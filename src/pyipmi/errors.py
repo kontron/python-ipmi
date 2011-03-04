@@ -2,6 +2,10 @@ class DecodingError(Exception):
     pass
 
 
+class EncodingError(Exception):
+    pass
+
+
 class TimeoutError(Exception):
     pass
 
@@ -17,9 +21,3 @@ class NotSupportedError(Exception):
 
 class DescriptionError(Exception):
     pass
-
-
-class EncodingError(Exception):
-    pass
-
-
