@@ -1,10 +1,24 @@
 from array import array
 import constants
-from pyipmi.errors import CompletionCodeError, EncodingError
+from pyipmi.errors import CompletionCodeError, EncodingError, DecodingError
 
 def check_completion_code(cc):
     if cc != constants.CC_OK:
         raise CompletionCodeError(cc)
+
+def push_unsigned_int(data, value, length):
+    for i in xrange(length):
+        data.append(chr((value >> (8*i)) & 0xff))
+
+def pop_unsigned_int(data, length):
+    value = 0
+    for i in xrange(length):
+        try:
+            value |= ord(data.pop(0)) << (8*i)
+        except IndexError:
+            raise DecodingError('Data too short for message')
+    return value
+
 
 class BaseField:
     def __init__(self, name, length, default=None):
@@ -22,13 +36,10 @@ class BaseField:
 class UnsignedInt(BaseField):
     def encode(self, obj, data):
         value = getattr(obj, self.name)
-        for i in xrange(self.length):
-            data.append(chr((value >> (8*i)) & 0xff))
+        push_unsigned_int(data, value, self.length)
 
     def decode(self, obj, data):
-        value = 0
-        for i in xrange(self.length):
-            value |= ord(data.pop(0)) << (8*i)
+        value = pop_unsigned_int(data, self.length)
         setattr(obj, self.name, value)
 
 
@@ -140,7 +151,10 @@ class Bitfield(BaseField):
     def decode(self, obj, data):
         value = 0
         for i in xrange(self.length):
-            value |= ord(data.pop(0)) << (8*i)
+            try:
+                value |= ord(data.pop(0)) << (8*i)
+            except IndexError:
+                raise DecodingError('Data too short for message')
         for bit in self._bits:
             tmp = (value >> bit._offset) & (2**bit._width - 1)
             wrapper = getattr(obj, self.name)
@@ -170,19 +184,27 @@ class Message:
 
 
     def __init__(self):
+        self.req = self._Req(self)
+        self.rsp = self._Rsp(self)
         self._create_fields()
 
     def _create_fields(self):
-        self.req = self._Req(self)
-        self.rsp = self._Rsp(self)
-        for field in self._REQ_DESC:
-            if hasattr(self.req, field.name):
-                raise DescriptionError('Field "%s" already added', field.name)
-            setattr(self.req, field.name, field.default)
-        for field in self._RSP_DESC:
-            setattr(self.rsp, field.name, field.default)
+        if hasattr(self, '_REQ_DESC'):
+            for field in self._REQ_DESC:
+                if hasattr(self.req, field.name):
+                    raise DescriptionError('Field "%s" already added',
+                            field.name)
+                setattr(self.req, field.name, field.default)
+        if hasattr(self, '_RSP_DESC'):
+            for field in self._RSP_DESC:
+                setattr(self.rsp, field.name, field.default)
 
     def _encode_req(self):
+        # messages can extend this class and provide their own encoding
+        # and decoding functions
+        if not hasattr(self, '_REQ_DESC'):
+            raise NotImplementedError('You have to overwrite this method')
+
         data = array('c')
         for field in self._REQ_DESC:
             if getattr(self.req, field.name) == None:
@@ -191,15 +213,19 @@ class Message:
         return data.tostring()
 
     def _decode_req(self, data):
+        if not hasattr(self, '_REQ_DESC'):
+            raise NotImplementedError('You have to overwrite this method')
+
         data = array('c', data)
         for field in self._REQ_DESC:
-            try:
-                field.decode(self.rsp, data)
-            except CompletionCodeError:
-                # stop decoding on completion code != 0
-                break
+            field.decode(self.req, data)
+        if len(data) > 0:
+            raise DecodingError('Data has extra bytes')
 
     def _encode_rsp(self):
+        if not hasattr(self, '_RSP_DESC'):
+            raise NotImplementedError('You have to overwrite this method')
+
         data = array('c')
         for field in self._RSP_DESC:
             if getattr(self.rsp, field.name) == None:
@@ -208,6 +234,9 @@ class Message:
         return data.tostring()
 
     def _decode_rsp(self, data):
+        if not hasattr(self, '_RSP_DESC'):
+            raise NotImplementedError('You have to overwrite this method')
+
         data = array('c', data)
         for field in self._RSP_DESC:
             try:
@@ -215,3 +244,5 @@ class Message:
             except CompletionCodeError:
                 # stop decoding on completion code != 0
                 break
+        if len(data) > 0:
+            raise DecodingError('Data has extra bytes')
