@@ -33,6 +33,29 @@ class BaseField:
         raise NotImplementedError()
 
 
+class ByteArray(BaseField):
+    def __init__(self, name, length, default=None):
+        BaseField.__init__(self, name, length)
+        if default is not None:
+            self.default = array('B', default)
+        else:
+            self.default = array('B')
+
+    def encode(self, obj, data):
+        a = getattr(obj, self.name)
+        if len(a) != self.length:
+            raise EncodingError('Array must be exaclty %d bytes long '
+                    '(but is %d long)' % (self.length, len(a)))
+        for i in xrange(self.length):
+            push_unsigned_int(data, a[i], 1)
+
+    def decode(self, obj, data):
+        a = getattr(obj, self.name)
+        bytes = []
+        for i in xrange(self.length):
+            bytes.append(pop_unsigned_int(data, 1))
+        setattr(obj, self.name, array('B', bytes))
+
 class UnsignedInt(BaseField):
     def encode(self, obj, data):
         value = getattr(obj, self.name)
