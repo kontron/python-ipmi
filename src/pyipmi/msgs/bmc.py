@@ -1,5 +1,6 @@
 import constants
 from pyipmi.msgs import Message
+from pyipmi.msgs import ByteArray
 from pyipmi.msgs import UnsignedInt
 from pyipmi.msgs import UnsignedIntMask
 from pyipmi.msgs import Timestamp
@@ -21,11 +22,11 @@ class GetDeviceId(Message):
                 Bitfield.ReservedBit(3,0),
                 Bitfield.Bit('provides_device_sdrs', 1)
             ),
-            Bitfield('firmware_revision', 1,
-                Bitfield.Bit('major_revision', 7),
-                Bitfield.Bit('device_available', 1)
+            Bitfield('firmware_revision', 2,
+                Bitfield.Bit('major', 7),
+                Bitfield.Bit('device_available', 1),
+                Bitfield.Bit('minor', 8)
             ),
-            UnsignedInt('minor_firmware_revision', 1),
             UnsignedInt('ipmi_version', 1),
             Bitfield('additional_support', 1,
                 Bitfield.Bit('sensor', 1),
@@ -39,12 +40,9 @@ class GetDeviceId(Message):
             ),
             UnsignedInt('manufacturer_id', 3),
             UnsignedInt('product_id', 2),
-            UnsignedInt('auxiliary_0', 1),
-            UnsignedInt('auxiliary_1', 1),
-            UnsignedInt('auxiliary_2', 1),
-            UnsignedInt('auxiliary_3', 1),
-            
+            ByteArray('auxiliary', 4)
     )
+
 
 class ColdReset(Message):
     CMDID = constants.CMDID_COLD_RESET
@@ -55,6 +53,7 @@ class ColdReset(Message):
         CompletionCode(),
     )
 
+
 class WarmReset(Message):
     CMDID = constants.CMDID_WARM_RESET
     NETFN = constants.NETFN_APP
@@ -63,6 +62,7 @@ class WarmReset(Message):
     _RSP_DESC = (
         CompletionCode(),
     )
+
 
 class ManufacturingTestOn(Message):
     CMDID = constants.CMDID_MANUFACTURING_TEST_ON
