@@ -10,6 +10,23 @@ from pyipmi.msgs import Conditional
 from pyipmi.msgs import push_unsigned_int, pop_unsigned_int
 from pyipmi.errors import DecodingError, EncodingError
 
+class GetFruInventoryAreaInfo(Message):
+    CMDID = constants.CMDID_GET_FRU_INVENTORY_AREA_INFO
+    NETFN = constants.NETFN_STORAGE
+    LUN = 0
+    _REQ_DESC = (
+        UnsignedInt('fru_id', 1, 0),
+    )
+    _RSP_DESC = (
+        CompletionCode(),
+        UnsignedInt('area_size', 2),
+        Bitfield('area_info', 1,
+            Bitfield.Bit('access', 1),
+            Bitfield.ReservedBit(7,0)
+        ),
+    )
+
+
 class ReadFruData(Message):
     CMDID = constants.CMDID_READ_FRU_DATA
     NETFN = constants.NETFN_STORAGE

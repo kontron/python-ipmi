@@ -9,6 +9,7 @@ import functools
 import picmg
 import chassis
 import bmc
+import fru
 
 def create_connection(interface):
     session = Session()
@@ -77,7 +78,7 @@ class Session:
     interface = property(_get_interface, _set_interface)
 
 class Ipmi:
-    HELPER_CLS = [ bmc.Helper, chassis.Helper, picmg.Helper ]
+    HELPER_CLS = [ fru.Helper, bmc.Helper, chassis.Helper, picmg.Helper ]
 
     def __init__(self):
         self._helper_objs = [ cls() for cls in self.HELPER_CLS ]
