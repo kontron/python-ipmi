@@ -63,7 +63,7 @@ class Session:
         self._rmcp_host = host
 
     def set_auth_type_user(self, username, password):
-        self._requested_auth_type = self.AUTH_TYPE_PASSWORD
+        self.auth_type = self.AUTH_TYPE_PASSWORD
         self._auth_username = username
         self._auth_password = password
 

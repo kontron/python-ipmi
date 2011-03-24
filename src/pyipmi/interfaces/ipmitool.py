@@ -96,7 +96,7 @@ class Ipmitool:
 
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += ' -P ""'
-        elif self._session_auth_type == Session.AUTH_TYPE_PASSWORD:
+        elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
             cmd += (' -U "%s"' % self._session._auth_username)
             cmd += (' -P "%s"' % self._session._auth_password)
         else:
@@ -105,7 +105,6 @@ class Ipmitool:
 
         cmd += (' %s' % ipmitool_cmd)
         cmd += (' 2>&1')
-
         log().debug('Run ipmitool "%s"', cmd)
 
         child = Popen(cmd, shell=True, stdout=PIPE)
