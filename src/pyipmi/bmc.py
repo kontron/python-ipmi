@@ -35,7 +35,7 @@ class DeviceId:
         s+= ' revision: %d' % self.revision
         s+= ' available: %d' % self.available
         s+= ' fw version: %d.%d' % (self.major_fw_revision, self.minor_fw_revision)
-        s+= ' ipmi: %d' % self.ipmi_version
+        s+= ' ipmi: %d.%d' % (self.major_ipmi_version, self.minor_ipmi_version)
         s+= ' manufacturer: %d' % self.manufacturer_id
         s+= ' product: %d' % self.product_id
         return s
