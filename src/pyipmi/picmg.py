@@ -71,6 +71,16 @@ class Helper:
 
     def set_port_state(self, fn, link_info):
         m = picmg.SetPortState()
+        m.req.link_info.channel = link_info.channel
+        m.req.link_info.interface = link_info.interface
+        m.req.link_info.port_0 = link_info.link_flags & 0x1
+        m.req.link_info.port_1 = (link_info.link_flags >> 1)&1
+        m.req.link_info.port_2 = (link_info.link_flags >> 2)&1
+        m.req.link_info.port_3 = (link_info.link_flags >> 3)&1
+        m.req.link_info.type = link_info.type
+        m.req.link_info.type_extension = link_info.extension
+        m.req.link_info.grouping_id = link_info.grouping_id
+        m.req.state = link_info.state
         fn(m)
         check_completion_code(m.rsp.completion_code)
 
@@ -84,6 +94,57 @@ class Helper:
         fn(m)
         check_completion_code(m.rsp.completion_code)
         return None
+
+class LinkInfo:
+    INTERFACE_BASE = picmg.LINK_INTERFACE_BASE
+    INTERFACE_FABRIC = picmg.LINK_INTERFACE_FABRIC
+    INTERFACE_UPDATE_CHANNEL = picmg.LINK_INTERFACE_UPDATE_CHANNEL
+
+    TYPE_BASE = picmg.LINK_TYPE_BASE
+    TYPE_ETHERNET_FABRIC = picmg.LINK_TYPE_ETHERNET_FABRIC
+    TYPE_INFINIBAND_FABRIC = picmg.LINK_TYPE_INFINIBAND_FABRIC
+    TYPE_STARFABRIC_FABRIC = picmg.LINK_TYPE_STARFABRIC_FABRIC
+    TYPE_PCIEXPRESS_FABRIC = picmg.LINK_TYPE_PCIEXPRESS_FABRIC
+    TYPE_OEM0 = picmg.LINK_TYPE_OEM0
+    TYPE_OEM1 = picmg.LINK_TYPE_OEM1
+    TYPE_OEM2 = picmg.LINK_TYPE_OEM2
+    TYPE_OEM3 = picmg.LINK_TYPE_OEM3
+
+    TYPE_EXT_BASE0 = picmg.LINK_TYPE_EXT_BASE0
+    TYPE_EXT_BASE1 = picmg.LINK_TYPE_EXT_BASE1
+
+    TYPE_EXT_ETHERNET_FIX1000BX = picmg.LINK_TYPE_EXT_ETHERNET_FIX1000BX
+    TYPE_EXT_ETHERNET_FIX10GBX4 = picmg.LINK_TYPE_EXT_ETHERNET_FIX10GBX4
+    TYPE_EXT_ETHERNET_FCPI = picmg.LINK_TYPE_EXT_ETHERNET_FCPI
+    TYPE_EXT_ETHERNET_FIX1000KX_10GKR = \
+            picmg.LINK_TYPE_EXT_ETHERNET_FIX1000KX_10GKR
+    TYPE_EXT_ETHERNET_FIX10GKX4 = picmg.LINK_TYPE_EXT_ETHERNET_FIX10GKX4
+    TYPE_EXT_ETHERNET_FIX40GKR4 = picmg.LINK_TYPE_EXT_ETHERNET_FIX40GKR4
+
+    TYPE_EXT_OEM_LINK_TYPE_EXT_0 = picmg.LINK_TYPE_EXT_OEM_LINK_TYPE_EXT_0
+
+    FLAGS_LANE0 = picmg.LINK_FLAGS_LANE0
+    FLAGS_LANE0123 = picmg.LINK_FLAGS_LANE0123
+
+    STATE_DISABLE = picmg.LINK_STATE_DISABLE
+    STATE_ENABLE = picmg.LINK_STATE_ENABLE
+
+    PROPERTIES = [
+            # (propery, description)
+            ('channel', ''),
+            ('interface', ''),
+            ('link_flags', ''),
+            ('type', ''),
+            ('extension', ''),
+            ('grouping_id', ''),
+            ('state', ''),
+    ]
+
+    def __init__(self, res=None):
+        for p in self.PROPERTIES:
+            setattr(self, p[0], None)
+        if res:
+            self.from_response(res)
 
 class LedState:
     COLOR_BLUE = picmg.LED_COLOR_BLUE

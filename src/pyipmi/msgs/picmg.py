@@ -186,3 +186,28 @@ class GetFruLedState(Message):
             Conditional(_cond_lamp_test, UnsignedIntMask('lamp_test_duration',
                 1, 0x7f)),
     )
+
+class SetPortState(Message):
+    CMDID = constants.CMDID_SET_PORT_STATE
+    NETFN = constants.NETFN_GROUP_EXTENSION
+    LUN = 0
+
+    _REQ_DESC = (
+            PicmgIdentifier(),
+            Bitfield('link_info', 4,
+                Bitfield.Bit('channel', 6),
+                Bitfield.Bit('interface', 2),
+                Bitfield.Bit('port_0', 1),
+                Bitfield.Bit('port_1', 1),
+                Bitfield.Bit('port_2', 1),
+                Bitfield.Bit('port_3', 1),
+                Bitfield.Bit('type', 8),
+                Bitfield.Bit('type_extension', 4),
+                Bitfield.Bit('grouping_id', 8, 0),
+            ),
+            UnsignedInt('state', 1),
+    )
+    _RSP_DESC = (
+            CompletionCode(),
+            PicmgIdentifier(),
+    )
