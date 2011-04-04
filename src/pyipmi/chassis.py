@@ -27,9 +27,9 @@ class Helper:
     def chassis_control_soft_shutdown(self, fn):
         self._chassis_control(fn, chassis.CONTROL_SOFT_SHUTDOWN)
 
-    def _chassis_control(self, fn, fru_id, option):
+    def _chassis_control(self, fn, option):
         m = chassis.ChassisControl()
-        m.req.control = option
+        m.req.control.option = option
         fn(m)
         check_completion_code(m.rsp.completion_code)
 
