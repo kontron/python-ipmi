@@ -25,6 +25,61 @@ class Helper:
         fn(m)
         check_completion_code(m.rsp.completion_code)
 
+    def set_watchdog_timer(self, fn, config):
+        m = bmc.SetWatchdogTimer()
+        m.req.timer_use.timer_use = config.timer_use
+        m.req.timer_use.dont_stop = config.dont_stop
+        m.req.timer_use.dont_log = config.dont_log
+
+        m.req.timer_actions.pre_timeout_interrupt = \
+                config.pre_timeout_interrupt
+        m.req.timer_actions.timeout_action = \
+                config.timeout_action
+
+        m.req.pre_timeout_interval = config.pre_timeout_interval
+        m.req.timer_use_expiration_flags = config.timer_use_expiration_flags
+        m.req.initial_countdown = config.initial_countdown
+        fn(m)
+        check_completion_code(m.rsp.completion_code)
+
+    def reset_watchdog_timer(self, fn):
+        m = bmc.ResetWatchdogTimer()
+        fn(m)
+        check_completion_code(m.rsp.completion_code)
+
+
+class Watchdog:
+    TIMER_USE_OEM = 5
+    TIMER_USE_SMS_OS = 4
+    TIMER_USE_OS_LOAD = 3
+    TIMER_USE_BIOS_POST = 2
+    TIMER_USE_BIOS_FRB2 = 1
+
+    TIMEOUT_ACTION_NO_ACTION = 0
+    TIMEOUT_ACTION_HARD_RESET = 1
+    TIMEOUT_ACTION_POWER_DOWN = 2
+    TIMEOUT_ACTION_POWER_CYCLE = 3
+
+    PROPERTIES = [
+            # (propery, description)
+            ('timer_use', ''),
+            ('dont_stop', ''),
+            ('dont_log', ''),
+            ('pre_timeout_interrupt', ''),
+            ('timeout_action', ''),
+            ('pre_timeout_interval', ''),
+            ('timer_use_expiration_flags', ''),
+            ('initial_countdown', ''),
+            ('present_countdown', ''),
+    ]
+
+    def __init__(self, res=None):
+        for p in self.PROPERTIES:
+            setattr(self, p[0], None)
+        if res:
+            self.from_response(res)
+
+
 class DeviceId:
     def __init__(self, rsp=None):
         if rsp is not None:
