@@ -4,6 +4,39 @@ from array import array
 import pyipmi.msgs.fru
 from pyipmi.errors import DecodingError, EncodingError
 
+class TestFruActivationPolicy(unittest.TestCase):
+    def test_clear_activation_lock(self):
+        m = pyipmi.msgs.picmg.SetFruActivationPolicy()
+        m.req.fru_id = 1
+        m.req.mask.activation_locked = 1
+        m.req.set.activation_locked = 0
+        data = m.req.encode()
+        self.assertEqual(data, '\x00\x01\x01\x00')
+
+    def test_set_activation_lock(self):
+        m = pyipmi.msgs.picmg.SetFruActivationPolicy()
+        m.req.fru_id = 1
+        m.req.mask.activation_locked = 1
+        m.req.set.activation_locked = 1
+        data = m.req.encode()
+        self.assertEqual(data, '\x00\x01\x01\x01')
+
+    def test_clear_deactivation_lock(self):
+        m = pyipmi.msgs.picmg.SetFruActivationPolicy()
+        m.req.fru_id = 1
+        m.req.mask.deactivation_locked = 1
+        m.req.set.deactivation_locked = 0
+        data = m.req.encode()
+        self.assertEqual(data, '\x00\x01\x02\x00')
+
+    def test_set_deactivation_lock(self):
+        m = pyipmi.msgs.picmg.SetFruActivationPolicy()
+        m.req.fru_id = 1
+        m.req.mask.deactivation_locked = 1
+        m.req.set.deactivation_locked = 1
+        data = m.req.encode()
+        self.assertEqual(data, '\x00\x01\x02\x02')
+
 class TestReadFruData(unittest.TestCase):
     def test_decode_valid_req(self):
         m = pyipmi.msgs.fru.ReadFruData()
