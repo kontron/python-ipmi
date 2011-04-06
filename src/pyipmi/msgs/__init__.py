@@ -1,4 +1,5 @@
 from array import array
+from copy import deepcopy
 import constants
 from pyipmi.errors import CompletionCodeError, EncodingError, DecodingError
 
@@ -217,10 +218,15 @@ class Message:
                 if hasattr(self.req, field.name):
                     raise DescriptionError('Field "%s" already added',
                             field.name)
-                setattr(self.req, field.name, field.default)
+                # make a deep copy, default may be a mutable object
+                setattr(self.req, field.name, deepcopy(field.default))
         if hasattr(self, '_RSP_DESC'):
             for field in self._RSP_DESC:
-                setattr(self.rsp, field.name, field.default)
+                if hasattr(self.rsp, field.name):
+                    raise DescriptionError('Field "%s" already added',
+                            field.name)
+                # make a deep copy, default may be a mutable object
+                setattr(self.rsp, field.name, deepcopy(field.default))
 
     def _encode_req(self):
         # messages can extend this class and provide their own encoding
