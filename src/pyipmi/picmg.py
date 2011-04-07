@@ -8,6 +8,9 @@
 from errors import DecodingError, CompletionCodeError
 from msgs import picmg, check_completion_code
 
+CHANNEL_SIGNALING_CLASS_BASIC = picmg.CHANNEL_SIGNALING_CLASS_BASIC
+CHANNEL_SIGNALING_CLASS_10_3125GBD = picmg.CHANNEL_SIGNALING_CLASS_10_3125GBD
+
 class Helper:
     def fru_control_cold_reset(self, fn, fru_id=0):
         self._fru_control(fn, fru_id, picmg.FRU_CONTROL_COLD_RESET)
