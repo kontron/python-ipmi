@@ -34,6 +34,22 @@ class Ipmitool:
         # just remember session parameters here
         self._session = session
 
+    def rmcp_ping(self):
+        # for now this uses impitool..
+        cmd = self.IPMITOOL_PATH
+        cmd += (' -I lan')
+        cmd += (' -H %s' % self._session._rmcp_host)
+        cmd += (' -A NONE')
+        cmd += (' session info all')
+
+        log().debug('Run ipmitool "%s"', cmd)
+        child = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+        child.communicate()
+
+        log().debug('rc = %s' % child.returncode)
+        if child.returncode:
+            raise TimeoutError()
+
     def send_and_receive(self, target, msg):
         """Sends an IPMI request message and waits for its response.
 

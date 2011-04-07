@@ -75,6 +75,10 @@ class Session:
         if hasattr(self.interface, 'close_session'):
             self.interface.close_session(self)
 
+    def rmcp_ping(self):
+        if hasattr(self.interface, 'rmcp_ping'):
+            self.interface.rmcp_ping()
+
     interface = property(_get_interface, _set_interface)
 
 class Ipmi:
