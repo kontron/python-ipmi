@@ -1,6 +1,11 @@
-from ipmitool import Ipmitool
 
-INTERFACES = [ Ipmitool ]
+import ipmitool
+import aardvark
+
+INTERFACES = [
+        ipmitool.Ipmitool,
+        aardvark.Aardvark,
+]
 
 def create_interface(interface, *args, **kwargs):
     for intf in INTERFACES:
