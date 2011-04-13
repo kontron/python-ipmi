@@ -110,7 +110,9 @@ class DeviceId:
         self.provides_sdrs = bool(rsp.device_revision.provides_device_sdrs)
         self.available = bool(rsp.firmware_revision.device_available)
         self.major_fw_revision = rsp.firmware_revision.major
-        self.minor_fw_revision = rsp.firmware_revision.minor
+        self.minor_fw_revision = (
+                ((rsp.firmware_revision.minor >> 4) & 0xf) * 10
+                + (rsp.firmware_revision.minor & 0xf))
         self.major_ipmi_version = rsp.ipmi_version & 0xf
         self.minor_ipmi_version = (rsp.ipmi_version >> 4) & 0xf
 
