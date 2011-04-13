@@ -17,7 +17,8 @@ def main():
             package_data = {
                 'pyipmi.ext.totalphase':
                     ['aardvark.so', 'LICENSE.txt']
-            }
+            },
+            scripts = ['bin/ipmitool.py']
     )
 
 if __name__ == '__main__':
