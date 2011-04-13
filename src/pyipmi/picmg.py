@@ -89,14 +89,19 @@ class Helper:
 
     def set_signaling_class(self, fn, interface, channel, signaling_class):
         m = picmg.SetSignalingClass()
+        m.req.channel_info.channel_number = channel
+        m.req.channel_info.interface = interface
+        m.req.channel_signaling.class_capability = signaling_class
         fn(m)
         check_completion_code(m.rsp.completion_code)
 
     def get_signaling_class(self, fn, interface, channel):
         m = picmg.GetSignalingClass()
+        m.req.channel_info.channel_number = channel
+        m.req.channel_info.interface = interface
         fn(m)
         check_completion_code(m.rsp.completion_code)
-        return None
+        return m.rsp.channel_signaling.class_capability
 
 class LinkInfo:
     INTERFACE_BASE = picmg.LINK_INTERFACE_BASE

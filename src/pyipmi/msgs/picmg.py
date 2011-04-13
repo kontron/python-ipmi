@@ -211,3 +211,49 @@ class SetPortState(Message):
             CompletionCode(),
             PicmgIdentifier(),
     )
+
+class SetSignalingClass(Message):
+    CMDID = constants.CMDID_SET_CHANNEL_SIGNALING_CLASS
+    NETFN = constants.NETFN_GROUP_EXTENSION
+    LUN = 0
+
+    _REQ_DESC = (
+            PicmgIdentifier(),
+            Bitfield('channel_info', 1,
+                Bitfield.Bit('channel_number', 6, 0),
+                Bitfield.Bit('interface', 2, 0),
+            ),
+            Bitfield('channel_signaling', 1,
+                Bitfield.Bit('class_capability', 4, 0),
+                Bitfield.ReservedBit(4)
+            ),
+    )
+    _RSP_DESC = (
+            CompletionCode(),
+            PicmgIdentifier(),
+    )
+
+class GetSignalingClass(Message):
+    CMDID = constants.CMDID_GET_CHANNEL_SIGNALING_CLASS
+    NETFN = constants.NETFN_GROUP_EXTENSION
+    LUN = 0
+
+    _REQ_DESC = (
+            PicmgIdentifier(),
+            Bitfield('channel_info', 1,
+                Bitfield.Bit('channel_number', 6, 0),
+                Bitfield.Bit('interface', 2, 0),
+            ),
+    )
+    _RSP_DESC = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            Bitfield('channel_info', 1,
+                Bitfield.Bit('channel_number', 6, 0),
+                Bitfield.Bit('interface', 2, 0),
+            ),
+            Bitfield('channel_signaling', 1,
+                Bitfield.Bit('class_capability', 4, 0),
+                Bitfield.ReservedBit(4)
+            ),
+    )
