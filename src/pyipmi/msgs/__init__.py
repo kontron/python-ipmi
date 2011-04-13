@@ -132,8 +132,14 @@ class Bitfield(BaseField):
 
 
     class BitWrapper:
-        pass
-
+        def __str__(self):
+            s = '['
+            for attr in dir(self):
+                if attr.startswith('_'):
+                    continue
+                s += '%s=%s ' % (attr, getattr(self, attr))
+            s += ']'
+            return s
 
     reserved_bit_counter = 0
 
@@ -196,7 +202,14 @@ class Message:
             return self._parent._encode_req()
         def decode(self, data):
             self._parent._decode_req(data)
-
+        def __str__(self):
+            s = '%sReq(' % self._parent.__class__.__name__
+            if not hasattr(self._parent, '_REQ_DESC'):
+                raise NotImplementedError('You have to overwrite this method')
+            for field in self._parent._REQ_DESC:
+                s += '%s=%s ' % (field.name, getattr(self, field.name))
+            s += ")"
+            return s
 
     class _Rsp:
         def __init__(self, parent):
@@ -205,7 +218,14 @@ class Message:
             return self._parent._encode_rsp()
         def decode(self, data):
             self._parent._decode_rsp(data)
-
+        def __str__(self):
+            s = '%sRsp(' % self._parent.__class__.__name__
+            if not hasattr(self._parent, '_RSP_DESC'):
+                raise NotImplementedError('You have to overwrite this method')
+            for field in self._parent._RSP_DESC:
+                s += '%s=%s ' % (field.name, getattr(self, field.name))
+            s += ")"
+            return s
 
     def __init__(self):
         self.req = self._Req(self)
