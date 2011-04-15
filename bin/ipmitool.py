@@ -3,6 +3,7 @@
 from collections import namedtuple
 import sys
 import getopt
+import logging
 
 import pyipmi
 import pyipmi.interfaces
@@ -67,6 +68,10 @@ def cmd_bmc(ipmi, args):
         bmc_usage()
         sys.exit(1)
 
+def cmd_sel(ipmi, args):
+    for entry in ipmi.sel_entries():
+        print entry
+
 def cmd_raw(ipmi, args):
     pass
 
@@ -81,7 +86,7 @@ def version():
     
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:')
+        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:')
     except getopt.GetoptError, err:
         print str(err)
         usage()
@@ -89,6 +94,9 @@ def main():
     verbose = False
     interface = 'aardvark'
     target_address = 0x20
+    rmcp_host = None
+    rmcp_user = ''
+    rmcp_password = ''
     for o, a in opts:
         if o == '-v':
             verbose = True
@@ -100,14 +108,28 @@ def main():
             sys.exit()
         elif o == '-t':
             target_address = int(a, 0)
+        elif o == '-H':
+            rmcp_host = a
+        elif o == '-U':
+            rmcp_user = a
+        elif o == '-P':
+            rmcp_password = a
         elif o == '-I':
-            interface = o
+            interface = a
         else:
             assert False, 'unhandled option'
 
     if len(args) == 0:
         usage()
         sys.exit(1)
+
+    handler = logging.StreamHandler()
+    if verbose:
+        handler.setLevel(logging.DEBUG)
+    else:
+        handler.setLevel(logging.INFO)
+    pyipmi.logger.add_log_handler(handler)
+    pyipmi.logger.set_log_level(logging.DEBUG)
 
     (cmd_name, args) = (args[0], args[1:])
 
@@ -121,10 +143,13 @@ def main():
 
     interface = pyipmi.interfaces.create_interface(interface)
     ipmi = pyipmi.create_connection(interface)
-    #ipmi.session.set_session_type_rmcp(host)
-    #ipmi.session.set_auth_type_user(user, password)
     ipmi.target = pyipmi.Target(target_address)
-    #ipmi.session.establish()
+
+    if rmcp_host is not None:
+        ipmi.session.set_session_type_rmcp(rmcp_host)
+        ipmi.session.set_auth_type_user(rmcp_user, rmcp_password)
+        ipmi.session.establish()
+
 
     try:
         fn(ipmi, args)
@@ -133,7 +158,8 @@ def main():
     except pyipmi.errors.TimeoutError, e:
         print 'Command timed out'
 
-    #ipmi.session.close()
+    if rmcp_host is not None:
+        ipmi.session.close()
 
 
 GLOBAL_COMMANDS = (
@@ -141,6 +167,8 @@ GLOBAL_COMMANDS = (
             'Management Controller status and global enables'),
         Command('raw', cmd_raw,
             'Send a RAW IPMI request and print response'),
+        Command('sel', cmd_sel,
+            'Print System Event Log (SEL)'),
 )
 
 if __name__ == '__main__':
