@@ -5,8 +5,9 @@
 # author: Michael Walle <michael.walle@kontron.com>
 #
 
-from errors import DecodingError, CompletionCodeError
-from msgs import chassis, check_completion_code
+from pyipmi.errors import DecodingError, CompletionCodeError
+from pyipmi.msgs import chassis
+from utils import check_completion_code
 
 class Helper:
     def chassis_control_power_down(self, fn):

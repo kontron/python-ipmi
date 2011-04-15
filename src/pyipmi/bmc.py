@@ -5,8 +5,9 @@
 # author: Michael Walle <michael.walle@kontron.com>
 #
 
-from errors import DecodingError, CompletionCodeError
-from msgs import bmc, check_completion_code
+from pyipmi.errors import DecodingError, CompletionCodeError
+from pyipmi.msgs import bmc
+from pyipmi.utils import check_completion_code
 
 class Helper:
     def get_device_id(self, fn):

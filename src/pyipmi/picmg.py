@@ -5,8 +5,9 @@
 # author: Michael Walle <michael.walle@kontron.com>
 #
 
-from errors import DecodingError, CompletionCodeError
-from msgs import picmg, check_completion_code
+from pyipmi.errors import DecodingError, CompletionCodeError
+from pyipmi.msgs import picmg
+from pyipmi.utils import check_completion_code
 
 CHANNEL_SIGNALING_CLASS_BASIC = picmg.CHANNEL_SIGNALING_CLASS_BASIC
 CHANNEL_SIGNALING_CLASS_10_3125GBD = picmg.CHANNEL_SIGNALING_CLASS_10_3125GBD

@@ -10,6 +10,7 @@ import picmg
 import chassis
 import bmc
 import fru
+import sel
 
 def create_connection(interface):
     session = Session()
@@ -17,18 +18,35 @@ def create_connection(interface):
     ipmi = Ipmi()
     ipmi.interface = interface
     ipmi.session = session
+    ipmi.requester = NullRequester()
     return ipmi
 
+class Requester:
+    '''The Requester class represents an IPMI device which initiates a
+    request/response message exchange.
+    '''
+
+    def __init__(self, ipmb_address):
+        self.ipmb_address = ipmb_address
+
+class NullRequester:
+    '''The NullRequester is used for interfaces which doesn't require a
+    valid requester.
+    '''
+
+    @property
+    def ipmb_address():
+        raise AssertionError('NullRequester does not provide an IPMB address')
+
 class Target:
-    """The Target class represents an IPMI target.
-    """
+    '''The Target class represents an IPMI target.'''
     class Routing:
         def __init__(self, address, bridge_channel):
             self.address = address
             self.bridge_channel = bridge_channel
 
-    def __init__(self, target_address):
-        self.target_address = target_address
+    def __init__(self, ipmb_address):
+        self.ipmb_address = ipmb_address
 
     def set_routing_information(self, rinfo):
         """Set the path over which a target is reachable.
@@ -82,7 +100,8 @@ class Session:
     interface = property(_get_interface, _set_interface)
 
 class Ipmi:
-    HELPER_CLS = [ fru.Helper, bmc.Helper, chassis.Helper, picmg.Helper ]
+    HELPER_CLS = [ fru.Helper, bmc.Helper, chassis.Helper, picmg.Helper,
+            sel.Helper ]
 
     def __init__(self):
         self._helper_objs = [ cls() for cls in self.HELPER_CLS ]
@@ -98,7 +117,9 @@ class Ipmi:
         return functools.partial(callable, self._send_and_receive)
 
     def _send_and_receive(self, msg):
-        self.interface.send_and_receive(self.target, msg)
+        msg.target = self.target
+        msg.requester = self.requester
+        self.interface.send_and_receive(msg)
 
     def _get_interface(self):
         try:

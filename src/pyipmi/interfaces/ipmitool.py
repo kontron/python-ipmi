@@ -1,5 +1,5 @@
 #
-# Kontron Ipmitool Interface
+# pyipmi
 #
 # author: Heiko Thiery <heiko.thiery@kontron.com>
 # author: Michael Walle <michael.walle@kontron.com>
@@ -50,7 +50,7 @@ class Ipmitool:
         if child.returncode:
             raise TimeoutError()
 
-    def send_and_receive(self, target, msg):
+    def send_and_receive(self, msg):
         """Sends an IPMI request message and waits for its response.
 
         `msg` is a IPMI Message containing both the request and response.
@@ -62,7 +62,7 @@ class Ipmitool:
         for byte in msg.req.encode():
             cmd += ' 0x%02x' % ord(byte)
         
-        output, rc = self._run_ipmitool(target, cmd)
+        output, rc = self._run_ipmitool(msg.target, cmd)
         match_err = self.re_err.match(output)
         match_timeout = self.re_timeout.match(output)
         data = array('c')
@@ -108,7 +108,7 @@ class Ipmitool:
                 raise RuntimeError('The impitool interface at most double '
                        'briding')
 
-        cmd += (' -t 0x%02x' % target.target_address)
+        cmd += (' -t 0x%02x' % target.ipmb_address)
 
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += ' -P ""'

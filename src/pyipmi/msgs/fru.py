@@ -7,7 +7,7 @@ from pyipmi.msgs import Timestamp
 from pyipmi.msgs import Bitfield
 from pyipmi.msgs import CompletionCode
 from pyipmi.msgs import Conditional
-from pyipmi.msgs import push_unsigned_int, pop_unsigned_int
+from pyipmi.utils import push_unsigned_int, pop_unsigned_int
 from pyipmi.errors import DecodingError, EncodingError
 
 class GetFruInventoryAreaInfo(Message):

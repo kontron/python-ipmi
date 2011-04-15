@@ -6,8 +6,10 @@
 #
 
 import array
-from errors import DecodingError, CompletionCodeError
-from msgs import fru, check_completion_code, constants
+
+from pyipmi.errors import DecodingError, CompletionCodeError
+from pyipmi.msgs import fru
+from pyipmi.utils import check_completion_code
 
 class Helper:
     def get_fru_inventory_area_info(self, fn, fru_id=0):
