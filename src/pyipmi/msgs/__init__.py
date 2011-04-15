@@ -2,24 +2,7 @@ from array import array
 from copy import deepcopy
 import constants
 from pyipmi.errors import CompletionCodeError, EncodingError, DecodingError
-
-def check_completion_code(cc):
-    if cc != constants.CC_OK:
-        raise CompletionCodeError(cc)
-
-def push_unsigned_int(data, value, length):
-    for i in xrange(length):
-        data.append(chr((value >> (8*i)) & 0xff))
-
-def pop_unsigned_int(data, length):
-    value = 0
-    for i in xrange(length):
-        try:
-            value |= ord(data.pop(0)) << (8*i)
-        except IndexError:
-            raise DecodingError('Data too short for message')
-    return value
-
+from pyipmi.utils import push_unsigned_int, pop_unsigned_int
 
 class BaseField:
     def __init__(self, name, length, default=None):
@@ -56,6 +39,7 @@ class ByteArray(BaseField):
         for i in xrange(self.length):
             bytes.append(pop_unsigned_int(data, 1))
         setattr(obj, self.name, array('B', bytes))
+
 
 class UnsignedInt(BaseField):
     def encode(self, obj, data):
@@ -218,6 +202,10 @@ class Message:
             return self._parent._encode_rsp()
         def decode(self, data):
             self._parent._decode_rsp(data)
+        def encode_cmd(self):
+            return self._parent._cmd_encode_rsp()
+        def decode_cmd(self, data):
+            self._parent._decode_cmd_rsp(data)
         def __str__(self):
             s = '%sRsp(' % self._parent.__class__.__name__
             if not hasattr(self._parent, '_RSP_DESC'):
@@ -247,6 +235,12 @@ class Message:
                             field.name)
                 # make a deep copy, default may be a mutable object
                 setattr(self.rsp, field.name, deepcopy(field.default))
+
+    def _csum(self, data):
+        csum = 0
+        for b in data:
+            csum += b
+        return -csum % 256
 
     def _encode_req(self):
         # messages can extend this class and provide their own encoding

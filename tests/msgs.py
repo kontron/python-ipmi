@@ -2,6 +2,7 @@ import unittest
 from array import array
 
 import pyipmi.msgs.fru
+import pyipmi.msgs.sel
 from pyipmi.errors import DecodingError, EncodingError
 
 class TestFruActivationPolicy(unittest.TestCase):
@@ -123,6 +124,33 @@ class TestGetDeviceId(unittest.TestCase):
         self.assertEqual(m.rsp.manufacturer_id, 15000)
         self.assertEqual(m.rsp.product_id, 5310)
         self.assertEqual(m.rsp.auxiliary, array('B', [4, 0, 2, 0]))
+
+
+class TestGetSelEntry(unittest.TestCase):
+    def test_decode_rsp_with_cc(self):
+        m = pyipmi.msgs.sel.GetSelEntry()
+        m.rsp.decode('\xc0')
+        self.assertEqual(m.rsp.completion_code, 0xc0)
+
+    def test_decode_invalid_rsp(self):
+        m = pyipmi.msgs.sel.GetSelEntry()
+        self.assertRaises(DecodingError, m.rsp.decode, '\x00\x01')
+
+    def test_encode_valid_rsp(self):
+        m = pyipmi.msgs.sel.GetSelEntry()
+        m.rsp.encode('\x00\x02\x01\x01\x02\x03\x04')
+        self.assertEqual(m.rsp.completion_code, 0x00)
+        self.assertEqual(m.rsp.next_record_id, 0x0102)
+        self.assertEqual(m.rsp.record_data, '\x01\x02\x03\x04')
+
+    def test_encode_valid_rsp(self):
+        m = pyipmi.msgs.sel.GetSelEntry()
+        m.rsp.completion_code = 0
+        m.rsp.next_record_id = 0x0102
+        m.rsp.record_data = array('c', '\x01\x02\x03\x04')
+        data = m.rsp.encode()
+        self.assertEqual(data, '\x00\x02\x01\x01\x02\x03\x04')
+
 
 if __name__ == '__main__':
     unittest.main()
