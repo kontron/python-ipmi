@@ -253,7 +253,7 @@ class Aardvark:
 
                 if (rs_sa == self.slave_address
                         and netfn == msg.NETFN + 1
-                        and rq_lun == msg.LUN
+                        and rs_lun == msg.LUN
                         and rq_sa == msg.target.ipmb_address
                         and rq_seq == self.next_sequence_number
                         and cmd_id == msg.CMDID):
