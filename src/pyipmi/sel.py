@@ -61,7 +61,7 @@ class SelEntry:
         return s
 
     def from_response(self, data):
-        if len(self.event_data != 16):
+        if len(data) != 16:
             raise DecodingError('Invalid SEL record length (%d)' % len(data))
 
         self.data = data
