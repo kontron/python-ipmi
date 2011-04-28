@@ -81,6 +81,27 @@ class FruControl(Message):
     )
 
 
+class GetFruControlCapabilities(Message):
+    CMDID = constants.CMDID_FRU_CONTROL_CAPABILITIES
+    NETFN = constants.NETFN_GROUP_EXTENSION
+    LUN = 0
+    _REQ_DESC = (
+            PicmgIdentifier(),
+            UnsignedInt('fru_id', 1),
+    )
+    _RSP_DESC = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            Bitfield('capabilities', 1,
+                Bitfield.ReservedBit(1),
+                Bitfield.Bit('warm_reset', 1),
+                Bitfield.Bit('graceful_reboot', 1),
+                Bitfield.Bit('diagnostic_interrupt', 1),
+                Bitfield.ReservedBit(4),
+            ),
+    )
+
+
 class SetFruActivationPolicy(Message):
     CMDID = constants.CMDID_SET_FRU_ACTIVATION_POLICY
     NETFN = constants.NETFN_GROUP_EXTENSION
