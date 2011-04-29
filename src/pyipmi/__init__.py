@@ -11,6 +11,7 @@ import chassis
 import bmc
 import fru
 import sel
+import sdr
 
 def create_connection(interface):
     session = Session()
@@ -101,7 +102,7 @@ class Session:
 
 class Ipmi:
     HELPER_CLS = [ fru.Helper, bmc.Helper, chassis.Helper, picmg.Helper,
-            sel.Helper ]
+            sel.Helper, sdr.Helper ]
 
     def __init__(self):
         self._helper_objs = [ cls() for cls in self.HELPER_CLS ]
