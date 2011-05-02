@@ -71,9 +71,9 @@ class SelEntry:
 
         self.record_id = pop_unsigned_int(tmp_data, 2)
         self.type = pop_unsigned_int(tmp_data, 1)
-        if (self.type != TYPE_SYSTEM_EVENT
-                and self.type not in TYPE_OEM_TIMESTAMPED_RANGE
-                and self.type not in TYPE_NON_OEM_TIMESTAMPED_RANGE):
+        if (self.type != self.TYPE_SYSTEM_EVENT
+                and self.type not in self.TYPE_OEM_TIMESTAMPED_RANGE
+                and self.type not in self.TYPE_NON_OEM_TIMESTAMPED_RANGE):
             raise DecodingError('Unknown SEL type (0x%02x)' % self.type)
         self.timestamp = pop_unsigned_int(tmp_data, 4)
         self.generator_id = pop_unsigned_int(tmp_data, 2)
