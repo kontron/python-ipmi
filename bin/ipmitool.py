@@ -10,7 +10,19 @@ import pyipmi.interfaces
 
 IPMITOOL_VERSION = 0.1
 
-Command = namedtuple('Command', ['name','fn','help'])
+Command = namedtuple('Command', 'name fn')
+CommandHelp = namedtuple('CommandHelp', 'name arguments help')
+
+# print helper
+def _print(s):
+    print s
+
+def _get_command_function(name):
+    for cmd in COMMANDS:
+        if cmd.name == name:
+            return cmd.fn
+    else:
+        return None
 
 def cmd_bmc_info(ipmi, args):
     id = ipmi.get_device_id()
@@ -44,42 +56,65 @@ Additional Device Support:
         print 'Aux Firmware Rev Info:  [%02x %02x %02x %02x]' % (
                 id.aux[0], id.aux[1], id.aux[2], id.aux[3])
 
-def bmc_usage():
-    print 'BMC Commands:'
-    print '  reset [warm|cold]'
-    print '  info'
+def usage(toplevel=False):
+    commands = []
+    maxlen = 0
 
-def cmd_bmc(ipmi, args):
-    if len(args) == 0:
-        bmc_usage()
-        sys.exit(1)
-
-    if args[0] == 'reset':
-        if len(args) == 2 and args[1] == 'warm':
-            ipmi.warm_reset()
-        elif len(args) == 2 and args[1] == 'cold':
-            ipmi.cold_reset()
-        else:
-            bmc_usage()
-            sys.exit(1)
-    elif args[0] == 'info':
-        cmd_bmc_info(ipmi, args[1:])
+    if toplevel:
+        argv = []
     else:
-        bmc_usage()
-        sys.exit(1)
+        argv = sys.argv[1:]
 
-def cmd_sel(ipmi, args):
-    for entry in ipmi.sel_entries():
-        print entry
+    # (1) try to find help for commands on exactly one level above
+    for cmd in COMMAND_HELP:
+        subcommands = cmd.name.split(' ')
+        if (len(subcommands) == len(argv) + 1
+                and subcommands[:len(argv)] == argv):
+            commands.append(cmd)
+            if cmd.arguments:
+                maxlen = max(maxlen, len(cmd.name)+len(cmd.arguments)+1)
+            else:
+                maxlen = max(maxlen, len(cmd.name))
 
-def cmd_raw(ipmi, args):
-    pass
+    # (2) if nothing found, try to find help on any level above
+    if maxlen == 0:
+        for cmd in COMMAND_HELP:
+            subcommands = cmd.name.split(' ')
+            if (len(subcommands) > len(argv) + 1 
+                    and subcommands[:len(argv)] == argv):
+                commands.append(cmd)
+                if cmd.arguments:
+                    maxlen = max(maxlen, len(cmd.name)+len(cmd.arguments)+1)
+                else:
+                    maxlen = max(maxlen, len(cmd.name))
 
-def usage():
-    print 'usage: ipmitool [options...] <command>'
-    print 'Commands:'
-    for cmd in GLOBAL_COMMANDS:
-        print '    %-8s %s' % (cmd.name, cmd.help)
+    # (3) find help on same level
+    if maxlen == 0:
+        for cmd in COMMAND_HELP:
+            subcommands = cmd.name.split(' ')
+            if (len(subcommands) == len(argv)
+                    and subcommands[:len(argv)] == argv):
+                commands.append(cmd)
+                if cmd.arguments:
+                    maxlen = max(maxlen, len(cmd.name)+len(cmd.arguments)+1)
+                else:
+                    maxlen = max(maxlen, len(cmd.name))
+
+    # if still nothing found, print toplevel usage
+    if maxlen == 0:
+        usage(toplevel=True)
+        return
+
+    if len(argv) == 0:
+        version()
+        print 'usage: ipmitool [options...] <command>'
+        print 'Commands:'
+
+    for cmd in commands:
+        name = cmd.name
+        if cmd.arguments:
+            name = '%s %s' % (name, cmd.arguments)
+        print '  %-*s   %s' % (maxlen, name, cmd.help)
 
 def version():
     print 'ipmitool v%s' % IPMITOOL_VERSION
@@ -119,6 +154,9 @@ def main():
         else:
             assert False, 'unhandled option'
 
+    # fake sys.argv
+    sys.argv = [sys.argv[0]] + args
+
     if len(args) == 0:
         usage()
         sys.exit(1)
@@ -131,11 +169,10 @@ def main():
     pyipmi.logger.add_log_handler(handler)
     pyipmi.logger.set_log_level(logging.DEBUG)
 
-    (cmd_name, args) = (args[0], args[1:])
-
-    for cmd in GLOBAL_COMMANDS:
-        if cmd_name == cmd.name:
-            fn = cmd.fn
+    for i in xrange(len(args)):
+        cmd = _get_command_function(' '.join(args[0:i+1]))
+        if cmd is not None:
+            args = args[i+1:]
             break
     else:
         usage()
@@ -150,9 +187,8 @@ def main():
         ipmi.session.set_auth_type_user(rmcp_user, rmcp_password)
         ipmi.session.establish()
 
-
     try:
-        fn(ipmi, args)
+        cmd(ipmi, args)
     except pyipmi.errors.CompletionCodeError, e:
         print 'Command returned with completion code 0x%02x' % e.cc
     except pyipmi.errors.TimeoutError, e:
@@ -161,14 +197,28 @@ def main():
     if rmcp_host is not None:
         ipmi.session.close()
 
+COMMANDS = (
+        Command('bmc info', cmd_bmc_info),
+        Command('bmc reset cold', lambda i, a: i.cold_reset()),
+        Command('bmc reset warm', lambda i, a: i.warm_reset()),
+        Command('sel list', lambda i, a: map(_print, i.sel_entries())),
+)
 
-GLOBAL_COMMANDS = (
-        Command('bmc', cmd_bmc, 
-            'Management Controller status and global enables'),
-        Command('raw', cmd_raw,
-            'Send a RAW IPMI request and print response'),
-        Command('sel', cmd_sel,
-            'Print System Event Log (SEL)'),
+COMMAND_HELP = (
+#        CommandHelp('raw', None, 'Send a RAW IPMI request and print response'),
+#        CommandHelp('fru', None,
+#                'Print built-in FRU and scan SDR for FRU locators'),
+#        CommandHelp('sensor', None, 'Print detailed sensor information'),
+#        CommandHelp('sdr', None,
+#                'Print Sensor Data Repository entries and readings'),
+#        CommandHelp('chassis', None, 'Get chassis status and set power state'),
+
+        CommandHelp('sel', None, 'Print System Event Log (SEL)'),
+        CommandHelp('sel list', None, 'List all SEL entries'),
+
+        CommandHelp('bmc', None,
+                'Management Controller status and global enables'),
+        CommandHelp('bmc reset', '<cold|warm>', 'BMC reset control'),
 )
 
 if __name__ == '__main__':
