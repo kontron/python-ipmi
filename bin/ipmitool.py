@@ -56,6 +56,39 @@ Additional Device Support:
         print 'Aux Firmware Rev Info:  [%02x %02x %02x %02x]' % (
                 id.aux[0], id.aux[1], id.aux[2], id.aux[3])
 
+def cmd_sdr_show(ipmi, args):
+    if len(args) != 1:
+        usage()
+        return
+
+    try:
+        s = ipmi.get_sdr(int(args[0], 0))
+        if s.type is pyipmi.sensor.SDR_TYPE_FULL_SENSOR_RECORD:
+            raw = ipmi.get_sensor_reading(s.number)
+            value = s.convert_sensor_reading(raw)
+            print "SDR record ID:    0x%04x" % s.id
+            print "Device Id string: %s" % s.device_id_string
+            print "reading:          %s" % value
+        else:
+            print "SDR record ID:    0x%04x" % s.id
+            print "Device Id string: %s" % s.device_id_string
+    except ValueError:
+        print ''
+
+def cmd_sdr_list(ipmi, args):
+    print "SDR-ID | Device String    |"
+    print "=======|==================|===================="
+
+    for s in ipmi.sdr_entries():
+        if s.type is pyipmi.sensor.SDR_TYPE_FULL_SENSOR_RECORD:
+            raw = ipmi.get_sensor_reading(s.number)
+            value = s.convert_sensor_reading(raw)
+
+            print "0x%04x | %-16s | %s" % (s.id, s.device_id_string, value)
+
+        else:
+            print "0x%04x | %-16s |" % (s.id, s.device_id_string)
+
 def usage(toplevel=False):
     commands = []
     maxlen = 0
@@ -202,6 +235,8 @@ COMMANDS = (
         Command('bmc reset cold', lambda i, a: i.cold_reset()),
         Command('bmc reset warm', lambda i, a: i.warm_reset()),
         Command('sel list', lambda i, a: map(_print, i.sel_entries())),
+        Command('sdr list', cmd_sdr_list),
+        Command('sdr show', cmd_sdr_show),
 )
 
 COMMAND_HELP = (
@@ -216,8 +251,13 @@ COMMAND_HELP = (
         CommandHelp('sel', None, 'Print System Event Log (SEL)'),
         CommandHelp('sel list', None, 'List all SEL entries'),
 
+        CommandHelp('sdr', None, 'Print SDRs '),
+        CommandHelp('sdr list', None, 'List all SDRs'),
+        CommandHelp('sdr show', '<sdr-id>', 'List all SDRs'),
+
         CommandHelp('bmc', None,
                 'Management Controller status and global enables'),
+        CommandHelp('bmc info', None, 'BMC Device ID inforamtion'),
         CommandHelp('bmc reset', '<cold|warm>', 'BMC reset control'),
 )
 
