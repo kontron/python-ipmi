@@ -21,15 +21,21 @@ class Helper:
     def read_fru_data(self, fn, fru_id=0, offset=None, count=None):
         off=0
         area_size = 0
-        req_size = 0
+        req_size = 32
         data = array.array('c')
+
+        # first check for maximum area size
+        info = fru.GetFruInventoryAreaInfo()
+        info.fru_id = fru_id
+        fn(info)
+        check_completion_code(info.rsp.completion_code)
+
         if offset is None:
-            m = fru.GetFruInventoryAreaInfo()
-            m.fru_id = fru_id
-            fn(m)
-            check_completion_code(m.rsp.completion_code)
-            area_size = m.rsp.area_size
-            req_size = 32
+            area_size = info.rsp.area_size
+            off = 0
+        else:
+            area_size = offset + count
+            off = offset
 
         while off < area_size:
             if (off + req_size) > area_size:
@@ -49,7 +55,6 @@ class Helper:
                 else:
                     check_completion_code(m.rsp.completion_code)
 
-            print 'o=0x%04x c=%d d=%s' %( off, m.rsp.count, m.rsp.data)
             data.extend(m.rsp.data)
             off += m.rsp.count
 
@@ -72,5 +77,10 @@ class FruInventory:
         s += 'data len: %d' % len(self.data)
         return s
 
-    def get_data(self, offset, count):
-        return self.data[offset:offset+count]
+    def get_data(self, offset=None, count=None):
+        if not offset:
+            return self.data[:]
+        elif not count:
+            return self.data[offset:]
+        else:
+            return self.data[offset:offset+count]
