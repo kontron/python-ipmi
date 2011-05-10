@@ -7,6 +7,7 @@
 import math
 import errors
 import array
+import time
 from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.utils import check_completion_code, pop_unsigned_int
 import pyipmi.msgs.sdr
@@ -48,10 +49,7 @@ class Helper:
         be determined.
         """
         if reservation_id is None:
-           m = pyipmi.msgs.sdr.ReserveDeviceSdrRepository()
-           fn(m)
-           check_completion_code(m.rsp.completion_code)
-           reservation_id =  m.rsp.reservation_id
+            reservation_id = self.get_reservation_id(fn)
 
         # get record header ... 5 bytes
         m = pyipmi.msgs.sdr.GetDeviceSdr()
@@ -59,9 +57,21 @@ class Helper:
         m.req.record_id = record_id
         m.req.offset = 0
         m.req.length = 5
-        fn(m)
+        retry = 5
+        while retry > 0:
+            fn(m)
+            if m.rsp.completion_code == 0:
+                break
+            elif m.rsp.completion_code == pyipmi.msgs.constants.CC_RES_CANCELED:
+                m.req.reservation_id = self.get_reservation_id(fn)
+                time.sleep(0.1)
+                retry -= 1
+                continue
+            else:
+                check_completion_code(m.rsp.completion_code)
 
         next_record_id = m.rsp.next_record_id
+
         # pop will change data, therefore copy it
         record_data = m.rsp.record_data[:]
         record_id = pop_unsigned_int(m.rsp.record_data, 2)
@@ -71,13 +81,31 @@ class Helper:
         record_length += 5
 
         m.req.offset = len(record_data)
+        self.max_req_len = 20
+        retry = 5
         # now get the other record data
         while True:
-            m.req.length = 16
-            if (m.req.offset+16) > record_length:
+            if retry == 0:
+                raise pyipmi.errors.RetryError
+
+            m.req.length = self.max_req_len
+            if (m.req.offset + m.req.length) > record_length:
                 m.req.length = record_length - m.req.offset
             fn(m)
-            check_completion_code(m.rsp.completion_code)
+
+            if (m.rsp.completion_code
+                        == pyipmi.msgs.constants.CC_CANT_RET_NUM_REQ_BYTES):
+                self.max_req_len -= 4
+                if self.max_req_len <= 0:
+                    retry = 0
+                continue
+            elif m.rsp.completion_code == pyipmi.msgs.constants.CC_RES_CANCELED:
+                m.req.reservation_id = self.get_reservation_id(fn)
+                time.sleep(0.1 * retry)
+                retry -= 1
+                continue
+            else:
+                check_completion_code(m.rsp.completion_code)
 
             record_data += m.rsp.record_data[:]
             m.req.offset = len(record_data)
