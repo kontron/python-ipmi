@@ -58,13 +58,19 @@ class Helper:
         m.req.offset = 0
         m.req.length = 5
         retry = 5
-        while retry > 0:
+        while True:
+            if retry == 0:
+                raise pyipmi.errors.RetryError()
             fn(m)
             if m.rsp.completion_code == 0:
                 break
             elif m.rsp.completion_code == pyipmi.msgs.constants.CC_RES_CANCELED:
                 m.req.reservation_id = self.get_reservation_id(fn)
                 time.sleep(0.1)
+                retry -= 1
+                continue
+            elif m.rsp.completion_code == 0xce:
+                time.sleep(0.1 * retry)
                 retry -= 1
                 continue
             else:
@@ -86,7 +92,7 @@ class Helper:
         # now get the other record data
         while True:
             if retry == 0:
-                raise pyipmi.errors.RetryError
+                raise pyipmi.errors.RetryError()
 
             m.req.length = self.max_req_len
             if (m.req.offset + m.req.length) > record_length:
@@ -101,6 +107,10 @@ class Helper:
                 continue
             elif m.rsp.completion_code == pyipmi.msgs.constants.CC_RES_CANCELED:
                 m.req.reservation_id = self.get_reservation_id(fn)
+                time.sleep(0.1 * retry)
+                retry -= 1
+                continue
+            elif m.rsp.completion_code == 0xce:
                 time.sleep(0.1 * retry)
                 retry -= 1
                 continue
