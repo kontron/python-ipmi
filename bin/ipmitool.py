@@ -63,31 +63,56 @@ def cmd_sdr_show(ipmi, args):
 
     try:
         s = ipmi.get_sdr(int(args[0], 0))
-        if s.type is pyipmi.sensor.SDR_TYPE_FULL_SENSOR_RECORD:
-            raw = ipmi.get_sensor_reading(s.number)
+        if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
+            (raw, states) = ipmi.get_sensor_reading(s.number)
             value = s.convert_sensor_reading(raw)
+            t_unr = s.convert_sensor_reading(s.threshold_unr)
+            t_ucr = s.convert_sensor_reading(s.threshold_ucr)
+            t_unc = s.convert_sensor_reading(s.threshold_unc)
+            t_lnc = s.convert_sensor_reading(s.threshold_lnc)
+            t_lcr = s.convert_sensor_reading(s.threshold_lcr)
+            t_lnr = s.convert_sensor_reading(s.threshold_lnr)
             print "SDR record ID:    0x%04x" % s.id
             print "Device Id string: %s" % s.device_id_string
-            print "reading:          %s" % value
+            print "Entity:           %s.%s" % (s.entity_id, s.entity_instance)
+            print "Reading value:    %s" % value
+            print "Reading state:    %s" % states
+            print "UNR:              %s" % t_unr
+            print "UCR:              %s" % t_ucr
+            print "UNC:              %s" % t_unc
+            print "LNC:              %s" % t_lnc
+            print "LCR:              %s" % t_lcr
+            print "LNR:              %s" % t_lnr
+        elif s.type is pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
+            (raw, states) = ipmi.get_sensor_reading(s.number)
+            print "SDR record ID:    0x%04x" % s.id
+            print "Device Id string: %s" % s.device_id_string
+            print "Entity:           %s.%s" % (s.entity_id, s.entity_instance)
+            print "Reading:          %s" % raw
+            print "Reading state:    %s" % states
         else:
+            raw = ipmi.get_sensor_reading(s.number)
             print "SDR record ID:    0x%04x" % s.id
             print "Device Id string: %s" % s.device_id_string
+            print "Entity:           %s.%s" % (s.entity_id, s.entity_instance)
     except ValueError:
         print ''
 
 def cmd_sdr_list(ipmi, args):
-    print "SDR-ID | Device String    |"
-    print "=======|==================|===================="
+    print "SDR-ID |     | Device String    |"
+    print "=======|=====|==================|===================="
 
     for s in ipmi.sdr_entries():
-        if s.type is pyipmi.sensor.SDR_TYPE_FULL_SENSOR_RECORD:
-            raw = ipmi.get_sensor_reading(s.number)
+        if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
+            (raw, states) = ipmi.get_sensor_reading(s.number)
             value = s.convert_sensor_reading(raw)
-
-            print "0x%04x | %-16s | %s" % (s.id, s.device_id_string, value)
-
+            print "0x%04x | %3d | %-16s | %9s | 0x%x" % (s.id, s.number,
+                    s.device_id_string, value, states)
+        elif s.type is pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
+            (raw, states) = ipmi.get_sensor_reading(s.number)
+            print "0x%04x | %3d | %-16s | 0x%02x      | 0x%x" % (s.id, s.number, s.device_id_string, raw, states)
         else:
-            print "0x%04x | %-16s |" % (s.id, s.device_id_string)
+            print "0x%04x | --- | %-16s |" % (s.id, s.device_id_string)
 
 def usage(toplevel=False):
     commands = []
