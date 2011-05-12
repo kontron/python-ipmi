@@ -231,7 +231,6 @@ class Aardvark:
 
         rsp_received = False
         retries = 0
-        start_time = time.time()
         while not rsp_received and retries < self.max_retries - 1:
             log().debug('IPMB Req to 0x%02x [%s]'
                     % (msg.target.ipmb_address,
@@ -239,6 +238,7 @@ class Aardvark:
             self._dev.i2c_write(msg.target.ipmb_address >> 1, data.tostring())
 
             # receive messages
+            start_time = time.time()
             timeout = self.timeout - (time.time() - start_time)
             while not rsp_received and timeout > 0:
                 try:
@@ -258,6 +258,7 @@ class Aardvark:
                         and rq_seq == self.next_sequence_number
                         and cmd_id == msg.CMDID):
                     rsp_received = True
+                timeout = self.timeout - (time.time() - start_time)
 
             retries += 1
 
