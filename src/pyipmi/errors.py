@@ -23,3 +23,14 @@ class NotSupportedError(Exception):
 
 class DescriptionError(Exception):
     pass
+
+
+class RetryError(Exception):
+    def __init__(self, msg=None):
+        self.msg = msg
+
+    def __str__(self):
+        if self.msg:
+            return "%s msg=%s" % (self.__class__.__name__, self.msg)
+        else:
+            return "%s" % (self.__class__.__name__)
