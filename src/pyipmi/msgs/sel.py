@@ -123,14 +123,14 @@ class ClearSel(Message):
     LUN = 0
     _REQ_DESC = (
             UnsignedInt('reservation_id', 2),
-            UnsignedInt('key', 3, default='CLR'),
+            ByteArray('key', 3, default='CLR'),
             UnsignedInt('cmd', 1)
     )
     _RSP_DESC = (
             CompletionCode(),
             Bitfield('status', 1,
-                Bitfield.Bit('erase_in_progress', 1),
-                Bitfield.ReservedBit(7),
+                Bitfield.Bit('erase_in_progress', 4),
+                Bitfield.ReservedBit(4),
             )
     )
 
