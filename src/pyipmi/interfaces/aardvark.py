@@ -221,21 +221,21 @@ class Aardvark:
 
         log().debug('IPMI Request [%s]', msg.req)
 
-        data = self._encode_ipmb_msg(msg.target.ipmb_address, msg.NETFN,
+        tx_data = self._encode_ipmb_msg(msg.target.ipmb_address, msg.NETFN,
                 msg.LUN, self.slave_address, 0, self.next_sequence_number,
                 msg.CMDID, array.array('B', msg.req.encode()))
 
         log().debug('IPMB Req to 0x%02x [%s]'
                 % (msg.target.ipmb_address,
-                    ' '.join(['%02x' % b for b in data])))
+                    ' '.join(['%02x' % b for b in tx_data])))
 
         rsp_received = False
         retries = 0
         while not rsp_received and retries < self.max_retries - 1:
             log().debug('IPMB Req to 0x%02x [%s]'
                     % (msg.target.ipmb_address,
-                        ' '.join(['%02x' % b for b in data])))
-            self._dev.i2c_write(msg.target.ipmb_address >> 1, data.tostring())
+                        ' '.join(['%02x' % b for b in tx_data])))
+            self._dev.i2c_write(msg.target.ipmb_address >> 1, tx_data.tostring())
 
             # receive messages
             start_time = time.time()
@@ -246,10 +246,10 @@ class Aardvark:
                 except TimeoutError:
                     break
 
-                (addr, data) = self._dev.i2c_slave_read()
+                (addr, rx_data) = self._dev.i2c_slave_read()
 
                 (rs_sa, netfn, rq_lun, rq_sa, rs_lun, rq_seq, cmd_id,
-                        cmd_data) = self._decode_ipmb_msg(addr, data)
+                        cmd_data) = self._decode_ipmb_msg(addr, rx_data)
 
                 if (rs_sa == self.slave_address
                         and netfn == msg.NETFN + 1
@@ -266,7 +266,7 @@ class Aardvark:
             raise TimeoutError()
 
         log().debug('IPMB Rsp to 0x%02x [%s]'
-                % (rs_sa, ' '.join(['%02x' % b for b in data])))
+                % (rs_sa, ' '.join(['%02x' % b for b in rx_data])))
 
         self._inc_sequence_number()
 
