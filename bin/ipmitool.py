@@ -176,14 +176,14 @@ Options:
   -H <host>        Set RMCP host
   -U <user>        Set RMCP user
   -P <password>    Set RMCP password
-  -o <options>     Set interface specific functions (name=value, separated
+  -o <options>     Set interface specific options (name=value, separated
                    by commas, see below for available options).
-'''[1:-1]
+'''[1:]
         print '''
 Aardvark options:
   pullups=<on|off>  Enable/disable pullups
   power=<on|off>    Enable/disable target power
-'''[1:-1]
+'''[1:]
         print 'Commands:'
 
     for cmd in commands:
