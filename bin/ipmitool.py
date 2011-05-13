@@ -287,6 +287,8 @@ def main():
         print 'Command returned with completion code 0x%02x' % e.cc
     except pyipmi.errors.TimeoutError, e:
         print 'Command timed out'
+    except KeyboardInterrupt, e:
+        pass
 
     if rmcp_host is not None:
         ipmi.session.close()
