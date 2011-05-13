@@ -166,6 +166,24 @@ def usage(toplevel=False):
     if len(argv) == 0:
         version()
         print 'usage: ipmitool [options...] <command>'
+        print '''
+Options:
+  -t <addr>        Set target IPMB address
+  -h               Show this help
+  -v               Be verbose
+  -V               Print version
+  -I <interface>   Set interface (available: aardvark ipmitool)
+  -H <host>        Set RMCP host
+  -U <user>        Set RMCP user
+  -P <password>    Set RMCP password
+  -o <options>     Set interface specific functions (name=value, separated
+                   by commas, see below for available options).
+'''[1:-1]
+        print '''
+Aardvark options:
+  pullups=<on|off>  Enable/disable pullups
+  power=<on|off>    Enable/disable target power
+'''[1:-1]
         print 'Commands:'
 
     for cmd in commands:
@@ -179,17 +197,18 @@ def version():
     
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:')
+        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:o:')
     except getopt.GetoptError, err:
         print str(err)
         usage()
         sys.exit(2)
     verbose = False
-    interface = 'aardvark'
+    interface_name = 'aardvark'
     target_address = 0x20
     rmcp_host = None
     rmcp_user = ''
     rmcp_password = ''
+    interface_options = list()
     for o, a in opts:
         if o == '-v':
             verbose = True
@@ -208,7 +227,9 @@ def main():
         elif o == '-P':
             rmcp_password = a
         elif o == '-I':
-            interface = a
+            interface_name = a
+        elif o == '-o':
+            interface_options = a.split(',')
         else:
             assert False, 'unhandled option'
 
@@ -236,7 +257,22 @@ def main():
         usage()
         sys.exit(1)
 
-    interface = pyipmi.interfaces.create_interface(interface)
+    interface = pyipmi.interfaces.create_interface(interface_name)
+    for option in interface_options:
+        (name, value) = option.split('=', 1)
+        if (interface_name, name) == ('aardvark', 'pullups'):
+            if value == 'on':
+                interface.enable_pullups(True)
+            else:
+                interface.enable_pullups(False)
+        elif (interface_name, name) == ('aardvark', 'power'):
+            if value == 'on':
+                interface.enable_target_power(True)
+            else:
+                interface.enable_target_power(False)
+        else:
+            print 'Warning: unknown option %s' % name
+
     ipmi = pyipmi.create_connection(interface)
     ipmi.target = pyipmi.Target(target_address)
 
@@ -269,14 +305,13 @@ COMMAND_HELP = (
 #        CommandHelp('fru', None,
 #                'Print built-in FRU and scan SDR for FRU locators'),
 #        CommandHelp('sensor', None, 'Print detailed sensor information'),
-#        CommandHelp('sdr', None,
-#                'Print Sensor Data Repository entries and readings'),
 #        CommandHelp('chassis', None, 'Get chassis status and set power state'),
 
         CommandHelp('sel', None, 'Print System Event Log (SEL)'),
         CommandHelp('sel list', None, 'List all SEL entries'),
 
-        CommandHelp('sdr', None, 'Print SDRs '),
+        CommandHelp('sdr', None,
+                'Print Sensor Data Repository entries and readings'),
         CommandHelp('sdr list', None, 'List all SDRs'),
         CommandHelp('sdr show', '<sdr-id>', 'List all SDRs'),
 
