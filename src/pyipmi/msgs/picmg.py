@@ -9,6 +9,9 @@ from pyipmi.msgs import Conditional
 
 PICMG_IDENTIFIER = 0x00
 
+FRU_ACTIVATION_FRU_ACTIVATE = 0x1
+FRU_ACTIVATION_FRU_DEACTIVATE = 0x0
+
 LINK_INTERFACE_BASE = 0x0
 LINK_INTERFACE_FABRIC = 0x1
 LINK_INTERFACE_UPDATE_CHANNEL = 0x2
@@ -119,6 +122,21 @@ class SetFruActivationPolicy(Message):
                 Bitfield.Bit('deactivation_locked', 1, default=0),
                 Bitfield.ReservedBit(6),
             ),
+    )
+    _RSP_DESC = (
+            CompletionCode(),
+            PicmgIdentifier(),
+    )
+
+
+class SetFruActivation(Message):
+    CMDID = constants.CMDID_SET_FRU_ACTIVATION
+    NETFN = constants.NETFN_GROUP_EXTENSION
+    LUN = 0
+    _REQ_DESC = (
+            PicmgIdentifier(),
+            UnsignedInt('fru_id', 1),
+            UnsignedInt('control', 1),
     )
     _RSP_DESC = (
             CompletionCode(),

@@ -41,6 +41,20 @@ class Helper:
         check_completion_code(m.rsp.completion_code)
         return LedState(m.rsp)
 
+    def set_fru_activation(self, fn, fru_id):
+        m = picmg.SetFruActivation()
+        m.req.fru_id = fru_id
+        m.req.control = picmg.FRU_ACTIVATION_FRU_ACTIVATE
+        fn(m)
+        check_completion_code(m.rsp.completion_code)
+
+    def set_fru_deactivation(self, fn, fru_id):
+        m = picmg.SetFruActivation()
+        m.req.fru_id = fru_id
+        m.req.control = picmg.FRU_ACTIVATION_FRU_DEACTIVATE
+        fn(m)
+        check_completion_code(m.rsp.completion_code)
+
     def set_fru_activation_lock(self, fn, fru_id):
         m = picmg.SetFruActivationPolicy()
         m.req.fru_id = fru_id
