@@ -76,7 +76,11 @@ class Ipmitool:
                 raise RuntimeError('ipmitool failed with rc=%d' % rc)
             # completion code
             data.append(chr(0))
-            output = output.replace('\n','').replace('\r','').strip()
+            output_lines = output.split('\n')
+            # strip 'Close Session command failed' lines
+            output_lines = [ l for l in output_lines
+                    if not l.startswith('Close Session command failed') ]
+            output = ''.join(output_lines).replace('\r','').strip()
             if len(output):
                 for x in output.split(' '):
                     data.append(chr(int(x, 16)))
