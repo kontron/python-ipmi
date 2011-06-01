@@ -77,7 +77,7 @@ def cmd_sdr_show(ipmi, args):
             print "Device Id string: %s" % s.device_id_string
             print "Entity:           %s.%s" % (s.entity_id, s.entity_instance)
             print "Reading value:    %s" % value
-            print "Reading state:    %s" % states
+            print "Reading state:    0x%x" % states
             print "UNR:              %s" % t_unr
             print "UCR:              %s" % t_ucr
             print "UNC:              %s" % t_unc
@@ -90,7 +90,7 @@ def cmd_sdr_show(ipmi, args):
             print "Device Id string: %s" % s.device_id_string
             print "Entity:           %s.%s" % (s.entity_id, s.entity_instance)
             print "Reading:          %s" % raw
-            print "Reading state:    %s" % states
+            print "Reading state:    0x%x" % states
         else:
             raw = ipmi.get_sensor_reading(s.number)
             print "SDR record ID:    0x%04x" % s.id
