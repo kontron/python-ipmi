@@ -56,3 +56,26 @@ class ReadFruData(Message):
         if len(data) != self.rsp.count:
             raise DecodingError()
         self.rsp.data = data[:self.rsp.count]
+
+class WriteFruData(Message):
+    CMDID = constants.CMDID_WRITE_FRU_DATA
+    NETFN = constants.NETFN_STORAGE
+    LUN = 0
+
+    def _encode_req(self):
+        data = array('c')
+        push_unsigned_int(data, self.req.fru_id, 1)
+        push_unsigned_int(data, self.req.offset, 2)
+        data.extend(self.req.data)
+        return data.tostring()
+
+    def _decode_req(self, data):
+        data = array('c', data)
+        self.req.fru_id = pop_unsigned_int(data, 1)
+        self.req.offset = pop_unsigned_int(data, 2)
+        self.req.data = data[:]
+
+    _RSP_DESC = (
+        CompletionCode(),
+        UnsignedInt('count_written', 1)
+    )

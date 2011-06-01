@@ -18,8 +18,16 @@ class Helper:
         fn(m)
         check_completion_code(m.rsp.completion_code)
 
+    def write_fru_data(self, fn, data, fru_id=0, offset=0):
+        m = fru.WriteFruData()
+        m.req.fru_id = fru_id
+        m.req.offset = offset
+        m.req.data = data[:]
+        fn(m)
+        check_completion_code(m.rsp.completion_code)
+
     def read_fru_data(self, fn, fru_id=0, offset=None, count=None):
-        off=0
+        off = 0
         area_size = 0
         req_size = 32
         data = array.array('c')
@@ -74,7 +82,8 @@ class FruInventory:
 
     def __str__(self):
         s = ''
-        s += 'data len: %d' % len(self.data)
+        s += 'data len: %d\n' % len(self.data)
+        s += ' '.join( ["%02X" % ord(x) for x in self.data])
         return s
 
     def get_data(self, offset=None, count=None):
