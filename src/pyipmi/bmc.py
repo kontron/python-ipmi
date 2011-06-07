@@ -43,6 +43,12 @@ class Helper:
         fn(m)
         check_completion_code(m.rsp.completion_code)
 
+    def get_watchdog_timer(self, fn):
+        m = bmc.GetWatchdogTimer()
+        fn(m)
+        check_completion_code(m.rsp.completion_code)
+        return Watchdog(m.rsp)
+
     def reset_watchdog_timer(self, fn):
         m = bmc.ResetWatchdogTimer()
         fn(m)
@@ -79,6 +85,17 @@ class Watchdog:
             setattr(self, p[0], None)
         if res:
             self.from_response(res)
+
+    def from_response(self, rsp):
+        self.timer_use = rsp.timer_use.timer_use
+        self.dont_stop = rsp.timer_use.dont_stop
+        self.dont_log = rsp.timer_use.dont_log
+        self.pre_timeout_interrupt = rsp.timer_actions.pre_timeout_interrupt
+        self.timeout_action = rsp.timer_actions.timeout_action
+        self.pre_timeout_interval = rsp.pre_timeout_interval
+        self.timer_use_expiration_flags = rsp.timer_use_expiration_flags
+        self.initial_countdown = rsp.initial_countdown
+        self.present_countdown = rsp.present_countdown
 
 
 class DeviceId:
