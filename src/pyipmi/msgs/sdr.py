@@ -34,6 +34,27 @@ class GetSDRRepositoryInfo(Message):
             ),
     )
 
+
+class GetDeviceSdrInfo(Message):
+    CMDID = constants.CMDID_GET_DEVICE_SDR_INFO
+    NETFN = constants.NETFN_SENSOR_EVENT
+    LUN = 0
+    _REQ_DESC = ()
+    _RSP_DESC = (
+            CompletionCode(),
+            UnsignedInt('number_of_sensors', 1),
+            Bitfield('flags', 1,
+                Bitfield.Bit('lun0_has_sensors', 1),
+                Bitfield.Bit('lun1_has_sensors', 1),
+                Bitfield.Bit('lun2_has_sensors', 1),
+                Bitfield.Bit('lun3_has_sensors', 1),
+                Bitfield.ReservedBit(3, 0),
+                Bitfield.Bit('dynamic_population', 1)
+            ),
+            Timestamp('sensor_population_change'),
+    )
+
+
 class GetDeviceSdr(Message):
     CMDID = constants.CMDID_GET_DEVICE_SDR
     NETFN = constants.NETFN_SENSOR_EVENT
