@@ -109,8 +109,10 @@ class FruDataField:
             self.from_data(data, offset, force_lang_english)
 
     def __str__(self):
-        return 'FruDataField(type=%d,len=%d,val=%s)' % (
-                self.type, self.length, self.value)
+        if self.type is FruDataField.TYPE_BINARY:
+            return ' '.join('%02x' % ord(b) for b in self.value)
+        else:
+            return self.value
 
     def from_data(self, data, offset=0, force_lang_english=False):
         self.type = ord(data[offset]) >> 6 & 0x3
@@ -247,6 +249,46 @@ class InventoryProductInfoArea(CommonInfoArea):
             self.custom_mfg_info.append(field)
             offset += field.length+1
 
+class FruDataMultiRecord:
+    TYPE_POWER_SUPPLY_INFORMATION = 0
+    TYPE_DC_OUTPUT = 1
+    TYPE_DC_LOAD = 2
+    TYPE_MANAGEMENT_ACCESS_RECORD = 3
+    TYPE_BASE_COMPATIBILITY_RECORD = 4
+    TYPE_EXTENDED_COMPATIBILITY_RECORD = 5
+    TYPE_OEM = range(0x0c, 0x100)
+
+    def __init__(self, data, offset=0):
+        if data:
+            self.from_data(data, offset)
+
+    def __str__(self):
+        return '%02x: %s' % (self.type,
+                ' '.join('%02x' % ord(b) for b in self.raw))
+
+    def from_data(self, data, offset=0):
+        self.type = ord(data[offset])
+        self.format_version = ord(data[offset+1]) & 0x0f
+        self.length = ord(data[offset+2])
+        if sum([ord(c) for c in data[offset:offset+5]]) % 256 != 0:
+            raise DecodingError('FruDataMultiRecord header checksum failed')
+        self.raw = data[offset+5:offset+5+self.length]
+        if (sum([ord(c) for c in self.raw]) + ord(data[offset+3])) % 256 != 0:
+            raise DecodingError('FruDataMultiRecord record checksum failed')
+
+class InventoryMultiRecordArea:
+    def __init__(self, data):
+        if data:
+            self.from_data(data)
+
+    def from_data(self, data):
+        self.records = list()
+        offset = 0
+        while not ord(data[offset+1]) & 0x80:
+            record = FruDataMultiRecord(data, offset)
+            self.records.append(record)
+            offset += record.length+5
+
 class FruInventory:
     def __init__(self, data=None):
         self.chassis_info_area = None
@@ -271,3 +313,7 @@ class FruInventory:
         if self.common_header.product_info_area_offset:
             self.product_info_area = InventoryProductInfoArea(
                     data[self.common_header.product_info_area_offset:])
+
+        if self.common_header.multirecord_area_offset:
+            self.multirecord_area = InventoryMultiRecordArea(
+                    data[self.common_header.multirecord_area_offset:])
