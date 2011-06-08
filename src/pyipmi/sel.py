@@ -79,7 +79,8 @@ class Helper:
             record_data = []
             while True:
                 m.req.length = self.max_req_len
-                if (m.req.offset + m.req.length) > 16:
+                if (self.max_req_len != 0xff
+                        and (m.req.offset + m.req.length) > 16):
                     m.req.length = 16 - m.req.offset
 
                 fn(m)
@@ -124,6 +125,7 @@ class SelEntry:
         str.append('  Raw: %s' % s)
         str.append('  Type: %d' % self.type)
         str.append('  Timestamp: %d' % self.timestamp)
+        str.append('  Generator: %d' % self.generator_id)
         str.append('  EvM rev: %d' % self.evm_rev)
         str.append('  Sensor Type: 0x%02x' % self.sensor_type)
         str.append('  Sensor Number: %d' % self.sensor_number)
