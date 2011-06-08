@@ -4,6 +4,7 @@ from collections import namedtuple
 import sys
 import getopt
 import logging
+import traceback
 
 import pyipmi
 import pyipmi.interfaces
@@ -113,6 +114,78 @@ def cmd_sdr_list(ipmi, args):
             print "0x%04x | %3d | %-16s | 0x%02x      | 0x%x" % (s.id, s.number, s.device_id_string, raw, states)
         else:
             print "0x%04x | --- | %-16s |" % (s.id, s.device_id_string)
+
+def cmd_fru_print(ipmi, args):
+    fru_id = 0
+    print_all = False
+    if len(args) > 0:
+        fru_id = int(args[0])
+    if len(args) > 1 and args[1] == 'all':
+        print_all = True
+
+    inv = ipmi.get_fru_inventory(fru_id)
+
+    # Chassis Info Area
+    area = inv.chassis_info_area
+    if area:
+        print '''
+Chassis Info Area:
+  Type:               %(type)d
+  Part Number:        %(part_number)s
+  Serial Number:      %(serial_number)s
+'''[1:-1] % area.__dict__
+
+        if len(area.custom_chassis_info) != 0:
+            print '  Custom Chassis Info Records:'
+            for field in area.custom_chassis_info:
+                print '    %s' % field
+
+    # Board Info Area
+    area = inv.board_info_area
+    if area:
+        print '''
+Board Info Area:
+  Mfg. Date / Time:   %(mfg_date)s
+  Manufacturer:       %(manufacturer)s
+  Product Name:       %(product_name)s
+  Serial Number:      %(serial_number)s
+  Part Number:        %(part_number)s
+  FRU File ID:        %(fru_file_id)s
+'''[1:-1] % area.__dict__
+
+        if len(area.custom_mfg_info) != 0:
+            print '  Custom Board Info Records:'
+            for field in area.custom_mfg_info:
+                print '    %s' % field
+
+    # Product Info Area
+    area = inv.product_info_area
+    if area:
+        print '''
+Product Info Area:
+  Manufacturer:       %(manufacturer)s
+  Name:               %(name)s
+  Part/Model Number:  %(part_number)s
+  Version:            %(version)s
+  Serial Number:      %(serial_number)s
+  Asset:              %(asset_tag)s
+  FRU File ID:        %(fru_file_id)s
+'''[1:-1] % area.__dict__
+
+        if len(area.custom_mfg_info) != 0:
+            print '  Custom Board Info Records:'
+            for field in area.custom_mfg_info:
+                print '    %s' % field
+
+    # Multirecords
+    area = inv.multirecord_area
+    if area:
+        print 'Multirecord Area:'
+        if print_all:
+            for record in area.records:
+                print '  %s' % record
+        else:
+            print '  Skipped. Use "print <fruid> all"'
 
 def usage(toplevel=False):
     commands = []
@@ -288,7 +361,8 @@ def main():
     except pyipmi.errors.TimeoutError, e:
         print 'Command timed out'
     except KeyboardInterrupt, e:
-        pass
+        if verbose:
+            traceback.print_exc()
 
     if rmcp_host is not None:
         ipmi.session.close()
@@ -300,12 +374,13 @@ COMMANDS = (
         Command('sel list', lambda i, a: map(_print, i.sel_entries())),
         Command('sdr list', cmd_sdr_list),
         Command('sdr show', cmd_sdr_show),
+        Command('fru print', cmd_fru_print),
 )
 
 COMMAND_HELP = (
 #        CommandHelp('raw', None, 'Send a RAW IPMI request and print response'),
-#        CommandHelp('fru', None,
-#                'Print built-in FRU and scan SDR for FRU locators'),
+        CommandHelp('fru', None,
+                'Print built-in FRU and scan SDR for FRU locators'),
 #        CommandHelp('sensor', None, 'Print detailed sensor information'),
 #        CommandHelp('chassis', None, 'Get chassis status and set power state'),
 
