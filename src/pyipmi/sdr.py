@@ -315,15 +315,54 @@ class SdrFullSensorRecord(Sdr):
         if initialization & 0x01:
             self.initialization.append('default_scanning')
 
-        # byte 12
+        # byte 12 - sensor capabilities
         capabilities = pop_unsigned_int(tmp_data, 1)
         self.capabilities = []
+        # ignore sensor
         if capabilities & 0x80:
-            self.capabilities.append('ignore')
+            self.capabilities.append('ignore_sensor')
+        # sensor auto re-arm support
         if capabilities & 0x40:
             self.capabilities.append('auto_rearm')
+        # sensor hysteresis support
+        HYSTERESIS_MASK = 0x30
+        HYSTERESIS_IS_NOT_SUPPORTED = 0x00
+        HYSTERESIS_IS_READABLE = 0x10
+        HYSTERESIS_IS_READ_AND_SETTABLE = 0x20
+        HYSTERESIS_IS_FIXED = 0x30
+        if capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_NOT_SUPPORTED:
+            self.capabilities.append('hysteresis_not_supported')
+        elif capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_READABLE:
+            self.capabilities.append('hysteresis_readable')
+        elif capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_READ_AND_SETTABLE:
+            self.capabilities.append('hysteresis_read_and_setable')
+        elif capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_FIXED:
+            self.capabilities.append('hysteresis_fixed')
+        # sensor threshold support
+        THRESHOLD_MASK = 0x30
+        THRESHOLD_IS_NOT_SUPPORTED = 0x00
+        THRESHOLD_IS_READABLE = 0x10
+        THRESHOLD_IS_READ_AND_SETTABLE = 0x20
+        THRESHOLD_IS_FIXED = 0x30
+        if capabilities & THRESHOLD_MASK == THRESHOLD_IS_NOT_SUPPORTED:
+            self.capabilities.append('threshold_not_supported')
+        elif capabilities & THRESHOLD_MASK == THRESHOLD_IS_READABLE:
+            self.capabilities.append('threshold_readable')
+        elif capabilities & THRESHOLD_MASK == THRESHOLD_IS_READ_AND_SETTABLE:
+            self.capabilities.append('threshold_read_and_setable')
+        elif capabilities & THRESHOLD_MASK == THRESHOLD_IS_FIXED:
+            self.capabilities.append('threshold_fixed')
+        # sensor event message control support
+        if (capabilities & 0x03) is 0:
+            pass
+        if (capabilities & 0x03) is 1:
+            pass
+        if (capabilities & 0x03) is 2:
+            pass
+        if (capabilities & 0x03) is 3:
+            pass
 
-        self.sensor_type = pop_unsigned_int(tmp_data, 1)
+        self.sensor_type_code = pop_unsigned_int(tmp_data, 1)
         self.event_reading_type_code = pop_unsigned_int(tmp_data, 1)
         self.assertion_mask = pop_unsigned_int(tmp_data, 2)
         self.deassertion_mask = pop_unsigned_int(tmp_data, 2)
