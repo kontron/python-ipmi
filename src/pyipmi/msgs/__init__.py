@@ -96,7 +96,7 @@ class Conditional:
 
     def decode(self, obj, data):
         if self._condition_fn(obj):
-            self._field.encode(obj, data)
+            self._field.decode(obj, data)
 
 
 class Bitfield(BaseField):
