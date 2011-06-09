@@ -152,5 +152,43 @@ class TestGetSelEntry(unittest.TestCase):
         self.assertEqual(data, '\x00\x02\x01\x01\x02\x03\x04')
 
 
+class TestGetFruLedState(unittest.TestCase):
+    def test_decode_local_control_state(self):
+        m = pyipmi.msgs.picmg.GetFruLedState()
+        m.rsp.decode('\x00\x00\x01\xff\x00\x02')
+        self.assertEqual(m.rsp.completion_code, 0x00)
+        self.assertEqual(m.rsp.led_states.local_avail, 1)
+        self.assertEqual(m.rsp.local_function, 0xff)
+        self.assertEqual(m.rsp.local_on_duration, 0)
+        self.assertEqual(m.rsp.local_color, 2)
+
+    def test_decode_override_mode(self):
+        m = pyipmi.msgs.picmg.GetFruLedState()
+        m.rsp.decode('\x00\x00\x03\xff\x00\x03\xff\x00\x03')
+        self.assertEqual(m.rsp.completion_code, 0x00)
+        self.assertEqual(m.rsp.led_states.local_avail, 1)
+        self.assertEqual(m.rsp.local_function, 0xff)
+        self.assertEqual(m.rsp.local_on_duration, 0)
+        self.assertEqual(m.rsp.local_color, 3)
+        self.assertEqual(m.rsp.led_states.override_en, 1)
+        self.assertEqual(m.rsp.override_function, 0xff)
+        self.assertEqual(m.rsp.override_on_duration, 0)
+        self.assertEqual(m.rsp.override_color, 3)
+
+    def test_decode_lamp_test_mode(self):
+        m = pyipmi.msgs.picmg.GetFruLedState()
+        m.rsp.decode('\x00\x00\x07\xff\x00\x02\xff\x00\x02\x7f')
+        self.assertEqual(m.rsp.completion_code, 0x00)
+        self.assertEqual(m.rsp.led_states.local_avail, 1)
+        self.assertEqual(m.rsp.local_function, 0xff)
+        self.assertEqual(m.rsp.local_on_duration, 0)
+        self.assertEqual(m.rsp.local_color, 2)
+        self.assertEqual(m.rsp.led_states.override_en, 1)
+        self.assertEqual(m.rsp.override_function, 0xff)
+        self.assertEqual(m.rsp.override_on_duration, 0)
+        self.assertEqual(m.rsp.override_color, 2)
+        self.assertEqual(m.rsp.led_states.lamp_test_en, 1)
+        self.assertEqual(m.rsp.lamp_test_duration, 0x7f)
+
 if __name__ == '__main__':
     unittest.main()
