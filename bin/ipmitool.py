@@ -5,6 +5,7 @@ import sys
 import getopt
 import logging
 import traceback
+import array
 
 import pyipmi
 import pyipmi.interfaces
@@ -186,6 +187,24 @@ Product Info Area:
                 print '  %s' % record
         else:
             print '  Skipped. Use "print <fruid> all"'
+
+def cmd_raw(ipmi, args):
+    lun = 0
+    if len(args) > 1 and args[0] == 'lun':
+        lun = int(args[1], 0)
+        args = args[2:]
+
+    if len(args) < 2:
+        usage()
+        return
+
+    netfn = int(args[0], 0)
+    cmd = int(args[1], 0)
+    req = array.array('c', [chr(netfn << 2 | lun), chr(cmd)])
+    req.extend([chr(int(d, 0)) for d in args[2:]])
+    req = req.tostring()
+    rsp = ipmi.raw_command(req)
+    print ' '.join('%02x' % ord(d) for d in rsp)
 
 def usage(toplevel=False):
     commands = []
@@ -375,10 +394,11 @@ COMMANDS = (
         Command('sdr list', cmd_sdr_list),
         Command('sdr show', cmd_sdr_show),
         Command('fru print', cmd_fru_print),
+        Command('raw', cmd_raw),
 )
 
 COMMAND_HELP = (
-#        CommandHelp('raw', None, 'Send a RAW IPMI request and print response'),
+        CommandHelp('raw', None, 'Send a RAW IPMI request and print response'),
         CommandHelp('fru', None,
                 'Print built-in FRU and scan SDR for FRU locators'),
 #        CommandHelp('sensor', None, 'Print detailed sensor information'),

@@ -50,19 +50,15 @@ class Ipmitool:
         if child.returncode:
             raise TimeoutError()
 
-    def send_and_receive(self, msg):
-        """Sends an IPMI request message and waits for its response.
+    def send_and_receive_raw(self, target, raw_data):
+        cmd = '-l %d raw 0x%02x ' % (ord(raw_data[0]) & 0x3,
+                (ord(raw_data[0]) >> 2) & 0x3f)
+        cmd += ' '.join(['0x%02x' % ord(d) for d in raw_data[1:]])
 
-        `msg` is a IPMI Message containing both the request and response.
-        """
+        # run ipmitool
+        output, rc = self._run_ipmitool(target, cmd)
 
-        log().debug('IPMI Request [%s]', msg.req)
-
-        cmd = ('-l %d raw 0x%02x 0x%02x' % (msg.LUN, msg.NETFN, msg.CMDID))
-        for byte in msg.req.encode():
-            cmd += ' 0x%02x' % ord(byte)
-        
-        output, rc = self._run_ipmitool(msg.target, cmd)
+        # check for errors
         match_err = self.re_err.match(output)
         match_timeout = self.re_timeout.match(output)
         data = array('c')
@@ -85,7 +81,19 @@ class Ipmitool:
                 for x in output.split(' '):
                     data.append(chr(int(x, 16)))
         
-        msg.rsp.decode(data.tostring())
+        return data
+
+    def send_and_receive(self, msg):
+
+        log().debug('IPMI Request [%s]', msg.req)
+
+        req = chr(msg.NETFN << 2 | msg.LUN)
+        req += (chr(msg.CMDID))
+        req += msg.req.encode()
+
+        rsp = self.send_and_receive_raw(msg.target, req)
+
+        msg.rsp.decode(rsp.tostring())
         log().debug('IPMI Response [%s])', msg.rsp)
  
     def _run_ipmitool(self, target, ipmitool_cmd):

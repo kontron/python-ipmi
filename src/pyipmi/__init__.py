@@ -115,6 +115,9 @@ class Ipmi:
                 return self._cmd_wrapper(getattr(o, name))
         raise AttributeError()
 
+    def raw_command(self, raw_cmd):
+        return self.interface.send_and_receive_raw(self.target, raw_cmd)
+
     def _cmd_wrapper(self, callable):
         return functools.partial(callable, self._send_and_receive)
 
