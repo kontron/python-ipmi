@@ -162,6 +162,41 @@ class Helper:
             states |= (m.rsp.states2 << 8)
         return (m.rsp.sensor_reading, states)
 
+    def set_sensor_thresholds(self, fn, sensor_number, unr=None, ucr=None,
+                unc=None, lnc=None, lcr=None, lnr=None):
+        """Set the sensor thresholds that are not 'None'
+
+        `sensor_number`
+        `unr` for upper non-recoverable
+        `ucr` for upper critical
+        `unc` for upper non-critical
+        `lnc` for lower non-critical
+        `lcr` for lower critical
+        `lnr` for lower non-recoverable
+        """
+        m = pyipmi.msgs.sdr.SetSensorThreshold()
+        m.req.sensor_number = sensor_number
+        if unr is not None:
+            m.req.set_mask.unr = 1
+            m.req.threshold.unr = unr
+        if ucr is not None:
+            m.req.set_mask.ucr = 1
+            m.req.threshold.ucr = ucr
+        if unc is not None:
+            m.req.set_mask.unc = 1
+            m.req.threshold.unc = unc
+        if lnc is not None:
+            m.req.set_mask.lnc = 1
+            m.req.threshold.lnc = lnc
+        if lcr is not None:
+            m.req.set_mask.lcr = 1
+            m.req.threshold.lcr = lcr
+        if lnr is not None:
+            m.req.set_mask.lnr = 1
+            m.req.threshold.lnr = lnr
+        fn(m)
+        check_completion_code(m.rsp.completion_code)
+
 
 def create_sdr(data, next_id=None):
     sdr_type = ord(data[3])
@@ -237,17 +272,39 @@ class SdrFullSensorRecord(Sdr):
         s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % ord(b) for b in self.data]))
         return s
 
-    def convert_sensor_reading(self, value):
+    def convert_sensor_raw_to_value(self, raw):
         fmt = self.analog_data_format
         if (fmt == self.DATA_FMT_1S_COMPLEMENT):
-            if value & 0x80:
-                value = -((value & 0x7f) ^ 0x7f)
+            if raw & 0x80:
+                raw = -((raw & 0x7f) ^ 0x7f)
         elif (fmt == self.DATA_FMT_2S_COMPLEMENT):
-            if value & 0x80:
-                value = -((value & 0x7f) ^ 0x7f) - 1
-        value = float(value)
+            if raw & 0x80:
+                raw = -((raw & 0x7f) ^ 0x7f) - 1
+        raw = float(raw)
 
-        return self.l((self.m * value + (self.b * 10**self.k1)) * 10**self.k2)
+        return self.l((self.m * raw + (self.b * 10**self.k1)) * 10**self.k2)
+
+    def convert_sensor_value_to_raw(self, value):
+        linearization = self.linearization & 0x7f
+
+        if linearization is not self.L_LINEAR:
+            raise NotImplementedError()
+
+        raw = ((float(value) * 10**(-1 * self.k2)) / self.m) - (self.b * 10**self.k1)
+
+        fmt = self.analog_data_format
+        if (fmt == self.DATA_FMT_1S_COMPLEMENT):
+            if value < 0:
+                raise NotImplementedError()
+        elif (fmt == self.DATA_FMT_2S_COMPLEMENT):
+            if value < 0:
+                raise NotImplementedError()
+
+        raw = int(round(raw))
+        if raw > 0xff:
+            raise ValueError()
+
+        return raw
 
     @property
     def l(self):
@@ -420,14 +477,16 @@ class SdrFullSensorRecord(Sdr):
         self.normal_minimum = pop_unsigned_int(tmp_data, 1)
         self.sensor_maximum_reading = pop_unsigned_int(tmp_data, 1)
         self.sensor_minimum_reading = pop_unsigned_int(tmp_data, 1)
-        self.threshold_unr = pop_unsigned_int(tmp_data, 1)
-        self.threshold_ucr = pop_unsigned_int(tmp_data, 1)
-        self.threshold_unc = pop_unsigned_int(tmp_data, 1)
-        self.threshold_lnr = pop_unsigned_int(tmp_data, 1)
-        self.threshold_lcr = pop_unsigned_int(tmp_data, 1)
-        self.threshold_lnc = pop_unsigned_int(tmp_data, 1)
-        self.positive_going_hysteresis = pop_unsigned_int(tmp_data, 1)
-        self.negative_going_hysteresis = pop_unsigned_int(tmp_data, 1)
+        self.threshold = {}
+        self.threshold['unr'] = pop_unsigned_int(tmp_data, 1)
+        self.threshold['ucr'] = pop_unsigned_int(tmp_data, 1)
+        self.threshold['unc'] = pop_unsigned_int(tmp_data, 1)
+        self.threshold['lnr'] = pop_unsigned_int(tmp_data, 1)
+        self.threshold['lcr'] = pop_unsigned_int(tmp_data, 1)
+        self.threshold['lnc'] = pop_unsigned_int(tmp_data, 1)
+        self.hysteresis = {}
+        self.hysteresis['positive_going'] = pop_unsigned_int(tmp_data, 1)
+        self.hysteresis['negative_going'] = pop_unsigned_int(tmp_data, 1)
         self.reserved = pop_unsigned_int(tmp_data, 2)
         self.oem = pop_unsigned_int(tmp_data, 1)
         self.device_id_string_type_length = pop_unsigned_int(tmp_data, 1)

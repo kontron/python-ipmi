@@ -190,5 +190,56 @@ class TestGetFruLedState(unittest.TestCase):
         self.assertEqual(m.rsp.led_states.lamp_test_en, 1)
         self.assertEqual(m.rsp.lamp_test_duration, 0x7f)
 
+
+class SetSensorThreshold(unittest.TestCase):
+    def test_encode_req_set_unr(self):
+        m = pyipmi.msgs.sdr.SetSensorThreshold()
+        m.req.sensor_number = 0x55
+        m.req.set_mask.unr = 1
+        m.req.threshold.unr = 0xaa
+        data = m.req.encode()
+        self.assertEqual(data, '\x55\x20\x00\x00\x00\x00\x00\xaa')
+
+    def test_encode_req_set_ucr(self):
+        m = pyipmi.msgs.sdr.SetSensorThreshold()
+        m.req.sensor_number = 0x55
+        m.req.set_mask.ucr = 1
+        m.req.threshold.ucr = 0xaa
+        data = m.req.encode()
+        self.assertEqual(data, '\x55\x10\x00\x00\x00\x00\xaa\x00')
+
+    def test_encode_req_set_unc(self):
+        m = pyipmi.msgs.sdr.SetSensorThreshold()
+        m.req.sensor_number = 0x55
+        m.req.set_mask.unc = 1
+        m.req.threshold.unc = 0xaa
+        data = m.req.encode()
+        self.assertEqual(data, '\x55\x08\x00\x00\x00\xaa\x00\x00')
+
+    def test_encode_req_set_lnr(self):
+        m = pyipmi.msgs.sdr.SetSensorThreshold()
+        m.req.sensor_number = 0x55
+        m.req.set_mask.lnr = 1
+        m.req.threshold.lnr = 0xaa
+        data = m.req.encode()
+        self.assertEqual(data, '\x55\x04\x00\x00\xaa\x00\x00\x00')
+
+    def test_encode_req_set_lcr(self):
+        m = pyipmi.msgs.sdr.SetSensorThreshold()
+        m.req.sensor_number = 0x55
+        m.req.set_mask.lcr = 1
+        m.req.threshold.lcr = 0xaa
+        data = m.req.encode()
+        self.assertEqual(data, '\x55\x02\x00\xaa\x00\x00\x00\x00')
+
+    def test_encode_req_set_lnc(self):
+        m = pyipmi.msgs.sdr.SetSensorThreshold()
+        m.req.sensor_number = 0x55
+        m.req.set_mask.lnc = 1
+        m.req.threshold.lnc = 0xaa
+        data = m.req.encode()
+        self.assertEqual(data, '\x55\x01\xaa\x00\x00\x00\x00\x00')
+
+
 if __name__ == '__main__':
     unittest.main()

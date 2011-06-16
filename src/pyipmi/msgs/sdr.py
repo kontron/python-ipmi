@@ -93,6 +93,65 @@ class ReserveDeviceSdrRepository(Message):
             UnsignedInt('reservation_id', 2)
     )
 
+
+class GetSensorThreshold(Message):
+    CMDID = constants.CMDID_GET_SENSOR_THRESHOLD
+    NETFN = constants.NETFN_SENSOR_EVENT
+    LUN = 0
+    _REQ_DESC = (
+        UnsignedInt('sensor_number', 1),
+    )
+    _RSP_DESC = (
+        CompletionCode(),
+        Bitfield('readable_mask', 1,
+                Bitfield.Bit('lnc', 1, default=0),
+                Bitfield.Bit('lcr', 1, default=0),
+                Bitfield.Bit('lnr', 1, default=0),
+                Bitfield.Bit('unc', 1, default=0),
+                Bitfield.Bit('ucr', 1, default=0),
+                Bitfield.Bit('unr', 1, default=0),
+                Bitfield.ReservedBit(2, 0),
+            ),
+        Bitfield('threshold', 6,
+                Bitfield.Bit('lnc', 8, default=0),
+                Bitfield.Bit('lcr', 8, default=0),
+                Bitfield.Bit('lnr', 8, default=0),
+                Bitfield.Bit('unc', 8, default=0),
+                Bitfield.Bit('ucr', 8, default=0),
+                Bitfield.Bit('unr', 8, default=0),
+            ),
+    )
+
+
+class SetSensorThreshold(Message):
+    CMDID = constants.CMDID_SET_SENSOR_THRESHOLD
+    NETFN = constants.NETFN_SENSOR_EVENT
+    LUN = 0
+    _REQ_DESC = (
+        UnsignedInt('sensor_number', 1),
+        Bitfield('set_mask', 1,
+                Bitfield.Bit('lnc', 1, default=0),
+                Bitfield.Bit('lcr', 1, default=0),
+                Bitfield.Bit('lnr', 1, default=0),
+                Bitfield.Bit('unc', 1, default=0),
+                Bitfield.Bit('ucr', 1, default=0),
+                Bitfield.Bit('unr', 1, default=0),
+                Bitfield.ReservedBit(2, 0),
+            ),
+        Bitfield('threshold', 6,
+                Bitfield.Bit('lnc', 8, default=0),
+                Bitfield.Bit('lcr', 8, default=0),
+                Bitfield.Bit('lnr', 8, default=0),
+                Bitfield.Bit('unc', 8, default=0),
+                Bitfield.Bit('ucr', 8, default=0),
+                Bitfield.Bit('unr', 8, default=0),
+            ),
+    )
+    _RSP_DESC = (
+        CompletionCode(),
+    )
+
+
 class GetSensorReading(Message):
     CMDID = constants.CMDID_GET_SENSOR_READING
     NETFN = constants.NETFN_SENSOR_EVENT

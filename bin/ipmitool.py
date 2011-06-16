@@ -67,13 +67,13 @@ def cmd_sdr_show(ipmi, args):
         s = ipmi.get_sdr(int(args[0], 0))
         if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
             (raw, states) = ipmi.get_sensor_reading(s.number)
-            value = s.convert_sensor_reading(raw)
-            t_unr = s.convert_sensor_reading(s.threshold_unr)
-            t_ucr = s.convert_sensor_reading(s.threshold_ucr)
-            t_unc = s.convert_sensor_reading(s.threshold_unc)
-            t_lnc = s.convert_sensor_reading(s.threshold_lnc)
-            t_lcr = s.convert_sensor_reading(s.threshold_lcr)
-            t_lnr = s.convert_sensor_reading(s.threshold_lnr)
+            value = s.convert_sensor_raw_to_value(raw)
+            t_unr = s.convert_sensor_raw_to_value(s.threshold['unr'])
+            t_ucr = s.convert_sensor_raw_to_value(s.threshold['ucr'])
+            t_unc = s.convert_sensor_raw_to_value(s.threshold['unc'])
+            t_lnc = s.convert_sensor_raw_to_value(s.threshold['lnc'])
+            t_lcr = s.convert_sensor_raw_to_value(s.threshold['lcr'])
+            t_lnr = s.convert_sensor_raw_to_value(s.threshold['lnr'])
             print "SDR record ID:    0x%04x" % s.id
             print "Device Id string: %s" % s.device_id_string
             print "Entity:           %s.%s" % (s.entity_id, s.entity_instance)
@@ -107,7 +107,7 @@ def cmd_sdr_list(ipmi, args):
     for s in ipmi.sdr_entries():
         if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
             (raw, states) = ipmi.get_sensor_reading(s.number)
-            value = s.convert_sensor_reading(raw)
+            value = s.convert_sensor_raw_to_value(raw)
             print "0x%04x | %3d | %-16s | %9s | 0x%x" % (s.id, s.number,
                     s.device_id_string, value, states)
         elif s.type is pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
