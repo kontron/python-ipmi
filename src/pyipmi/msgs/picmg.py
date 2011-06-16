@@ -64,6 +64,10 @@ LED_FUNCTION_OFF = 0x00
 LED_FUNCTION_BLINKING_RANGE = range(0x01, 0xfa)
 LED_FUNCTION_ON = 0xff
 
+LED_STATE_LOCAL_CONTROL = 0
+LED_STATE_OVERRIDE = 1
+LED_STATE_LAMP_TEST = 2
+
 class PicmgIdentifier(UnsignedInt):
     def __init__(self, name='picmg_identifier'):
         UnsignedInt.__init__(self, name, 1, PICMG_IDENTIFIER)
