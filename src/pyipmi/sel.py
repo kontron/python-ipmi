@@ -131,7 +131,7 @@ class SelEntry:
         str.append('  Sensor Number: %d' % self.sensor_number)
         str.append('  Event Direction: %d' % self.event_direction)
         str.append('  Event Type: 0x%02x' % self.event_type)
-        str.append('  Event Data: %s' % (self.event_data))
+        str.append('  Event Data: %s' % self.event_data.encode('hex'))
         return "\n".join(str)
 
     def type_to_string(self, type):
@@ -170,4 +170,4 @@ class SelEntry:
         else:
             self.event_direction = Event.DIR_ASSERTION
         self.event_type = event_desc & 0x3f
-        self.event_data = tmp_data[:]
+        self.event_data = "%s%s%s" % (tmp_data[0], tmp_data[1], tmp_data[2])
