@@ -185,8 +185,8 @@ class GetSensorReading(Message):
 
         tmp = pop_unsigned_int(data, 1)
         self.rsp.event_disabled = (tmp & 0x80) >> 7
-        self.rsp.scanning_disabled = (tmp & 0x80) >> 6
-        self.rsp.update_in_progress = (tmp & 0x80) >> 5
+        self.rsp.scanning_disabled = (tmp & 0x40) >> 6
+        self.rsp.update_in_progress = (tmp & 0x20) >> 5
 
         if len(data):
             self.rsp.states1 = pop_unsigned_int(data, 1)

@@ -69,7 +69,8 @@ class Helper:
                 time.sleep(0.1)
                 retry -= 1
                 continue
-            elif m.rsp.completion_code == 0xce:
+            elif (m.rsp.completion_code
+                        == pyipmi.msgs.constants.CC_RESP_COULD_NOT_BE_PRV):
                 time.sleep(0.1 * retry)
                 retry -= 1
                 continue
@@ -88,7 +89,7 @@ class Helper:
 
         m.req.offset = len(record_data)
         self.max_req_len = 20
-        retry = 5
+        retry = 20
         # now get the other record data
         while True:
             if retry == 0:
@@ -108,6 +109,9 @@ class Helper:
             elif m.rsp.completion_code == pyipmi.msgs.constants.CC_RES_CANCELED:
                 m.req.reservation_id = self.get_reservation_id(fn)
                 time.sleep(0.1 * retry)
+                # clean all previous data and retry with new reservation
+                record_data = array.array('c')
+                m.req.offset = 0
                 retry -= 1
                 continue
             elif m.rsp.completion_code == 0xce:
@@ -155,12 +159,17 @@ class Helper:
         m.req.sensor_number = sensor_number
         fn(m)
         check_completion_code(m.rsp.completion_code)
+
+        reading = m.rsp.sensor_reading
+        if m.rsp.update_in_progress:
+            reading = None
+
         states = None
         if m.rsp.states1 is not None:
             states = m.rsp.states1
         if m.rsp.states2 is not None:
             states |= (m.rsp.states2 << 8)
-        return (m.rsp.sensor_reading, states)
+        return (reading, states)
 
     def set_sensor_thresholds(self, fn, sensor_number, unr=None, ucr=None,
                 unc=None, lnc=None, lcr=None, lnr=None):
