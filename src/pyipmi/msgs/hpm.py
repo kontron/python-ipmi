@@ -32,26 +32,19 @@ class GetTargetUpgradeCapabilities(Message):
                 Bitfield.Bit('firmware_upgrade_undesirable', 1),
                 Bitfield.Bit('automatic_rollback_overriden', 1),
                 Bitfield.Bit('ipmc_degraded_during_upgrade', 1),
-                Bitfield.Bit('deferred_actiation', 1),
+                Bitfield.Bit('deferred_activation', 1),
                 Bitfield.Bit('services_affected_by_upgrade', 1),
                 Bitfield.Bit('manual_rollback', 1),
-                Bitfield.Bit('automtic_rollback', 1),
+                Bitfield.Bit('automatic_rollback', 1),
                 Bitfield.Bit('selftest', 1),
             ),
-            UnsignedInt('upgrade_timeout', 1),
-            UnsignedInt('selftest_timeout', 1),
-            UnsignedInt('rollback_timeout', 1),
-            UnsignedInt('inaccessiblity_timeout', 1),
-            Bitfield('component_present', 1,
-                Bitfield.Bit('0', 1),
-                Bitfield.Bit('1', 1),
-                Bitfield.Bit('2', 1),
-                Bitfield.Bit('3', 1),
-                Bitfield.Bit('4', 1),
-                Bitfield.Bit('5', 1),
-                Bitfield.Bit('6', 1),
-                Bitfield.Bit('7', 1),
+            Bitfield('timeout', 4,
+                Bitfield.Bit('upgrade', 8),
+                Bitfield.Bit('selftest', 8),
+                Bitfield.Bit('rollback', 8),
+                Bitfield.Bit('inaccessibility', 8),
             ),
+            UnsignedInt('component_present', 1),
     )
 
 
@@ -61,8 +54,8 @@ class GetComponentProperties(Message):
     LUN = 0
     _REQ_DESC = (
             PicmgIdentifier(),
-            UnsignedInt('component_id', 1),
-            UnsignedInt('component_properties_selector', 1),
+            UnsignedInt('id', 1),
+            UnsignedInt('selector', 1),
     )
 
     def _encode_rsp(self):
@@ -79,6 +72,7 @@ class GetComponentProperties(Message):
             return
         self.rsp.picmg_identifier = pop_unsigned_int(data, 1)
         self.rsp.data = data[:]
+
 
 class AbortFirmwareUpgrade(Message):
     CMDID = constants.CMDID_HPM_ABORT_FIRMWARE_UPGRADE
@@ -100,7 +94,7 @@ class InitiateUpgradeAction(Message):
     _REQ_DESC = (
             PicmgIdentifier(),
             UnsignedInt('components', 1),
-            UnsignedInt('upgrade_action', 1),
+            UnsignedInt('action', 1),
     )
     _RSP_DESC = (
             CompletionCode(),
