@@ -11,30 +11,7 @@ import datetime
 
 from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.msgs import fru
-from pyipmi.utils import check_completion_code
-
-bcd_map = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '-', '.' ]
-
-def bcd_encode(input, errors='strict'):
-    raise NotImplementedError()
-
-def bcd_decode(input, errors='strict'):
-    chars = list()
-    try:
-        for b in input:
-            b = ord(b)
-            chars.append(bcd_map[b>>4 & 0xf] + bcd_map[b & 0xf])
-        return (''.join(chars), len(input) * 2)
-    except IndexError:
-        raise ValueError()
-
-def bcd_search(name):
-    if name != 'bcd+':
-        return None
-    return codecs.CodecInfo(
-            name = 'bcd+',
-            encode = bcd_encode,
-            decode = bcd_decode)
+from pyipmi.utils import check_completion_code, bcd_search
 
 codecs.register(bcd_search)
 
