@@ -1,3 +1,4 @@
+import array
 import constants
 from pyipmi.msgs import Message
 from pyipmi.msgs import UnsignedInt
@@ -6,6 +7,8 @@ from pyipmi.msgs import Timestamp
 from pyipmi.msgs import Bitfield
 from pyipmi.msgs import CompletionCode
 from pyipmi.msgs import Conditional
+from pyipmi.utils import push_unsigned_int, pop_unsigned_int
+from pyipmi.errors import DecodingError, EncodingError
 
 PICMG_IDENTIFIER = 0x00
 
@@ -173,6 +176,37 @@ class GetFruLedColorCapabilities(Message):
             UnsignedIntMask('local_def_color', 1, 0x0f),
             UnsignedIntMask('override_def_color', 1, 0x0f),
     )
+
+
+class GetPowerLevel(Message):
+    CMDID = constants.CMDID_GET_POWER_LEVEL
+    NETFN = constants.NETFN_GROUP_EXTENSION
+    LUN = 0
+    _REQ_DESC = (
+        PicmgIdentifier(),
+        UnsignedInt('fru_id', 1),
+        UnsignedInt('power_type', 1),
+    )
+
+    def _encode_rsp(self):
+        data = array.array('c')
+        raise NotImplementedError('You have to overwrite this method')
+        return data.tostring()
+
+    def _decode_rsp(self, data):
+        data = array.array('c', data)
+        self.rsp.completion_code = pop_unsigned_int(data, 1)
+        if (self.rsp.completion_code != constants.CC_OK):
+            return
+        self.rsp.picmg_identifier  = pop_unsigned_int(data, 1)
+        tmp =  pop_unsigned_int(data, 1)
+        self.rsp.dynamic_power_configuration = tmp & 0x80 >> 7
+        self.rsp.power_level = tmp & 0x1f
+
+        self.rsp.delay_to_stable_power = pop_unsigned_int(data, 1)
+        self.rsp.power_multiplier = pop_unsigned_int(data, 1)
+        self.rsp.data = data[:]
+
 
 class SetFruLedState(Message):
     CMDID = constants.CMDID_SET_FRU_LED_STATE

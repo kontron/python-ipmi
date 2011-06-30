@@ -5,6 +5,7 @@
 # author: Michael Walle <michael.walle@kontron.com>
 #
 
+import array
 from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.msgs import picmg
 from pyipmi.utils import check_completion_code
@@ -32,6 +33,14 @@ class Helper:
         m.req.option = option
         fn(m)
         check_completion_code(m.rsp.completion_code)
+
+    def get_power_level(self, fn, fru_id, power_type):
+        m = picmg.GetPowerLevel()
+        m.req.fru_id = fru_id
+        m.req.power_type = power_type
+        fn(m)
+        check_completion_code(m.rsp.completion_code)
+        return PowerLevel(m.rsp)
 
     def get_led_state(self, fn, fru_id, led_id):
         m = picmg.GetFruLedState()
@@ -168,6 +177,21 @@ class LinkInfo:
             setattr(self, p[0], None)
         if res:
             self.from_response(res)
+
+
+class PowerLevel:
+    def __init__(self, res=None):
+        if res:
+            self.from_response(res)
+
+    def from_response(self, res):
+        print res
+        self.dynamic_power_configuration = res.dynamic_power_configuration
+        self.power_level = res.power_level
+        self.delay_to_stable = res.delay_to_stable_power
+        self.power_mulitplier = res.power_multiplier
+        self.power_levels = [ord(c) for c in res.data]
+
 
 class LedState:
     COLOR_BLUE = picmg.LED_COLOR_BLUE
