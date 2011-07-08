@@ -29,8 +29,8 @@ class Helper:
     def set_watchdog_timer(self, fn, config):
         m = bmc.SetWatchdogTimer()
         m.req.timer_use.timer_use = config.timer_use
-        m.req.timer_use.dont_stop = config.dont_stop
-        m.req.timer_use.dont_log = config.dont_log
+        m.req.timer_use.dont_stop = config.dont_stop and 1 or 0
+        m.req.timer_use.dont_log = config.dont_log and 1 or 0
 
         m.req.timer_actions.pre_timeout_interrupt = \
                 config.pre_timeout_interrupt
@@ -71,6 +71,7 @@ class Watchdog:
             # (propery, description)
             ('timer_use', ''),
             ('dont_stop', ''),
+            ('is_running', ''),
             ('dont_log', ''),
             ('pre_timeout_interrupt', ''),
             ('timeout_action', ''),
@@ -88,8 +89,8 @@ class Watchdog:
 
     def from_response(self, rsp):
         self.timer_use = rsp.timer_use.timer_use
-        self.dont_stop = rsp.timer_use.dont_stop
-        self.dont_log = rsp.timer_use.dont_log
+        self.is_running = bool(rsp.timer_use.is_running)
+        self.dont_log = bool(rsp.timer_use.dont_log)
         self.pre_timeout_interrupt = rsp.timer_actions.pre_timeout_interrupt
         self.timeout_action = rsp.timer_actions.timeout_action
         self.pre_timeout_interval = rsp.pre_timeout_interval

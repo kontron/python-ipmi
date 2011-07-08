@@ -123,7 +123,7 @@ class GetWatchdogTimer(Message):
         Bitfield('timer_use', 1,
             Bitfield.Bit('timer_use', 3),
             Bitfield.ReservedBit(3, 0),
-            Bitfield.Bit('dont_stop', 1, 0),
+            Bitfield.Bit('is_running', 1, 0),
             Bitfield.Bit('dont_log', 1, 0),
         ),
         Bitfield('timer_actions', 1,
