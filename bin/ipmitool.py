@@ -261,6 +261,8 @@ def usage(toplevel=False):
         print '''
 Options:
   -t <addr>        Set target IPMB address
+  -b <channel>     Set target channel
+  -r <rtr>         Set target routing (not supported atm)
   -h               Show this help
   -v               Be verbose
   -V               Print version
@@ -289,7 +291,7 @@ def version():
     
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:o:')
+        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:o:b:')
     except getopt.GetoptError, err:
         print str(err)
         usage()
@@ -297,6 +299,7 @@ def main():
     verbose = False
     interface_name = 'aardvark'
     target_address = 0x20
+    target_routing = [(0x20,0)]
     rmcp_host = None
     rmcp_user = ''
     rmcp_password = ''
@@ -312,6 +315,8 @@ def main():
             sys.exit()
         elif o == '-t':
             target_address = int(a, 0)
+        elif o == '-b':
+            target_routing = [(0x20,int(a))]
         elif o == '-H':
             rmcp_host = a
         elif o == '-U':
@@ -367,6 +372,7 @@ def main():
 
     ipmi = pyipmi.create_connection(interface)
     ipmi.target = pyipmi.Target(target_address)
+    ipmi.target.set_routing_information(target_routing)
 
     if rmcp_host is not None:
         ipmi.session.set_session_type_rmcp(rmcp_host)
