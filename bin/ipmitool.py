@@ -68,6 +68,8 @@ def cmd_sdr_show(ipmi, args):
         if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
             (raw, states) = ipmi.get_sensor_reading(s.number)
             value = s.convert_sensor_raw_to_value(raw)
+            if value is None:
+                value = "na"
             t_unr = s.convert_sensor_raw_to_value(s.threshold['unr'])
             t_ucr = s.convert_sensor_raw_to_value(s.threshold['ucr'])
             t_unc = s.convert_sensor_raw_to_value(s.threshold['unc'])
@@ -107,7 +109,10 @@ def cmd_sdr_list(ipmi, args):
     for s in ipmi.sdr_entries():
         if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
             (raw, states) = ipmi.get_sensor_reading(s.number)
-            value = s.convert_sensor_raw_to_value(raw)
+            if raw is not None:
+                value = s.convert_sensor_raw_to_value(raw)
+            else:
+                raw = 'na'
             print "0x%04x | %3d | %-16s | %9s | 0x%x" % (s.id, s.number,
                     s.device_id_string, value, states)
         elif s.type is pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
@@ -206,6 +211,28 @@ def cmd_raw(ipmi, args):
     rsp = ipmi.raw_command(req)
     print ' '.join('%02x' % ord(d) for d in rsp)
 
+def cmd_hpm_capabilities(ipmi, args):
+    cap = ipmi.get_target_upgrade_capabilities()
+
+    for c in cap.components:
+        prop = ipmi.get_component_properties(c)
+        print "Component ID: %d" % c
+        for p in  prop:
+            print "  %s" % p
+
+def cmd_hpm_check_file(ipmi, args):
+    if len(args) < 1:
+        return
+    cap = ipmi.open_hpm_file(args[0])
+
+    print cap.header
+    for action in cap.actions:
+        print action
+
+def cmd_picmg_get_power(ipmi, args):
+    pwr = ipmi.get_power_level(0, 0)
+    print pwr
+
 def usage(toplevel=False):
     commands = []
     maxlen = 0
@@ -230,7 +257,7 @@ def usage(toplevel=False):
     if maxlen == 0:
         for cmd in COMMAND_HELP:
             subcommands = cmd.name.split(' ')
-            if (len(subcommands) > len(argv) + 1 
+            if (len(subcommands) > len(argv) + 1
                     and subcommands[:len(argv)] == argv):
                 commands.append(cmd)
                 if cmd.arguments:
@@ -288,7 +315,7 @@ Aardvark options:
 
 def version():
     print 'ipmitool v%s' % IPMITOOL_VERSION
-    
+
 def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:o:b:')
@@ -400,15 +427,17 @@ COMMANDS = (
         Command('sdr list', cmd_sdr_list),
         Command('sdr show', cmd_sdr_show),
         Command('fru print', cmd_fru_print),
+        Command('picmg power get', cmd_picmg_get_power),
         Command('raw', cmd_raw),
+        Command('hpm cap', cmd_hpm_capabilities),
+        Command('hpm check', cmd_hpm_check_file),
 )
 
 COMMAND_HELP = (
         CommandHelp('raw', None, 'Send a RAW IPMI request and print response'),
+
         CommandHelp('fru', None,
                 'Print built-in FRU and scan SDR for FRU locators'),
-#        CommandHelp('sensor', None, 'Print detailed sensor information'),
-#        CommandHelp('chassis', None, 'Get chassis status and set power state'),
 
         CommandHelp('sel', None, 'Print System Event Log (SEL)'),
         CommandHelp('sel list', None, 'List all SEL entries'),
@@ -422,6 +451,16 @@ COMMAND_HELP = (
                 'Management Controller status and global enables'),
         CommandHelp('bmc info', None, 'BMC Device ID inforamtion'),
         CommandHelp('bmc reset', '<cold|warm>', 'BMC reset control'),
+
+        CommandHelp('picmg', None, 'HPM.1 commands'),
+        CommandHelp('picmg power get', 'get PICMG power level',
+                'Request the power level'),
+
+        CommandHelp('hpm', None, 'HPM.1 commands'),
+        CommandHelp('hpm cap', 'HPM.1 target upgrade capabilities',
+                'Request the target upgrade capabilities'),
+        CommandHelp('hpm check', 'HPM.1 file check',
+                'Check the specified HPM.1 file'),
 )
 
 if __name__ == '__main__':
