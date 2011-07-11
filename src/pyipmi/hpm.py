@@ -5,9 +5,12 @@
 # author: Michael Walle <michael.walle@kontron.com>
 #
 
+import os
 import codecs
 import array
-from struct import unpack
+import struct
+import collections
+import hashlib
 
 from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.msgs import  hpm
@@ -25,6 +28,10 @@ PROPERTIES_DATA_CURRENT_VERSION = 0x01
 PROPERTIES_DATA_DESCRIPTION_STRING = 0x02
 PROPERTIES_DATA_ROLLBACK_FIRMWARE_VERSION = 0x03
 PROPERTIES_DATA_DEFERRED_UPGRADE_FIRMWARE_VERSION = 0x04
+
+ACTION_BACKUP_COMPONENT = 0x00
+ACTION_PREPARE_COMPONENT = 0x01
+ACTION_UPLOAD_FIRMWARE_IMAGE = 0x02
 
 
 class Helper:
@@ -54,7 +61,13 @@ class Helper:
         return properties
 
     def open_hpm_file(self, fn, filename):
-        image = UpgradeImage(filename)
+        return UpgradeImage(filename)
+
+    def query_selftest_result(self, fn):
+        pass
+
+    def upload_component_firmware(self, fn):
+        pass
 
 
 class TargetUpgradeCapabilities:
@@ -72,6 +85,29 @@ class TargetUpgradeCapabilities:
         for i in range(8):
             if rsp.component_present & (1<<i):
                 self.components.append(i)
+
+VERSION_FIELD_LEN = 6
+class VersionField:
+    def __init__(self, data=None):
+        if data:
+            if isinstance(data, str):
+                data = array.array('c', [chr(c)for c in [ord(c) for c in data]])
+            self.version = self._decode_version_string(data[0:2])
+            self.auxiliary = data[2:5]
+
+    def __str__(self):
+        str = []
+        str.append('%s %s' % (self.version, self.auxiliary))
+        return '\n'.join(str)
+
+    def _decode_version_string(self, data):
+        """`data` is array.array
+        """
+        mayor = ord(data[0])
+        minor = ord(data[1])
+        if minor is not 255:
+            minor = data[1:2].tostring().decode('bcd+')
+        return ''.join("%s.%s" % (mayor, minor))
 
 
 codecs.register(bcd_search)
@@ -94,6 +130,10 @@ class ComponentProperty:
         return ''.join("%s.%s" % (mayor, minor))
 
     def _from_data(self, id, data):
+        """
+        `id` is component id
+        `data` is data as array
+        """
         if id is PROPERTIES_DATA_GENERAL:
             PREPARATION_SUPPORT_MASK = 0x04
             COMPARISON_SUPPORT_MASK = 0x08
@@ -110,7 +150,6 @@ class ComponentProperty:
                 support.append('rollback_is_supported')
             elif cap & 0x3 == 3:
                 support.append('reserved')
-
             if cap & PREPARATION_SUPPORT_MASK:
                 support.append('prepartion')
             if cap & COMPARISON_SUPPORT_MASK:
@@ -123,7 +162,7 @@ class ComponentProperty:
 
         elif id is PROPERTIES_DATA_CURRENT_VERSION:
             self.property = (PROPERTIES_DATA_CURRENT_VERSION,
-                    'current_version', self._decode_version_string(data[0:3]))
+                    'current_version', VersionField(data))
         elif id is PROPERTIES_DATA_DESCRIPTION_STRING:
             # remove trailing '\0'
             descr =  data.tostring().replace('\0', '')
@@ -131,30 +170,43 @@ class ComponentProperty:
                     'description_string', descr)
         elif id is PROPERTIES_DATA_ROLLBACK_FIRMWARE_VERSION:
             self.property = (PROPERTIES_DATA_ROLLBACK_FIRMWARE_VERSION,
-                    'rollback_version', self._decode_version_string(data[0:3]))
+                    'rollback_version', VersionField(data))
         elif id is PROPERTIES_DATA_DEFERRED_UPGRADE_FIRMWARE_VERSION:
             self.property = (PROPERTIES_DATA_DEFERRED_UPGRADE_FIRMWARE_VERSION,
-                    'deferred_upgrade_version',
-                    self._decode_version_string(data[0:3]))
+                    'deferred_upgrade_version', VersionField(data))
 
+
+ImageHeader = collections.namedtuple('ImageHeader', ['field_name', 'format', 'start', 'len'])
 
 class UpgradeImageHeaderRecord:
     def __init__(self, data=None):
+        FORMAT  = [
+            ImageHeader('format_version', 'B', 8, 1),
+            ImageHeader('device_id', 'B', 9, 1),
+            ImageHeader('product_id', '<H', 13, 2),
+            ImageHeader('time', '<L', 15, 4),
+            ImageHeader('capabilities', 'B', 19,1),
+            ImageHeader('components', 'B',  20, 1),
+            ImageHeader('selftest_timeout', 'B', 21, 1),
+            ImageHeader('rollback_timeout', 'B', 22, 1),
+            ImageHeader('inaccessibility_timeout', 'B', 23, 1),
+            ImageHeader('earliest_compatible_revision', '<H', 24, 2),
+            ImageHeader('oem_data_length', '<H', 32, 2),
+        ]
+
+        for a in FORMAT:
+            setattr(self, a.field_name, None)
         if data:
             self.signature = data[0:8]
-            self.format_version = unpack("B", data[8])[0]
-            self.device_id = unpack("B", data[9])[0]
-            tmp = data[10:13]
-#            self.manufacturer_id = unpack("BBB", data[9:12])[0:3]
-            self.product_id = unpack("<H", data[13:15])[0]
-            self.time = unpack("<L", data[15:19])[0]
-            self.image_capabilities = unpack("B", data[19])[0]
-            self.components = unpack("B", data[20])[0]
-            self.selftest_timeout = unpack("B", data[21])[0]
-            self.rollback_timeout = unpack("B", data[22])[0]
-            self.inaccessibility_timeout = unpack("B", data[23])[0]
-            self.earliest_compatible_revision = unpack("<H", data[24:26])[0]
-            self.oem_data_length = unpack("<H", data[32:34])[0]
+            for a in FORMAT:
+                setattr(self, a.field_name, struct.unpack(a.format, data[a.start:a.start+a.len])[0])
+            self.manufacturer_id = ord(data[10])|ord(data[11])<< 8|ord(data[12])<<16
+            self.firmware_revision = VersionField(data[26:26+VERSION_FIELD_LEN])
+            if self.oem_data_length != 0:
+                self.oem_data = [ord(d) for d in data[34:-1]]
+            # XXX checksum check
+            self.checksum = data[34+self.oem_data_length]
+            self.length = 34+self.oem_data_length+1
 
     def __str__(self):
         str = []
@@ -162,9 +214,10 @@ class UpgradeImageHeaderRecord:
         str.append(" Signature:        %s" % self.signature)
         str.append(" Format Version:   %s" % self.format_version)
         str.append(" Device ID:        %s" % self.device_id)
+        str.append(" Manufacturer:     %s" % self.manufacturer_id)
         str.append(" Product ID:       %s" % self.product_id)
         str.append(" Time:             %s" % self.time)
-        str.append(" Image Cap:        0x%02x" % self.image_capabilities)
+        str.append(" Image Cap:        0x%02x" % self.capabilities)
         str.append(" Components:       0x%02x" % self.components)
         str.append(" Selftest Timeout: %s" % self.selftest_timeout)
         str.append(" Rollback Timeout: %s" % self.rollback_timeout)
@@ -174,26 +227,32 @@ class UpgradeImageHeaderRecord:
         return "\n".join(str)
 
 
-ACTION_BACKUP_COMPONENT = 0x00
-ACTION_PREPARE_COMPONENT = 0x01
-ACTION_UPLOAD_FIRMWARE_IMAGE = 0x02
 
 class UpgradeActionRecord:
-
     def __init__(self, data=None):
         if data:
-            self.upgrade_action_type = unpack("B", data[0])[0]
-            self.components = unpack("B", data[1])[0]
+            (self.upgrade_action_type, self.components, self.checksum) = \
+                    struct.unpack('BBB', data[0:3])
+            self.length = 3
             if self.upgrade_action_type is ACTION_UPLOAD_FIRMWARE_IMAGE:
-                pass
+                self.firmware_version = VersionField(data[3:3+VERSION_FIELD_LEN])
+                self.firmware_description_string = data[9:30]
+                self.firmware_length = struct.unpack('<L', data[30:34])[0]
+                self.firmware_image_data = [ord(d) for d in data[34:34+self.firmware_length]]
+                self.length += 31 + self.firmware_length
 
     def __str__(self):
         str = []
         str.append("Action Record:")
         str.append(" Action:     %s" % self.upgrade_action_type)
-        str.append(" Components: %s" % self.components)
+        str.append(" Components: 0x%02x" % self.components)
+        if self.upgrade_action_type is ACTION_UPLOAD_FIRMWARE_IMAGE:
+            str.append(" Description: %s" % self.firmware_description_string)
+            str.append(" Image len  : %s" % self.firmware_length)
         return "\n".join(str)
 
+
+HPM_IMAGE_CHECKSUM_SIZE = 16
 
 class UpgradeImage:
     def __init__(self, filename=None):
@@ -204,6 +263,11 @@ class UpgradeImage:
         str = []
         return "\n".join(str)
 
+    def _check_md5_sum(self, filedata):
+        summer = hashlib.md5()
+        checksum_actual = summer.update(filedata[:-HPM_IMAGE_CHECKSUM_SIZE])
+        checksum_expected = filedata[-HPM_IMAGE_CHECKSUM_SIZE:]
+
     def _from_file(self, filename):
 
         try:
@@ -211,25 +275,21 @@ class UpgradeImage:
         except IOError:
             print 'Error open file "%s"' % filename
 
+        # get file size
+        file_size = os.stat(filename).st_size
+        file_data = f.read(file_size)
+
+        # get image checksum
+        self._check_md5_sum(file_data)
+        # XXX verify checksum
+
         # Upgrade Image Header
-        header_data = f.read(34)
-        self.image_header = UpgradeImageHeaderRecord(header_data)
-        print self.image_header
-
-        # OEM Information
-        f.seek(34+self.image_header.oem_data_length)
-        self.image_header_checksum = f.read(1)
-
-        # Header Checksum
-        offset = f.tell()
+        self.header = UpgradeImageHeaderRecord(file_data)
+        off = self.header.length
 
         # Upgrade Actions
-        while True:
-            action_data = f.read(34)
-            action_record = UpgradeActionRecord(action_data)
-            f.seek(offset+30)
-            firmware_length = unpack("<L", f.read(4))[0]
-            f.seek(offset)
-            break
-        # image checksum
-        # tbd
+        self.actions = []
+        while off + HPM_IMAGE_CHECKSUM_SIZE < len(file_data):
+            action = UpgradeActionRecord(file_data[off:])
+            self.actions.append(action)
+            off += action.length
