@@ -156,8 +156,11 @@ class Bitfield(BaseField):
         for bit in self._bits:
             wrapper = getattr(obj, self.name)
             bit_value = getattr(wrapper, bit.name)
+            if bit_value is None:
+                bit_value = bit.default
             if bit_value == None:
                 raise EncodingError('Bitfield "%s" not set.' % bit.name)
+
             value |= (bit_value & (2**bit._width - 1)) << bit._offset
         for i in xrange(self.length):
             data.append(chr((value >> (8*i)) & 0xff))
