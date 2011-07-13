@@ -284,11 +284,13 @@ class Message:
             raise NotImplementedError('You have to overwrite this method')
 
         data = array('c', data)
+        cc = 0
         for field in self._RSP_DESC:
             try:
                 field.decode(self.rsp, data)
-            except CompletionCodeError:
+            except CompletionCodeError, e:
                 # stop decoding on completion code != 0
+                cc = e.cc
                 break
-        if len(data) > 0:
+        if cc == 0 and len(data) > 0:
             raise DecodingError('Data has extra bytes')
