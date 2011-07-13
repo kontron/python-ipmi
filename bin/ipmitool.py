@@ -107,19 +107,27 @@ def cmd_sdr_list(ipmi, args):
     print "=======|=====|==================|===================="
 
     for s in ipmi.sdr_entries():
-        if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
-            (raw, states) = ipmi.get_sensor_reading(s.number)
-            if raw is not None:
-                value = s.convert_sensor_raw_to_value(raw)
+        try:
+            if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
+                (raw, states) = ipmi.get_sensor_reading(s.number)
+                if raw is not None:
+                    value = s.convert_sensor_raw_to_value(raw)
+                else:
+                    raw = 'na'
+                print "0x%04x | %3d | %-16s | %9s | 0x%x" % (s.id, s.number,
+                        s.device_id_string, value, states)
+            elif s.type is pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
+                (raw, states) = ipmi.get_sensor_reading(s.number)
+                print "0x%04x | %3d | %-16s | 0x%02x      | 0x%x" % (
+                        s.id, s.number, s.device_id_string, raw, states)
             else:
-                raw = 'na'
-            print "0x%04x | %3d | %-16s | %9s | 0x%x" % (s.id, s.number,
-                    s.device_id_string, value, states)
-        elif s.type is pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
-            (raw, states) = ipmi.get_sensor_reading(s.number)
-            print "0x%04x | %3d | %-16s | 0x%02x      | 0x%x" % (s.id, s.number, s.device_id_string, raw, states)
-        else:
-            print "0x%04x | --- | %-16s |" % (s.id, s.device_id_string)
+                print "0x%04x | --- | %-16s |" % (s.id, s.device_id_string)
+
+        except pyipmi.errors.CompletionCodeError, e:
+            if s.type in (pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD,
+                    pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD):
+                print "0x%04x | %3d | %-16s | ERR: CC=0x%02x " % (s.id,
+                        s.number, s.device_id_string, e.cc)
 
 def cmd_fru_print(ipmi, args):
     fru_id = 0
@@ -410,8 +418,12 @@ def main():
         cmd(ipmi, args)
     except pyipmi.errors.CompletionCodeError, e:
         print 'Command returned with completion code 0x%02x' % e.cc
+        if verbose:
+            traceback.print_exc()
     except pyipmi.errors.TimeoutError, e:
         print 'Command timed out'
+        if verbose:
+            traceback.print_exc()
     except KeyboardInterrupt, e:
         if verbose:
             traceback.print_exc()
