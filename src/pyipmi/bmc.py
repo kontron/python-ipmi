@@ -5,54 +5,54 @@
 # author: Michael Walle <michael.walle@kontron.com>
 #
 
-from pyipmi.msgs import bmc as msgs
+from pyipmi.msgs import create_request_by_name
 from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.utils import check_completion_code
 
 class Bmc:
     def get_device_id(self):
-        m = msgs.GetDeviceId()
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
-        return DeviceId(m.rsp)
+        req = create_request_by_name('GetDeviceId')
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return DeviceId(rsp)
 
     def cold_reset(self):
-        m = msgs.ColdReset()
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+        req = create_request_by_name('ColdReset')
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def warm_reset(self):
-        m = msgs.WarmReset()
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+        req = create_request_by_name('WarmReset')
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def set_watchdog_timer(self, config):
-        m = msgs.SetWatchdogTimer()
-        m.req.timer_use.timer_use = config.timer_use
-        m.req.timer_use.dont_stop = config.dont_stop and 1 or 0
-        m.req.timer_use.dont_log = config.dont_log and 1 or 0
+        req = create_request_by_name('SetWatchdogTimer')
+        req.timer_use.timer_use = config.timer_use
+        req.timer_use.dont_stop = config.dont_stop and 1 or 0
+        req.timer_use.dont_log = config.dont_log and 1 or 0
 
-        m.req.timer_actions.pre_timeout_interrupt = \
+        req.timer_actions.pre_timeout_interrupt = \
                 config.pre_timeout_interrupt
-        m.req.timer_actions.timeout_action = \
+        req.timer_actions.timeout_action = \
                 config.timeout_action
 
-        m.req.pre_timeout_interval = config.pre_timeout_interval
-        m.req.timer_use_expiration_flags = config.timer_use_expiration_flags
-        m.req.initial_countdown = config.initial_countdown
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+        req.pre_timeout_interval = config.pre_timeout_interval
+        req.timer_use_expiration_flags = config.timer_use_expiration_flags
+        req.initial_countdown = config.initial_countdown
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def get_watchdog_timer(self):
-        m = msgs.GetWatchdogTimer()
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
-        return Watchdog(m.rsp)
+        req = create_request_by_name('GetWatchdogTimer')
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return Watchdog(rsp)
 
     def reset_watchdog_timer(self):
-        m = msgs.ResetWatchdogTimer()
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+        req = create_request_by_name('ResetWatchdogTimer')
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
 
 class Watchdog:

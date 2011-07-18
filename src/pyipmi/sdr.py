@@ -8,9 +8,10 @@ import math
 import errors
 import array
 import time
-from pyipmi.errors import DecodingError, CompletionCodeError
+from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
 from pyipmi.utils import check_completion_code, pop_unsigned_int
-import pyipmi.msgs.sdr
+from pyipmi.msgs import create_request_by_name
+from pyipmi.msgs import constants
 
 SDR_TYPE_FULL_SENSOR_RECORD = 0x01
 SDR_TYPE_COMPACT_SENSOR_RECORD = 0x02
@@ -33,10 +34,10 @@ EVENT_READING_TYPE_CODE_PERFORMANCE = 0x06
 
 class Sdr:
     def get_reservation_id(self):
-        m = pyipmi.msgs.sdr.ReserveDeviceSdrRepository()
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
-        return  m.rsp.reservation_id
+        req = create_request_by_name('ReserveDeviceSdrRepository')
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return  rsp.reservation_id
 
     def get_sdr(self, record_id, reservation_id=None):
         """Collects all data for the given SDR record ID and returns
@@ -51,77 +52,75 @@ class Sdr:
             reservation_id = self.get_reservation_id()
 
         # get record header ... 5 bytes
-        m = pyipmi.msgs.sdr.GetDeviceSdr()
-        m.req.reservation_id = reservation_id
-        m.req.record_id = record_id
-        m.req.offset = 0
-        m.req.length = 5
+        req = create_request_by_name('GetDeviceSdr')
+        req.reservation_id = reservation_id
+        req.record_id = record_id
+        req.offset = 0
+        req.length = 5
         retry = 5
         while True:
             if retry == 0:
-                raise pyipmi.errors.RetryError()
-            self.send_message(m)
-            if m.rsp.completion_code == 0:
+                raise RetryError()
+            rsp = self.send_message(req)
+            if rsp.completion_code == 0:
                 break
-            elif m.rsp.completion_code == pyipmi.msgs.constants.CC_RES_CANCELED:
-                m.req.reservation_id = self.get_reservation_id()
+            elif rsp.completion_code == constants.CC_RES_CANCELED:
+                req.reservation_id = self.get_reservation_id()
                 time.sleep(0.1)
                 retry -= 1
                 continue
-            elif (m.rsp.completion_code
-                        == pyipmi.msgs.constants.CC_RESP_COULD_NOT_BE_PRV):
+            elif rsp.completion_code == constants.CC_RESP_COULD_NOT_BE_PRV:
                 time.sleep(0.1 * retry)
                 retry -= 1
                 continue
             else:
-                check_completion_code(m.rsp.completion_code)
+                check_completion_code(rsp.completion_code)
 
-        next_record_id = m.rsp.next_record_id
+        next_record_id = rsp.next_record_id
 
         # pop will change data, therefore copy it
-        record_data = m.rsp.record_data[:]
-        record_id = pop_unsigned_int(m.rsp.record_data, 2)
-        record_version = pop_unsigned_int(m.rsp.record_data, 1)
-        record_type = pop_unsigned_int(m.rsp.record_data, 1)
-        record_length = pop_unsigned_int(m.rsp.record_data, 1)
+        record_data = rsp.record_data[:]
+        record_id = pop_unsigned_int(rsp.record_data, 2)
+        record_version = pop_unsigned_int(rsp.record_data, 1)
+        record_type = pop_unsigned_int(rsp.record_data, 1)
+        record_length = pop_unsigned_int(rsp.record_data, 1)
         record_length += 5
 
-        m.req.offset = len(record_data)
+        req.offset = len(record_data)
         self.max_req_len = 20
         retry = 20
         # now get the other record data
         while True:
             if retry == 0:
-                raise pyipmi.errors.RetryError()
+                raise RetryError()
 
-            m.req.length = self.max_req_len
-            if (m.req.offset + m.req.length) > record_length:
-                m.req.length = record_length - m.req.offset
-            self.send_message(m)
+            req.length = self.max_req_len
+            if (req.offset + req.length) > record_length:
+                req.length = record_length - req.offset
+            rsp = self.send_message(req)
 
-            if (m.rsp.completion_code
-                        == pyipmi.msgs.constants.CC_CANT_RET_NUM_REQ_BYTES):
+            if rsp.completion_code == constants.CC_CANT_RET_NUM_REQ_BYTES:
                 self.max_req_len -= 4
                 if self.max_req_len <= 0:
                     retry = 0
                 continue
-            elif m.rsp.completion_code == pyipmi.msgs.constants.CC_RES_CANCELED:
-                m.req.reservation_id = self.get_reservation_id()
+            elif rsp.completion_code == constants.CC_RES_CANCELED:
+                req.reservation_id = self.get_reservation_id()
                 time.sleep(0.1 * retry)
                 # clean all previous data and retry with new reservation
                 record_data = array.array('c')
-                m.req.offset = 0
+                req.offset = 0
                 retry -= 1
                 continue
-            elif m.rsp.completion_code == 0xce:
+            elif rsp.completion_code == 0xce:
                 time.sleep(0.1 * retry)
                 retry -= 1
                 continue
             else:
-                check_completion_code(m.rsp.completion_code)
+                check_completion_code(rsp.completion_code)
 
-            record_data += m.rsp.record_data[:]
-            m.req.offset = len(record_data)
+            record_data += rsp.record_data[:]
+            req.offset = len(record_data)
             if len(record_data) >= record_length:
                 break
 
@@ -154,20 +153,20 @@ class Sdr:
 
         Returns a tuple with `raw reading`and `assertion states`.
         """
-        m = pyipmi.msgs.sdr.GetSensorReading()
-        m.req.sensor_number = sensor_number
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+        req = create_request_by_name('GetSensorReading')
+        req.sensor_number = sensor_number
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
-        reading = m.rsp.sensor_reading
-        if m.rsp.update_in_progress:
+        reading = rsp.sensor_reading
+        if rsp.update_in_progress:
             reading = None
 
         states = None
-        if m.rsp.states1 is not None:
-            states = m.rsp.states1
-        if m.rsp.states2 is not None:
-            states |= (m.rsp.states2 << 8)
+        if rsp.states1 is not None:
+            states = rsp.states1
+        if rsp.states2 is not None:
+            states |= (rsp.states2 << 8)
         return (reading, states)
 
     def set_sensor_thresholds(self, sensor_number, unr=None, ucr=None,
@@ -182,28 +181,28 @@ class Sdr:
         `lcr` for lower critical
         `lnr` for lower non-recoverable
         """
-        m = pyipmi.msgs.sdr.SetSensorThreshold()
-        m.req.sensor_number = sensor_number
+        req = create_request_by_name('SetSensorThreshold')
+        req.sensor_number = sensor_number
         if unr is not None:
-            m.req.set_mask.unr = 1
-            m.req.threshold.unr = unr
+            req.set_mask.unr = 1
+            req.threshold.unr = unr
         if ucr is not None:
-            m.req.set_mask.ucr = 1
-            m.req.threshold.ucr = ucr
+            req.set_mask.ucr = 1
+            req.threshold.ucr = ucr
         if unc is not None:
-            m.req.set_mask.unc = 1
-            m.req.threshold.unc = unc
+            req.set_mask.unc = 1
+            req.threshold.unc = unc
         if lnc is not None:
-            m.req.set_mask.lnc = 1
-            m.req.threshold.lnc = lnc
+            req.set_mask.lnc = 1
+            req.threshold.lnc = lnc
         if lcr is not None:
-            m.req.set_mask.lcr = 1
-            m.req.threshold.lcr = lcr
+            req.set_mask.lcr = 1
+            req.threshold.lcr = lcr
         if lnr is not None:
-            m.req.set_mask.lnr = 1
-            m.req.threshold.lnr = lnr
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+            req.set_mask.lnr = 1
+            req.threshold.lnr = lnr
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
 
 def create_sdr(data, next_id=None):

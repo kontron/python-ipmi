@@ -10,26 +10,27 @@ import codecs
 import datetime
 
 from pyipmi.errors import DecodingError, CompletionCodeError
-from pyipmi.msgs import fru
+from pyipmi.msgs import create_request_by_name
+from pyipmi.msgs import constants
 from pyipmi.utils import check_completion_code, bcd_search
 
 codecs.register(bcd_search)
 
 class Fru:
     def get_fru_inventory_area_info(self, fru_id=0):
-        m = fru.GetFruInventoryAreaInfo()
-        m.fru_id = fru_id
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
-        return m.rsp.area_size
+        req = create_request_by_name('GetFruInventoryAreaInfo')
+        req.fru_id = fru_id
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return rsp.area_size
 
-    def write_fru_data(self, data, offset=0, fru_id=0):
-        m = fru.WriteFruData()
-        m.req.fru_id = fru_id
-        m.req.offset = offset
-        m.req.data = data[:]
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+    def write_fru_data(self, data, fru_id=0, offset=0):
+        req = create_request_by_name('WriteFruData')
+        req.fru_id = fru_id
+        req.offset = offset
+        req.data = data[:]
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def read_fru_data(self, offset=None, count=None, fru_id=0):
         off = 0
@@ -38,7 +39,6 @@ class Fru:
         data = array.array('c')
 
         # first check for maximum area size
-
         if offset is None:
             area_size = self.get_fru_inventory_area_info(fru_id)
             off = 0
@@ -50,22 +50,22 @@ class Fru:
             if (off + req_size) > area_size:
                 req_size = area_size - off
 
-            m = fru.ReadFruData()
-            m.req.fru_id = fru_id
-            m.req.offset = off
-            m.req.count = req_size
+            req = create_request_by_name('ReadFruData')
+            req.fru_id = fru_id
+            req.offset = off
+            req.count = req_size
             try:
-                self.send_message(m)
-                check_completion_code(m.rsp.completion_code)
+                rsp = self.send_message(req)
+                check_completion_code(rsp.completion_code)
             except CompletionCodeError, e:
-                if e.cc == 0xca:
+                if e.cc == constants.CC_CANT_RET_NUM_REQ_BYTES:
                     req_size -= 2
                     continue
                 else:
                     raise
 
-            data.extend(m.rsp.data)
-            off += m.rsp.count
+            data.extend(rsp.data)
+            off += rsp.count
 
         return data.tostring()
 

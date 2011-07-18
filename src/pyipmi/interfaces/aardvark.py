@@ -8,6 +8,7 @@ import time
 import array
 
 from pyipmi import Session
+from pyipmi.msgs import create_message, encode_message, decode_message
 from pyipmi.errors import TimeoutError
 from pyipmi.logger import log
 
@@ -219,11 +220,11 @@ class Aardvark:
         `msg` is a IPMI Message containing both the request and response.
         """
 
-        log().debug('IPMI Request [%s]', msg.req)
+        log().debug('IPMI Request [%s]', msg)
 
-        tx_data = self._encode_ipmb_msg(msg.target.ipmb_address, msg.NETFN,
-                msg.LUN, self.slave_address, 0, self.next_sequence_number,
-                msg.CMDID, array.array('B', msg.req.encode()))
+        tx_data = self._encode_ipmb_msg(msg.target.ipmb_address, msg.netfn,
+                msg.lun, self.slave_address, 0, self.next_sequence_number,
+                msg.cmdid, array.array('B', encode_message(msg)))
 
         log().debug('IPMB Req to 0x%02x [%s]'
                 % (msg.target.ipmb_address,
@@ -252,11 +253,11 @@ class Aardvark:
                         cmd_data) = self._decode_ipmb_msg(addr, rx_data)
 
                 if (rs_sa == self.slave_address
-                        and netfn == msg.NETFN + 1
-                        and rs_lun == msg.LUN
+                        and netfn == msg.netfn + 1
+                        and rs_lun == msg.lun
                         and rq_sa == msg.target.ipmb_address
                         and rq_seq == self.next_sequence_number
-                        and cmd_id == msg.CMDID):
+                        and cmd_id == msg.cmdid):
                     rsp_received = True
                 timeout = self.timeout - (time.time() - start_time)
 
@@ -270,6 +271,10 @@ class Aardvark:
 
         self._inc_sequence_number()
 
-        msg.rsp.decode(cmd_data.tostring())
-        log().debug('IPMI Response [%s])', msg.rsp)
+        msg = create_message(msg.cmdid, msg.netfn + 1)
+        decode_message(msg, cmd_data.tostring())
+
+        log().debug('IPMI Response [%s])', msg)
+
+        return msg
 

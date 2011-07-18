@@ -13,7 +13,8 @@ import collections
 import hashlib
 
 from pyipmi.errors import DecodingError, CompletionCodeError
-from pyipmi.msgs import  hpm
+from pyipmi.msgs import create_request_by_name
+from pyipmi.msgs import constants
 from pyipmi.utils import check_completion_code, bcd_search
 
 
@@ -36,10 +37,10 @@ ACTION_UPLOAD_FIRMWARE_IMAGE = 0x02
 
 class Hpm:
     def get_target_upgrade_capabilities(self):
-        m = hpm.GetTargetUpgradeCapabilities()
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
-        return TargetUpgradeCapabilities(m.rsp)
+        req = create_request_by_name('GetTargetUpgradeCapabilities')
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return TargetUpgradeCapabilities(rsp)
 
     def get_component_properties(self, id):
         PROPERTIES = [
@@ -50,14 +51,14 @@ class Hpm:
             PROPERTIES_DATA_DEFERRED_UPGRADE_FIRMWARE_VERSION,
         ]
 
-        m = hpm.GetComponentProperties()
-        m.req.id = id
+        req = create_request_by_name('GetComponentProperties')
+        req.id = id
         properties = []
         for p in PROPERTIES:
-            m.req.selector = p
-            self.send_message(m)
-            if m.rsp.completion_code is 0:
-                properties.append(ComponentProperty(p, m.rsp.data))
+            req.selector = p
+            rsp = self.send_message(req)
+            if rsp.completion_code == constants.CC_OK:
+                properties.append(ComponentProperty(p, rsp.data))
         return properties
 
     def open_hpm_file(self, filename):

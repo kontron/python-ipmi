@@ -6,10 +6,11 @@
 #
 import time
 
-from pyipmi.errors import DecodingError, CompletionCodeError
+from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
 from pyipmi.utils import check_completion_code, pop_unsigned_int
 from pyipmi.event import Event
-import pyipmi.msgs.sel
+from pyipmi.msgs import create_request_by_name
+from pyipmi.msgs import constants
 
 INITIATE_ERASE = 0xaa
 GET_ERASE_STATUS = 0x00
@@ -18,88 +19,88 @@ ERASURE_COMPLETED = 0x1
 
 class Sel:
     def get_sel_reservation_id(self):
-        m = pyipmi.msgs.sel.ReserveSel()
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
-        return m.rsp.reservation_id
+        req = create_request_by_name('ReserveSel')
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return rsp.reservation_id
 
     def clear_sel(self, retry=5):
-        m = pyipmi.msgs.sel.ClearSel()
-        m.req.reservation_id = self.get_sel_reservation_id()
+        req = create_request_by_name('ClearSel')
+        req.reservation_id = self.get_sel_reservation_id(fn)
 
-        m.req.cmd = pyipmi.sel.INITIATE_ERASE
+        req.cmd = INITIATE_ERASE
         while True:
-            self.send_message(m)
-            if m.rsp.completion_code == pyipmi.msgs.constants.CC_RES_CANCELED:
-                m.req.reservation_id = self.get_sel_reservation_id()
+            rsp = self.send_message(req)
+            if rsp.completion_code == constants.CC_RES_CANCELED:
+                req.reservation_id = self.get_sel_reservation_id()
                 retry -= 1
                 continue
             else:
-                check_completion_code(m.rsp.completion_code)
+                check_completion_code(rsp.completion_code)
                 break
 
-        m.req.cmd = pyipmi.sel.GET_ERASE_STATUS
+        req.cmd = GET_ERASE_STATUS
         while True:
             if retry <= 0:
-                raise pyipmi.errors.RetryError()
+                raise RetryError()
 
-            self.send_message(m)
-            if m.rsp.completion_code == pyipmi.msgs.constants.CC_OK:
-                if m.rsp.status.erase_in_progress == pyipmi.sel.ERASURE_IN_PROGRESS:
+            rsp = self.send_message(req)
+            if rsp.completion_code == pyipmi.msgs.constants.CC_OK:
+                if rsp.status.erase_in_progress == ERASURE_IN_PROGRESS:
                     time.sleep(0.5)
                     retry -= 1
                     continue
                 else:
                     break
-            elif m.rsp.completion_code == pyipmi.msgs.constants.CC_RES_CANCELED:
+            elif rsp.completion_code == constants.CC_RES_CANCELED:
                 time.sleep(0.2)
-                m.req.reservation_id = self.get_sel_reservation_id()
+                req.reservation_id = self.get_sel_reservation_id()
                 retry -= 1
                 continue
             else:
-                check_completion_code(m.rsp.completion_code)
+                check_completion_code(rsp.completion_code)
                 break
 
     def sel_entries(self):
-        '''Generator which returns all SEL entries.'''
-        m = pyipmi.msgs.sel.GetSelInfo()
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
-        if m.rsp.entries == 0:
+        """Generator which returns all SEL entries."""
+        req = create_request_by_name('GetSelInfo')
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        if rsp.entries == 0:
             return
         reservation_id = self.get_sel_reservation_id()
         next_record_id = 0
         while True:
-            m = pyipmi.msgs.sel.GetSelEntry()
-            m.req.reservation_id = reservation_id
-            m.req.record_id = next_record_id
-            m.req.offset = 0
+            req = create_request_by_name('GetSelEntry')
+            req.reservation_id = reservation_id
+            req.record_id = next_record_id
+            req.offset = 0
             self.max_req_len = 0xff # read entire record
 
             record_data = []
             while True:
-                m.req.length = self.max_req_len
+                req.length = self.max_req_len
                 if (self.max_req_len != 0xff
-                        and (m.req.offset + m.req.length) > 16):
-                    m.req.length = 16 - m.req.offset
+                        and (req.offset + req.length) > 16):
+                    req.length = 16 - req.offset
 
-                self.send_message(m)
-                if m.rsp.completion_code == 0xca:
+                rsp = self.send_message(req)
+                if rsp.completion_code == constants.CC_CANT_RET_NUM_REQ_BYTES:
                     if self.max_req_len  == 0xff:
                         self.max_req_len = 16
                     else:
                         self.max_req_len -= 1
                     continue
                 else:
-                    check_completion_code(m.rsp.completion_code)
+                    check_completion_code(rsp.completion_code)
 
-                record_data += m.rsp.record_data
-                m.req.offset = len(record_data)
+                record_data += rsp.record_data
+                req.offset = len(record_data)
 
                 if len(record_data) >= 16:
                     break
 
-            next_record_id = m.rsp.next_record_id
+            next_record_id = rsp.next_record_id
 
             yield SelEntry(record_data)
             if next_record_id == 0xffff:

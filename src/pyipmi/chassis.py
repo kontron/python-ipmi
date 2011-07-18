@@ -7,8 +7,8 @@
 
 from functools import partial
 
+from pyipmi.msgs import create_request_by_name
 from pyipmi.errors import DecodingError, CompletionCodeError
-from pyipmi.msgs import chassis as msgs
 from utils import check_completion_code
 
 from pyipmi.msgs.chassis import \
@@ -18,10 +18,10 @@ from pyipmi.msgs.chassis import \
 
 class Chassis:
     def chassis_control(self, option):
-        m = msgs.ChassisControl()
-        m.req.control.option = option
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+        req = create_request_by_name('ChassisControl')
+        req.control.option = option
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def chassis_control_power_down(self):
         self.chassis_control(CONTROL_POWER_DOWN)

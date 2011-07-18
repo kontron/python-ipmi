@@ -1,12 +1,13 @@
 import array
 import constants
-from pyipmi.msgs import Message
-from pyipmi.msgs import UnsignedInt
-from pyipmi.msgs import UnsignedIntMask
-from pyipmi.msgs import Timestamp
-from pyipmi.msgs import Bitfield
-from pyipmi.msgs import CompletionCode
-from pyipmi.msgs import Conditional
+from . import register_message_class
+from . import Message
+from . import UnsignedInt
+from . import UnsignedIntMask
+from . import Timestamp
+from . import Bitfield
+from . import CompletionCode
+from . import Conditional
 from pyipmi.utils import push_unsigned_int, pop_unsigned_int
 from pyipmi.errors import DecodingError, EncodingError
 
@@ -76,30 +77,46 @@ class PicmgIdentifier(UnsignedInt):
         UnsignedInt.__init__(self, name, 1, PICMG_IDENTIFIER)
 
 
-class FruControl(Message):
-    CMDID = constants.CMDID_FRU_CONTROL
-    NETFN = constants.NETFN_GROUP_EXTENSION
-    LUN = 0
-    _REQ_DESC = (
+@register_message_class
+class FruControlReq(Message):
+    __cmdid__ = constants.CMDID_FRU_CONTROL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
             UnsignedInt('option', 1),
     )
-    _RSP_DESC = (
+
+
+@register_message_class
+class FruControlRsp(Message):
+    __cmdid__ = constants.CMDID_FRU_CONTROL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
     )
 
 
-class GetFruControlCapabilities(Message):
-    CMDID = constants.CMDID_FRU_CONTROL_CAPABILITIES
-    NETFN = constants.NETFN_GROUP_EXTENSION
-    LUN = 0
-    _REQ_DESC = (
+@register_message_class
+class GetFruControlCapabilitiesReq(Message):
+    __cmdid__ = constants.CMDID_FRU_CONTROL_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
     )
-    _RSP_DESC = (
+
+
+@register_message_class
+class GetFruControlCapabilitiesRsp(Message):
+    __cmdid__ = constants.CMDID_FRU_CONTROL_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
             Bitfield('capabilities', 1,
@@ -112,11 +129,12 @@ class GetFruControlCapabilities(Message):
     )
 
 
-class SetFruActivationPolicy(Message):
-    CMDID = constants.CMDID_SET_FRU_ACTIVATION_POLICY
-    NETFN = constants.NETFN_GROUP_EXTENSION
-    LUN = 0
-    _REQ_DESC = (
+@register_message_class
+class SetFruActivationPolicyReq(Message):
+    __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION_POLICY
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
             Bitfield('mask', 1,
@@ -130,37 +148,60 @@ class SetFruActivationPolicy(Message):
                 Bitfield.ReservedBit(6),
             ),
     )
-    _RSP_DESC = (
+
+
+@register_message_class
+class SetFruActivationPolicyRsp(Message):
+    __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION_POLICY
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
     )
 
 
-class SetFruActivation(Message):
-    CMDID = constants.CMDID_SET_FRU_ACTIVATION
-    NETFN = constants.NETFN_GROUP_EXTENSION
-    LUN = 0
-    _REQ_DESC = (
+@register_message_class
+class SetFruActivationReq(Message):
+    __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
             UnsignedInt('control', 1),
     )
-    _RSP_DESC = (
+
+
+@register_message_class
+class SetFruActivationRsp(Message):
+    __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
     )
 
 
-class GetFruLedColorCapabilities(Message):
-    CMDID = constants.CMDID_GET_FRU_LED_COLOR_CAPABILITIES
-    NETFN = constants.NETFN_GROUP_EXTENSION
-    LUN = 0
-    _REQ_DESC = (
+@register_message_class
+class GetFruLedColorCapabilitiesReq(Message):
+    __cmdid__ = constants.CMDID_GET_FRU_LED_COLOR_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
             UnsignedInt('led_id', 1),
     )
-    _RSP_DESC = (
+
+
+@register_message_class
+class GetFruLedColorCapabilitiesRsp(Message):
+    __cmdid__ = constants.CMDID_GET_FRU_LED_COLOR_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
             Bitfield('color_capabilities', 1,
@@ -178,41 +219,45 @@ class GetFruLedColorCapabilities(Message):
     )
 
 
-class GetPowerLevel(Message):
-    CMDID = constants.CMDID_GET_POWER_LEVEL
-    NETFN = constants.NETFN_GROUP_EXTENSION
-    LUN = 0
-    _REQ_DESC = (
+@register_message_class
+class GetPowerLevelReq(Message):
+    __cmdid__ = constants.CMDID_GET_POWER_LEVEL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
         PicmgIdentifier(),
         UnsignedInt('fru_id', 1),
         UnsignedInt('power_type', 1),
     )
 
-    def _encode_rsp(self):
-        data = array.array('c')
-        raise NotImplementedError('You have to overwrite this method')
-        return data.tostring()
 
-    def _decode_rsp(self, data):
+@register_message_class
+class GetPowerLevelRsp(Message):
+    __cmdid__ = constants.CMDID_GET_POWER_LEVEL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+
+    def _decode(self, data):
         data = array.array('c', data)
-        self.rsp.completion_code = pop_unsigned_int(data, 1)
-        if (self.rsp.completion_code != constants.CC_OK):
+        self.completion_code = pop_unsigned_int(data, 1)
+        if (self.completion_code != constants.CC_OK):
             return
-        self.rsp.picmg_identifier  = pop_unsigned_int(data, 1)
+        self.picmg_identifier  = pop_unsigned_int(data, 1)
         tmp =  pop_unsigned_int(data, 1)
-        self.rsp.dynamic_power_configuration = tmp & 0x80 >> 7
-        self.rsp.power_level = tmp & 0x1f
+        self.dynamic_power_configuration = tmp & 0x80 >> 7
+        self.power_level = tmp & 0x1f
 
-        self.rsp.delay_to_stable_power = pop_unsigned_int(data, 1)
-        self.rsp.power_multiplier = pop_unsigned_int(data, 1)
-        self.rsp.data = data[:]
+        self.delay_to_stable_power = pop_unsigned_int(data, 1)
+        self.power_multiplier = pop_unsigned_int(data, 1)
+        self.data = data[:]
 
 
-class SetFruLedState(Message):
-    CMDID = constants.CMDID_SET_FRU_LED_STATE
-    NETFN = constants.NETFN_GROUP_EXTENSION
-    LUN = 0
-    _REQ_DESC = (
+@register_message_class
+class SetFruLedStateReq(Message):
+    __cmdid__ = constants.CMDID_SET_FRU_LED_STATE
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
             UnsignedInt('led_id', 1),
@@ -220,16 +265,37 @@ class SetFruLedState(Message):
             UnsignedInt('on_duration', 1),
             UnsignedIntMask('color', 1, 0x0f),
     )
-    _RSP_DESC = (
+
+
+@register_message_class
+class SetFruLedStateRsp(Message):
+    __cmdid__ = constants.CMDID_SET_FRU_LED_STATE
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
     )
 
 
-class GetFruLedState(Message):
-    CMDID = constants.CMDID_GET_FRU_LED_STATE
-    NETFN = constants.NETFN_GROUP_EXTENSION
-    LUN = 0
+@register_message_class
+class GetFruLedStateReq(Message):
+    __cmdid__ = constants.CMDID_GET_FRU_LED_STATE
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+
+    __fields__ = (
+            PicmgIdentifier(),
+            UnsignedInt('fru_id', 1),
+            UnsignedInt('led_id', 1),
+    )
+
+
+@register_message_class
+class GetFruLedStateRsp(Message):
+    __cmdid__ = constants.CMDID_GET_FRU_LED_STATE
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
 
     def _cond_override(obj):
         return obj.led_states.override_en == 1
@@ -237,12 +303,7 @@ class GetFruLedState(Message):
     def _cond_lamp_test(obj):
         return obj.led_states.lamp_test_en == 1
 
-    _REQ_DESC = (
-            PicmgIdentifier(),
-            UnsignedInt('fru_id', 1),
-            UnsignedInt('led_id', 1),
-    )
-    _RSP_DESC = (
+    __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
             Bitfield('led_states', 1,
@@ -264,12 +325,13 @@ class GetFruLedState(Message):
                 1, 0x7f)),
     )
 
-class SetPortState(Message):
-    CMDID = constants.CMDID_SET_PORT_STATE
-    NETFN = constants.NETFN_GROUP_EXTENSION
-    LUN = 0
 
-    _REQ_DESC = (
+@register_message_class
+class SetPortStateReq(Message):
+    __cmdid__ = constants.CMDID_SET_PORT_STATE
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
             PicmgIdentifier(),
             Bitfield('link_info', 4,
                 Bitfield.Bit('channel', 6),
@@ -284,17 +346,25 @@ class SetPortState(Message):
             ),
             UnsignedInt('state', 1),
     )
-    _RSP_DESC = (
+
+
+@register_message_class
+class SetPortStateRsp(Message):
+    __cmdid__ = constants.CMDID_SET_PORT_STATE
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
     )
 
-class SetSignalingClass(Message):
-    CMDID = constants.CMDID_SET_CHANNEL_SIGNALING_CLASS
-    NETFN = constants.NETFN_GROUP_EXTENSION
-    LUN = 0
 
-    _REQ_DESC = (
+@register_message_class
+class SetSignalingClassReq(Message):
+    __cmdid__ = constants.CMDID_SET_CHANNEL_SIGNALING_CLASS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
             PicmgIdentifier(),
             Bitfield('channel_info', 1,
                 Bitfield.Bit('channel_number', 6, 0),
@@ -305,24 +375,39 @@ class SetSignalingClass(Message):
                 Bitfield.ReservedBit(4)
             ),
     )
-    _RSP_DESC = (
+
+
+@register_message_class
+class SetSignalingClassRsp(Message):
+    __cmdid__ = constants.CMDID_SET_CHANNEL_SIGNALING_CLASS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
     )
 
-class GetSignalingClass(Message):
-    CMDID = constants.CMDID_GET_CHANNEL_SIGNALING_CLASS
-    NETFN = constants.NETFN_GROUP_EXTENSION
-    LUN = 0
 
-    _REQ_DESC = (
+@register_message_class
+class GetSignalingClassReq(Message):
+    __cmdid__ = constants.CMDID_GET_CHANNEL_SIGNALING_CLASS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
             PicmgIdentifier(),
             Bitfield('channel_info', 1,
                 Bitfield.Bit('channel_number', 6, 0),
                 Bitfield.Bit('interface', 2, 0),
             ),
     )
-    _RSP_DESC = (
+
+
+@register_message_class
+class GetSignalingClassRsp(Message):
+    __cmdid__ = constants.CMDID_GET_CHANNEL_SIGNALING_CLASS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
             Bitfield('channel_info', 1,

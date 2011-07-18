@@ -7,128 +7,132 @@
 
 import array
 from pyipmi.errors import DecodingError, CompletionCodeError
+from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import picmg
 from pyipmi.utils import check_completion_code
 
 from pyipmi.msgs.picmg import \
         CHANNEL_SIGNALING_CLASS_BASIC, CHANNEL_SIGNALING_CLASS_10_3125GBD, \
         FRU_CONTROL_COLD_RESET, FRU_CONTROL_WARM_RESET, \
-        FRU_CONTROL_GRACEFUL_REBOOT, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT
+        FRU_CONTROL_GRACEFUL_REBOOT, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT, \
+        FRU_ACTIVATION_FRU_ACTIVATE, FRU_ACTIVATION_FRU_DEACTIVATE
 
 class Picmg:
-    def fru_control(self, option, fru_id=0):
-        m = picmg.FruControl()
-        m.req.fru_id = fru_id
-        m.req.option = option
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+    def fru_control(self, fru_id, option):
+        req = create_request_by_name('FruControl')
+        req.fru_id = fru_id
+        req.option = option
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def fru_control_cold_reset(self, fru_id=0):
-        self.fru_control(picmg.FRU_CONTROL_COLD_RESET, fru_id)
+        self.fru_control(fru_id, FRU_CONTROL_COLD_RESET)
 
     def fru_control_warm_reset(self, fru_id=0):
-        self.fru_control(picmg.FRU_CONTROL_WARM_RESET, fru_id)
+        self.fru_control(fru_id, FRU_CONTROL_WARM_RESET)
 
     def fru_control_graceful_reboot(self, fru_id=0):
-        self.fru_control(picmg.FRU_CONTROL_GRACEFUL_REBOOT, fru_id)
+        self.fru_control(fru_id, FRU_CONTROL_GRACEFUL_REBOOT)
 
     def fru_control_diagnostic_interrupt(self, fru_id=0):
-        self.fru_control(picmg.FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT, fru_id)
+        self.fru_control(fru_id, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT)
 
     def get_power_level(self, fru_id, power_type):
-        m = picmg.GetPowerLevel()
-        m.req.fru_id = fru_id
-        m.req.power_type = power_type
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
-        return PowerLevel(m.rsp)
+        req = create_request_by_name('GetPowerLevel')
+        req.fru_id = fru_id
+        req.power_type = power_type
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return PowerLevel(rsp)
 
     def get_led_state(self, fru_id, led_id):
-        m = picmg.GetFruLedState()
-        m.req.fru_id = fru_id
-        m.req.led_id = led_id
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
-        return LedState(m.rsp)
+        req = create_request_by_name('GetFruLedState')
+        req.fru_id = fru_id
+        req.led_id = led_id
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return LedState(rsp)
 
     def set_fru_activation(self, fru_id):
-        m = picmg.SetFruActivation()
-        m.req.fru_id = fru_id
-        m.req.control = picmg.FRU_ACTIVATION_FRU_ACTIVATE
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+        req = create_request_by_name('SetFruActivation')
+        req.fru_id = fru_id
+        req.control = FRU_ACTIVATION_FRU_ACTIVATE
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def set_fru_deactivation(self, fru_id):
-        m = picmg.SetFruActivation()
-        m.req.fru_id = fru_id
-        m.req.control = picmg.FRU_ACTIVATION_FRU_DEACTIVATE
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+        req = create_request_by_name('SetFruActivation')
+        req.fru_id = fru_id
+        req.control = FRU_ACTIVATION_FRU_DEACTIVATE
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def set_fru_activation_lock(self, fru_id):
-        m = picmg.SetFruActivationPolicy()
-        m.req.fru_id = fru_id
-        m.req.mask.activation_locked = 1
-        m.req.set.activation_locked = 1
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+        req = create_request_by_name('SetFruActivationPolicy')
+        req.fru_id = fru_id
+        req.mask.activation_locked = 1
+        req.set.activation_locked = 1
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def clear_fru_activation_lock(self, fru_id):
-        m = picmg.SetFruActivationPolicy()
-        m.req.fru_id = fru_id
-        m.req.mask.activation_locked = 1
-        m.req.set.activation_locked = 0
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+        req = create_request_by_name('SetFruActivationPolicy')
+        req.fru_id = fru_id
+        req.mask.activation_locked = 1
+        req.set.activation_locked = 0
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def set_fru_deactivation_lock(self, fru_id):
-        m = picmg.SetFruActivationPolicy()
-        m.req.fru_id = fru_id
-        m.req.mask.deactivation_locked = 1
-        m.req.set.deactivation_locked = 1
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+        req = create_request_by_name('SetFruActivationPolicy')
+        req.fru_id = fru_id
+        req.mask.deactivation_locked = 1
+        req.set.deactivation_locked = 1
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def clear_fru_deactivation_lock(self, fru_id):
-        m = picmg.SetFruActivationPolicy()
-        m.req.fru_id = fru_id
-        m.req.mask.deactivation_locked = 1
-        m.req.set.deactivation_locked = 0
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+        req = create_request_by_name('SetFruActivationPolicy')
+        req.fru_id = fru_id
+        req.mask.deactivation_locked = 1
+        req.set.deactivation_locked = 0
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def set_port_state(self, link_info):
-        m = picmg.SetPortState()
-        m.req.link_info.channel = link_info.channel
-        m.req.link_info.interface = link_info.interface
-        m.req.link_info.port_0 = link_info.link_flags & 0x1
-        m.req.link_info.port_1 = (link_info.link_flags >> 1)&1
-        m.req.link_info.port_2 = (link_info.link_flags >> 2)&1
-        m.req.link_info.port_3 = (link_info.link_flags >> 3)&1
-        m.req.link_info.type = link_info.type
-        m.req.link_info.type_extension = link_info.extension
-        m.req.link_info.grouping_id = link_info.grouping_id
-        m.req.state = link_info.state
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+        req = create_request_by_name('SetPortState')
+        req.link_info.channel = link_info.channel
+        req.link_info.interface = link_info.interface
+        req.link_info.port_0 = (link_info.link_flags >> 0) & 1
+        req.link_info.port_1 = (link_info.link_flags >> 1) & 1
+        req.link_info.port_2 = (link_info.link_flags >> 2) & 1
+        req.link_info.port_3 = (link_info.link_flags >> 3) & 1
+        req.link_info.type = link_info.type
+        req.link_info.type_extension = link_info.extension
+        req.link_info.grouping_id = link_info.grouping_id
+        req.state = link_info.state
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def set_signaling_class(self, interface, channel, signaling_class):
-        m = picmg.SetSignalingClass()
-        m.req.channel_info.channel_number = channel
-        m.req.channel_info.interface = interface
-        m.req.channel_signaling.class_capability = signaling_class
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
+        req = create_request_by_name('SetSignalingClass')
+        req.channel_info.channel_number = channel
+        req.channel_info.interface = interface
+        req.channel_signaling.class_capability = signaling_class
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def get_signaling_class(self, interface, channel):
-        m = picmg.GetSignalingClass()
-        m.req.channel_info.channel_number = channel
-        m.req.channel_info.interface = interface
-        self.send_message(m)
-        check_completion_code(m.rsp.completion_code)
-        return m.rsp.channel_signaling.class_capability
+        req = create_request_by_name('GetSignalingClass')
+        req.channel_info.channel_number = channel
+        req.channel_info.interface = interface
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return rsp.channel_signaling.class_capability
 
 class LinkInfo:
+    # TODO dont duplicate exports, import them instead
+    from pyipmi.msgs import picmg
     INTERFACE_BASE = picmg.LINK_INTERFACE_BASE
     INTERFACE_FABRIC = picmg.LINK_INTERFACE_FABRIC
     INTERFACE_UPDATE_CHANNEL = picmg.LINK_INTERFACE_UPDATE_CHANNEL

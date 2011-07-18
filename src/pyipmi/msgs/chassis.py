@@ -1,11 +1,12 @@
 import constants
-from pyipmi.msgs import Message
-from pyipmi.msgs import UnsignedInt
-from pyipmi.msgs import UnsignedIntMask
-from pyipmi.msgs import Timestamp
-from pyipmi.msgs import Bitfield
-from pyipmi.msgs import CompletionCode
-from pyipmi.msgs import Conditional
+from . import register_message_class
+from . import Message
+from . import UnsignedInt
+from . import UnsignedIntMask
+from . import Timestamp
+from . import Bitfield
+from . import CompletionCode
+from . import Conditional
 
 CONTROL_POWER_DOWN = 0
 CONTROL_POWER_UP = 1
@@ -14,16 +15,24 @@ CONTROL_HARD_RESET = 3
 CONTROL_DIAGNOSTIC_INTERRUPT = 4
 CONTROL_SOFT_SHUTDOWN = 5
 
-class ChassisControl(Message):
-    CMDID = constants.CMDID_CHASSIS_CONTROL
-    NETFN = constants.NETFN_CHASSIS
-    LUN = 0
-    _REQ_DESC = (
+@register_message_class
+class ChassisControlReq(Message):
+    __cmdid__ = constants.CMDID_CHASSIS_CONTROL
+    __netfn__ = constants.NETFN_CHASSIS
+    __default_lun__ = 0
+    __fields__ = (
         Bitfield('control', 1,
             Bitfield.Bit('option', 4),
             Bitfield.ReservedBit(4, 0)
         ),
     )
-    _RSP_DESC = (
+
+
+@register_message_class
+class ChassisControlRsp(Message):
+    __cmdid__ = constants.CMDID_CHASSIS_CONTROL
+    __netfn__ = constants.NETFN_CHASSIS | 1
+    __default_lun__ = 0
+    __fields__ = (
         CompletionCode(),
     )

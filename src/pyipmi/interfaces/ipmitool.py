@@ -11,6 +11,7 @@ from array import array
 from pyipmi import Session
 from pyipmi.errors import TimeoutError
 from pyipmi.logger import log
+from pyipmi.msgs import encode_message, decode_message, create_message
 
 class Ipmitool:
     """This interface uses the ipmitool raw command to "emulate" a RMCP
@@ -84,18 +85,21 @@ class Ipmitool:
         
         return data
 
-    def send_and_receive(self, msg):
+    def send_and_receive(self, req):
 
-        log().debug('IPMI Request [%s]', msg.req)
+        log().debug('IPMI Request [%s]', req)
 
-        req = chr(msg.NETFN << 2 | msg.LUN)
-        req += (chr(msg.CMDID))
-        req += msg.req.encode()
+        req_data = chr(req.netfn << 2 | req.lun)
+        req_data += (chr(req.cmdid))
+        req_data += encode_message(req)
 
-        rsp = self.send_and_receive_raw(msg.target, req)
+        rsp_data = self.send_and_receive_raw(req.target, req_data)
 
-        msg.rsp.decode(rsp.tostring())
-        log().debug('IPMI Response [%s])', msg.rsp)
+        rsp = create_message(req.cmdid, req.netfn + 1)
+        decode_message(rsp, rsp_data.tostring())
+        log().debug('IPMI Response [%s])', rsp)
+
+        return rsp
  
     def _run_ipmitool(self, target, ipmitool_cmd):
         """Legacy call of ipmitool (will be removed in future).

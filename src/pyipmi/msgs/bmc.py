@@ -1,26 +1,33 @@
 import constants
-from pyipmi.msgs import Message
-from pyipmi.msgs import ByteArray
-from pyipmi.msgs import UnsignedInt
-from pyipmi.msgs import UnsignedIntMask
-from pyipmi.msgs import Timestamp
-from pyipmi.msgs import Bitfield
-from pyipmi.msgs import CompletionCode
-from pyipmi.msgs import Conditional
-from pyipmi.msgs import Optional
+from . import register_message_class
+from . import Message
+from . import ByteArray
+from . import UnsignedInt
+from . import UnsignedIntMask
+from . import Timestamp
+from . import Bitfield
+from . import CompletionCode
+from . import Conditional
+from . import Optional
 
+@register_message_class
+class GetDeviceIdReq(Message):
+    __cmdid__ = constants.CMDID_GET_DEVICE_ID
+    __netfn__ = constants.NETFN_APP
+    __default_lun__ = 0
+    __fields__ = ()
 
-class GetDeviceId(Message):
-    CMDID = constants.CMDID_GET_DEVICE_ID
-    NETFN = constants.NETFN_APP
-    LUN = 0
-    _REQ_DESC = ()
-    _RSP_DESC = (
+@register_message_class
+class GetDeviceIdRsp(Message):
+    __cmdid__ = constants.CMDID_GET_DEVICE_ID
+    __netfn__ = constants.NETFN_APP | 1
+    __default_lun__ = 0
+    __fields__ = (
             CompletionCode(),
             UnsignedInt('device_id', 1),
             Bitfield('device_revision', 1,
-                Bitfield.Bit('device_revision',4),
-                Bitfield.ReservedBit(3,0),
+                Bitfield.Bit('device_revision', 4),
+                Bitfield.ReservedBit(3, 0),
                 Bitfield.Bit('provides_device_sdrs', 1)
             ),
             Bitfield('firmware_revision', 2,
@@ -45,52 +52,84 @@ class GetDeviceId(Message):
     )
 
 
-class ColdReset(Message):
-    CMDID = constants.CMDID_COLD_RESET
-    NETFN = constants.NETFN_APP
-    LUN = 0
-    _REQ_DESC = ()
-    _RSP_DESC = (
+@register_message_class
+class ColdResetReq(Message):
+    __cmdid__ = constants.CMDID_COLD_RESET
+    __netfn__ = constants.NETFN_APP
+    __default_lun__ = 0
+    __fields__ = ()
+
+
+@register_message_class
+class ColdResetRsp(Message):
+    __cmdid__ = constants.CMDID_COLD_RESET
+    __netfn__ = constants.NETFN_APP | 1
+    __default_lun__ = 0
+    __fields__ = (
         CompletionCode(),
     )
 
 
-class WarmReset(Message):
-    CMDID = constants.CMDID_WARM_RESET
-    NETFN = constants.NETFN_APP
-    LUN = 0
-    _REQ_DESC = ()
-    _RSP_DESC = (
+@register_message_class
+class WarmResetReq(Message):
+    __cmdid__ = constants.CMDID_WARM_RESET
+    __netfn__ = constants.NETFN_APP
+    __default_lun__ = 0
+    __fields__ = ()
+
+
+@register_message_class
+class WarmResetRsp(Message):
+    __cmdid__ = constants.CMDID_WARM_RESET
+    __netfn__ = constants.NETFN_APP | 1
+    __default_lun__ = 0
+    __fields__ = (
         CompletionCode(),
     )
 
 
-class ManufacturingTestOn(Message):
-    CMDID = constants.CMDID_MANUFACTURING_TEST_ON
-    NETFN = constants.NETFN_APP
-    LUN = 0
-    _REQ_DESC = ()
-    _RSP_DESC = (
+@register_message_class
+class ManufacturingTestOnReq(Message):
+    __cmdid__ = constants.CMDID_MANUFACTURING_TEST_ON
+    __netfn__ = constants.NETFN_APP
+    __default_lun__ = 0
+    __fields__ = ()
+
+
+@register_message_class
+class ManufacturingTestOnRsp(Message):
+    __cmdid__ = constants.CMDID_MANUFACTURING_TEST_ON
+    __netfn__ = constants.NETFN_APP | 1
+    __default_lun__ = 0
+    __fields__ = (
         CompletionCode(),
     )
 
 
-class ResetWatchdogTimer(Message):
-    CMDID = constants.CMDID_RESET_WATCHDOG_TIMER
-    NETFN = constants.NETFN_APP
-    LUN = 0
-    _REQ_DESC = (
-    )
-    _RSP_DESC = (
+@register_message_class
+class ResetWatchdogTimerReq(Message):
+    __cmdid__ = constants.CMDID_RESET_WATCHDOG_TIMER
+    __netfn__ = constants.NETFN_APP
+    __default_lun__ = 0
+    __fields__ = ()
+
+
+@register_message_class
+class ResetWatchdogTimerRsp(Message):
+    __cmdid__ = constants.CMDID_RESET_WATCHDOG_TIMER
+    __netfn__ = constants.NETFN_APP | 1
+    __default_lun__ = 0
+    __fields__ = (
         CompletionCode(),
     )
 
 
-class SetWatchdogTimer(Message):
-    CMDID = constants.CMDID_SET_WATCHDOG_TIMER
-    NETFN = constants.NETFN_APP
-    LUN = 0
-    _REQ_DESC = (
+@register_message_class
+class SetWatchdogTimerReq(Message):
+    __cmdid__ = constants.CMDID_SET_WATCHDOG_TIMER
+    __netfn__ = constants.NETFN_APP
+    __default_lun__ = 0
+    __fields__ = (
             Bitfield('timer_use', 1,
                 Bitfield.Bit('timer_use', 3),
                 Bitfield.ReservedBit(3, 0),
@@ -107,19 +146,32 @@ class SetWatchdogTimer(Message):
             UnsignedInt('timer_use_expiration_flags', 1),
             UnsignedInt('initial_countdown', 2),
     )
-    _RSP_DESC = (
+
+
+@register_message_class
+class SetWatchdogTimerRsp(Message):
+    __cmdid__ = constants.CMDID_SET_WATCHDOG_TIMER
+    __netfn__ = constants.NETFN_APP | 1
+    __default_lun__ = 0
+    __fields__ = (
         CompletionCode(),
     )
 
 
-class GetWatchdogTimer(Message):
-    CMDID = constants.CMDID_GET_WATCHDOG_TIMER
-    NETFN = constants.NETFN_APP
-    LUN = 0
+@register_message_class
+class GetWatchdogTimerReq(Message):
+    __cmdid__ = constants.CMDID_GET_WATCHDOG_TIMER
+    __netfn__ = constants.NETFN_APP
+    __default_lun__ = 0
+    __fields__ = ()
 
-    _REQ_DESC = (
-    )
-    _RSP_DESC = (
+
+@register_message_class
+class GetWatchdogTimerRsp(Message):
+    __cmdid__ = constants.CMDID_GET_WATCHDOG_TIMER
+    __netfn__ = constants.NETFN_APP | 1
+    __default_lun__ = 0
+    __fields__ = (
         CompletionCode(),
         Bitfield('timer_use', 1,
             Bitfield.Bit('timer_use', 3),
