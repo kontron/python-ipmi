@@ -7,6 +7,7 @@ from pyipmi.msgs import Timestamp
 from pyipmi.msgs import Bitfield
 from pyipmi.msgs import CompletionCode
 from pyipmi.msgs import Conditional
+from pyipmi.msgs import Optional
 
 
 class GetDeviceId(Message):
@@ -40,7 +41,7 @@ class GetDeviceId(Message):
             ),
             UnsignedInt('manufacturer_id', 3),
             UnsignedInt('product_id', 2),
-            ByteArray('auxiliary', 4)
+            Optional(ByteArray('auxiliary', 4))
     )
 
 
