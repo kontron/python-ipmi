@@ -98,6 +98,19 @@ class Conditional:
         if self._condition_fn(obj):
             self._field.decode(obj, data)
 
+class Optional:
+    def __init__(self, field):
+        self._field = field
+
+    def __getattr__(self, name):
+        return getattr(self._field, name)
+
+    def decode(self, obj, data):
+        if len(data) > 0:
+            self._field.decode(obj,data)
+
+    def encode(self, obj, data):
+        self._field.encode(obj, data)
 
 class Bitfield(BaseField):
     class Bit:
