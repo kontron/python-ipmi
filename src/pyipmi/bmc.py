@@ -5,29 +5,29 @@
 # author: Michael Walle <michael.walle@kontron.com>
 #
 
+from pyipmi.msgs import bmc as msgs
 from pyipmi.errors import DecodingError, CompletionCodeError
-from pyipmi.msgs import bmc
 from pyipmi.utils import check_completion_code
 
-class Helper:
-    def get_device_id(self, fn):
-        m = bmc.GetDeviceId()
-        fn(m)
+class Bmc:
+    def get_device_id(self):
+        m = msgs.GetDeviceId()
+        self.send_message(m)
         check_completion_code(m.rsp.completion_code)
         return DeviceId(m.rsp)
 
-    def cold_reset(self, fn):
-        m = bmc.ColdReset()
-        fn(m)
+    def cold_reset(self):
+        m = msgs.ColdReset()
+        self.send_message(m)
         check_completion_code(m.rsp.completion_code)
 
-    def warm_reset(self, fn):
-        m = bmc.WarmReset()
-        fn(m)
+    def warm_reset(self):
+        m = msgs.WarmReset()
+        self.send_message(m)
         check_completion_code(m.rsp.completion_code)
 
-    def set_watchdog_timer(self, fn, config):
-        m = bmc.SetWatchdogTimer()
+    def set_watchdog_timer(self, config):
+        m = msgs.SetWatchdogTimer()
         m.req.timer_use.timer_use = config.timer_use
         m.req.timer_use.dont_stop = config.dont_stop and 1 or 0
         m.req.timer_use.dont_log = config.dont_log and 1 or 0
@@ -40,18 +40,18 @@ class Helper:
         m.req.pre_timeout_interval = config.pre_timeout_interval
         m.req.timer_use_expiration_flags = config.timer_use_expiration_flags
         m.req.initial_countdown = config.initial_countdown
-        fn(m)
+        self.send_message(m)
         check_completion_code(m.rsp.completion_code)
 
-    def get_watchdog_timer(self, fn):
-        m = bmc.GetWatchdogTimer()
-        fn(m)
+    def get_watchdog_timer(self):
+        m = msgs.GetWatchdogTimer()
+        self.send_message(m)
         check_completion_code(m.rsp.completion_code)
         return Watchdog(m.rsp)
 
-    def reset_watchdog_timer(self, fn):
-        m = bmc.ResetWatchdogTimer()
-        fn(m)
+    def reset_watchdog_timer(self):
+        m = msgs.ResetWatchdogTimer()
+        self.send_message(m)
         check_completion_code(m.rsp.completion_code)
 
 

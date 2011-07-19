@@ -16,22 +16,22 @@ GET_ERASE_STATUS = 0x00
 ERASURE_IN_PROGRESS = 0x0
 ERASURE_COMPLETED = 0x1
 
-class Helper:
-    def get_sel_reservation_id(self, fn):
+class Sel:
+    def get_sel_reservation_id(self):
         m = pyipmi.msgs.sel.ReserveSel()
-        fn(m)
+        self.send_message(m)
         check_completion_code(m.rsp.completion_code)
         return m.rsp.reservation_id
 
-    def clear_sel(self, fn, retry=5):
+    def clear_sel(self, retry=5):
         m = pyipmi.msgs.sel.ClearSel()
-        m.req.reservation_id = self.get_sel_reservation_id(fn)
+        m.req.reservation_id = self.get_sel_reservation_id()
 
         m.req.cmd = pyipmi.sel.INITIATE_ERASE
         while True:
-            fn(m)
+            self.send_message(m)
             if m.rsp.completion_code == pyipmi.msgs.constants.CC_RES_CANCELED:
-                m.req.reservation_id = self.get_sel_reservation_id(fn)
+                m.req.reservation_id = self.get_sel_reservation_id()
                 retry -= 1
                 continue
             else:
@@ -43,7 +43,7 @@ class Helper:
             if retry <= 0:
                 raise pyipmi.errors.RetryError()
 
-            fn(m)
+            self.send_message(m)
             if m.rsp.completion_code == pyipmi.msgs.constants.CC_OK:
                 if m.rsp.status.erase_in_progress == pyipmi.sel.ERASURE_IN_PROGRESS:
                     time.sleep(0.5)
@@ -53,21 +53,21 @@ class Helper:
                     break
             elif m.rsp.completion_code == pyipmi.msgs.constants.CC_RES_CANCELED:
                 time.sleep(0.2)
-                m.req.reservation_id = self.get_sel_reservation_id(fn)
+                m.req.reservation_id = self.get_sel_reservation_id()
                 retry -= 1
                 continue
             else:
                 check_completion_code(m.rsp.completion_code)
                 break
 
-    def sel_entries(self, fn):
+    def sel_entries(self):
         '''Generator which returns all SEL entries.'''
         m = pyipmi.msgs.sel.GetSelInfo()
-        fn(m)
+        self.send_message(m)
         check_completion_code(m.rsp.completion_code)
         if m.rsp.entries == 0:
             return
-        reservation_id = self.get_sel_reservation_id(fn)
+        reservation_id = self.get_sel_reservation_id()
         next_record_id = 0
         while True:
             m = pyipmi.msgs.sel.GetSelEntry()
@@ -83,7 +83,7 @@ class Helper:
                         and (m.req.offset + m.req.length) > 16):
                     m.req.length = 16 - m.req.offset
 
-                fn(m)
+                self.send_message(m)
                 if m.rsp.completion_code == 0xca:
                     if self.max_req_len  == 0xff:
                         self.max_req_len = 16
@@ -105,9 +105,9 @@ class Helper:
             if next_record_id == 0xffff:
                 break
 
-    def get_sel_entries(self, fn):
+    def get_sel_entries(self):
         '''Returns all SEL entries as a list.'''
-        return list(self.sel_entries(fn))
+        return list(self.sel_entries())
 
 class SelEntry:
     TYPE_SYSTEM_EVENT = 0x02

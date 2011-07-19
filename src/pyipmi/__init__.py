@@ -101,30 +101,19 @@ class Session:
 
     interface = property(_get_interface, _set_interface)
 
-class Ipmi:
-    HELPER_CLS = [ fru.Helper, bmc.Helper, chassis.Helper, picmg.Helper,
-            sel.Helper, sdr.Helper, hpm.Helper ]
+class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm, sdr.Sdr,
+        sel.Sel):
 
     def __init__(self):
-        self._helper_objs = [ cls() for cls in self.HELPER_CLS ]
+        pass
 
-    def __getattr__(self, name):
-        # map in ipmi helper
-        for o in self._helper_objs:
-            if hasattr(o, name):
-                return self._cmd_wrapper(getattr(o, name))
-        raise AttributeError()
-
-    def raw_command(self, raw_cmd):
-        return self.interface.send_and_receive_raw(self.target, raw_cmd)
-
-    def _cmd_wrapper(self, callable):
-        return functools.partial(callable, self._send_and_receive)
-
-    def _send_and_receive(self, msg):
+    def send_message(self, msg):
         msg.target = self.target
         msg.requester = self.requester
         self.interface.send_and_receive(msg)
+
+    def raw_command(self, raw_cmd):
+        return self.interface.send_and_receive_raw(self.target, raw_cmd)
 
     def _get_interface(self):
         try:

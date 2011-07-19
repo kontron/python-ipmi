@@ -34,14 +34,14 @@ ACTION_PREPARE_COMPONENT = 0x01
 ACTION_UPLOAD_FIRMWARE_IMAGE = 0x02
 
 
-class Helper:
-    def get_target_upgrade_capabilities(self, fn):
+class Hpm:
+    def get_target_upgrade_capabilities(self):
         m = hpm.GetTargetUpgradeCapabilities()
-        fn(m)
+        self.send_message(m)
         check_completion_code(m.rsp.completion_code)
         return TargetUpgradeCapabilities(m.rsp)
 
-    def get_component_properties(self, fn, id):
+    def get_component_properties(self, id):
         PROPERTIES = [
             PROPERTIES_DATA_GENERAL,
             PROPERTIES_DATA_CURRENT_VERSION,
@@ -55,19 +55,19 @@ class Helper:
         properties = []
         for p in PROPERTIES:
             m.req.selector = p
-            fn(m)
+            self.send_message(m)
             if m.rsp.completion_code is 0:
                 properties.append(ComponentProperty(p, m.rsp.data))
         return properties
 
-    def open_hpm_file(self, fn, filename):
+    def open_hpm_file(self, filename):
         return UpgradeImage(filename)
 
-    def query_selftest_result(self, fn):
-        pass
+    def query_selftest_result(self):
+        raise NotImplementedError()
 
-    def upload_component_firmware(self, fn):
-        pass
+    def upload_component_firmware(self):
+        raise NotImplementedError()
 
 
 class TargetUpgradeCapabilities:

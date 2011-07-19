@@ -15,35 +15,32 @@ from pyipmi.utils import check_completion_code, bcd_search
 
 codecs.register(bcd_search)
 
-class Helper:
-    def get_fru_inventory_area_info(self, fn, fru_id=0):
+class Fru:
+    def get_fru_inventory_area_info(self, fru_id=0):
         m = fru.GetFruInventoryAreaInfo()
         m.fru_id = fru_id
-        fn(m)
+        self.send_message(m)
         check_completion_code(m.rsp.completion_code)
+        return m.rsp.area_size
 
-    def write_fru_data(self, fn, data, fru_id=0, offset=0):
+    def write_fru_data(self, data, offset=0, fru_id=0):
         m = fru.WriteFruData()
         m.req.fru_id = fru_id
         m.req.offset = offset
         m.req.data = data[:]
-        fn(m)
+        self.send_message(m)
         check_completion_code(m.rsp.completion_code)
 
-    def read_fru_data(self, fn, fru_id=0, offset=None, count=None):
+    def read_fru_data(self, offset=None, count=None, fru_id=0):
         off = 0
         area_size = 0
         req_size = 32
         data = array.array('c')
 
         # first check for maximum area size
-        info = fru.GetFruInventoryAreaInfo()
-        info.fru_id = fru_id
-        fn(info)
-        check_completion_code(info.rsp.completion_code)
 
         if offset is None:
-            area_size = info.rsp.area_size
+            area_size = self.get_fru_inventory_area_info(fru_id)
             off = 0
         else:
             area_size = offset + count
@@ -58,22 +55,22 @@ class Helper:
             m.req.offset = off
             m.req.count = req_size
             try:
-                fn(m)
+                self.send_message(m)
                 check_completion_code(m.rsp.completion_code)
-            except CompletionCodeError:
-                if m.rsp.completion_code == 0xca:
+            except CompletionCodeError, e:
+                if e.cc == 0xca:
                     req_size -= 2
                     continue
                 else:
-                    check_completion_code(m.rsp.completion_code)
+                    raise
 
             data.extend(m.rsp.data)
             off += m.rsp.count
 
         return data.tostring()
 
-    def get_fru_inventory(self, fn, fru_id=0):
-        return FruInventory(self.read_fru_data(fn, fru_id))
+    def get_fru_inventory(self, fru_id=0):
+        return FruInventory(self.read_fru_data(fru_id=fru_id))
 
 class FruDataField:
     TYPE_BINARY = 0

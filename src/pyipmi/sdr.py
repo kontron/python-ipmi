@@ -30,16 +30,14 @@ EVENT_READING_TYPE_CODE_PREDICTIVE_FAILIRE = 0x04
 EVENT_READING_TYPE_CODE_LIMIT = 0x05
 EVENT_READING_TYPE_CODE_PERFORMANCE = 0x06
 
-class Helper:
-    def get_reservation_id(self, fn):
-        """
-        """
+class Sdr:
+    def get_reservation_id(self):
         m = pyipmi.msgs.sdr.ReserveDeviceSdrRepository()
-        fn(m)
+        self.send_message(m)
         check_completion_code(m.rsp.completion_code)
         return  m.rsp.reservation_id
 
-    def get_sdr(self, fn, record_id, reservation_id=None):
+    def get_sdr(self, record_id, reservation_id=None):
         """Collects all data for the given SDR record ID and returns
         the decoded SDR object.
 
@@ -49,7 +47,7 @@ class Helper:
         be determined.
         """
         if reservation_id is None:
-            reservation_id = self.get_reservation_id(fn)
+            reservation_id = self.get_reservation_id()
 
         # get record header ... 5 bytes
         m = pyipmi.msgs.sdr.GetDeviceSdr()
@@ -61,11 +59,11 @@ class Helper:
         while True:
             if retry == 0:
                 raise pyipmi.errors.RetryError()
-            fn(m)
+            self.send_message(m)
             if m.rsp.completion_code == 0:
                 break
             elif m.rsp.completion_code == pyipmi.msgs.constants.CC_RES_CANCELED:
-                m.req.reservation_id = self.get_reservation_id(fn)
+                m.req.reservation_id = self.get_reservation_id()
                 time.sleep(0.1)
                 retry -= 1
                 continue
@@ -98,7 +96,7 @@ class Helper:
             m.req.length = self.max_req_len
             if (m.req.offset + m.req.length) > record_length:
                 m.req.length = record_length - m.req.offset
-            fn(m)
+            self.send_message(m)
 
             if (m.rsp.completion_code
                         == pyipmi.msgs.constants.CC_CANT_RET_NUM_REQ_BYTES):
@@ -107,7 +105,7 @@ class Helper:
                     retry = 0
                 continue
             elif m.rsp.completion_code == pyipmi.msgs.constants.CC_RES_CANCELED:
-                m.req.reservation_id = self.get_reservation_id(fn)
+                m.req.reservation_id = self.get_reservation_id()
                 time.sleep(0.1 * retry)
                 # clean all previous data and retry with new reservation
                 record_data = array.array('c')
@@ -128,26 +126,26 @@ class Helper:
 
         return create_sdr(record_data, next_record_id)
 
-    def sdr_entries(self, fn):
+    def sdr_entries(self):
         """A generator that returns the SDR list. Starting with ID=0x0000 and
         end when ID=0xffff is returned.
         """
-        reservation_id = self.get_reservation_id(fn)
+        reservation_id = self.get_reservation_id()
         record_id = 0
 
         while True:
-            s = self.get_sdr(fn, record_id, reservation_id)
+            s = self.get_sdr(record_id, reservation_id)
             yield s
             if s.next_id == 0xffff:
                 break
             record_id = s.next_id
 
-    def get_sdr_list(self, fn, reservation_id=None):
+    def get_sdr_list(self, reservation_id=None):
         """Returns the complete SDR list.
         """
-        return list(self.sdr_entries(fn))
+        return list(self.sdr_entries())
 
-    def get_sensor_reading(self, fn, sensor_number, sdr=None):
+    def get_sensor_reading(self, sensor_number, sdr=None):
         """Returns the sensor reading at the assertion states for the given
         sensor number.
 
@@ -157,7 +155,7 @@ class Helper:
         """
         m = pyipmi.msgs.sdr.GetSensorReading()
         m.req.sensor_number = sensor_number
-        fn(m)
+        self.send_message(m)
         check_completion_code(m.rsp.completion_code)
 
         reading = m.rsp.sensor_reading
@@ -171,7 +169,7 @@ class Helper:
             states |= (m.rsp.states2 << 8)
         return (reading, states)
 
-    def set_sensor_thresholds(self, fn, sensor_number, unr=None, ucr=None,
+    def set_sensor_thresholds(self, sensor_number, unr=None, ucr=None,
                 unc=None, lnc=None, lcr=None, lnr=None):
         """Set the sensor thresholds that are not 'None'
 
@@ -203,7 +201,7 @@ class Helper:
         if lnr is not None:
             m.req.set_mask.lnr = 1
             m.req.threshold.lnr = lnr
-        fn(m)
+        self.send_message(m)
         check_completion_code(m.rsp.completion_code)
 
 
@@ -226,8 +224,7 @@ def create_sdr(data, next_id=None):
         raise DecodingError('Unsupported SDR type(0x%02x)' % sdr_type)
 
 
-class Sdr:
-
+class SdrCommon:
     def __init__(self, rsp=None, next_id=None):
         if rsp:
             self.from_response(rsp)
@@ -253,7 +250,7 @@ class Sdr:
 ###
 # SDR type 0x01
 ##################################################
-class SdrFullSensorRecord(Sdr):
+class SdrFullSensorRecord(SdrCommon):
     DATA_FMT_UNSIGNED = 0
     DATA_FMT_1S_COMPLEMENT = 1
     DATA_FMT_2S_COMPLEMENT = 2
@@ -274,7 +271,7 @@ class SdrFullSensorRecord(Sdr):
 
     def __init__(self, data, next_id=None):
         if data:
-            Sdr.__init__(self, data, next_id)
+            SdrCommon.__init__(self, data, next_id)
             self.from_data(data)
 
     def __str__(self):
@@ -505,10 +502,10 @@ class SdrFullSensorRecord(Sdr):
 ###
 # SDR type 0x02
 ##################################################
-class SdrCompactSensorRecord(Sdr):
+class SdrCompactSensorRecord(SdrCommon):
     def __init__(self, data, next_id=None):
         if data:
-            Sdr.__init__(self, data, next_id)
+            SdrCommon.__init__(self, data, next_id)
             self.from_data(data)
 
     def __str__(self):
@@ -545,10 +542,10 @@ class SdrCompactSensorRecord(Sdr):
 ###
 # SDR type 0x11
 ##################################################
-class SdrFruDeviceLocator(Sdr):
+class SdrFruDeviceLocator(SdrCommon):
     def __init__(self, data, next_id=None):
         if data:
-            Sdr.__init__(self, data, next_id)
+            SdrCommon.__init__(self, data, next_id)
             self.from_data(data)
 
     def __str__(self):
@@ -577,10 +574,10 @@ class SdrFruDeviceLocator(Sdr):
 ###
 # SDR type 0x12
 ##################################################
-class SdrManagementContollerDeviceLocator(Sdr):
+class SdrManagementContollerDeviceLocator(SdrCommon):
     def __init__(self, data, next_id=None):
         if data:
-            Sdr.__init__(self, data, next_id)
+            SdrCommon.__init__(self, data, next_id)
             self.from_data(data)
 
     def __str__(self):
