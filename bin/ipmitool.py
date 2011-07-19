@@ -443,6 +443,18 @@ COMMANDS = (
         Command('raw', cmd_raw),
         Command('hpm cap', cmd_hpm_capabilities),
         Command('hpm check', cmd_hpm_check_file),
+        Command('chassis power off',
+            lambda i, a: i.chassis_control_power_down()),
+        Command('chassis power on',
+            lambda i, a: i.chassis_control_power_up()),
+        Command('chassis power cycle',
+            lambda i, a: i.chassis_control_power_cycle()),
+        Command('chassis power reset',
+            lambda i, a: i.chassis_control_power_hard_reset()),
+        Command('chassis power diag',
+            lambda i, a: i.chassis_control_power_diagnostic_interrupt()),
+        Command('chassis power soft',
+            lambda i, a: i.chassis_control_power_soft_shutdown()),
 )
 
 COMMAND_HELP = (
@@ -473,6 +485,10 @@ COMMAND_HELP = (
                 'Request the target upgrade capabilities'),
         CommandHelp('hpm check', 'HPM.1 file check',
                 'Check the specified HPM.1 file'),
+
+        CommandHelp('chassis', None, 'Get chassis status and set power state'),
+        CommandHelp('chassis power', '<on|off|cycle|reset|diag|soft>',
+            'Set power state')
 )
 
 if __name__ == '__main__':
