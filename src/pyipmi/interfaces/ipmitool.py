@@ -39,6 +39,7 @@ class Ipmitool:
         cmd = self.IPMITOOL_PATH
         cmd += (' -I lan')
         cmd += (' -H %s' % self._session._rmcp_host)
+        cmd += (' -p %s' % self._session._rmcp_port)
         cmd += (' -A NONE')
         cmd += (' session info all')
 
@@ -106,6 +107,7 @@ class Ipmitool:
         cmd = self.IPMITOOL_PATH
         cmd += (' -I lan')
         cmd += (' -H %s' % self._session._rmcp_host)
+        cmd += (' -p %s' % self._session._rmcp_port)
 
         if hasattr(target, 'routing'):
             # we have to do bridging here

@@ -79,8 +79,9 @@ class Session:
     def _set_interface(self, interface):
         self._interface = interface
 
-    def set_session_type_rmcp(self, host):
+    def set_session_type_rmcp(self, host, port=623):
         self._rmcp_host = host
+        self._rmcp_port = port
 
     def set_auth_type_user(self, username, password):
         self.auth_type = self.AUTH_TYPE_PASSWORD
