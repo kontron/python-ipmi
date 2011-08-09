@@ -14,6 +14,7 @@ import pyipmi.msgs.sdr
 
 SDR_TYPE_FULL_SENSOR_RECORD = 0x01
 SDR_TYPE_COMPACT_SENSOR_RECORD = 0x02
+SDR_TYPE_EVENT_ONLY_SENSOR_RECORD = 0x03
 SDR_TYPE_ENTITY_ASSOCIATION_RECORD = 0x08
 SDR_TYPE_FRU_DEVICE_LOCATOR_RECORD = 0x11
 SDR_TYPE_MANAGEMENT_CONTROLLER_DEVICE_LOCATOR_RECORD = 0x12
@@ -212,6 +213,8 @@ def create_sdr(data, next_id=None):
         return SdrFullSensorRecord(data, next_id)
     elif sdr_type == SDR_TYPE_COMPACT_SENSOR_RECORD:
         return SdrCompactSensorRecord(data, next_id)
+    elif sdr_type == SDR_TYPE_EVENT_ONLY_SENSOR_RECORD:
+        return SdrEventOnlySensorRecord(data, next_id)
     elif sdr_type == SDR_TYPE_FRU_DEVICE_LOCATOR_RECORD:
         return SdrFruDeviceLocator(data, next_id)
     elif sdr_type == SDR_TYPE_MANAGEMENT_CONTROLLER_DEVICE_LOCATOR_RECORD:
@@ -537,6 +540,23 @@ class SdrCompactSensorRecord(SdrCommon):
         self.oem = pop_unsigned_int(tmp_data, 1)
         self.device_id_string_type_length = pop_unsigned_int(tmp_data, 1)
         self.device_id_string = tmp_data.tostring()
+
+
+###
+# SDR type 0x03
+##################################################
+class SdrEventOnlySensorRecord(SdrCommon):
+    def __init__(self, data, next_id=None):
+        if data:
+            SdrCommon.__init__(self, data, next_id)
+            self.from_data(data)
+
+    def __str__(self):
+        return 'Not supported yet.'
+
+    def from_data(self, data):
+        pass
+
 
 
 ###
