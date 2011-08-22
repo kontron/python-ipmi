@@ -4,7 +4,7 @@ from setuptools import setup
 
 def main():
     setup(name = 'pyipmi',
-            version = '1.00',
+            version = '2.00',
             description = 'Pure python IPMI library',
             author_email = 'michael.walle@kontron.com',
             package_dir = { '' : 'src' },
