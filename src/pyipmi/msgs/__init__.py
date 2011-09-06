@@ -1,3 +1,12 @@
+
+"""IPMI message creation and parsing."""
+
+__author__ = 'Michael Walle <michael.walle@kontron.com>'
+__copyright__ = 'Copyright (c) 2011 Kontron Modular Computers'
+__license__ = 'GPLv3'
+__url__ = 'http://localhost'
+__version__ = '0'
+
 from array import array
 from copy import deepcopy
 import constants
