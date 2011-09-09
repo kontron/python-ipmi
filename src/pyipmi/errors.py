@@ -1,16 +1,20 @@
 class DecodingError(Exception):
+    """Error on message decoding."""
     pass
 
 
 class EncodingError(Exception):
+    """Error on message encoding."""
     pass
 
 
 class TimeoutError(Exception):
+    """Timeout occurred."""
     pass
 
 
 class CompletionCodeError(Exception):
+    """IPMI completion code not OK."""
     def __init__(self, cc):
         self.cc = cc
 
@@ -18,14 +22,17 @@ class CompletionCodeError(Exception):
         return "%s cc=0x%02x" % (self.__class__.__name__, self.cc)
 
 class NotSupportedError(Exception):
+    """Not supported yet."""
     pass
 
 
 class DescriptionError(Exception):
+    """Message description incorrect."""
     pass
 
 
 class RetryError(Exception):
+    """Maxium number of retries exceeded."""
     def __init__(self, msg=None):
         self.msg = msg
 
