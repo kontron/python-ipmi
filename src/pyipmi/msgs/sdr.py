@@ -79,7 +79,7 @@ class GetDeviceSdrReq(Message):
     __netfn__ = constants.NETFN_SENSOR_EVENT
     __default_lun__ = 0
     __fields__ = (
-            UnsignedInt('reservation_id', 2),
+            UnsignedInt('reservation_id', 2, 0x0000),
             UnsignedInt('record_id', 2),
             UnsignedInt('offset', 1),
             UnsignedInt('length', 1),
@@ -166,6 +166,51 @@ class GetSensorThresholdRsp(Message):
 
 
 @register_message_class
+class SetSensorHysteresisReq(Message):
+    __cmdid__ = constants.CMDID_SET_SENSOR_HYSTERESIS
+    __netfn__ = constants.NETFN_SENSOR_EVENT
+    __default_lun__ = 0
+    __fields__ = (
+            UnsignedInt('sensor_number', 1),
+            UnsignedInt('reserved', 1, 0xff),
+            UnsignedInt('positive_going_hysteresis', 1),
+            UnsignedInt('negative_going_hysteresis', 1),
+    )
+
+
+@register_message_class
+class SetSensorHysteresisRsp(Message):
+    __cmdid__ = constants.CMDID_SET_SENSOR_HYSTERESIS
+    __netfn__ = constants.NETFN_SENSOR_EVENT | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+    )
+
+
+@register_message_class
+class GetSensorHysteresisReq(Message):
+    __cmdid__ = constants.CMDID_GET_SENSOR_HYSTERESIS
+    __netfn__ = constants.NETFN_SENSOR_EVENT
+    __default_lun__ = 0
+    __fields__ = (
+            UnsignedInt('sensor_number', 1),
+    )
+
+
+@register_message_class
+class GetSensorHysteresisRsp(Message):
+    __cmdid__ = constants.CMDID_GET_SENSOR_HYSTERESIS
+    __netfn__ = constants.NETFN_SENSOR_EVENT | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            UnsignedInt('positive_going_hysteresis', 1),
+            UnsignedInt('negative_going_hysteresis', 1),
+    )
+
+
+@register_message_class
 class SetSensorThresholdReq(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_THRESHOLD
     __netfn__ = constants.NETFN_SENSOR_EVENT
@@ -200,6 +245,80 @@ class SetSensorThresholdRsp(Message):
     __fields__ = (
         CompletionCode(),
     )
+
+
+@register_message_class
+class SetSensorEventEnableReq(Message):
+    __cmdid__ = constants.CMDID_SET_SENSOR_EVENT_ENABLE
+    __netfn__ = constants.NETFN_SENSOR_EVENT
+    __default_lun__ = 0
+
+    def _encode(self):
+        data = array.array('c')
+        push_unsigned_int(data, self.sensor_number, 1)
+        tmp = 0
+        tmp |= (self.cfg & 0x3) << 4
+        tmp |= (self.event_enable & 0x1) << 6
+        tmp |= (self.scanning_enable & 0x1) << 7
+        push_unsigned_int(data, tmp, 1)
+        if hasattr(self, 'byte3'):
+            data.extend(chr(self.byte3))
+        if hasattr(self, 'byte4'):
+            data.extend(chr(self.byte4))
+        if hasattr(self, 'byte5'):
+            data.extend(chr(self.byte5))
+        if hasattr(self, 'byte6'):
+            data.extend(chr(self.byte6))
+        return data.tostring()
+
+
+@register_message_class
+class SetSensorEventEnableRsp(Message):
+    __cmdid__ = constants.CMDID_SET_SENSOR_EVENT_ENABLE
+    __netfn__ = constants.NETFN_SENSOR_EVENT | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+    )
+
+
+@register_message_class
+class GetSensorEventEnableReq(Message):
+    __cmdid__ = constants.CMDID_GET_SENSOR_EVENT_ENABLE
+    __netfn__ = constants.NETFN_SENSOR_EVENT
+    __default_lun__ = 0
+    __fields__ = (
+        UnsignedInt('sensor_number', 1),
+    )
+
+
+@register_message_class
+class GetSensorEventEnableRsp(Message):
+    __cmdid__ = constants.CMDID_GET_SENSOR_EVENT_ENABLE
+    __netfn__ = constants.NETFN_SENSOR_EVENT | 1
+    __default_lun__ = 0
+    __fields__ = (
+        UnsignedInt('sensor_number', 1),
+    )
+
+    def _decode(self, data):
+        data = array.array('c', data)
+        self.completion_code = pop_unsigned_int(data, 1)
+        if (self.completion_code != constants.CC_OK):
+            return
+
+        tmp = pop_unsigned_int(data, 1)
+        self.event_enabled = (tmp & 0x80) >> 7
+        self.scanning_enabled = (tmp & 0x40) >> 6
+
+        if len(data):
+            self.byte3 = pop_unsigned_int(data, 1)
+        if len(data):
+            self.byte4 = pop_unsigned_int(data, 1)
+        if len(data):
+            self.byte5 = pop_unsigned_int(data, 1)
+        if len(data):
+            self.byte6 = pop_unsigned_int(data, 1)
 
 
 @register_message_class
