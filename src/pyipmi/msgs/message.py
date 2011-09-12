@@ -27,7 +27,7 @@ class ByteArray(BaseField):
         if default is not None:
             self.default = array('B', default)
         else:
-            self.default = array('B')
+            self.default = None
 
     def encode(self, obj, data):
         a = getattr(obj, self.name)
@@ -45,7 +45,11 @@ class ByteArray(BaseField):
         setattr(obj, self.name, array('B', bytes))
 
     def create(self):
-        return array('B', self.default)
+        if self.default is not None:
+            return array('B', self.default)
+        else:
+            return array('B', self.length * '\x00')
+
 
 class UnsignedInt(BaseField):
     def encode(self, obj, data):
@@ -57,7 +61,10 @@ class UnsignedInt(BaseField):
         setattr(obj, self.name, value)
 
     def create(self):
-        return self.default
+        if self.default is not None:
+            return self.default
+        else:
+            return 0
 
 
 class String(BaseField):
@@ -70,7 +77,10 @@ class String(BaseField):
         del data[0:self.length]
 
     def create(self):
-        return self.default
+        if self.default is not None:
+            return self.default
+        else:
+            return ''
 
 
 class CompletionCode(UnsignedInt):
@@ -147,7 +157,10 @@ class Bitfield(BaseField):
                 if hasattr(self, bit.name):
                     raise DescriptionError('Bit with name "%s" already added' %
                             bit.name)
-                setattr(self, bit.name, bit.default)
+                if bit.default is not None:
+                    setattr(self, bit.name, bit.default)
+                else:
+                    setattr(self, bit.name, 0)
 
         def __str__(self):
             s = '['
