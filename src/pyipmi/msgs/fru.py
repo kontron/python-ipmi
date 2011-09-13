@@ -53,6 +53,12 @@ class ReadFruDataRsp(Message):
     __cmdid__ = constants.CMDID_READ_FRU_DATA
     __netfn__ = constants.NETFN_STORAGE | 1
     __default_lun__ = 0
+    #__fields__ = (
+    #        CompletionCode(),
+    #        UnsignedInt('count', 1),
+    #        # TODO check count
+    #        RemainingBytes('data'),
+    #)
 
     def _encode(self):
         data = ByteBuffer()

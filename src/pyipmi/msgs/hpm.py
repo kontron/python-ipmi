@@ -7,6 +7,8 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import Conditional
+from . import Optional
+from . import RemainingBytes
 from pyipmi.utils import ByteBuffer
 from pyipmi.errors import DecodingError, EncodingError
 from pyipmi.msgs.picmg import PicmgIdentifier, PICMG_IDENTIFIER
@@ -67,21 +69,11 @@ class GetComponentPropertiesRsp(Message):
     __cmdid__ = constants.CMDID_HPM_GET_COMPONENT_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __default_lun__ = 0
-
-    def _encode(self):
-        data = ByteBuffer()
-        data.push_unsigned_int(self.completion_code, 1)
-        if (self.completion_code == constants.CC_OK):
-            data.extend(self.data)
-        return data.tostring()
-
-    def _decode(self, data):
-        data = ByteBuffer(data)
-        self.completion_code = data.pop_unsigned_int(1)
-        if (self.completion_code != constants.CC_OK):
-            return
-        self.picmg_identifier = data.pop_unsigned_int(1)
-        self.data = data[:]
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            RemainingBytes('data'),
+    )
 
 
 @register_message_class
@@ -136,22 +128,10 @@ class UploadFirmwareBlockReq(Message):
     __cmdid__ = constants.CMDID_HPM_UPLOAD_FIRMWARE_BLOCK
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __default_lun__ = 0
-
-    def _encode(self):
-        data = ByteBuffer()
-        data.push_unsigned_int(self.completion_code)
-        if (self.completion_code == constants.CC_OK):
-            data.push_unsigned_int(PICMG_IDENTIFIER, 1)
-            data.extend(self.data)
-        return data.tostring()
-
-    def _decode(self, data):
-        data = ByteBuffer(data)
-        self.completion_code = data.pop_unsigned_int(1)
-        if (self.completion_code != constants.CC_OK):
-            return
-        self.picmg_identifier = pop_unsigned_int(1)
-        self.data = data[:]
+    __fields__ = (
+            PicmgIdentifier(),
+            RemainingBytes('data'),
+    )
 
 
 @register_message_class
@@ -159,28 +139,12 @@ class UploadFirmwareBlockRsp(Message):
     __cmdid__ = constants.CMDID_HPM_UPLOAD_FIRMWARE_BLOCK
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __default_lun__ = 0
-
-    def _encode(self):
-        data = ByteBuffer()
-        data.push_unsigned_int(self.completion_code, 1)
-        if (self.completion_code == constants.CC_OK):
-            data.extend(self.data)
-            if self.section_offset is not None:
-                data.push_unsigned_int(self.section_offset)
-            if self.section_length is not None:
-                data.push_unsigned_int(self.section_length)
-        return data.tostring()
-
-    def _decode(self, data):
-        data = ByteBuffer(data)
-        self.completion_code = data.pop_unsigned_int(1)
-        if (self.completion_code != constants.CC_OK):
-            return
-        self.picmg_identifier = data.pop_unsigned_int(1)
-        if (len(data) != 0):
-            self.section_offset = data.pop_unsigned_int(4)
-        if (len(data) != 0):
-            self.section_length = data.pop_unsigned_int(4)
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            Optional(UnsignedInt('section_offset', 4)),
+            Optional(UnsignedInt('section_length', 4)),
+    )
 
 
 @register_message_class
@@ -224,21 +188,12 @@ class GetUpgradeStatusRsp(Message):
     __cmdid__ = constants.CMDID_HPM_GET_UPGRADE_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __default_lun__ = 0
-
-    def _encode(self):
-        data = ByteBuffer()
-        data.push_unsigned_int(self.completion_code, 1)
-        self.picmg_identifier = data.pop_unsigned_int(1)
-
-    def _decode(self, data):
-        data = ByteBuffer(data)
-        self.completion_code = data.pop_unsigned_int(1)
-        if (self.completion_code != constants.CC_OK):
-            return
-        self.picmg_identifier = data.pop_unsigned_int(1)
-        self.command_in_progress = data.pop_unsigned_int(1)
-        if (len(data) != 0):
-            self.completion_estimate = data.pop_unsigned_int(1)
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            UnsignedInt('command_in_progress', 1),
+            Optional(UnsignedInt('completion_estimate', 1)),
+    )
 
 
 @register_message_class
@@ -246,19 +201,10 @@ class ActivateFirmwareReq(Message):
     __cmdid__ = constants.CMDID_HPM_ACTIVATE_FIRMWARE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __default_lun__ = 0
-
-    def _encode_req(self):
-        data = ByteBuffer()
-        data.push_unsigned_int(PICMG_IDENTIFIER)
-        if self.rollback_override_policy is not None:
-            data.push_unsigned_int(self.rollback_override_policy)
-        return data.tostring()
-
-    def _decode_req(self, data):
-        data = ByteBuffer(data)
-        self.picmg_identifier = data.pop_unsigned_int(1)
-        if len(data) != 0:
-            self.rollback_override_policy = data.pop_unsigned_int(1)
+    __fields__ = (
+            PicmgIdentifier(),
+            Optional(UnsignedInt('rollback_override_policy', 1)),
+    )
 
 
 @register_message_class
@@ -314,21 +260,12 @@ class QueryRollbackStatusRsp(Message):
     __cmdid__ = constants.CMDID_HPM_QUERY_ROLLBACK_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __default_lun__ = 0
-
-    def _encode(self):
-        data = ByteBuffer()
-        data.push_unsigned_int(self.completion_code, 1)
-        self.picmg_identifier = data.pop_unsigned_int(1)
-
-    def _decode(self, data):
-        data = ByteBuffer(data)
-        self.completion_code = data.pop_unsigned_int(1)
-        if (self.completion_code != constants.CC_OK):
-            return
-        self.picmg_identifier = data.pop_unsigned_int(1)
-        self.rollback_status = data.pop_unsigned_int(1)
-        if len(data) != 0:
-            self.completion_estimate = data.pop_unsigned_int(1)
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            UnsignedInt('rollback_status', 1),
+            Optional(UnsignedInt('completion_estimate', 1)),
+    )
 
 
 @register_message_class

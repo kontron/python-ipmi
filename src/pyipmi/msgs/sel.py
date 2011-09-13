@@ -10,6 +10,7 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import Conditional
+from . import RemainingBytes
 from pyipmi.utils import ByteBuffer
 from pyipmi.errors import DecodingError, EncodingError
 
@@ -105,22 +106,11 @@ class GetSelEntryRsp(Message):
     __cmdid__ = constants.CMDID_GET_SEL_ENTRY
     __netfn__ = constants.NETFN_STORAGE | 1
     __default_lun__ = 0
-
-    def _encode(self):
-        data = ByteBuffer()
-        data.push_unsigned_int(self.completion_code, 1)
-        if (self.completion_code == constants.CC_OK):
-            data.push_unsigned_int(self.next_record_id, 2)
-            data.append_array(self.record_data)
-        return data.to_string()
-
-    def _decode(self, data):
-        data = ByteBuffer(data)
-        self.completion_code = data.pop_unsigned_int(1)
-        if (self.completion_code != constants.CC_OK):
-            return
-        self.next_record_id = data.pop_unsigned_int(2)
-        self.record_data = data[:]
+    __fields__ = (
+            CompletionCode(),
+            UnsignedInt('next_record_id', 2),
+            RemainingBytes('record_data'),
+    )
 
 
 @register_message_class

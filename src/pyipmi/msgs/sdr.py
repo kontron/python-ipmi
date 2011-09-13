@@ -9,6 +9,8 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import Conditional
+from . import Optional
+from . import RemainingBytes
 from pyipmi.utils import ByteBuffer
 from pyipmi.errors import DecodingError, EncodingError
 
@@ -91,22 +93,11 @@ class GetDeviceSdrRsp(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_SDR
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
     __default_lun__ = 0
-
-    def _encode(self):
-        data = ByteBuffer()
-        data.push_unsigned_int(self.completion_code, 1)
-        if (self.completion_code == constants.CC_OK):
-            data.push_unsigned_int(self.next_record_id, 2)
-            data.extend(self.record_data)
-        return data.to_string()
-
-    def _decode(self, data):
-        data = ByteBuffer(data)
-        self.completion_code = data.pop_unsigned_int(1)
-        if (self.completion_code != constants.CC_OK):
-            return
-        self.next_record_id = data.pop_unsigned_int(2)
-        self.record_data = data[:]
+    __field__ = (
+            CompletionCode(),
+            UnsignedInt('next_record_id', 2),
+            RemainingBytes('record_data'),
+    )
 
 
 @register_message_class
@@ -252,25 +243,19 @@ class SetSensorEventEnableReq(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_EVENT_ENABLE
     __netfn__ = constants.NETFN_SENSOR_EVENT
     __default_lun__ = 0
-
-    def _encode(self):
-        data = ByteBuffer()
-        data.push_unsigned_int(self.sensor_number, 1)
-        tmp = 0
-        tmp |= (self.cfg & 0x3) << 4
-        tmp |= (self.event_enable & 0x1) << 6
-        tmp |= (self.scanning_enable & 0x1) << 7
-        data.push_unsigned_int(tmp, 1)
-        if hasattr(self, 'byte3'):
-            data.push_unsigned_int(self.byte3, 1)
-        if hasattr(self, 'byte4'):
-            data.push_unsigned_int(self.byte4, 1)
-        if hasattr(self, 'byte5'):
-            data.push_unsigned_int(self.byte5, 1)
-        if hasattr(self, 'byte6'):
-            data.push_unsigned_int(self.byte6, 1)
-        return data.to_string()
-
+    __fields__ = (
+            UnsignedInt('sensor_number', 1),
+            Bitfield('enable', 1,
+                Bitfield.ReservedBit(4, 0),
+                Bitfield.Bit('config', 2, 0),
+                Bitfield.Bit('sensor_scanning', 1, 0),
+                Bitfield.Bit('event_message', 1, 0),
+            ),
+            Optional(UnsignedInt('byte3', 1)),
+            Optional(UnsignedInt('byte4', 1)),
+            Optional(UnsignedInt('byte5', 1)),
+            Optional(UnsignedInt('byte6', 1)),
+    )
 
 @register_message_class
 class SetSensorEventEnableRsp(Message):
@@ -298,27 +283,17 @@ class GetSensorEventEnableRsp(Message):
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
     __default_lun__ = 0
     __fields__ = (
-        UnsignedInt('sensor_number', 1),
+            CompletionCode(),
+            Bitfield('enabled', 1,
+                Bitfield.ReservedBit(6, 0),
+                Bitfield.Bit('sensor_scanning', 1, 0),
+                Bitfield.Bit('event_message', 1, 0),
+            ),
+            Optional(UnsignedInt('byte3', 1)),
+            Optional(UnsignedInt('byte4', 1)),
+            Optional(UnsignedInt('byte5', 1)),
+            Optional(UnsignedInt('byte6', 1)),
     )
-
-    def _decode(self, data):
-        data = ByteBuffer(data)
-        self.completion_code = data.pop_unsigned_int(1)
-        if (self.completion_code != constants.CC_OK):
-            return
-
-        tmp = data.pop_unsigned_int(1)
-        self.event_enabled = (tmp & 0x80) >> 7
-        self.scanning_enabled = (tmp & 0x40) >> 6
-
-        if len(data):
-            self.byte3 = data.pop_unsigned_int(1)
-        if len(data):
-            self.byte4 = data.pop_unsigned_int(1)
-        if len(data):
-            self.byte5 = data.pop_unsigned_int(1)
-        if len(data):
-            self.byte6 = data.pop_unsigned_int(1)
 
 
 @register_message_class
@@ -336,35 +311,19 @@ class GetSensorReadingRsp(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_READING
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
     __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            UnsignedInt('sensor_reading', 1),
+            Bitfield('config', 1,
+                Bitfield.ReservedBit(5, 0),
+                Bitfield.Bit('initial_update_in_progress', 1, 0),
+                Bitfield.Bit('sensor_scanning_disabled', 1, 0),
+                Bitfield.Bit('event_message_disabled', 1, 0),
+            ),
+            #Alias('update_in_progress', 'stats.update_in_progress'),
+            #Alias('scanning_disabled', 'stats.scanning_disabled'),
+            #Alias('event_disabled', 'stats.event_disabled'),
+            Optional(UnsignedInt('states1', 1)),
+            Optional(UnsignedInt('states2', 1)),
 
-    def _encode(self):
-        data = ByteBuffer()
-        data.push_unsigned_int(self.completion_code, 1)
-        if (self.completion_code == constants.CC_OK):
-            data.push_unsigned_int(self.sensor_reading, 1)
-            tmp = (self.event_disabled & 0x1 << 5
-                    | self.scanning_disabled & 0x1 << 6
-                    | self.update_in_progress & 0x1 << 7)
-            data.push_unsigned_int(tmp, 1)
-            if self.states1:
-                data.push_unsigned_int(self.states1, 1)
-            if self.states2:
-                data.push_unsigned_int(self.states2, 1)
-        return data.to_string()
-
-    def _decode(self, data):
-        data = ByteBuffer(data)
-        self.completion_code = data.pop_unsigned_int(1)
-        if (self.completion_code != constants.CC_OK):
-            return
-        self.sensor_reading = data.pop_unsigned_int(1)
-
-        tmp = data.pop_unsigned_int(1)
-        self.event_disabled = (tmp & 0x80) >> 7
-        self.scanning_disabled = (tmp & 0x40) >> 6
-        self.update_in_progress = (tmp & 0x20) >> 5
-
-        if len(data):
-            self.states1 = data.pop_unsigned_int(1)
-        if len(data):
-            self.states2 = data.pop_unsigned_int(1)
+    )

@@ -11,6 +11,7 @@ from . import Bitfield
 from . import CompletionCode
 from . import Conditional
 from . import Optional
+from . import RemainingBytes
 
 from pyipmi.utils import ByteBuffer
 
@@ -124,6 +125,12 @@ class GetSelftestResultsRsp(Message):
     __cmdid__ = constants.CMDID_GET_SELF_TEST_RESULTS
     __netfn__ = constants.NETFN_APP | 1
     __default_lun__ = 0
+
+    def __init__(self, *args, **kwargs):
+        self.completion_code = 0
+        self.result = 0
+        self.status = 0
+        Message.__init__(self, *args, **kwargs)
 
     def _decode(self, data):
         data = ByteBuffer(data)
@@ -389,15 +396,14 @@ class GetMessageRsp(Message):
     __cmdid__ = constants.CMDID_GET_MESSAGE
     __netfn__ = constants.NETFN_APP | 1
     __default_lun__ = 0
-    def _decode(self, data):
-        data = ByteBuffer(data)
-        self.completion_code = data.pop_unsigned_int(1)
-        if (self.completion_code != constants.CC_OK):
-            return
-        tmp = data.pop_unsigned_int(1)
-        self.privilege_level = (tmp & 0xf0) >> 4
-        self.channel_number = (tmp & 0x0f) >> 0
-        self.data = data[:]
+    __fields__ = (
+        CompletionCode(),
+        Bitfield('channel_number', 1,
+            Bitfield.Bit('channel_number', 4, 0),
+            Bitfield.Bit('privilege_level', 4, 0),
+        ),
+        RemainingBytes('data'),
+    )
 
 
 @register_message_class
@@ -413,9 +419,7 @@ class ReadEventMessageBufferRsp(Message):
     __cmdid__ = constants.CMDID_READ_EVENT_MESSAGE_BUFFER
     __netfn__ = constants.NETFN_APP | 1
     __default_lun__ = 0
-    def _decode(self, data):
-        data = ByteBuffer(data)
-        self.completion_code = data.pop_unsigned_int(1)
-        if (self.completion_code != constants.CC_OK):
-            return
-        self.event_data = data[:]
+    __fields__ = (
+        CompletionCode(),
+        RemainingBytes('event_data'),
+    )

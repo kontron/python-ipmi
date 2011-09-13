@@ -7,10 +7,30 @@ import pyipmi.msgs.bmc
 import pyipmi.msgs.fru
 import pyipmi.msgs.sel
 import pyipmi.msgs.event
+import pyipmi.msgs.hpm
+import pyipmi.msgs.sdr
 
 from pyipmi.errors import DecodingError, EncodingError
 from pyipmi.msgs import encode_message
 from pyipmi.msgs import decode_message
+
+class TestPredicates(unittest.TestCase):
+    def test_alias(self):
+        m = pyipmi.msgs.sdr.GetSensorReadingRsp()
+        raise NotImplementedError()
+
+    def test_optional(self):
+        m = pyipmi.msgs.hpm.ActivateFirmwareReq()
+        raise NotImplementedError()
+
+    def test_remaining_bytes(self):
+        m = pyipmi.msgs.fru.WriteFruDataReq()
+        raise NotImplementedError()
+
+    def test_conditional(self):
+        m = pyipmi.msgs.picmg.GetFruLedStateRsp()
+        raise NotImplementedError()
+
 
 class TestFruActivationPolicy(unittest.TestCase):
     def test_clear_activation_lock_req(self):
@@ -44,6 +64,34 @@ class TestFruActivationPolicy(unittest.TestCase):
         m.set.deactivation_locked = 1
         data = encode_message(m)
         self.assertEqual(data, '\x00\x01\x02\x02')
+
+
+class TestActivateFirmware(unittest.TestCase):
+    def test_decode_valid_req(self):
+        m = pyipmi.msgs.hpm.ActivateFirmwareReq()
+        decode_message(m, '\x00\x01')
+        self.assertEqual(m.picmg_identifier, 0)
+        self.assertEqual(m.rollback_override_policy, 1)
+
+    def test_encode_valid_req(self):
+        m = pyipmi.msgs.hpm.ActivateFirmwareReq()
+        m.picmg_identifier = 0
+        m.rollback_override_policy = 0x1
+        data = encode_message(m)
+        self.assertEqual(data, '\x00\x01')
+
+    def test_decode_valid_req_wo_optional(self):
+        m = pyipmi.msgs.hpm.ActivateFirmwareReq()
+        decode_message(m, '\x00')
+        self.assertEqual(m.picmg_identifier, 0)
+        self.assertEqual(m.rollback_override_policy, None)
+
+    def test_encode_valid_req_wo_optional(self):
+        m = pyipmi.msgs.hpm.ActivateFirmwareReq()
+        m.picmg_identifier = 0
+        m.rollback_override_policy = None
+        data = encode_message(m)
+        self.assertEqual(data, '\x00')
 
 
 class TestWriteFruData(unittest.TestCase):
@@ -476,15 +524,15 @@ class TestGetMessage(unittest.TestCase):
 		m = pyipmi.msgs.bmc.GetMessageRsp()
 		decode_message(m, '\x00\x21')
 		self.assertEqual(m.completion_code, 0x00)
-		self.assertEqual(m.channel_number, 1)
-		self.assertEqual(m.privilege_level, 2)
+		self.assertEqual(m.channel_number.channel_number, 1)
+		self.assertEqual(m.channel_number.privilege_level, 2)
 
 	def test_decode_with_data_rsp(self):
 		m = pyipmi.msgs.bmc.GetMessageRsp()
 		decode_message(m, '\x00\x21\xaa\xff\xff\xee')
 		self.assertEqual(m.completion_code, 0x00)
-		self.assertEqual(m.channel_number, 1)
-		self.assertEqual(m.privilege_level, 2)
+		self.assertEqual(m.channel_number.channel_number, 1)
+		self.assertEqual(m.channel_number.privilege_level, 2)
 		self.assertEqual(m.data, array('B', '\xaa\xff\xff\xee'))
 
 
@@ -642,45 +690,45 @@ class TestSetSensorEventEnable(unittest.TestCase):
     def test_encode_req(self):
         m = pyipmi.msgs.sdr.SetSensorEventEnableReq()
         m.sensor_number = 0xab
-        m.cfg = 0
-        m.event_enable = 0
-        m.scanning_enable = 0
+        m.enable.config = 0
+        m.enable.event_message = 0
+        m.enable.sensor_scanning = 0
         data = encode_message(m)
         self.assertEqual(data, '\xab\x00')
 
     def test_encode_cfg_req(self):
         m = pyipmi.msgs.sdr.SetSensorEventEnableReq()
         m.sensor_number = 0xab
-        m.cfg = 2
-        m.event_enable = 0
-        m.scanning_enable = 0
+        m.enable.config = 2
+        m.enable.event_message = 0
+        m.enable.sensor_scanning = 0
         data = encode_message(m)
         self.assertEqual(data, '\xab\x20')
-
-    def test_encode_event_enabled_req(self):
-        m = pyipmi.msgs.sdr.SetSensorEventEnableReq()
-        m.sensor_number = 0xab
-        m.cfg = 0
-        m.event_enable = 1
-        m.scanning_enable = 0
-        data = encode_message(m)
-        self.assertEqual(data, '\xab\x40')
 
     def test_encode_scanning_enabled_req(self):
         m = pyipmi.msgs.sdr.SetSensorEventEnableReq()
         m.sensor_number = 0xab
-        m.cfg = 0
-        m.event_enable = 0
-        m.scanning_enable = 1
+        m.enable.config = 0
+        m.enable.event_message = 0
+        m.enable.sensor_scanning = 1
+        data = encode_message(m)
+        self.assertEqual(data, '\xab\x40')
+
+    def test_encode_event_enabled_req(self):
+        m = pyipmi.msgs.sdr.SetSensorEventEnableReq()
+        m.sensor_number = 0xab
+        m.enable.config = 0
+        m.enable.event_message = 1
+        m.enable.sensor_scanning = 0
         data = encode_message(m)
         self.assertEqual(data, '\xab\x80')
 
     def test_encode_byte3_req(self):
         m = pyipmi.msgs.sdr.SetSensorEventEnableReq()
         m.sensor_number = 0xab
-        m.cfg = 0
-        m.event_enable = 0
-        m.scanning_enable = 0
+        m.enable.config = 0
+        m.enable.event_message = 0
+        m.enable.sensor_scanning = 0
         m.byte3 = 0xaa
         data = encode_message(m)
         self.assertEqual(data, '\xab\x00\xaa')
@@ -688,31 +736,13 @@ class TestSetSensorEventEnable(unittest.TestCase):
     def test_encode_byte34_req(self):
         m = pyipmi.msgs.sdr.SetSensorEventEnableReq()
         m.sensor_number = 0xab
-        m.cfg = 0
-        m.event_enable = 0
-        m.scanning_enable = 0
+        m.enable.config = 0
+        m.enable.event_message = 0
+        m.enable.sensor_scanning = 0
         m.byte3 = 0xaa
         m.byte4 = 0xbb
         data = encode_message(m)
         self.assertEqual(data, '\xab\x00\xaa\xbb')
-
-    def test_encode_scanning_enabled_req(self):
-        m = pyipmi.msgs.sdr.SetSensorEventEnableReq()
-        m.sensor_number = 0xab
-        m.cfg = 0
-        m.event_enable = 0
-        m.scanning_enable = 1
-        data = encode_message(m)
-        self.assertEqual(data, '\xab\x80')
-
-    def test_encode_scanning_enabled_req(self):
-        m = pyipmi.msgs.sdr.SetSensorEventEnableReq()
-        m.sensor_number = 0xab
-        m.cfg = 0
-        m.event_enable = 0
-        m.scanning_enable = 1
-        data = encode_message(m)
-        self.assertEqual(data, '\xab\x80')
 
 class TestGetSensorEventEnable(unittest.TestCase):
     def test_encode_req(self):
@@ -725,28 +755,28 @@ class TestGetSensorEventEnable(unittest.TestCase):
         m = pyipmi.msgs.sdr.GetSensorEventEnableRsp()
         decode_message(m, '\x00\x80')
         self.assertEqual(m.completion_code, 0x00)
-        self.assertEqual(m.event_enabled, 1)
-        self.assertEqual(m.scanning_enabled, 0)
+        self.assertEqual(m.enabled.event_message, 1)
+        self.assertEqual(m.enabled.sensor_scanning, 0)
 
     def test_decode_scanning_enabled_rsp(self):
         m = pyipmi.msgs.sdr.GetSensorEventEnableRsp()
         decode_message(m, '\x00\x40')
         self.assertEqual(m.completion_code, 0x00)
-        self.assertEqual(m.event_enabled, 0)
-        self.assertEqual(m.scanning_enabled, 1)
+        self.assertEqual(m.enabled.event_message, 0)
+        self.assertEqual(m.enabled.sensor_scanning, 1)
 
     def test_decode_byte3_rsp(self):
         m = pyipmi.msgs.sdr.GetSensorEventEnableRsp()
         decode_message(m, '\x00\xc0\xaa')
         self.assertEqual(m.completion_code, 0x00)
-        self.assertEqual(m.event_enabled, 1)
+        self.assertEqual(m.enabled.event_message, 1)
         self.assertEqual(m.byte3, 0xaa)
 
     def test_decode_byte34_rsp(self):
         m = pyipmi.msgs.sdr.GetSensorEventEnableRsp()
         decode_message(m, '\x00\xc0\xaa\xbb')
         self.assertEqual(m.completion_code, 0x00)
-        self.assertEqual(m.event_enabled, 1)
+        self.assertEqual(m.enabled.event_message, 1)
         self.assertEqual(m.byte3, 0xaa)
         self.assertEqual(m.byte4, 0xbb)
 
@@ -754,7 +784,7 @@ class TestGetSensorEventEnable(unittest.TestCase):
         m = pyipmi.msgs.sdr.GetSensorEventEnableRsp()
         decode_message(m, '\x00\xc0\xaa\xbb\xcc\xdd')
         self.assertEqual(m.completion_code, 0x00)
-        self.assertEqual(m.event_enabled, 1)
+        self.assertEqual(m.enabled.event_message, 1)
         self.assertEqual(m.byte3, 0xaa)
         self.assertEqual(m.byte4, 0xbb)
         self.assertEqual(m.byte5, 0xcc)

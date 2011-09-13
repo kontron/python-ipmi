@@ -8,6 +8,7 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import Conditional
+from . import RemainingBytes
 from pyipmi.utils import ByteBuffer
 from pyipmi.errors import DecodingError, EncodingError
 
@@ -236,20 +237,18 @@ class GetPowerLevelRsp(Message):
     __cmdid__ = constants.CMDID_GET_POWER_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __default_lun__ = 0
-
-    def _decode(self, data):
-        data = ByteBuffer(data)
-        self.completion_code = data.pop_unsigned_int(1)
-        if (self.completion_code != constants.CC_OK):
-            return
-        self.picmg_identifier  = data.pop_unsigned_int(1)
-        tmp =  data.pop_unsigned_int(1)
-        self.dynamic_power_configuration = tmp & 0x80 >> 7
-        self.power_level = tmp & 0x1f
-
-        self.delay_to_stable_power = data.pop_unsigned_int(1)
-        self.power_multiplier = data.pop_unsigned_int(1)
-        self.data = data[:]
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            Bitfield('properties', 1,
+                Bitfield.Bit('power_level', 5, 0),
+                Bitfield.ReservedBit(2, 0),
+                Bitfield.Bit('dynamic_power_configuration', 1, 0),
+            ),
+            UnsignedInt('delay_to_stable_power', 1),
+            UnsignedInt('power_multiplier', 1),
+            RemainingBytes('power_draw'),
+    )
 
 
 @register_message_class
