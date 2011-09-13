@@ -611,6 +611,36 @@ class TestGetFruLedState(unittest.TestCase):
         self.assertEqual(m.lamp_test_duration, 0x7f)
 
 
+class TestGetDeviceSdrInfo(unittest.TestCase):
+    def test_encode_req(self):
+        m = pyipmi.msgs.sdr.GetDeviceSdrInfoReq()
+        data = encode_message(m)
+        self.assertEqual(data, '')
+
+    def test_encode_rsp(self):
+        m = pyipmi.msgs.sdr.GetDeviceSdrInfoRsp()
+        decode_message(m, '\x00\x03\x05')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.number_of_sensors, 3)
+        self.assertEqual(m.flags.lun0_has_sensors, 1)
+        self.assertEqual(m.flags.lun1_has_sensors, 0)
+        self.assertEqual(m.flags.lun2_has_sensors, 1)
+        self.assertEqual(m.flags.lun3_has_sensors, 0)
+        self.assertEqual(m.flags.dynamic_population, 0)
+
+    def test_encode_rsp_with_timestamp(self):
+        m = pyipmi.msgs.sdr.GetDeviceSdrInfoRsp()
+        decode_message(m, '\x00\x12\x01\xaa\xbb\xcc\xdd')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.number_of_sensors, 0x12)
+        self.assertEqual(m.flags.lun0_has_sensors, 1)
+        self.assertEqual(m.flags.lun1_has_sensors, 0)
+        self.assertEqual(m.flags.lun2_has_sensors, 0)
+        self.assertEqual(m.flags.lun3_has_sensors, 0)
+        self.assertEqual(m.flags.dynamic_population, 0)
+        self.assertEqual(m.sensor_population_change, 0xddccbbaa)
+
+
 class TestSetSensorHysteresis(unittest.TestCase):
     def test_encode_req(self):
         m = pyipmi.msgs.sdr.SetSensorHysteresisReq()
