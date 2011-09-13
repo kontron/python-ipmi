@@ -15,6 +15,8 @@ class BaseField:
         raise NotImplementedError()
 
     def encode(self, obj, data):
+        if getattr(obj, self.name) == None:
+            raise EncodingError('Field "%s" not set.' % self.name)
         raise NotImplementedError()
 
     def create(self):
@@ -131,9 +133,15 @@ class Optional:
     def decode(self, obj, data):
         if len(data) > 0:
             self._field.decode(obj,data)
+        else:
+            setattr(obj, self._field.name, None)
 
     def encode(self, obj, data):
-        self._field.encode(obj, data)
+        if getattr(obj, self._field.name) is not None:
+            self._field.encode(obj, data)
+
+    def create(self):
+        return None
 
 
 class RemainingBytes(BaseField):
@@ -283,8 +291,6 @@ class Message:
 
         data = ByteBuffer()
         for field in self.__fields__:
-            if getattr(self, field.name) == None:
-                raise EncodingError('Field "%s" not set.' % field.name)
             field.encode(self, data)
         return data.to_string()
 
