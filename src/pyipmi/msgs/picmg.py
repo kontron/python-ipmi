@@ -79,6 +79,28 @@ class PicmgIdentifier(UnsignedInt):
 
 
 @register_message_class
+class GetPicmgPropertiesReq(Message):
+    __cmdid__ = constants.CMDID_GET_PICMG_PROPERTIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
+            PicmgIdentifier(),
+            UnsignedInt('fru_id', 1),
+    )
+
+
+@register_message_class
+class GetPicmgPropertiesRsp(Message):
+    __cmdid__ = constants.CMDID_GET_PICMG_PROPERTIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+    )
+
+
+@register_message_class
 class FruControlReq(Message):
     __cmdid__ = constants.CMDID_FRU_CONTROL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
@@ -182,6 +204,59 @@ class SetFruActivationRsp(Message):
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
+    )
+
+
+@register_message_class
+class GetDeviceLocatorRecordIdReq(Message):
+    __cmdid__ = constants.CMDID_GET_DEVLOC_RECORD_ID
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
+            PicmgIdentifier(),
+            UnsignedInt('fru_id', 1),
+    )
+
+
+@register_message_class
+class GetDeviceLocatorRecordIdRsp(Message):
+    __cmdid__ = constants.CMDID_GET_DEVLOC_RECORD_ID
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            UnsignedInt('record_id', 2),
+    )
+
+
+@register_message_class
+class GetFruLedPropertiesReq(Message):
+    __cmdid__ = constants.CMDID_GET_FRU_LED_PROPERTIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
+            PicmgIdentifier(),
+            UnsignedInt('fru_id', 1),
+    )
+
+
+@register_message_class
+class GetFruLedPropertiesRsp(Message):
+    __cmdid__ = constants.CMDID_GET_FRU_LED_PROPERTIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            Bitfield('general_status_led_properties', 1,
+                Bitfield.Bit('blue_led', 1),
+                Bitfield.Bit('led1', 1),
+                Bitfield.Bit('led2', 1),
+                Bitfield.Bit('led3', 1),
+                Bitfield.ReservedBit(4),
+            ),
+            UnsignedInt('application_specific_led_count', 1),
     )
 
 
