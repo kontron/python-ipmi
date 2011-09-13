@@ -595,7 +595,7 @@ class TestGetFruLedState(unittest.TestCase):
         self.assertEqual(m.override_on_duration, 0)
         self.assertEqual(m.override_color, 3)
 
-    def test_decode_rsp_lamp_test_mode(self):
+    def test_decode_rsp_lamp_test_and_override_mode(self):
         m = pyipmi.msgs.picmg.GetFruLedStateRsp()
         decode_message(m, '\x00\x00\x07\xff\x00\x02\xff\x00\x02\x7f')
         self.assertEqual(m.completion_code, 0x00)
@@ -604,6 +604,21 @@ class TestGetFruLedState(unittest.TestCase):
         self.assertEqual(m.local_on_duration, 0)
         self.assertEqual(m.local_color, 2)
         self.assertEqual(m.led_states.override_en, 1)
+        self.assertEqual(m.override_function, 0xff)
+        self.assertEqual(m.override_on_duration, 0)
+        self.assertEqual(m.override_color, 2)
+        self.assertEqual(m.led_states.lamp_test_en, 1)
+        self.assertEqual(m.lamp_test_duration, 0x7f)
+
+    def test_decode_rsp_only_lamp_test_mode(self):
+        m = pyipmi.msgs.picmg.GetFruLedStateRsp()
+        decode_message(m, '\x00\x00\x04\xff\x00\x02\xff\x00\x02\x7f')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.led_states.local_avail, )
+        self.assertEqual(m.local_function, 0xff)
+        self.assertEqual(m.local_on_duration, 0)
+        self.assertEqual(m.local_color, 2)
+        self.assertEqual(m.led_states.override_en, 0)
         self.assertEqual(m.override_function, 0xff)
         self.assertEqual(m.override_on_duration, 0)
         self.assertEqual(m.override_color, 2)

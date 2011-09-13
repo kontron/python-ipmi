@@ -374,7 +374,8 @@ class GetFruLedStateRsp(Message):
     __default_lun__ = 0
 
     def _cond_override(obj):
-        return obj.led_states.override_en == 1
+        return (obj.led_states.override_en == 1
+                or obj.led_states.lamp_test_en == 1)
 
     def _cond_lamp_test(obj):
         return obj.led_states.lamp_test_en == 1
@@ -391,14 +392,14 @@ class GetFruLedStateRsp(Message):
             UnsignedInt('local_function', 1),
             UnsignedInt('local_on_duration', 1),
             UnsignedIntMask('local_color', 1, 0x0f),
-            Conditional(_cond_override, UnsignedInt('override_function',
-                1)),
+            Conditional(_cond_override,
+                UnsignedInt('override_function', 1)),
             Conditional(_cond_override,
                 UnsignedInt('override_on_duration', 1)),
-            Conditional(_cond_override, UnsignedIntMask('override_color',
-                1, 0x0f)),
-            Conditional(_cond_lamp_test, UnsignedIntMask('lamp_test_duration',
-                1, 0x7f)),
+            Conditional(_cond_override,
+                UnsignedIntMask('override_color', 1, 0x0f)),
+            Conditional(_cond_lamp_test,
+                UnsignedIntMask('lamp_test_duration', 1, 0x7f)),
     )
 
 
