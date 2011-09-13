@@ -45,6 +45,43 @@ class TestFruActivationPolicy(unittest.TestCase):
         data = encode_message(m)
         self.assertEqual(data, '\x00\x01\x02\x02')
 
+
+class TestWriteFruData(unittest.TestCase):
+    def test_decode_valid_req(self):
+        m = pyipmi.msgs.fru.WriteFruDataReq()
+        decode_message(m, '\x01\x02\x03\x04\x05')
+        self.assertEqual(m.fru_id, 1)
+        self.assertEqual(m.offset, 0x302)
+        self.assertEqual(m.data, array('B', '\x04\x05'))
+
+    def test_encode_valid_req(self):
+        m = pyipmi.msgs.fru.WriteFruDataReq()
+        m.fru_id = 1
+        m.offset = 0x302
+        m.data = array('B', '\x04\x05')
+        data = encode_message(m)
+        self.assertEqual(data, '\x01\x02\x03\x04\x05')
+
+    def test_decode_valid_req_wo_data(self):
+        m = pyipmi.msgs.fru.WriteFruDataReq()
+        decode_message(m, '\x01\x02\x03')
+        self.assertEqual(m.fru_id, 1)
+        self.assertEqual(m.offset, 0x302)
+        self.assertEqual(m.data, array('B'))
+
+    def test_encode_valid_req_wo_data(self):
+        m = pyipmi.msgs.fru.WriteFruDataReq()
+        m.fru_id = 1
+        m.offset = 0x302
+        m.data = array('B')
+        data = encode_message(m)
+        self.assertEqual(data, '\x01\x02\x03')
+
+    def test_decode_invalid_req(self):
+        m = pyipmi.msgs.fru.WriteFruDataReq()
+        self.assertRaises(DecodingError, decode_message, m, '\x01\x02')
+
+
 class TestReadFruData(unittest.TestCase):
     def test_decode_valid_req(self):
         m = pyipmi.msgs.fru.ReadFruDataReq()
