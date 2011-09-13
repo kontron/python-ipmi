@@ -122,7 +122,7 @@ class ReserveDeviceSdrRepositoryRsp(Message):
 
 
 @register_message_class
-class GetSensorThresholdReq(Message):
+class GetSensorThresholdsReq(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_THRESHOLD
     __netfn__ = constants.NETFN_SENSOR_EVENT
     __default_lun__ = 0
@@ -132,7 +132,7 @@ class GetSensorThresholdReq(Message):
 
 
 @register_message_class
-class GetSensorThresholdRsp(Message):
+class GetSensorThresholdsRsp(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_THRESHOLD
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
     __default_lun__ = 0
@@ -205,7 +205,7 @@ class GetSensorHysteresisRsp(Message):
 
 
 @register_message_class
-class SetSensorThresholdReq(Message):
+class SetSensorThresholdsReq(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_THRESHOLD
     __netfn__ = constants.NETFN_SENSOR_EVENT
     __default_lun__ = 0
@@ -232,7 +232,7 @@ class SetSensorThresholdReq(Message):
 
 
 @register_message_class
-class SetSensorThresholdRsp(Message):
+class SetSensorThresholdsRsp(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_THRESHOLD
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
     __default_lun__ = 0
