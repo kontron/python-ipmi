@@ -8,7 +8,7 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import Conditional
-from pyipmi.utils import push_unsigned_int, pop_unsigned_int
+from pyipmi.utils import ByteBuffer
 from pyipmi.errors import DecodingError, EncodingError
 
 PICMG_IDENTIFIER = 0x00
@@ -238,17 +238,17 @@ class GetPowerLevelRsp(Message):
     __default_lun__ = 0
 
     def _decode(self, data):
-        data = array.array('c', data)
-        self.completion_code = pop_unsigned_int(data, 1)
+        data = ByteBuffer(data)
+        self.completion_code = data.pop_unsigned_int(1)
         if (self.completion_code != constants.CC_OK):
             return
-        self.picmg_identifier  = pop_unsigned_int(data, 1)
-        tmp =  pop_unsigned_int(data, 1)
+        self.picmg_identifier  = data.pop_unsigned_int(1)
+        tmp =  data.pop_unsigned_int(1)
         self.dynamic_power_configuration = tmp & 0x80 >> 7
         self.power_level = tmp & 0x1f
 
-        self.delay_to_stable_power = pop_unsigned_int(data, 1)
-        self.power_multiplier = pop_unsigned_int(data, 1)
+        self.delay_to_stable_power = data.pop_unsigned_int(1)
+        self.power_multiplier = data.pop_unsigned_int(1)
         self.data = data[:]
 
 

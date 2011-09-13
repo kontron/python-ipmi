@@ -10,7 +10,7 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import Conditional
-from pyipmi.utils import push_unsigned_int, pop_unsigned_int
+from pyipmi.utils import ByteBuffer
 from pyipmi.errors import DecodingError, EncodingError
 
 
@@ -107,19 +107,19 @@ class GetSelEntryRsp(Message):
     __default_lun__ = 0
 
     def _encode(self):
-        data = array.array('c')
-        push_unsigned_int(data, self.completion_code, 1)
+        data = ByteBuffer()
+        data.push_unsigned_int(self.completion_code, 1)
         if (self.completion_code == constants.CC_OK):
-            push_unsigned_int(data, self.next_record_id, 2)
-            data.extend(self.record_data)
-        return data.tostring()
+            data.push_unsigned_int(self.next_record_id, 2)
+            data.append_array(self.record_data)
+        return data.to_string()
 
     def _decode(self, data):
-        data = array.array('c', data)
-        self.completion_code = pop_unsigned_int(data, 1)
+        data = ByteBuffer(data)
+        self.completion_code = data.pop_unsigned_int(1)
         if (self.completion_code != constants.CC_OK):
             return
-        self.next_record_id = pop_unsigned_int(data, 2)
+        self.next_record_id = data.pop_unsigned_int(2)
         self.record_data = data[:]
 
 

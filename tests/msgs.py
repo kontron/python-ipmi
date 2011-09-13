@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import unittest
 from array import array
 
@@ -73,7 +75,7 @@ class TestReadFruData(unittest.TestCase):
         decode_message(m, '\x00\x05\x01\x02\x03\x04\x05')
         self.assertEqual(m.completion_code, 0)
         self.assertEqual(m.count, 5)
-        self.assertEqual(m.data, array('c', '\x01\x02\x03\x04\x05'))
+        self.assertEqual(m.data, array('B', '\x01\x02\x03\x04\x05'))
 
     def test_decode_rsp_with_cc(self):
         m = pyipmi.msgs.fru.ReadFruDataRsp()
@@ -88,7 +90,7 @@ class TestReadFruData(unittest.TestCase):
         m = pyipmi.msgs.fru.ReadFruDataRsp()
         m.completion_code = 0
         m.count = 5
-        m.data = array('c', '\x01\x02\x03\x04\x05')
+        m.data = array('B', '\x01\x02\x03\x04\x05')
         data = encode_message(m)
         self.assertEqual(data, '\x00\x05\x01\x02\x03\x04\x05')
 
@@ -102,7 +104,7 @@ class TestReadFruData(unittest.TestCase):
         m = pyipmi.msgs.fru.ReadFruDataRsp()
         m.completion_code = 0
         m.count = 1
-        m.data = array('c', '\x01\x02')
+        m.data = array('B', '\x01\x02')
         self.assertRaises(EncodingError, encode_message, m)
 
 
@@ -446,7 +448,7 @@ class TestGetMessage(unittest.TestCase):
 		self.assertEqual(m.completion_code, 0x00)
 		self.assertEqual(m.channel_number, 1)
 		self.assertEqual(m.privilege_level, 2)
-		self.assertEqual(m.data, array('c', '\xaa\xff\xff\xee'))
+		self.assertEqual(m.data, array('B', '\xaa\xff\xff\xee'))
 
 
 class TestReadEventMessageBuffer(unittest.TestCase):
@@ -455,7 +457,7 @@ class TestReadEventMessageBuffer(unittest.TestCase):
         decode_message(m, '\x00\x00\x01\x02\x03\x04\x05\x06\x07'\
                 '\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f')
         self.assertEqual(m.completion_code, 0x00)
-        self.assertEqual(m.event_data, array('c', '\x00\x01\x02\x03\x04'\
+        self.assertEqual(m.event_data, array('B', '\x00\x01\x02\x03\x04'\
                 '\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'))
 
 
@@ -480,7 +482,7 @@ class TestGetSelEntry(unittest.TestCase):
         m = pyipmi.msgs.sel.GetSelEntryRsp()
         m.completion_code = 0
         m.next_record_id = 0x0102
-        m.record_data = array('c', '\x01\x02\x03\x04')
+        m.record_data = array('B', '\x01\x02\x03\x04')
         data = encode_message(m)
         self.assertEqual(data, '\x00\x02\x01\x01\x02\x03\x04')
 

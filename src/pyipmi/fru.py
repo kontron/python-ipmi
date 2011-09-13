@@ -36,7 +36,7 @@ class Fru:
         off = 0
         area_size = 0
         req_size = 32
-        data = array.array('c')
+        data = array.array('B')
 
         # first check for maximum area size
         if offset is None:

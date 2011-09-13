@@ -7,7 +7,7 @@
 import time
 
 from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
-from pyipmi.utils import check_completion_code, pop_unsigned_int
+from pyipmi.utils import check_completion_code, ByteBuffer
 from pyipmi.event import Event
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
@@ -152,23 +152,23 @@ class SelEntry:
         self.data = data
 
         # pop will change data, therefore copy it
-        tmp_data = data[:]
+        buffer = ByteBuffer(data)
 
-        self.record_id = pop_unsigned_int(tmp_data, 2)
-        self.type = pop_unsigned_int(tmp_data, 1)
+        self.record_id = buffer.pop_unsigned_int(2)
+        self.type = buffer.pop_unsigned_int(1)
         if (self.type != self.TYPE_SYSTEM_EVENT
                 and self.type not in self.TYPE_OEM_TIMESTAMPED_RANGE
                 and self.type not in self.TYPE_NON_OEM_TIMESTAMPED_RANGE):
             raise DecodingError('Unknown SEL type (0x%02x)' % self.type)
-        self.timestamp = pop_unsigned_int(tmp_data, 4)
-        self.generator_id = pop_unsigned_int(tmp_data, 2)
-        self.evm_rev = pop_unsigned_int(tmp_data, 1)
-        self.sensor_type = pop_unsigned_int(tmp_data, 1)
-        self.sensor_number = pop_unsigned_int(tmp_data, 1)
-        event_desc = pop_unsigned_int(tmp_data, 1)
+        self.timestamp = buffer.pop_unsigned_int(4)
+        self.generator_id = buffer.pop_unsigned_int(2)
+        self.evm_rev = buffer.pop_unsigned_int(1)
+        self.sensor_type = buffer.pop_unsigned_int(1)
+        self.sensor_number = buffer.pop_unsigned_int(1)
+        event_desc = buffer.pop_unsigned_int(1)
         if event_desc & 0x80:
             self.event_direction = Event.DIR_DEASSERTION
         else:
             self.event_direction = Event.DIR_ASSERTION
         self.event_type = event_desc & 0x3f
-        self.event_data = "%s%s%s" % (tmp_data[0], tmp_data[1], tmp_data[2])
+        self.event_data = "%s%s%s" % (buffer[0], buffer[1], buffer[2])

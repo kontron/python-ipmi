@@ -9,7 +9,7 @@ import errors
 import array
 import time
 from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
-from pyipmi.utils import check_completion_code, pop_unsigned_int
+from pyipmi.utils import check_completion_code, ByteBuffer
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 
@@ -78,12 +78,11 @@ class Sdr:
 
         next_record_id = rsp.next_record_id
 
-        # pop will change data, therefore copy it
         record_data = rsp.record_data[:]
-        record_id = pop_unsigned_int(rsp.record_data, 2)
-        record_version = pop_unsigned_int(rsp.record_data, 1)
-        record_type = pop_unsigned_int(rsp.record_data, 1)
-        record_length = pop_unsigned_int(rsp.record_data, 1)
+        record_id = rsp.record_data.pop_unsigned_int(2)
+        record_version = rsp.record_data.pop_unsigned_int(1)
+        record_type = rsp.record_data.pop_unsigned_int(1)
+        record_length = rsp.record_data.pop_unsigned_int(1)
         record_length += 5
 
         req.offset = len(record_data)
@@ -242,12 +241,11 @@ class SdrCommon:
             raise DecodingError('Invalid SDR length (%d)' % len(data))
 
         self.data = data
-        # pop will change data, therefore copy it
-        tmp_data = data[:]
-        self.id = pop_unsigned_int(tmp_data, 2)
-        self.version = pop_unsigned_int(tmp_data, 1)
-        self.type = pop_unsigned_int(tmp_data, 1)
-        self.lenght = pop_unsigned_int(tmp_data, 1)
+        buffer = ByteBuffer(data[:])
+        self.id = buffer.pop_unsigned_int(2)
+        self.version = buffer.pop_unsigned_int(1)
+        self.type = buffer.pop_unsigned_int(1)
+        self.lenght = buffer.pop_unsigned_int(1)
 
 ###
 # SDR type 0x01
@@ -352,18 +350,17 @@ class SdrFullSensorRecord(SdrCommon):
         return value
 
     def from_data(self, data):
-        # pop will change data, therefore copy it
-        tmp_data = data[5:]
+        buffer = ByteBuffer(data[5:])
         # record key bytes
-        self.owner_id = pop_unsigned_int(tmp_data, 1)
-        self.owner_lun = pop_unsigned_int(tmp_data, 1)
-        self.number = pop_unsigned_int(tmp_data, 1)
+        self.owner_id = buffer.pop_unsigned_int(1)
+        self.owner_lun = buffer.pop_unsigned_int(1)
+        self.number = buffer.pop_unsigned_int(1)
         # record body bytes
-        self.entity_id = pop_unsigned_int(tmp_data, 1)
-        self.entity_instance = pop_unsigned_int(tmp_data, 1)
+        self.entity_id = buffer.pop_unsigned_int(1)
+        self.entity_instance = buffer.pop_unsigned_int(1)
 
         # byte 11
-        initialization = pop_unsigned_int(tmp_data, 1)
+        initialization = buffer.pop_unsigned_int(1)
         self.initialization = []
         if initialization & 0x40:
             self.initialization.append('scanning')
@@ -381,7 +378,7 @@ class SdrFullSensorRecord(SdrCommon):
             self.initialization.append('default_scanning')
 
         # byte 12 - sensor capabilities
-        capabilities = pop_unsigned_int(tmp_data, 1)
+        capabilities = buffer.pop_unsigned_int(1)
         self.capabilities = []
         # ignore sensor
         if capabilities & 0x80:
@@ -427,37 +424,37 @@ class SdrFullSensorRecord(SdrCommon):
         if (capabilities & 0x03) is 3:
             pass
 
-        self.sensor_type_code = pop_unsigned_int(tmp_data, 1)
-        self.event_reading_type_code = pop_unsigned_int(tmp_data, 1)
-        self.assertion_mask = pop_unsigned_int(tmp_data, 2)
-        self.deassertion_mask = pop_unsigned_int(tmp_data, 2)
-        self.discrete_reading_mask = pop_unsigned_int(tmp_data, 2)
+        self.sensor_type_code = buffer.pop_unsigned_int(1)
+        self.event_reading_type_code = buffer.pop_unsigned_int(1)
+        self.assertion_mask = buffer.pop_unsigned_int(2)
+        self.deassertion_mask = buffer.pop_unsigned_int(2)
+        self.discrete_reading_mask = buffer.pop_unsigned_int(2)
         # byte 21, 22, 23
-        units_1 = pop_unsigned_int(tmp_data, 1)
-        units_2 = pop_unsigned_int(tmp_data, 1)
-        units_3 = pop_unsigned_int(tmp_data, 1)
+        units_1 = buffer.pop_unsigned_int(1)
+        units_2 = buffer.pop_unsigned_int(1)
+        units_3 = buffer.pop_unsigned_int(1)
         self.analog_data_format = (units_1 >> 6) & 0x3
         self.rate_unit = (units_1 >> 3) >> 0x7
         self.modifier_unit = (units_1 >> 1) & 0x2
         self.percentage = units_1 & 0x1
         # byte 24
-        self.linearization = pop_unsigned_int(tmp_data, 1) & 0x7f
+        self.linearization = buffer.pop_unsigned_int(1) & 0x7f
         # byte 25, 26
-        m = pop_unsigned_int(tmp_data, 1)
-        m_tol = pop_unsigned_int(tmp_data, 1)
+        m = buffer.pop_unsigned_int(1)
+        m_tol = buffer.pop_unsigned_int(1)
         self.m = (m & 0xff) | ((m_tol & 0xc0) << 2)
         self.tolerance = (m_tol & 0x3f)
 
         # byte 27, 28, 29
-        b = pop_unsigned_int(tmp_data, 1)
-        b_acc = pop_unsigned_int(tmp_data, 1)
-        acc_accexp = pop_unsigned_int(tmp_data, 1)
+        b = buffer.pop_unsigned_int(1)
+        b_acc = buffer.pop_unsigned_int(1)
+        acc_accexp = buffer.pop_unsigned_int(1)
         self.b = (b & 0xff) | ((b_acc & 0xc0) << 2)
         self.b = self._convert_complement(self.b, 10)
         self.accuracy = (b_acc & 0x3f) | ((acc_accexp & 0xf0) << 4)
         self.accuracy_exp = (acc_accexp & 0x0c) >> 2
         # byte 30
-        rexp_bexp = pop_unsigned_int(tmp_data, 1)
+        rexp_bexp = buffer.pop_unsigned_int(1)
         self.k2 = (rexp_bexp & 0xf0) >> 4
         # convert 2s complement
         #if self.k2 & 0x8: # 4bit
@@ -471,7 +468,7 @@ class SdrFullSensorRecord(SdrCommon):
         self.k1 = self._convert_complement(self.k1, 4)
 
         # byte 31
-        analog_characteristics = pop_unsigned_int(tmp_data, 1)
+        analog_characteristics = buffer.pop_unsigned_int(1)
         self.analog_characteristic = []
         if analog_characteristics & 0x01:
             self.analog_characteristic.append('nominal_reading')
@@ -480,25 +477,25 @@ class SdrFullSensorRecord(SdrCommon):
         if analog_characteristics & 0x04:
             self.analog_characteristic.append('normal_min')
 
-        self.nominal_reading = pop_unsigned_int(tmp_data, 1)
-        self.normal_maximum = pop_unsigned_int(tmp_data, 1)
-        self.normal_minimum = pop_unsigned_int(tmp_data, 1)
-        self.sensor_maximum_reading = pop_unsigned_int(tmp_data, 1)
-        self.sensor_minimum_reading = pop_unsigned_int(tmp_data, 1)
+        self.nominal_reading = buffer.pop_unsigned_int(1)
+        self.normal_maximum = buffer.pop_unsigned_int(1)
+        self.normal_minimum = buffer.pop_unsigned_int(1)
+        self.sensor_maximum_reading = buffer.pop_unsigned_int(1)
+        self.sensor_minimum_reading = buffer.pop_unsigned_int(1)
         self.threshold = {}
-        self.threshold['unr'] = pop_unsigned_int(tmp_data, 1)
-        self.threshold['ucr'] = pop_unsigned_int(tmp_data, 1)
-        self.threshold['unc'] = pop_unsigned_int(tmp_data, 1)
-        self.threshold['lnr'] = pop_unsigned_int(tmp_data, 1)
-        self.threshold['lcr'] = pop_unsigned_int(tmp_data, 1)
-        self.threshold['lnc'] = pop_unsigned_int(tmp_data, 1)
+        self.threshold['unr'] = buffer.pop_unsigned_int(1)
+        self.threshold['ucr'] = buffer.pop_unsigned_int(1)
+        self.threshold['unc'] = buffer.pop_unsigned_int(1)
+        self.threshold['lnr'] = buffer.pop_unsigned_int(1)
+        self.threshold['lcr'] = buffer.pop_unsigned_int(1)
+        self.threshold['lnc'] = buffer.pop_unsigned_int(1)
         self.hysteresis = {}
-        self.hysteresis['positive_going'] = pop_unsigned_int(tmp_data, 1)
-        self.hysteresis['negative_going'] = pop_unsigned_int(tmp_data, 1)
-        self.reserved = pop_unsigned_int(tmp_data, 2)
-        self.oem = pop_unsigned_int(tmp_data, 1)
-        self.device_id_string_type_length = pop_unsigned_int(tmp_data, 1)
-        self.device_id_string = tmp_data.tostring()
+        self.hysteresis['positive_going'] = buffer.pop_unsigned_int(1)
+        self.hysteresis['negative_going'] = buffer.pop_unsigned_int(1)
+        self.reserved = buffer.pop_unsigned_int(2)
+        self.oem = buffer.pop_unsigned_int(1)
+        self.device_id_string_type_length = buffer.pop_unsigned_int(1)
+        self.device_id_string = buffer.to_string()
 
 
 ###
@@ -515,30 +512,29 @@ class SdrCompactSensorRecord(SdrCommon):
         return s
 
     def from_data(self, data):
-        # pop will change data, therefore copy it
-        tmp_data = data[5:]
-        self.owner_id = pop_unsigned_int(tmp_data, 1)
-        self.owner_lun = pop_unsigned_int(tmp_data, 1)
-        self.number = pop_unsigned_int(tmp_data, 1)
-        self.entity_id = pop_unsigned_int(tmp_data, 1)
-        self.entity_instance = pop_unsigned_int(tmp_data, 1)
-        self.sensor_initialization = pop_unsigned_int(tmp_data, 1)
-        self.capabilities = pop_unsigned_int(tmp_data, 1)
-        self.sensor_type = pop_unsigned_int(tmp_data, 1)
-        self.event_reading_type_code = pop_unsigned_int(tmp_data, 1)
-        self.assertion_mask = pop_unsigned_int(tmp_data, 2)
-        self.deassertion_mask = pop_unsigned_int(tmp_data, 2)
-        self.discrete_reading_mask = pop_unsigned_int(tmp_data, 2)
-        self.units_1 = pop_unsigned_int(tmp_data, 1)
-        self.units_2 = pop_unsigned_int(tmp_data, 1)
-        self.units_3 = pop_unsigned_int(tmp_data, 1)
-        self.record_sharing = pop_unsigned_int(tmp_data, 2)
-        self.positive_going_hysteresis = pop_unsigned_int(tmp_data, 1)
-        self.negative_going_hysteresis = pop_unsigned_int(tmp_data, 1)
-        self.reserved = pop_unsigned_int(tmp_data, 3)
-        self.oem = pop_unsigned_int(tmp_data, 1)
-        self.device_id_string_type_length = pop_unsigned_int(tmp_data, 1)
-        self.device_id_string = tmp_data.tostring()
+        buffer = ByteBuffer(data[5:])
+        self.owner_id = buffer.pop_unsigned_int(1)
+        self.owner_lun = buffer.pop_unsigned_int(1)
+        self.number = buffer.pop_unsigned_int(1)
+        self.entity_id = buffer.pop_unsigned_int(1)
+        self.entity_instance = buffer.pop_unsigned_int(1)
+        self.sensor_initialization = buffer.pop_unsigned_int(1)
+        self.capabilities = buffer.pop_unsigned_int(1)
+        self.sensor_type = buffer.pop_unsigned_int(1)
+        self.event_reading_type_code = buffer.pop_unsigned_int(1)
+        self.assertion_mask = buffer.pop_unsigned_int(2)
+        self.deassertion_mask = buffer.pop_unsigned_int(2)
+        self.discrete_reading_mask = buffer.pop_unsigned_int(2)
+        self.units_1 = buffer.pop_unsigned_int(1)
+        self.units_2 = buffer.pop_unsigned_int(1)
+        self.units_3 = buffer.pop_unsigned_int(1)
+        self.record_sharing = buffer.pop_unsigned_int(2)
+        self.positive_going_hysteresis = buffer.pop_unsigned_int(1)
+        self.negative_going_hysteresis = buffer.pop_unsigned_int(1)
+        self.reserved = buffer.pop_unsigned_int(3)
+        self.oem = buffer.pop_unsigned_int(1)
+        self.device_id_string_type_length = buffer.pop_unsigned_int(1)
+        self.device_id_string = buffer.to_string()
 
 
 ###
@@ -571,22 +567,21 @@ class SdrFruDeviceLocator(SdrCommon):
         return s
 
     def from_data(self, data):
-        # pop will change data, therefore copy it
-        tmp_data = data[5:]
+        buffer = ByteBuffer(data[5:])
         # record key bytes
-        self.device_access_address = pop_unsigned_int(tmp_data, 1) >> 1
-        self.fru_device_id = pop_unsigned_int(tmp_data, 1)
-        self.logical_physical = pop_unsigned_int(tmp_data, 1)
-        self.channel_number = pop_unsigned_int(tmp_data, 1)
+        self.device_access_address = buffer.pop_unsigned_int(1) >> 1
+        self.fru_device_id = buffer.pop_unsigned_int(1)
+        self.logical_physical = buffer.pop_unsigned_int(1)
+        self.channel_number = buffer.pop_unsigned_int(1)
         # record body bytes
-        self.reserved = pop_unsigned_int(tmp_data, 1)
-        self.device_type = pop_unsigned_int(tmp_data, 1)
-        self.device_type_modifier= pop_unsigned_int(tmp_data, 1)
-        self.entity_id = pop_unsigned_int(tmp_data, 1)
-        self.entity_instance = pop_unsigned_int(tmp_data, 1)
-        self.oem = pop_unsigned_int(tmp_data, 1)
-        self.device_id_string_type_length = pop_unsigned_int(tmp_data, 1)
-        self.device_id_string = tmp_data.tostring()
+        self.reserved = buffer.pop_unsigned_int(1)
+        self.device_type = buffer.pop_unsigned_int(1)
+        self.device_type_modifier= buffer.pop_unsigned_int(1)
+        self.entity_id = buffer.pop_unsigned_int(1)
+        self.entity_instance = buffer.pop_unsigned_int(1)
+        self.oem = buffer.pop_unsigned_int(1)
+        self.device_id_string_type_length = buffer.pop_unsigned_int(1)
+        self.device_id_string = buffer.to_string()
 
 
 ###
@@ -603,16 +598,15 @@ class SdrManagementContollerDeviceLocator(SdrCommon):
         return s
 
     def from_data(self, data):
-        # pop will change data, therefore copy it
-        tmp_data = data[5:]
-        self.device_slave_address = pop_unsigned_int(tmp_data, 1) >> 1
-        self.channel_number = pop_unsigned_int(tmp_data, 1) & 0xf
-        self.power_state_notification = pop_unsigned_int(tmp_data, 1)
+        buffer = ByteBuffer(data[5:])
+        self.device_slave_address = buffer.pop_unsigned_int(1) >> 1
+        self.channel_number = buffer.pop_unsigned_int(1) & 0xf
+        self.power_state_notification = buffer.pop_unsigned_int(1)
         self.global_initialization = 0
-        self.device_capabilities = pop_unsigned_int(tmp_data, 1)
-        self.reserved = pop_unsigned_int(tmp_data, 3)
-        self.entity_id = pop_unsigned_int(tmp_data, 1)
-        self.entity_instance = pop_unsigned_int(tmp_data, 1)
-        self.oem = pop_unsigned_int(tmp_data, 1)
-        self.device_id_string_type_length = pop_unsigned_int(tmp_data, 1)
-        self.device_id_string = tmp_data.tostring()
+        self.device_capabilities = buffer.pop_unsigned_int(1)
+        self.reserved = buffer.pop_unsigned_int(3)
+        self.entity_id = buffer.pop_unsigned_int(1)
+        self.entity_instance = buffer.pop_unsigned_int(1)
+        self.oem = buffer.pop_unsigned_int(1)
+        self.device_id_string_type_length = buffer.pop_unsigned_int(1)
+        self.device_id_string = buffer.to_string()

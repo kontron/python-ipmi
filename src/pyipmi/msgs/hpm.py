@@ -1,5 +1,3 @@
-from array import array
-
 import constants
 from . import register_message_class
 from . import Message
@@ -9,7 +7,7 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import Conditional
-from pyipmi.utils import push_unsigned_int, pop_unsigned_int
+from pyipmi.utils import ByteBuffer
 from pyipmi.errors import DecodingError, EncodingError
 from pyipmi.msgs.picmg import PicmgIdentifier, PICMG_IDENTIFIER
 
@@ -71,18 +69,18 @@ class GetComponentPropertiesRsp(Message):
     __default_lun__ = 0
 
     def _encode(self):
-        data = array('c')
-        push_unsigned_int(data, self.completion_code, 1)
+        data = ByteBuffer()
+        data.push_unsigned_int(self.completion_code, 1)
         if (self.completion_code == constants.CC_OK):
             data.extend(self.data)
         return data.tostring()
 
     def _decode(self, data):
-        data = array('c', data)
-        self.completion_code = pop_unsigned_int(data, 1)
+        data = ByteBuffer(data)
+        self.completion_code = data.pop_unsigned_int(1)
         if (self.completion_code != constants.CC_OK):
             return
-        self.picmg_identifier = pop_unsigned_int(data, 1)
+        self.picmg_identifier = data.pop_unsigned_int(1)
         self.data = data[:]
 
 
@@ -140,19 +138,19 @@ class UploadFirmwareBlockReq(Message):
     __default_lun__ = 0
 
     def _encode(self):
-        data = array('B', data)
-        push_unsigned_int(data, self.completion_code)
+        data = ByteBuffer()
+        data.push_unsigned_int(self.completion_code)
         if (self.completion_code == constants.CC_OK):
-            push_unsigned_int(data, PICMG_IDENTIFIER)
+            data.push_unsigned_int(PICMG_IDENTIFIER, 1)
             data.extend(self.data)
         return data.tostring()
 
     def _decode(self, data):
-        data = array('B', data)
-        self.completion_code = pop_unsigned_int(data, 1)
+        data = ByteBuffer(data)
+        self.completion_code = data.pop_unsigned_int(1)
         if (self.completion_code != constants.CC_OK):
             return
-        self.picmg_identifier = pop_unsigned_int(data)
+        self.picmg_identifier = pop_unsigned_int(1)
         self.data = data[:]
 
 
@@ -163,26 +161,26 @@ class UploadFirmwareBlockRsp(Message):
     __default_lun__ = 0
 
     def _encode(self):
-        data = array.array('B')
-        push_unsigned_int(data, self.completion_code, 1)
+        data = ByteBuffer()
+        data.push_unsigned_int(self.completion_code, 1)
         if (self.completion_code == constants.CC_OK):
             data.extend(self.data)
             if self.section_offset is not None:
-                push_unsigned_int(data, self.section_offset)
+                data.push_unsigned_int(self.section_offset)
             if self.section_length is not None:
-                push_unsigned_int(data, self.section_length)
+                data.push_unsigned_int(self.section_length)
         return data.tostring()
 
     def _decode(self, data):
-        data = array.array('B', data)
-        self.completion_code = pop_unsigned_int(data, 1)
+        data = ByteBuffer(data)
+        self.completion_code = data.pop_unsigned_int(1)
         if (self.completion_code != constants.CC_OK):
             return
-        self.picmg_identifier = pop_unsigned_int(data, 1)
+        self.picmg_identifier = data.pop_unsigned_int(1)
         if (len(data) != 0):
-            self.section_offset = pop_unsigned_int(data, 4)
+            self.section_offset = data.pop_unsigned_int(4)
         if (len(data) != 0):
-            self.section_length = pop_unsigned_int(data, 4)
+            self.section_length = data.pop_unsigned_int(4)
 
 
 @register_message_class
@@ -228,19 +226,19 @@ class GetUpgradeStatusRsp(Message):
     __default_lun__ = 0
 
     def _encode(self):
-        data = array.array('c')
-        push_unsigned_int(data, self.completion_code, 1)
-        self.picmg_identifier = pop_unsigned_int(data, 1)
+        data = ByteBuffer()
+        data.push_unsigned_int(self.completion_code, 1)
+        self.picmg_identifier = data.pop_unsigned_int(1)
 
     def _decode(self, data):
-        data = array.array('c', data)
-        self.completion_code = pop_unsigned_int(data, 1)
+        data = ByteBuffer(data)
+        self.completion_code = data.pop_unsigned_int(1)
         if (self.completion_code != constants.CC_OK):
             return
-        self.picmg_identifier = pop_unsigned_int(data, 1)
-        self.command_in_progress = pop_unsigned_int(data, 1)
+        self.picmg_identifier = data.pop_unsigned_int(1)
+        self.command_in_progress = data.pop_unsigned_int(1)
         if (len(data) != 0):
-            self.completion_estimate = pop_unsigned_int(data, 1)
+            self.completion_estimate = data.pop_unsigned_int(1)
 
 
 @register_message_class
@@ -250,17 +248,17 @@ class ActivateFirmwareReq(Message):
     __default_lun__ = 0
 
     def _encode_req(self):
-        data = array('c', data)
-        push_unsigned_int(data, PICMG_IDENTIFIER)
+        data = ByteBuffer()
+        data.push_unsigned_int(PICMG_IDENTIFIER)
         if self.rollback_override_policy is not None:
-            push_unsigned_int(data, self.rollback_override_policy)
+            data.push_unsigned_int(self.rollback_override_policy)
         return data.tostring()
 
     def _decode_req(self, data):
-        data = array('c', data)
-        self.picmg_identifier = pop_unsigned_int(data)
+        data = ByteBuffer(data)
+        self.picmg_identifier = data.pop_unsigned_int(1)
         if len(data) != 0:
-            self.rollback_override_policy = pop_unsigned_int(data)
+            self.rollback_override_policy = data.pop_unsigned_int(1)
 
 
 @register_message_class
@@ -318,19 +316,19 @@ class QueryRollbackStatusRsp(Message):
     __default_lun__ = 0
 
     def _encode(self):
-        data = array.array('c')
-        push_unsigned_int(data, self.completion_code, 1)
-        self.picmg_identifier = pop_unsigned_int(data, 1)
+        data = ByteBuffer()
+        data.push_unsigned_int(self.completion_code, 1)
+        self.picmg_identifier = data.pop_unsigned_int(1)
 
     def _decode(self, data):
-        data = array('c', data)
-        self.completion_code = pop_unsigned_int(data, 1)
+        data = ByteBuffer(data)
+        self.completion_code = data.pop_unsigned_int(1)
         if (self.completion_code != constants.CC_OK):
             return
-        self.picmg_identifier = pop_unsigned_int(data, 1)
-        self.rollback_status = pop_unsigned_int(data, 1)
+        self.picmg_identifier = data.pop_unsigned_int(1)
+        self.rollback_status = data.pop_unsigned_int(1)
         if len(data) != 0:
-            self.completion_estimate = pop_unsigned_int(data, 1)
+            self.completion_estimate = data.pop_unsigned_int(1)
 
 
 @register_message_class

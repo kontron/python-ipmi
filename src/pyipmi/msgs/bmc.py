@@ -12,7 +12,7 @@ from . import CompletionCode
 from . import Conditional
 from . import Optional
 
-from pyipmi.utils import push_unsigned_int, pop_unsigned_int
+from pyipmi.utils import ByteBuffer
 
 SELFTEST_RESULT_CORRUPTED_DATA_OR_INACCESSIBLE_DEVICE = 0x57
 
@@ -126,12 +126,12 @@ class GetSelftestResultsRsp(Message):
     __default_lun__ = 0
 
     def _decode(self, data):
-        data = array.array('c', data)
-        self.completion_code = pop_unsigned_int(data, 1)
+        data = ByteBuffer(data)
+        self.completion_code = data.pop_unsigned_int(1)
         if (self.completion_code != constants.CC_OK):
             return
-        self.result = pop_unsigned_int(data, 1)
-        self.status = pop_unsigned_int(data, 1)
+        self.result = data.pop_unsigned_int(1)
+        self.status = data.pop_unsigned_int(1)
 
         if self.result == SELFTEST_RESULT_CORRUPTED_DATA_OR_INACCESSIBLE_DEVICE:
             tmp = self.status
@@ -390,11 +390,11 @@ class GetMessageRsp(Message):
     __netfn__ = constants.NETFN_APP | 1
     __default_lun__ = 0
     def _decode(self, data):
-        data = array.array('c', data)
-        self.completion_code = pop_unsigned_int(data, 1)
+        data = ByteBuffer(data)
+        self.completion_code = data.pop_unsigned_int(1)
         if (self.completion_code != constants.CC_OK):
             return
-        tmp = pop_unsigned_int(data, 1)
+        tmp = data.pop_unsigned_int(1)
         self.privilege_level = (tmp & 0xf0) >> 4
         self.channel_number = (tmp & 0x0f) >> 0
         self.data = data[:]
@@ -414,8 +414,8 @@ class ReadEventMessageBufferRsp(Message):
     __netfn__ = constants.NETFN_APP | 1
     __default_lun__ = 0
     def _decode(self, data):
-        data = array.array('c', data)
-        self.completion_code = pop_unsigned_int(data, 1)
+        data = ByteBuffer(data)
+        self.completion_code = data.pop_unsigned_int(1)
         if (self.completion_code != constants.CC_OK):
             return
         self.event_data = data[:]

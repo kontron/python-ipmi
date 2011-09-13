@@ -1,7 +1,7 @@
 from array import array
 
 import constants
-from pyipmi.utils import push_unsigned_int, pop_unsigned_int
+from pyipmi.utils import ByteBuffer
 from pyipmi.errors import CompletionCodeError, EncodingError, DecodingError, \
         DescriptionError
 
@@ -35,13 +35,13 @@ class ByteArray(BaseField):
             raise EncodingError('Array must be exaclty %d bytes long '
                     '(but is %d long)' % (self.length, len(a)))
         for i in xrange(self.length):
-            push_unsigned_int(data, a[i], 1)
+            data.push_unsigned_int(a[i], 1)
 
     def decode(self, obj, data):
         a = getattr(obj, self.name)
         bytes = []
         for i in xrange(self.length):
-            bytes.append(pop_unsigned_int(data, 1))
+            bytes.append(data.pop_unsigned_int(1))
         setattr(obj, self.name, array('B', bytes))
 
     def create(self):
@@ -54,10 +54,10 @@ class ByteArray(BaseField):
 class UnsignedInt(BaseField):
     def encode(self, obj, data):
         value = getattr(obj, self.name)
-        push_unsigned_int(data, value, self.length)
+        data.push_unsigned_int(value, self.length)
 
     def decode(self, obj, data):
-        value = pop_unsigned_int(data, self.length)
+        value = data.pop_unsigned_int(self.length)
         setattr(obj, self.name, value)
 
     def create(self):
@@ -70,11 +70,12 @@ class UnsignedInt(BaseField):
 class String(BaseField):
     def encode(self, obj, data):
         value = getattr(obj, self.name)
-        data.fromstring(value)
+        data.push_string(value)
+        data.from_string(value)
 
     def decode(self, obj, data):
-        setattr(obj, self.name, data[0:self.length])
-        del data[0:self.length]
+        value = data.pop_string(self.length)
+        setattr(obj, self.name, value)
 
     def create(self):
         if self.default is not None:
@@ -199,13 +200,13 @@ class Bitfield(BaseField):
 
             value |= (bit_value & (2**bit._width - 1)) << bit._offset
         for i in xrange(self.length):
-            data.append(chr((value >> (8*i)) & 0xff))
+            data.push_unsigned_int((value >> (8*i)) & 0xff, 1)
 
     def decode(self, obj, data):
         value = 0
         for i in xrange(self.length):
             try:
-                value |= ord(data.pop(0)) << (8*i)
+                value |= data.pop_unsigned_int(1) << (8*i)
             except IndexError:
                 raise DecodingError('Data too short for message')
         for bit in self._bits:
@@ -263,18 +264,18 @@ class Message:
         if not hasattr(self, '__fields__'):
             raise NotImplementedError('You have to overwrite this method')
 
-        data = array('c')
+        data = ByteBuffer()
         for field in self.__fields__:
             if getattr(self, field.name) == None:
                 raise EncodingError('Field "%s" not set.' % field.name)
             field.encode(self, data)
-        return data.tostring()
+        return data.to_string()
 
     def _decode(self, data):
         if not hasattr(self, '__fields__'):
             raise NotImplementedError('You have to overwrite this method')
 
-        data = array('c', data)
+        data = ByteBuffer(data)
         cc = None
         for field in self.__fields__:
             try:

@@ -9,7 +9,7 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import Conditional
-from pyipmi.utils import push_unsigned_int, pop_unsigned_int
+from pyipmi.utils import ByteBuffer
 from pyipmi.errors import DecodingError, EncodingError
 
 
@@ -93,19 +93,19 @@ class GetDeviceSdrRsp(Message):
     __default_lun__ = 0
 
     def _encode(self):
-        data = array.array('c')
-        push_unsigned_int(data, self.completion_code, 1)
+        data = ByteBuffer()
+        data.push_unsigned_int(self.completion_code, 1)
         if (self.completion_code == constants.CC_OK):
-            push_unsigned_int(data, self.next_record_id, 2)
+            data.push_unsigned_int(self.next_record_id, 2)
             data.extend(self.record_data)
-        return data.tostring()
+        return data.to_string()
 
     def _decode(self, data):
-        data = array.array('c', data)
-        self.completion_code = pop_unsigned_int(data, 1)
+        data = ByteBuffer(data)
+        self.completion_code = data.pop_unsigned_int(1)
         if (self.completion_code != constants.CC_OK):
             return
-        self.next_record_id = pop_unsigned_int(data, 2)
+        self.next_record_id = data.pop_unsigned_int(2)
         self.record_data = data[:]
 
 
@@ -254,22 +254,22 @@ class SetSensorEventEnableReq(Message):
     __default_lun__ = 0
 
     def _encode(self):
-        data = array.array('c')
-        push_unsigned_int(data, self.sensor_number, 1)
+        data = ByteBuffer()
+        data.push_unsigned_int(self.sensor_number, 1)
         tmp = 0
         tmp |= (self.cfg & 0x3) << 4
         tmp |= (self.event_enable & 0x1) << 6
         tmp |= (self.scanning_enable & 0x1) << 7
-        push_unsigned_int(data, tmp, 1)
+        data.push_unsigned_int(tmp, 1)
         if hasattr(self, 'byte3'):
-            data.extend(chr(self.byte3))
+            data.push_unsigned_int(self.byte3, 1)
         if hasattr(self, 'byte4'):
-            data.extend(chr(self.byte4))
+            data.push_unsigned_int(self.byte4, 1)
         if hasattr(self, 'byte5'):
-            data.extend(chr(self.byte5))
+            data.push_unsigned_int(self.byte5, 1)
         if hasattr(self, 'byte6'):
-            data.extend(chr(self.byte6))
-        return data.tostring()
+            data.push_unsigned_int(self.byte6, 1)
+        return data.to_string()
 
 
 @register_message_class
@@ -302,23 +302,23 @@ class GetSensorEventEnableRsp(Message):
     )
 
     def _decode(self, data):
-        data = array.array('c', data)
-        self.completion_code = pop_unsigned_int(data, 1)
+        data = ByteBuffer(data)
+        self.completion_code = data.pop_unsigned_int(1)
         if (self.completion_code != constants.CC_OK):
             return
 
-        tmp = pop_unsigned_int(data, 1)
+        tmp = data.pop_unsigned_int(1)
         self.event_enabled = (tmp & 0x80) >> 7
         self.scanning_enabled = (tmp & 0x40) >> 6
 
         if len(data):
-            self.byte3 = pop_unsigned_int(data, 1)
+            self.byte3 = data.pop_unsigned_int(1)
         if len(data):
-            self.byte4 = pop_unsigned_int(data, 1)
+            self.byte4 = data.pop_unsigned_int(1)
         if len(data):
-            self.byte5 = pop_unsigned_int(data, 1)
+            self.byte5 = data.pop_unsigned_int(1)
         if len(data):
-            self.byte6 = pop_unsigned_int(data, 1)
+            self.byte6 = data.pop_unsigned_int(1)
 
 
 @register_message_class
@@ -338,33 +338,33 @@ class GetSensorReadingRsp(Message):
     __default_lun__ = 0
 
     def _encode(self):
-        data = array.array('c')
-        push_unsigned_int(data, self.completion_code, 1)
+        data = ByteBuffer()
+        data.push_unsigned_int(self.completion_code, 1)
         if (self.completion_code == constants.CC_OK):
-            push_unsigned_int(data, self.sensor_reading, 1)
+            data.push_unsigned_int(self.sensor_reading, 1)
             tmp = (self.event_disabled & 0x1 << 5
                     | self.scanning_disabled & 0x1 << 6
                     | self.update_in_progress & 0x1 << 7)
-            push_unsigned_int(data, tmp, 1)
+            data.push_unsigned_int(tmp, 1)
             if self.states1:
-                push_unsigned_int(data, self.states1, 1)
+                data.push_unsigned_int(self.states1, 1)
             if self.states2:
-                push_unsigned_int(data, self.states2, 1)
-        return data.tostring()
+                data.push_unsigned_int(self.states2, 1)
+        return data.to_string()
 
     def _decode(self, data):
-        data = array.array('c', data)
-        self.completion_code = pop_unsigned_int(data, 1)
+        data = ByteBuffer(data)
+        self.completion_code = data.pop_unsigned_int(1)
         if (self.completion_code != constants.CC_OK):
             return
-        self.sensor_reading = pop_unsigned_int(data, 1)
+        self.sensor_reading = data.pop_unsigned_int(1)
 
-        tmp = pop_unsigned_int(data, 1)
+        tmp = data.pop_unsigned_int(1)
         self.event_disabled = (tmp & 0x80) >> 7
         self.scanning_disabled = (tmp & 0x40) >> 6
         self.update_in_progress = (tmp & 0x20) >> 5
 
         if len(data):
-            self.states1 = pop_unsigned_int(data, 1)
+            self.states1 = data.pop_unsigned_int(1)
         if len(data):
-            self.states2 = pop_unsigned_int(data, 1)
+            self.states2 = data.pop_unsigned_int(1)

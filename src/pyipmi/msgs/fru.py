@@ -1,5 +1,3 @@
-from array import array
-
 import constants
 from . import register_message_class
 from . import Message
@@ -9,7 +7,7 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import Conditional
-from pyipmi.utils import push_unsigned_int, pop_unsigned_int
+from pyipmi.utils import ByteBuffer
 from pyipmi.errors import DecodingError, EncodingError
 
 @register_message_class
@@ -56,21 +54,21 @@ class ReadFruDataRsp(Message):
     __default_lun__ = 0
 
     def _encode(self):
-        data = array('c')
-        push_unsigned_int(data, self.completion_code, 1)
+        data = ByteBuffer()
+        data.push_unsigned_int(self.completion_code, 1)
         if (self.completion_code == constants.CC_OK):
-            push_unsigned_int(data, self.count, 1)
+            data.push_unsigned_int(self.count, 1)
             if len(self.data) != self.count:
                 raise EncodingError()
-            data.extend(self.data)
-        return data.tostring()
+            data.append_array(self.data)
+        return data.to_string()
 
     def _decode(self, data):
-        data = array('c', data)
-        self.completion_code = pop_unsigned_int(data, 1)
+        data = ByteBuffer(data)
+        self.completion_code = data.pop_unsigned_int(1)
         if (self.completion_code != constants.CC_OK):
             return
-        self.count = pop_unsigned_int(data, 1)
+        self.count = data.pop_unsigned_int(1)
         if len(data) != self.count:
             raise DecodingError()
         self.data = data[:self.count]
@@ -83,16 +81,16 @@ class WriteFruDataReq(Message):
     __default_lun__ = 0
 
     def _encode(self):
-        data = array('c')
-        push_unsigned_int(data, self.fru_id, 1)
-        push_unsigned_int(data, self.offset, 2)
-        data.extend(self.data)
-        return data.tostring()
+        data = ByteBuffer()
+        data.push_unsigned_int(self.fru_id, 1)
+        data.push_unsigned_int(self.offset, 2)
+        data.push_unsigned_int(self.data, 1)
+        return data.to_string()
 
     def _decode(self, data):
-        data = array('c', data)
-        self.fru_id = pop_unsigned_int(data, 1)
-        self.offset = pop_unsigned_int(data, 2)
+        data = ByteBuffer()
+        self.fru_id = data.pop_unsigned_int(1)
+        self.offset = data.pop_unsigned_int(2)
         self.data = data[:]
 
 
