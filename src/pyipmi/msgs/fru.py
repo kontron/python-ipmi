@@ -7,6 +7,7 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import Conditional
+from . import RemainingBytes
 from pyipmi.utils import ByteBuffer
 from pyipmi.errors import DecodingError, EncodingError
 
@@ -80,18 +81,11 @@ class WriteFruDataReq(Message):
     __netfn__ = constants.NETFN_STORAGE
     __default_lun__ = 0
 
-    def _encode(self):
-        data = ByteBuffer()
-        data.push_unsigned_int(self.fru_id, 1)
-        data.push_unsigned_int(self.offset, 2)
-        data.push_unsigned_int(self.data, 1)
-        return data.to_string()
-
-    def _decode(self, data):
-        data = ByteBuffer()
-        self.fru_id = data.pop_unsigned_int(1)
-        self.offset = data.pop_unsigned_int(2)
-        self.data = data[:]
+    __fields__ = (
+        UnsignedInt('fru_id', 1),
+        UnsignedInt('offset', 2),
+        RemainingBytes('data'),
+    )
 
 
 @register_message_class
