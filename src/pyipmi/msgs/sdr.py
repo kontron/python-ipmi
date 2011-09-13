@@ -188,6 +188,7 @@ class GetSensorHysteresisReq(Message):
     __default_lun__ = 0
     __fields__ = (
             UnsignedInt('sensor_number', 1),
+            UnsignedInt('reserved', 1, 0xff),
     )
 
 
