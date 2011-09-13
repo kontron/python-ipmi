@@ -85,7 +85,6 @@ class GetPicmgPropertiesReq(Message):
     __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
-            UnsignedInt('fru_id', 1),
     )
 
 
@@ -97,6 +96,9 @@ class GetPicmgPropertiesRsp(Message):
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
+            UnsignedInt('extension_version', 1),
+            UnsignedInt('max_fru_device_id', 1),
+            UnsignedInt('fru_device_id', 1),
     )
 
 
