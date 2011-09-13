@@ -135,6 +135,23 @@ class Optional:
     def encode(self, obj, data):
         self._field.encode(obj, data)
 
+
+class RemainingBytes(BaseField):
+    def __init__(self, name):
+        BaseField.__init__(self, name, None)
+
+    def encode(self, obj, data):
+        a = getattr(obj, self.name)
+        data.push_string(a)
+
+    def decode(self, obj, data):
+        setattr(obj, self.name, array('B', data[:]))
+        del data[:]
+
+    def create(self):
+        return array('B')
+
+
 class Bitfield(BaseField):
     class Bit:
         def __init__(self, name, width=1, default=None):

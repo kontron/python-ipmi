@@ -51,6 +51,9 @@ class ByteBuffer:
     def __getslice__(self, a, b):
         return self.array[a:b]
 
+    def __delslice__(self, a, b):
+        del self.array[a:b]
+
     def __len__(self):
         return len(self.array)
 
