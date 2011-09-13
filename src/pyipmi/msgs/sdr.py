@@ -71,7 +71,9 @@ class GetDeviceSdrInfoRsp(Message):
                 Bitfield.ReservedBit(3, 0),
                 Bitfield.Bit('dynamic_population', 1)
             ),
-            Timestamp('sensor_population_change'),
+            Optional(
+                Timestamp('sensor_population_change')
+            ),
     )
 
 
