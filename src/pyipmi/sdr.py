@@ -78,12 +78,13 @@ class Sdr:
 
         next_record_id = rsp.next_record_id
 
-        record_data = rsp.record_data[:]
-        record_id = rsp.record_data.pop_unsigned_int(2)
-        record_version = rsp.record_data.pop_unsigned_int(1)
-        record_type = rsp.record_data.pop_unsigned_int(1)
-        record_length = rsp.record_data.pop_unsigned_int(1)
-        record_length += 5
+        header = ByteBuffer(rsp.record_data)
+        record_id = header.pop_unsigned_int(2)
+        record_version = header.pop_unsigned_int(1)
+        record_type = header.pop_unsigned_int(1)
+        record_payload_length = header.pop_unsigned_int(1)
+        record_length = record_payload_length + 5
+        record_data = ByteBuffer(rsp.record_data)
 
         req.offset = len(record_data)
         self.max_req_len = 20
@@ -107,7 +108,7 @@ class Sdr:
                 req.reservation_id = self.get_reservation_id()
                 time.sleep(0.1 * retry)
                 # clean all previous data and retry with new reservation
-                record_data = array.array('c')
+                del record_data[:]
                 req.offset = 0
                 retry -= 1
                 continue
@@ -118,7 +119,7 @@ class Sdr:
             else:
                 check_completion_code(rsp.completion_code)
 
-            record_data += rsp.record_data[:]
+            record_data.append_array(rsp.record_data[:])
             req.offset = len(record_data)
             if len(record_data) >= record_length:
                 break
@@ -158,7 +159,7 @@ class Sdr:
         check_completion_code(rsp.completion_code)
 
         reading = rsp.sensor_reading
-        if rsp.update_in_progress:
+        if rsp.config.initial_update_in_progress:
             reading = None
 
         states = None
@@ -205,7 +206,7 @@ class Sdr:
 
 
 def create_sdr(data, next_id=None):
-    sdr_type = ord(data[3])
+    sdr_type = data[3]
 
     if sdr_type == SDR_TYPE_FULL_SENSOR_RECORD:
         return SdrFullSensorRecord(data, next_id)
@@ -233,7 +234,8 @@ class SdrCommon:
             self.next_id = next_id
 
     def __str__(self):
-        s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % ord(b) for b in self.data]))
+        s = '["%-16s"] [%s]' % \
+            (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
         return s
 
     def from_response(self, data):
