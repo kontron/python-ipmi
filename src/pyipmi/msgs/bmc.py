@@ -100,7 +100,9 @@ class ManufacturingTestOnReq(Message):
     __cmdid__ = constants.CMDID_MANUFACTURING_TEST_ON
     __netfn__ = constants.NETFN_APP
     __default_lun__ = 0
-    __fields__ = ()
+    __fields__ = (
+        RemainingBytes('data'),
+    )
 
 
 @register_message_class
@@ -111,6 +113,7 @@ class ManufacturingTestOnRsp(Message):
     __fields__ = (
         CompletionCode(),
     )
+
 
 @register_message_class
 class GetSelftestResultsReq(Message):
