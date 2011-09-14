@@ -57,6 +57,10 @@ class ByteBuffer:
     def __len__(self):
         return len(self.array)
 
+    def __getitem__(self, idx):
+        return self.array[idx]
+
+
 bcd_map = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '-', '.' ]
 
 def bcd_encode(input, errors='strict'):
