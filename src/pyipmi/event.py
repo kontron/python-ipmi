@@ -4,9 +4,5 @@
 # author: Heiko Thiery <heiko.thiery@kontron.com>
 # author: Michael Walle <michael.walle@kontron.com>
 #
-
-class Event:
-    DIR_ASSERTION = 0
-    DIR_DEASSERTION = 1
-
-
+EVENT_ASSERTION = 0
+EVENT_DEASSERTION = 1
