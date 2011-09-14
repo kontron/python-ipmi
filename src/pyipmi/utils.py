@@ -39,8 +39,8 @@ class ByteBuffer:
 
     def pop_string(self, length):
         s = self.array[0:length]
-        del data[0:self.length]
-        return s
+        del self.array[0:length]
+        return s.tostring()
 
     def to_string(self):
         return self.array.tostring()
