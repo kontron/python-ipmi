@@ -26,7 +26,7 @@ class Sel:
 
     def clear_sel(self, retry=5):
         req = create_request_by_name('ClearSel')
-        req.reservation_id = self.get_sel_reservation_id(fn)
+        req.reservation_id = self.get_sel_reservation_id()
 
         req.cmd = INITIATE_ERASE
         while True:
@@ -45,7 +45,7 @@ class Sel:
                 raise RetryError()
 
             rsp = self.send_message(req)
-            if rsp.completion_code == pyipmi.msgs.constants.CC_OK:
+            if rsp.completion_code == constants.CC_OK:
                 if rsp.status.erase_in_progress == ERASURE_IN_PROGRESS:
                     time.sleep(0.5)
                     retry -= 1
