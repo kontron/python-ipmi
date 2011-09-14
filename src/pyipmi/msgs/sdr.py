@@ -95,7 +95,7 @@ class GetDeviceSdrRsp(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_SDR
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
     __default_lun__ = 0
-    __field__ = (
+    __fields__ = (
             CompletionCode(),
             UnsignedInt('next_record_id', 2),
             RemainingBytes('record_data'),
