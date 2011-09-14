@@ -8,9 +8,9 @@ import time
 
 from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
 from pyipmi.utils import check_completion_code, ByteBuffer
-from pyipmi.event import Event
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
+from pyipmi.event import EVENT_ASSERTION, EVENT_DEASSERTION
 
 INITIATE_ERASE = 0xaa
 GET_ERASE_STATUS = 0x00
@@ -77,7 +77,7 @@ class Sel:
             req.offset = 0
             self.max_req_len = 0xff # read entire record
 
-            record_data = []
+            record_data = ByteBuffer()
             while True:
                 req.length = self.max_req_len
                 if (self.max_req_len != 0xff
@@ -94,7 +94,7 @@ class Sel:
                 else:
                     check_completion_code(rsp.completion_code)
 
-                record_data += rsp.record_data
+                record_data.append_array(rsp.record_data)
                 req.offset = len(record_data)
 
                 if len(record_data) >= 16:
@@ -120,7 +120,7 @@ class SelEntry:
             self.from_response(rsp)
 
     def __str__(self):
-        s = '[%s]' % (' '.join(['%02x' % ord(b) for b in self.data]))
+        s = '[%s]' % (' '.join(['%02x' % b for b in self.data]))
         str = []
         str.append('SEL Record ID 0x%04x' % self.record_id)
         str.append('  Raw: %s' % s)
@@ -132,7 +132,7 @@ class SelEntry:
         str.append('  Sensor Number: %d' % self.sensor_number)
         str.append('  Event Direction: %d' % self.event_direction)
         str.append('  Event Type: 0x%02x' % self.event_type)
-        str.append('  Event Data: %s' % self.event_data.encode('hex'))
+        str.append('  Event Data: 0x%s' % self.event_data.encode('hex'))
         return "\n".join(str)
 
     def type_to_string(self, type):
@@ -167,8 +167,8 @@ class SelEntry:
         self.sensor_number = buffer.pop_unsigned_int(1)
         event_desc = buffer.pop_unsigned_int(1)
         if event_desc & 0x80:
-            self.event_direction = Event.DIR_DEASSERTION
+            self.event_direction = EVENT_DEASSERTION
         else:
-            self.event_direction = Event.DIR_ASSERTION
+            self.event_direction = EVENT_ASSERTION
         self.event_type = event_desc & 0x3f
-        self.event_data = "%s%s%s" % (buffer[0], buffer[1], buffer[2])
+        self.event_data = buffer.pop_string(3)
