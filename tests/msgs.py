@@ -594,6 +594,7 @@ class TestGetFruLedState(unittest.TestCase):
         self.assertEqual(m.override_function, 0xff)
         self.assertEqual(m.override_on_duration, 0)
         self.assertEqual(m.override_color, 3)
+        self.assertEqual(m.led_states.lamp_test_en, 0)
 
     def test_decode_rsp_lamp_test_and_override_mode(self):
         m = pyipmi.msgs.picmg.GetFruLedStateRsp()
@@ -614,7 +615,7 @@ class TestGetFruLedState(unittest.TestCase):
         m = pyipmi.msgs.picmg.GetFruLedStateRsp()
         decode_message(m, '\x00\x00\x04\xff\x00\x02\xff\x00\x02\x7f')
         self.assertEqual(m.completion_code, 0x00)
-        self.assertEqual(m.led_states.local_avail, )
+        self.assertEqual(m.led_states.local_avail, 0)
         self.assertEqual(m.local_function, 0xff)
         self.assertEqual(m.local_on_duration, 0)
         self.assertEqual(m.local_color, 2)
@@ -656,6 +657,23 @@ class TestGetDeviceSdrInfo(unittest.TestCase):
         self.assertEqual(m.sensor_population_change, 0xddccbbaa)
 
 
+class TestGetDeviceSdr(unittest.TestCase):
+    def test_encode_req(self):
+        m = pyipmi.msgs.sdr.GetDeviceSdrReq()
+        m.reservation_id = 0x0123
+        m.record_id = 0x4567
+        m.offset = 0x89
+        m.length = 0xab
+        data = encode_message(m)
+        self.assertEqual(data, '\x23\x01\x67\x45\x89\xab')
+
+    def test_decode_rsp(self):
+        m = pyipmi.msgs.sdr.GetDeviceSdrRsp()
+        decode_message(m, '\x00\x01\x23\xaa\xbb')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.next_record_id, 0x2301)
+        self.assertEqual(m.record_data, array('B', [0xaa, 0xbb]) )
+
 class TestSetSensorHysteresis(unittest.TestCase):
     def test_encode_req(self):
         m = pyipmi.msgs.sdr.SetSensorHysteresisReq()
@@ -671,7 +689,7 @@ class TestGetSensorHysteresis(unittest.TestCase):
         m = pyipmi.msgs.sdr.GetSensorHysteresisReq()
         m.sensor_number = 0xab
         data = encode_message(m)
-        self.assertEqual(data, '\xab')
+        self.assertEqual(data, '\xab\xff')
 
     def test_decode_rsp(self):
         m = pyipmi.msgs.sdr.GetSensorHysteresisRsp()
@@ -681,9 +699,9 @@ class TestGetSensorHysteresis(unittest.TestCase):
         self.assertEqual(m.negative_going_hysteresis, 0xbb)
 
 
-class TestSetSensorThreshold(unittest.TestCase):
+class TestSetSensorThresholds(unittest.TestCase):
     def test_encode_req_set_unr(self):
-        m = pyipmi.msgs.sdr.SetSensorThresholdReq()
+        m = pyipmi.msgs.sdr.SetSensorThresholdsReq()
         m.sensor_number = 0x55
         m.set_mask.unr = 1
         m.threshold.unr = 0xaa
@@ -691,7 +709,7 @@ class TestSetSensorThreshold(unittest.TestCase):
         self.assertEqual(data, '\x55\x20\x00\x00\x00\x00\x00\xaa')
 
     def test_encode_req_set_ucr(self):
-        m = pyipmi.msgs.sdr.SetSensorThresholdReq()
+        m = pyipmi.msgs.sdr.SetSensorThresholdsReq()
         m.sensor_number = 0x55
         m.set_mask.ucr = 1
         m.threshold.ucr = 0xaa
@@ -699,7 +717,7 @@ class TestSetSensorThreshold(unittest.TestCase):
         self.assertEqual(data, '\x55\x10\x00\x00\x00\x00\xaa\x00')
 
     def test_encode_req_set_unc(self):
-        m = pyipmi.msgs.sdr.SetSensorThresholdReq()
+        m = pyipmi.msgs.sdr.SetSensorThresholdsReq()
         m.sensor_number = 0x55
         m.set_mask.unc = 1
         m.threshold.unc = 0xaa
@@ -707,7 +725,7 @@ class TestSetSensorThreshold(unittest.TestCase):
         self.assertEqual(data, '\x55\x08\x00\x00\x00\xaa\x00\x00')
 
     def test_encode_req_set_lnr(self):
-        m = pyipmi.msgs.sdr.SetSensorThresholdReq()
+        m = pyipmi.msgs.sdr.SetSensorThresholdsReq()
         m.sensor_number = 0x55
         m.set_mask.lnr = 1
         m.threshold.lnr = 0xaa
@@ -715,7 +733,7 @@ class TestSetSensorThreshold(unittest.TestCase):
         self.assertEqual(data, '\x55\x04\x00\x00\xaa\x00\x00\x00')
 
     def test_encode_req_set_lcr(self):
-        m = pyipmi.msgs.sdr.SetSensorThresholdReq()
+        m = pyipmi.msgs.sdr.SetSensorThresholdsReq()
         m.sensor_number = 0x55
         m.set_mask.lcr = 1
         m.threshold.lcr = 0xaa
@@ -723,7 +741,7 @@ class TestSetSensorThreshold(unittest.TestCase):
         self.assertEqual(data, '\x55\x02\x00\xaa\x00\x00\x00\x00')
 
     def test_encode_req_set_lnc(self):
-        m = pyipmi.msgs.sdr.SetSensorThresholdReq()
+        m = pyipmi.msgs.sdr.SetSensorThresholdsReq()
         m.sensor_number = 0x55
         m.set_mask.lnc = 1
         m.threshold.lnc = 0xaa
