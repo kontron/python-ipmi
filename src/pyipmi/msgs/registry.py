@@ -22,6 +22,15 @@ class MessageRegistry:
         if cls.__name__.endswith('Rsp') and cls.__netfn__ & 1 != 1:
             raise DescriptionError('LSB of NetFN of a Request must be 1')
 
+        # (4) must not be registered before
+        if cls.__name__ in self.registry:
+            raise DescriptionError('Message %s already registered' %
+                    cls.__name__)
+        msg_id = (cls.__cmdid__, cls.__netfn__)
+        if msg_id in self.registry:
+            raise DescriptionError('Message (%d,%d) already registered (%s)' %
+                    (msg_id[0], msg_id[1], self.registry[msg_id]))
+
         # register name
         self.registry[cls.__name__] = cls
         # register (netfn, cmdid) tuple
