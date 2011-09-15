@@ -15,7 +15,10 @@ from . import RemainingBytes
 
 from pyipmi.utils import ByteBuffer
 
+SELFTEST_RESULT_NO_ERROR = 0x55
+SELFTEST_RESULT_NOT_IMPLEMENTED = 0x56
 SELFTEST_RESULT_CORRUPTED_DATA_OR_INACCESSIBLE_DEVICE = 0x57
+SELFTEST_RESULT_FATAL_HARDWARE_ERROR = 0x58
 
 @register_message_class
 class GetDeviceIdReq(Message):
@@ -129,30 +132,20 @@ class GetSelftestResultsRsp(Message):
     __netfn__ = constants.NETFN_APP | 1
     __default_lun__ = 0
 
-    def __init__(self, *args, **kwargs):
-        self.completion_code = 0
-        self.result = 0
-        self.status = 0
-        Message.__init__(self, *args, **kwargs)
-
-    def _decode(self, data):
-        data = ByteBuffer(data)
-        self.completion_code = data.pop_unsigned_int(1)
-        if (self.completion_code != constants.CC_OK):
-            return
-        self.result = data.pop_unsigned_int(1)
-        self.status = data.pop_unsigned_int(1)
-
-        if self.result == SELFTEST_RESULT_CORRUPTED_DATA_OR_INACCESSIBLE_DEVICE:
-            tmp = self.status
-            self.cannot_access_sel_device = (tmp & 0x80) >> 7
-            self.cannot_access_sdr_device = (tmp & 0x40) >> 6
-            self.cannot_access_bmc_fru_device = (tmp & 0x20) >> 5
-            self.ipmb_signal_lines_do_not_respond = (tmp & 0x10) >> 4
-            self.sdr_repository_empty = (tmp & 0x08) >> 3
-            self.internal_use_area_corrupted = (tmp & 0x04) >> 2
-            self.controller_bootblock_corrupted = (tmp & 0x02) >> 1
-            self.controller_firmware_corrupted = (tmp & 0x01) >> 0
+    __fields__ = (
+            CompletionCode(),
+            UnsignedInt('result', 1),
+            Bitfield('status', 1,
+                Bitfield.Bit('controller_firmware_corrupted', 1, 0),
+                Bitfield.Bit('controller_bootblock_corrupted', 1, 0),
+                Bitfield.Bit('internal_use_area_corrupted', 1, 0),
+                Bitfield.Bit('sdr_repository_empty', 1, 0),
+                Bitfield.Bit('ipmb_signal_lines_do_not_respond', 1, 0),
+                Bitfield.Bit('cannot_access_bmc_fru_device', 1, 0),
+                Bitfield.Bit('cannot_access_sdr_device', 1, 0),
+                Bitfield.Bit('cannot_access_sel_device', 1, 0),
+            ),
+    )
 
 
 @register_message_class
