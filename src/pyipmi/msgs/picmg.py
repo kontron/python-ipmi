@@ -1,4 +1,3 @@
-import array
 import constants
 from . import register_message_class
 from . import Message
@@ -9,8 +8,6 @@ from . import Bitfield
 from . import CompletionCode
 from . import Conditional
 from . import RemainingBytes
-from pyipmi.utils import ByteBuffer
-from pyipmi.errors import DecodingError, EncodingError
 
 PICMG_IDENTIFIER = 0x00
 

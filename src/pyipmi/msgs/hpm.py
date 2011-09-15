@@ -9,9 +9,7 @@ from . import CompletionCode
 from . import Conditional
 from . import Optional
 from . import RemainingBytes
-from pyipmi.utils import ByteBuffer
-from pyipmi.errors import DecodingError, EncodingError
-from pyipmi.msgs.picmg import PicmgIdentifier, PICMG_IDENTIFIER
+from picmg import PicmgIdentifier
 
 @register_message_class
 class GetTargetUpgradeCapabilitiesReq(Message):
@@ -92,9 +90,6 @@ class AbortFirmwareUpgradeRsp(Message):
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __default_lun__ = 0
     __fields__ = (
-            PicmgIdentifier(),
-    )
-    __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
     )
@@ -152,7 +147,6 @@ class FinishFirmwareUploadReq(Message):
     __cmdid__ = constants.CMDID_HPM_FINISH_FIRMWARE_UPLOAD
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __default_lun__ = 0
-
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('component_id', 1),
@@ -165,7 +159,6 @@ class FinishFirmwareUploadRsp(Message):
     __cmdid__ = constants.CMDID_HPM_FINISH_FIRMWARE_UPLOAD
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __default_lun__ = 0
-
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -177,7 +170,6 @@ class GetUpgradeStatusReq(Message):
     __cmdid__ = constants.CMDID_HPM_GET_UPGRADE_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __default_lun__ = 0
-
     __fields__ = (
             PicmgIdentifier(),
     )
@@ -212,7 +204,6 @@ class ActivateFirmwareRsp(Message):
     __cmdid__ = constants.CMDID_HPM_ACTIVATE_FIRMWARE
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __default_lun__ = 0
-
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -224,7 +215,6 @@ class QuerySelftestResultsReq(Message):
     __cmdid__ = constants.CMDID_HPM_QUERY_SELFTEST_RESULTS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __default_lun__ = 0
-
     __fields__ = (
             PicmgIdentifier(),
     )
@@ -235,7 +225,6 @@ class QuerySelftestResultsRsp(Message):
     __cmdid__ = constants.CMDID_HPM_QUERY_SELFTEST_RESULTS
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __default_lun__ = 0
-
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -249,7 +238,6 @@ class QueryRollbackStatusReq(Message):
     __cmdid__ = constants.CMDID_HPM_QUERY_ROLLBACK_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __default_lun__ = 0
-
     __fields__ = (
             PicmgIdentifier(),
     )
@@ -273,7 +261,6 @@ class InitiateManualRollbackReq(Message):
     __cmdid__ = constants.CMDID_HPM_INITIATE_MANUAL_ROLLBACK
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __default_lun__ = 0
-
     __fields__ = (
             PicmgIdentifier(),
     )
@@ -284,7 +271,6 @@ class InitiateManualRollbackRsp(Message):
     __cmdid__ = constants.CMDID_HPM_INITIATE_MANUAL_ROLLBACK
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __default_lun__ = 0
-
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),

@@ -1,5 +1,3 @@
-import array
-
 import constants
 from . import register_message_class
 from . import Message
@@ -11,9 +9,6 @@ from . import CompletionCode
 from . import Conditional
 from . import Optional
 from . import RemainingBytes
-from pyipmi.utils import ByteBuffer
-from pyipmi.errors import DecodingError, EncodingError
-
 
 @register_message_class
 class GetSDRRepositoryInfoReq(Message):

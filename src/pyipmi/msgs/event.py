@@ -7,7 +7,6 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import Conditional
-from pyipmi.errors import DecodingError, EncodingError
 
 @register_message_class
 class SetEventReceiverReq(Message):

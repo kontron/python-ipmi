@@ -9,8 +9,6 @@ from . import CompletionCode
 from . import Conditional
 from . import RemainingBytes
 from . import VariableByteArray
-from pyipmi.utils import ByteBuffer
-from pyipmi.errors import DecodingError, EncodingError
 
 @register_message_class
 class GetFruInventoryAreaInfoReq(Message):
@@ -70,7 +68,6 @@ class WriteFruDataReq(Message):
     __cmdid__ = constants.CMDID_WRITE_FRU_DATA
     __netfn__ = constants.NETFN_STORAGE
     __default_lun__ = 0
-
     __fields__ = (
         UnsignedInt('fru_id', 1),
         UnsignedInt('offset', 2),

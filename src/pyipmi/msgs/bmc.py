@@ -1,5 +1,3 @@
-import array
-
 import constants
 from . import register_message_class
 from . import Message
@@ -13,8 +11,6 @@ from . import Conditional
 from . import Optional
 from . import RemainingBytes
 
-from pyipmi.utils import ByteBuffer
-
 SELFTEST_RESULT_NO_ERROR = 0x55
 SELFTEST_RESULT_NOT_IMPLEMENTED = 0x56
 SELFTEST_RESULT_CORRUPTED_DATA_OR_INACCESSIBLE_DEVICE = 0x57
@@ -26,6 +22,7 @@ class GetDeviceIdReq(Message):
     __netfn__ = constants.NETFN_APP
     __default_lun__ = 0
     __fields__ = ()
+
 
 @register_message_class
 class GetDeviceIdRsp(Message):
