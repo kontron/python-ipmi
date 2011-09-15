@@ -13,7 +13,7 @@ from . import RemainingBytes
 @register_message_class
 class GetSDRRepositoryInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_SDR_REPOSITORY_INFO
-    __netfn__ = constants.NETFN_SENSOR_EVENT
+    __netfn__ = constants.NETFN_STORAGE
     __default_lun__ = 0
     __fields__ = ()
 
@@ -21,7 +21,7 @@ class GetSDRRepositoryInfoReq(Message):
 @register_message_class
 class GetSDRRepositoryInfoRsp(Message):
     __cmdid__ = constants.CMDID_GET_SDR_REPOSITORY_INFO
-    __netfn__ = constants.NETFN_SENSOR_EVENT | 1
+    __netfn__ = constants.NETFN_STORAGE | 1
     __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
