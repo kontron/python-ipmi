@@ -14,6 +14,7 @@ from pyipmi.msgs.registry import create_message
 
 from pyipmi.msgs.message import Message
 from pyipmi.msgs.message import ByteArray
+from pyipmi.msgs.message import VariableByteArray
 from pyipmi.msgs.message import UnsignedInt
 from pyipmi.msgs.message import UnsignedIntMask
 from pyipmi.msgs.message import Timestamp

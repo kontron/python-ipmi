@@ -31,18 +31,21 @@ class ByteArray(BaseField):
         else:
             self.default = None
 
+    def _length(self, obj):
+        return self.length
+
     def encode(self, obj, data):
         a = getattr(obj, self.name)
-        if len(a) != self.length:
+        if len(a) != self._length(obj):
             raise EncodingError('Array must be exaclty %d bytes long '
-                    '(but is %d long)' % (self.length, len(a)))
-        for i in xrange(self.length):
+                    '(but is %d long)' % (self._length(obj), len(a)))
+        for i in xrange(self._length(obj)):
             data.push_unsigned_int(a[i], 1)
 
     def decode(self, obj, data):
         a = getattr(obj, self.name)
         bytes = []
-        for i in xrange(self.length):
+        for i in xrange(self._length(obj)):
             bytes.append(data.pop_unsigned_int(1))
         setattr(obj, self.name, array('B', bytes))
 
@@ -51,6 +54,23 @@ class ByteArray(BaseField):
             return array('B', self.default)
         else:
             return array('B', self.length * '\x00')
+
+
+class VariableByteArray(ByteArray):
+    """Array of bytes with variable length.
+
+    The length is dynamically computed by a function.
+    """
+
+    def __init__(self, name, length_func):
+        ByteArray.__init__(self, name, None, None)
+        self._length_func = length_func
+
+    def _length(self, obj):
+        return self._length_func(obj)
+
+    def create(self):
+        return None
 
 
 class UnsignedInt(BaseField):
