@@ -143,6 +143,10 @@ class Conditional:
         if self._condition_fn(obj):
             self._field.decode(obj, data)
 
+    def create(self):
+        return self._field.create()
+
+
 class Optional:
     def __init__(self, field):
         self._field = field
