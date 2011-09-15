@@ -176,9 +176,10 @@ class Bitfield(BaseField):
             Bitfield.reserved_bit_counter += 1
 
 
-    class BitWrapper:
-        def __init__(self, bits):
+    class BitWrapper(object):
+        def __init__(self, bits, length):
             self._bits = bits
+            self._length = length
             for bit in bits:
                 if hasattr(self, bit.name):
                     raise DescriptionError('Bit with name "%s" already added' %
@@ -197,6 +198,28 @@ class Bitfield(BaseField):
             s += ']'
             return s
 
+        def __int__(self):
+            return self._value
+
+        def _get_value(self):
+            value = 0
+            for bit in self._bits:
+                bit_value = getattr(self, bit.name)
+                if bit_value is None:
+                    bit_value = bit.default
+                if bit_value == None:
+                    raise EncodingError('Bitfield "%s" not set.' % bit.name)
+
+                value |= (bit_value & (2**bit._width - 1)) << bit.offset
+            return value
+
+        def _set_value(self, value):
+            for bit in self._bits:
+                tmp = (value >> bit.offset) & (2**bit._width - 1)
+                setattr(self, bit.name, tmp)
+
+        _value = property(_get_value, _set_value)
+
     reserved_bit_counter = 0
 
     def __init__(self, name, length, *bits):
@@ -207,23 +230,15 @@ class Bitfield(BaseField):
     def _precalc_offsets(self):
         offset = 0
         for b in self._bits:
-            b._offset = offset
+            b.offset = offset
             offset += b._width
         if offset != 8 * self.length:
             raise DescriptionError('Bit description does not match bitfield '
                     'length')
 
     def encode(self, obj, data):
-        value = 0
-        for bit in self._bits:
-            wrapper = getattr(obj, self.name)
-            bit_value = getattr(wrapper, bit.name)
-            if bit_value is None:
-                bit_value = bit.default
-            if bit_value == None:
-                raise EncodingError('Bitfield "%s" not set.' % bit.name)
-
-            value |= (bit_value & (2**bit._width - 1)) << bit._offset
+        wrapper = getattr(obj, self.name)
+        value = wrapper._value
         for i in xrange(self.length):
             data.push_unsigned_int((value >> (8*i)) & 0xff, 1)
 
@@ -234,13 +249,11 @@ class Bitfield(BaseField):
                 value |= data.pop_unsigned_int(1) << (8*i)
             except IndexError:
                 raise DecodingError('Data too short for message')
-        for bit in self._bits:
-            tmp = (value >> bit._offset) & (2**bit._width - 1)
-            wrapper = getattr(obj, self.name)
-            setattr(wrapper, bit.name, tmp)
+        wrapper = getattr(obj, self.name)
+        wrapper._value = value
 
     def create(self):
-        return Bitfield.BitWrapper(self._bits)
+        return Bitfield.BitWrapper(self._bits, self.length)
 
 class Message:
     RESERVED_FIELD_NAMES = ['cmdid', 'netfn', 'lun']
