@@ -34,3 +34,4 @@ import picmg
 import sdr
 import sel
 import event
+import lan
