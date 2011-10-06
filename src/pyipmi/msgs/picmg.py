@@ -100,6 +100,34 @@ class GetPicmgPropertiesRsp(Message):
 
 
 @register_message_class
+class GetAddressInfoReq(Message):
+    __cmdid__ = constants.CMDID_GET_ADDRESS_INFO
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
+            PicmgIdentifier(),
+            UnsignedInt('fru_id', 1),
+    )
+
+
+@register_message_class
+class GetAddressInfoRsp(Message):
+    __cmdid__ = constants.CMDID_GET_ADDRESS_INFO
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            UnsignedInt('hardware_address', 1),
+            UnsignedInt('ipmb_0_address', 1),
+            UnsignedInt('reserved', 1),
+            UnsignedInt('fru_id', 1),
+            UnsignedInt('site_id', 1),
+            UnsignedInt('site_type', 1),
+    )
+
+
+@register_message_class
 class FruControlReq(Message):
     __cmdid__ = constants.CMDID_FRU_CONTROL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
