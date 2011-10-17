@@ -420,13 +420,16 @@ def main():
         print 'Command returned with completion code 0x%02x' % e.cc
         if verbose:
             traceback.print_exc()
+        sys.exit(1)
     except pyipmi.errors.TimeoutError, e:
         print 'Command timed out'
         if verbose:
             traceback.print_exc()
+        sys.exit(1)
     except KeyboardInterrupt, e:
         if verbose:
             traceback.print_exc()
+        sys.exit(1)
 
     if rmcp_host is not None:
         ipmi.session.close()
