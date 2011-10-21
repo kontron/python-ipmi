@@ -24,7 +24,7 @@ class Fru:
         check_completion_code(rsp.completion_code)
         return rsp.area_size
 
-    def write_fru_data(self, data, fru_id=0, offset=0):
+    def write_fru_data(self, data, offset=0, fru_id=0):
         req = create_request_by_name('WriteFruData')
         req.fru_id = fru_id
         req.offset = offset
