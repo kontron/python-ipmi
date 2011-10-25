@@ -156,7 +156,7 @@ class DeviceId:
         if rsp.additional_support.chassis:
             self.supported_functions.append('chassis')
 
-        if hasattr(rsp, 'auxiliary'):
+        if rsp.auxiliary is not None:
             self.aux = list(rsp.auxiliary)
         else:
             self.aux = None

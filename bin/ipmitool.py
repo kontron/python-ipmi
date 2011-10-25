@@ -54,7 +54,7 @@ Additional Device Support:
         if id.supports_function(n):
             print '  %s' % s
 
-    if len(id.aux) != 0:
+    if id.aux is not None:
         print 'Aux Firmware Rev Info:  [%02x %02x %02x %02x]' % (
                 id.aux[0], id.aux[1], id.aux[2], id.aux[3])
 
