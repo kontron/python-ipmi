@@ -239,7 +239,7 @@ class Sdr:
         `lcr` for lower critical
         `lnr` for lower non-recoverable
         """
-        req = create_request_by_name('SetSensorThreshold')
+        req = create_request_by_name('SetSensorThresholds')
         req.sensor_number = sensor_number
         if unr is not None:
             req.set_mask.unr = 1
