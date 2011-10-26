@@ -12,7 +12,7 @@ import datetime
 from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
-from pyipmi.utils import check_completion_code, bcd_search
+from pyipmi.utils import check_completion_code, bcd_search, chunks
 
 codecs.register(bcd_search)
 
@@ -30,19 +30,14 @@ class Fru:
     def write_fru_data(self, data, offset=0, fru_id=0):
         req = create_request_by_name('WriteFruData')
         req.fru_id = fru_id
-        length = self.write_length
 
-        if length > len(data):
-            length = len(data) - offset
-
-        while offset+length < len(data):
-            if offset+length > len(data):
-                length = len(data) - offset
+        for chunk in chunks(data, self.write_length):
             req.offset = offset
-            req.data = data[offset:offset+length]
+            req.data = chunk
             rsp = self.send_message(req)
             check_completion_code(rsp.completion_code)
-            offset += length
+            offset += len(chunk)
+
 
     def read_fru_data(self, offset=None, count=None, fru_id=0):
         off = 0

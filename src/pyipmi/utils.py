@@ -14,6 +14,10 @@ def check_completion_code(cc):
     if cc != pyipmi.msgs.constants.CC_OK:
         raise pyipmi.errors.CompletionCodeError(cc)
 
+def chunks(d, n):
+    for i in xrange(0, len(d), n):
+        yield d[i:i+n]
+
 class ByteBuffer:
     def __init__(self, data=None):
         if data is not None:
