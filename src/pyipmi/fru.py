@@ -17,6 +17,9 @@ from pyipmi.utils import check_completion_code, bcd_search
 codecs.register(bcd_search)
 
 class Fru:
+    def __init__(self):
+        self.write_length = 16
+
     def get_fru_inventory_area_info(self, fru_id=0):
         req = create_request_by_name('GetFruInventoryAreaInfo')
         req.fru_id = fru_id
@@ -27,10 +30,19 @@ class Fru:
     def write_fru_data(self, data, offset=0, fru_id=0):
         req = create_request_by_name('WriteFruData')
         req.fru_id = fru_id
-        req.offset = offset
-        req.data = data[:]
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        length = self.write_length
+
+        if length > len(data):
+            length = len(data) - offset
+
+        while offset+length < len(data):
+            if offset+length > len(data):
+                length = len(data) - offset
+            req.offset = offset
+            req.data = data[offset:offset+length]
+            rsp = self.send_message(req)
+            check_completion_code(rsp.completion_code)
+            offset += length
 
     def read_fru_data(self, offset=None, count=None, fru_id=0):
         off = 0

@@ -106,7 +106,20 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm, sdr.Sdr,
         sel.Sel):
 
     def __init__(self):
-        pass
+        if (hasattr(bmc.Bmc, '__init__')):
+            bmc.Bmc.__init__(self)
+        if (hasattr(chassis.Chassis, '__init__')):
+            chassis.Chassis.__init__(self)
+        if (hasattr(fru.Fru, '__init__')):
+            fru.Fru.__init__(self)
+        if (hasattr(picmg.Picmg, '__init__')):
+            picmg.Picmg.__init__(self)
+        if (hasattr(hpm.Hpm, '__init__')):
+            hpm.Hpm.__init__(self)
+        if (hasattr(sdr.Sdr, '__init__')):
+            sdr.Sdr.__init__(self)
+        if (hasattr(sel.Sel, '__init__')):
+            sel.Sel.__init__(self)
 
     def send_message(self, msg):
         msg.target = self.target
