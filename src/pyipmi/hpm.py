@@ -18,17 +18,11 @@ from pyipmi.msgs import constants
 from pyipmi.utils import check_completion_code, bcd_search
 
 
-PROPERTY_GENERAL_COMPONENT_PROPERTIES = 0
-PROPERTY_CURENT_VERION = 1
+PROPERTY_GENERAL_PROPERTIES = 0
+PROPERTY_CURRENT_VERSION = 1
 PROPERTY_DESCRIPTION_STRING = 2
-PROPERTY_ROLLBACK_FIRMWARE_VERSION = 3
-PROPERTY_DEFERRED_UPGRADE_FIRMWARE_VERSION = 4
-
-PROPERTIES_DATA_GENERAL = 0x00
-PROPERTIES_DATA_CURRENT_VERSION = 0x01
-PROPERTIES_DATA_DESCRIPTION_STRING = 0x02
-PROPERTIES_DATA_ROLLBACK_FIRMWARE_VERSION = 0x03
-PROPERTIES_DATA_DEFERRED_UPGRADE_FIRMWARE_VERSION = 0x04
+PROPERTY_ROLLBACK_VERSION = 3
+PROPERTY_DEFERRED_VERSION = 4
 
 ACTION_BACKUP_COMPONENT = 0x00
 ACTION_PREPARE_COMPONENT = 0x01
@@ -42,24 +36,35 @@ class Hpm:
         check_completion_code(rsp.completion_code)
         return TargetUpgradeCapabilities(rsp)
 
-    def get_component_properties(self, id):
+    def get_component_properties(self, component_id):
+        """Return ComponentProperties()
+        """
         PROPERTIES = [
-            PROPERTIES_DATA_GENERAL,
-            PROPERTIES_DATA_CURRENT_VERSION,
-            PROPERTIES_DATA_DESCRIPTION_STRING,
-            PROPERTIES_DATA_ROLLBACK_FIRMWARE_VERSION,
-            PROPERTIES_DATA_DEFERRED_UPGRADE_FIRMWARE_VERSION,
+            PROPERTY_GENERAL_PROPERTIES,
+            PROPERTY_CURRENT_VERSION,
+            PROPERTY_DESCRIPTION_STRING,
+            PROPERTY_ROLLBACK_VERSION,
+            PROPERTY_DEFERRED_VERSION,
         ]
 
         req = create_request_by_name('GetComponentProperties')
-        req.id = id
-        properties = []
-        for p in PROPERTIES:
-            req.selector = p
+        req.id = component_id
+        properties = ComponentProperties()
+        for p_id in PROPERTIES:
+            req.selector = p_id
             rsp = self.send_message(req)
             if rsp.completion_code == constants.CC_OK:
-                properties.append(ComponentProperty(p, rsp.data))
+                properties.decode_from_response(p_id, rsp.data)
         return properties
+
+    def find_component_id_by_descriptor(self, descriptor):
+        caps = self.get_target_upgrade_capabilities()
+        for component_id in caps.components:
+            properties = self.get_component_properties(component_id)
+            if properties.description is not None:
+                if properties.description == descriptor:
+                    break
+        return component_id
 
     def open_hpm_file(self, filename):
         return UpgradeImage(filename)
@@ -90,66 +95,65 @@ class TargetUpgradeCapabilities:
 VERSION_FIELD_LEN = 6
 class VersionField:
     def __init__(self, data=None):
+        self.major = None
+        self.minor = None
         if data:
             if isinstance(data, str):
                 data = array.array('c', [chr(c)for c in [ord(c) for c in data]])
             self.version = self._decode_version_string(data[0:2])
-            self.auxiliary = data[2:5]
+            self.auxiliary = data[2:6]
 
     def __str__(self):
         str = []
-        str.append('%s %s' % (self.version, self.auxiliary))
+        str.append('%s' % (self.version))
         return '\n'.join(str)
 
     def _decode_version_string(self, data):
         """`data` is array.array
         """
-        mayor = ord(data[0])
-        minor = ord(data[1])
-        if minor is not 255:
-            minor = data[1:2].tostring().decode('bcd+')
-        return ''.join("%s.%s" % (mayor, minor))
+        self.major = data[0]
+        self.minor = data[1]
+
+        if data[1] is not 255:
+            self.minor = data[1:2].tostring().decode('bcd+')
+
+    def version_to_string(self):
+        return ''.join("%s.%s" % (self.major, self.minor))
 
 
 codecs.register(bcd_search)
 
-class ComponentProperty:
-    def __init__(self, id, data=None):
-        self.property = None
-        if data:
-            self._from_data(id, data)
+class ComponentProperties:
 
-    def __str__(self):
-        str = []
-        return ''.join('id=%d (%s) :%s' % (self.property[0], self.property[1], self.property[2]))
+    def __init__(self):
+        self.general_properties = None
+        self.current_version = None
+        self.rollback_version = None
+        self.deferred_version = None
+        self.description = None
 
-    def _decode_version_string(self, data):
-        mayor = ord(data[0])
-        minor = ord(data[1])
-        if minor is not 255:
-            minor = data[1:2].tostring().decode('bcd+')
-        return ''.join("%s.%s" % (mayor, minor))
-
-    def _from_data(self, id, data):
+    def decode_from_response(self, id, data):
         """
         `id` is component id
         `data` is data as array
         """
-        if id is PROPERTIES_DATA_GENERAL:
+        self.id = id
+        if id is PROPERTY_GENERAL_PROPERTIES:
+            ROLLBACK_SUPPORT_MASK = 0x03
             PREPARATION_SUPPORT_MASK = 0x04
             COMPARISON_SUPPORT_MASK = 0x08
             DEFERRED_ACTIVATION_SUPPORT_MASK = 0x10
             PAYLOAD_COLD_RESET_REQ_SUPPORT_MASK = 0x20
 
             support = []
-            cap = ord(data[0])
-            if cap & 0x3 == 0:
+            cap = data[0]
+            if cap & ROLLBACK_SUPPORT_MASK == 0:
                 support.append('rollback_backup_not_supported')
-            elif cap & 0x3 == 1:
+            elif cap & ROLLBACK_SUPPORT_MASK == 1:
                 support.append('rollback_is_supported')
-            elif cap & 0x3 == 2:
+            elif cap & ROLLBACK_SUPPORT_MASK == 2:
                 support.append('rollback_is_supported')
-            elif cap & 0x3 == 3:
+            elif cap & ROLLBACK_SUPPORT_MASK == 3:
                 support.append('reserved')
             if cap & PREPARATION_SUPPORT_MASK:
                 support.append('prepartion')
@@ -159,22 +163,19 @@ class ComponentProperty:
                 support.append('deferred_activation')
             if cap & PAYLOAD_COLD_RESET_REQ_SUPPORT_MASK:
                 support.append('payload_cold_reset_required')
-            self.property = (PROPERTIES_DATA_GENERAL, 'general', support)
 
-        elif id is PROPERTIES_DATA_CURRENT_VERSION:
-            self.property = (PROPERTIES_DATA_CURRENT_VERSION,
-                    'current_version', VersionField(data))
-        elif id is PROPERTIES_DATA_DESCRIPTION_STRING:
+            self.general_properties = support
+
+        elif id is PROPERTY_CURRENT_VERSION:
+            self.current_version = VersionField(data)
+        elif id is PROPERTY_DESCRIPTION_STRING:
             # remove trailing '\0'
             descr =  data.tostring().replace('\0', '')
-            self.property = (PROPERTIES_DATA_DESCRIPTION_STRING,
-                    'description_string', descr)
-        elif id is PROPERTIES_DATA_ROLLBACK_FIRMWARE_VERSION:
-            self.property = (PROPERTIES_DATA_ROLLBACK_FIRMWARE_VERSION,
-                    'rollback_version', VersionField(data))
-        elif id is PROPERTIES_DATA_DEFERRED_UPGRADE_FIRMWARE_VERSION:
-            self.property = (PROPERTIES_DATA_DEFERRED_UPGRADE_FIRMWARE_VERSION,
-                    'deferred_upgrade_version', VersionField(data))
+            self.description = descr
+        elif id is PROPERTY_ROLLBACK_VERSION:
+            self.rollback_version  = VersionField(data)
+        elif id is PROPERTY_DEFERRED_VERSION:
+            self.deferred_version = VersionField(data)
 
 
 ImageHeader = collections.namedtuple('ImageHeader', ['field_name', 'format', 'start', 'len'])
