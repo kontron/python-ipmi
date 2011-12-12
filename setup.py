@@ -13,6 +13,7 @@ def main():
                     ['aardvark.so', 'LICENSE.txt']
             },
             scripts = ['bin/ipmitool.py'],
+            test_suite = 'tests',
     )
 
 if __name__ == '__main__':
