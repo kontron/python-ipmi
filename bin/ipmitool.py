@@ -241,6 +241,32 @@ def cmd_picmg_get_power(ipmi, args):
     pwr = ipmi.get_power_level(0, 0)
     print pwr
 
+def print_link_state(p, s):
+    intf_str = pyipmi.picmg.LinkDescriptor().get_interface_string(p.interface)
+    link_str = pyipmi.picmg.LinkDescriptor().get_link_type_string(
+            p.type, p.extension, p.sig_class)
+    print 'CH=%02d INTF=%d FLAGS=0x%x TYPE=%d SIG=%d EXT=%d STATE=%d (%s/%s)'\
+            % (p.channel, p.interface, p.link_flags, p.type, p.sig_class,
+            p.extension, s, intf_str, link_str)
+
+def cmd_picmg_get_portstate_all(ipmi, args):
+    for interface in xrange(3):
+        for channel in xrange(16):
+           try:
+               (p, s) = ipmi.get_port_state(channel, interface)
+               print_link_state(p, s)
+           except pyipmi.errors.CompletionCodeError, e:
+               if e.cc is 0xcc:
+                   continue
+
+def cmd_picmg_get_portstate(ipmi, args):
+    if len(args) < 2:
+        return
+    channel = int(args[0])
+    interface = int(args[1])
+    (p, s) = ipmi.get_port_state(channel, interface)
+    print_link_state(p, s)
+
 def usage(toplevel=False):
     commands = []
     maxlen = 0
@@ -443,6 +469,8 @@ COMMANDS = (
         Command('sdr show', cmd_sdr_show),
         Command('fru print', cmd_fru_print),
         Command('picmg power get', cmd_picmg_get_power),
+        Command('picmg portstate get', cmd_picmg_get_portstate),
+        Command('picmg portstate getall', cmd_picmg_get_portstate_all),
         Command('raw', cmd_raw),
         Command('hpm cap', cmd_hpm_capabilities),
         Command('hpm check', cmd_hpm_check_file),
@@ -479,9 +507,13 @@ COMMAND_HELP = (
         CommandHelp('bmc info', None, 'BMC Device ID inforamtion'),
         CommandHelp('bmc reset', '<cold|warm>', 'BMC reset control'),
 
-        CommandHelp('picmg', None, 'HPM.1 commands'),
+        CommandHelp('picmg', None, 'PICMG commands'),
         CommandHelp('picmg power get', 'get PICMG power level',
                 'Request the power level'),
+        CommandHelp('picmg portstate getall', '',
+                'Request all portstates for all interfaces'),
+        CommandHelp('picmg portstate get', '<channel> <interface>',
+                'Request the portstate for an interface'),
 
         CommandHelp('hpm', None, 'HPM.1 commands'),
         CommandHelp('hpm cap', 'HPM.1 target upgrade capabilities',
