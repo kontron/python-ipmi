@@ -31,12 +31,19 @@ LINK_TYPE_OEM3 = 0xf3
 LINK_TYPE_EXT_BASE0 = 0x00
 LINK_TYPE_EXT_BASE1 = 0x01
 
-LINK_TYPE_EXT_ETHERNET_FIX1000BX = 0x00
-LINK_TYPE_EXT_ETHERNET_FIX10GBX4 = 0x01
+LINK_SIGNALING_CLASS_BASIC = 0
+LINK_SIGNALING_CLASS_10_3125_GBD = 3
+
+# when link signaling class value is 0000b
+LINK_TYPE_EXT_ETHERNET_FIX1000_BX = 0x0
+LINK_TYPE_EXT_ETHERNET_FIX10G_BX4 = 0x1
 LINK_TYPE_EXT_ETHERNET_FCPI = 0x02
-LINK_TYPE_EXT_ETHERNET_FIX1000KX_10GKR = 0x03
-LINK_TYPE_EXT_ETHERNET_FIX10GKX4 = 0x04
-LINK_TYPE_EXT_ETHERNET_FIX40GKR4 = 0x05
+LINK_TYPE_EXT_ETHERNET_FIX1000_KX = 0x3
+LINK_TYPE_EXT_ETHERNET_FIX10G_KX4 = 0x4
+
+# when link signaling class value is 0011b
+LINK_TYPE_EXT_ETHERNET_FIX10G_KR = 0x0
+LINK_TYPE_EXT_ETHERNET_FIX40G_KR4 = 0x1
 
 LINK_TYPE_EXT_OEM_LINK_TYPE_EXT_0 = 0x00
 
@@ -45,9 +52,6 @@ LINK_FLAGS_LANE0123 = 0x0f
 
 LINK_STATE_DISABLE = 0
 LINK_STATE_ENABLE = 1
-
-CHANNEL_SIGNALING_CLASS_BASIC = 0
-CHANNEL_SIGNALING_CLASS_10_3125GBD = 4
 
 FRU_CONTROL_COLD_RESET = 0x00
 FRU_CONTROL_WARM_RESET = 0x01
@@ -442,7 +446,8 @@ class SetPortStateReq(Message):
                 Bitfield.Bit('port_1', 1),
                 Bitfield.Bit('port_2', 1),
                 Bitfield.Bit('port_3', 1),
-                Bitfield.Bit('type', 8),
+                Bitfield.Bit('type', 4),
+                Bitfield.Bit('sig_class', 4, 0),
                 Bitfield.Bit('type_extension', 4),
                 Bitfield.Bit('grouping_id', 8, 0),
             ),
@@ -458,6 +463,32 @@ class SetPortStateRsp(Message):
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
+    )
+
+
+@register_message_class
+class GetPortStateReq(Message):
+    __cmdid__ = constants.CMDID_GET_PORT_STATE
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
+            PicmgIdentifier(),
+            Bitfield('channel', 1,
+                Bitfield.Bit('number', 6),
+                Bitfield.Bit('interface', 2),
+            ),
+    )
+
+
+@register_message_class
+class GetPortStateRsp(Message):
+    __cmdid__ = constants.CMDID_GET_PORT_STATE
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            RemainingBytes('data'),
     )
 
 

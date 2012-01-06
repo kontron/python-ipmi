@@ -12,7 +12,6 @@ from pyipmi.msgs import picmg
 from pyipmi.utils import check_completion_code
 
 from pyipmi.msgs.picmg import \
-        CHANNEL_SIGNALING_CLASS_BASIC, CHANNEL_SIGNALING_CLASS_10_3125GBD, \
         FRU_CONTROL_COLD_RESET, FRU_CONTROL_WARM_RESET, \
         FRU_CONTROL_GRACEFUL_REBOOT, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT, \
         FRU_ACTIVATION_FRU_ACTIVATE, FRU_ACTIVATION_FRU_DEACTIVATE
@@ -99,20 +98,41 @@ class Picmg:
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def set_port_state(self, link_info):
+    def set_port_state(self, link_descr, state):
         req = create_request_by_name('SetPortState')
-        req.link_info.channel = link_info.channel
-        req.link_info.interface = link_info.interface
-        req.link_info.port_0 = (link_info.link_flags >> 0) & 1
-        req.link_info.port_1 = (link_info.link_flags >> 1) & 1
-        req.link_info.port_2 = (link_info.link_flags >> 2) & 1
-        req.link_info.port_3 = (link_info.link_flags >> 3) & 1
-        req.link_info.type = link_info.type
-        req.link_info.type_extension = link_info.extension
-        req.link_info.grouping_id = link_info.grouping_id
-        req.state = link_info.state
+        req.link_info.channel = link_descr.channel
+        req.link_info.interface = link_descr.interface
+        req.link_info.port_0 = (link_descr.link_flags >> 0) & 1
+        req.link_info.port_1 = (link_descr.link_flags >> 1) & 1
+        req.link_info.port_2 = (link_descr.link_flags >> 2) & 1
+        req.link_info.port_3 = (link_descr.link_flags >> 3) & 1
+        req.link_info.type = link_descr.type
+        req.link_info.sig_class = link_descr.sig_class
+        req.link_info.type_extension = link_descr.extension
+        req.link_info.grouping_id = link_descr.grouping_id
+        req.state = state
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
+
+    def get_port_state(self, channel_number, channel_interface):
+        req = create_request_by_name('GetPortState')
+        req.channel.number = channel_number
+        req.channel.interface = channel_interface
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
+        if len(rsp.data) > 4:
+            link = LinkDescriptor()
+            link.channel = rsp.data[0] & 0x3F
+            link.interface = rsp.data[0]>>6 & 0x3
+            link.link_flags = rsp.data[1]&0xf
+            link.type = rsp.data[1]>>4&0xf
+            link.sig_class = rsp.data[2] &0xf
+            link.extension = rsp.data[2]>>4&0xf
+            link.grouping_id = rsp.data[3]
+            state = rsp.data[4]
+
+        return (link, state)
 
     def set_signaling_class(self, interface, channel, signaling_class):
         req = create_request_by_name('SetSignalingClass')
@@ -130,7 +150,8 @@ class Picmg:
         check_completion_code(rsp.completion_code)
         return rsp.channel_signaling.class_capability
 
-class LinkInfo:
+
+class LinkDescriptor:
     # TODO dont duplicate exports, import them instead
     from pyipmi.msgs import picmg
     INTERFACE_BASE = picmg.LINK_INTERFACE_BASE
@@ -150,13 +171,17 @@ class LinkInfo:
     TYPE_EXT_BASE0 = picmg.LINK_TYPE_EXT_BASE0
     TYPE_EXT_BASE1 = picmg.LINK_TYPE_EXT_BASE1
 
-    TYPE_EXT_ETHERNET_FIX1000BX = picmg.LINK_TYPE_EXT_ETHERNET_FIX1000BX
-    TYPE_EXT_ETHERNET_FIX10GBX4 = picmg.LINK_TYPE_EXT_ETHERNET_FIX10GBX4
+    SIGNALING_CLASS_BASIC = picmg.LINK_SIGNALING_CLASS_BASIC
+    SIGNALING_CLASS_10_3125_GBD = picmg.LINK_SIGNALING_CLASS_10_3125_GBD
+
+    TYPE_EXT_ETHERNET_FIX1000_BX = picmg.LINK_TYPE_EXT_ETHERNET_FIX1000_BX
+    TYPE_EXT_ETHERNET_FIX10G_BX4 = picmg.LINK_TYPE_EXT_ETHERNET_FIX10G_BX4
     TYPE_EXT_ETHERNET_FCPI = picmg.LINK_TYPE_EXT_ETHERNET_FCPI
-    TYPE_EXT_ETHERNET_FIX1000KX_10GKR = \
-            picmg.LINK_TYPE_EXT_ETHERNET_FIX1000KX_10GKR
-    TYPE_EXT_ETHERNET_FIX10GKX4 = picmg.LINK_TYPE_EXT_ETHERNET_FIX10GKX4
-    TYPE_EXT_ETHERNET_FIX40GKR4 = picmg.LINK_TYPE_EXT_ETHERNET_FIX40GKR4
+    TYPE_EXT_ETHERNET_FIX1000_KX = picmg.LINK_TYPE_EXT_ETHERNET_FIX1000_KX
+    TYPE_EXT_ETHERNET_FIX10G_KX4 = picmg.LINK_TYPE_EXT_ETHERNET_FIX10G_KX4
+
+    TYPE_EXT_ETHERNET_FIX10G_KR = picmg.LINK_TYPE_EXT_ETHERNET_FIX10G_KR
+    TYPE_EXT_ETHERNET_FIX40G_KR4 = picmg.LINK_TYPE_EXT_ETHERNET_FIX40G_KR4
 
     TYPE_EXT_OEM_LINK_TYPE_EXT_0 = picmg.LINK_TYPE_EXT_OEM_LINK_TYPE_EXT_0
 
@@ -172,9 +197,9 @@ class LinkInfo:
             ('interface', ''),
             ('link_flags', ''),
             ('type', ''),
+            ('sig_class', ''),
             ('extension', ''),
             ('grouping_id', ''),
-            ('state', ''),
     ]
 
     def __init__(self, res=None):
@@ -182,6 +207,65 @@ class LinkInfo:
             setattr(self, p[0], None)
         if res:
             self.from_response(res)
+
+    INTERFACE_DESCR_STRING = [
+        # Interface, 'STRING'
+        ( INTERFACE_BASE, 'Base' ),
+        ( INTERFACE_FABRIC, 'Fabric' ),
+        ( INTERFACE_UPDATE_CHANNEL, 'Update Channel' ),
+    ]
+
+    def get_interface_string(self, interf):
+        for d in self.INTERFACE_DESCR_STRING:
+            if d[0] == interf:
+                return d[1]
+        return 'unknown'
+
+    LINK_TYPE_DESCR_STRING = [
+        # Type, Extension, class, 'STRING'
+        ( TYPE_BASE,
+            TYPE_EXT_BASE0,
+            SIGNALING_CLASS_BASIC,
+            '10/100/1000 BASE-T'),
+        ( TYPE_BASE,
+            TYPE_EXT_BASE1,
+            SIGNALING_CLASS_BASIC,
+            '10/100 BASE-T ShMC Cross-connect'),
+        ( TYPE_ETHERNET_FABRIC,
+            TYPE_EXT_ETHERNET_FIX1000_BX,
+            SIGNALING_CLASS_BASIC,
+            'Fixed 1000BASE-BX'),
+        ( TYPE_ETHERNET_FABRIC,
+            TYPE_EXT_ETHERNET_FIX10G_BX4,
+            SIGNALING_CLASS_BASIC,
+            'Fixed 10GBASE-BX4 (XAUI)'),
+        ( TYPE_ETHERNET_FABRIC,
+            TYPE_EXT_ETHERNET_FCPI,
+            SIGNALING_CLASS_BASIC,
+            'FC-PI'),
+        ( TYPE_ETHERNET_FABRIC,
+            TYPE_EXT_ETHERNET_FIX1000_KX,
+            SIGNALING_CLASS_BASIC,
+            'Fixed 1000BASE-KX'),
+        ( TYPE_ETHERNET_FABRIC,
+            TYPE_EXT_ETHERNET_FIX10G_KX4,
+            SIGNALING_CLASS_BASIC,
+            'Fixed 10GBASE-KX4'),
+        ( TYPE_ETHERNET_FABRIC,
+            TYPE_EXT_ETHERNET_FIX10G_KR,
+            SIGNALING_CLASS_10_3125_GBD,
+            'Fixed 10GBASE-KR'),
+        ( TYPE_ETHERNET_FABRIC,
+            TYPE_EXT_ETHERNET_FIX40G_KR4,
+            SIGNALING_CLASS_10_3125_GBD,
+            'Fixed 40GBASE-KR4'),
+    ]
+
+    def get_link_type_string(self, type, ext, cls=0):
+        for d in self.LINK_TYPE_DESCR_STRING:
+            if d[0] == type and d[1] == ext and d[2] == cls:
+                return d[3]
+        return 'unknown'
 
 
 class PowerLevel:
