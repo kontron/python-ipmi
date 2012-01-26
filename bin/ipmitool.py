@@ -212,11 +212,8 @@ def cmd_raw(ipmi, args):
         return
 
     netfn = int(args[0], 0)
-    cmd = int(args[1], 0)
-    req = array.array('c', [chr(netfn << 2 | lun), chr(cmd)])
-    req.extend([chr(int(d, 0)) for d in args[2:]])
-    req = req.tostring()
-    rsp = ipmi.raw_command(req)
+    raw_bytes = array.array('B', [int(d, 0) for d in args[1:]])
+    rsp = ipmi.raw_command(lun, netfn, raw_bytes.tostring())
     print ' '.join('%02x' % ord(d) for d in rsp)
 
 def cmd_hpm_capabilities(ipmi, args):

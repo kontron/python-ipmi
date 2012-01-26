@@ -126,8 +126,9 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm, sdr.Sdr,
         msg.requester = self.requester
         return self.interface.send_and_receive(msg)
 
-    def raw_command(self, raw_cmd):
-        return self.interface.send_and_receive_raw(self.target, raw_cmd)
+    def raw_command(self, lun, netfn, raw_bytes):
+        return self.interface.send_and_receive_raw(self.target, lun, netfn,
+                raw_bytes)
 
     def _get_interface(self):
         try:

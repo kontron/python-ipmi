@@ -48,7 +48,7 @@ class Ipmitool:
             cmd += (' -P "%s"' % self._session._auth_password)
         cmd += (' session info all')
 
-        log().debug('Run ipmitool "%s"', cmd)
+        log().debug('Running ipmitool "%s"', cmd)
         child = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
         child.communicate()
 
@@ -56,10 +56,9 @@ class Ipmitool:
         if child.returncode:
             raise TimeoutError()
 
-    def send_and_receive_raw(self, target, raw_data):
-        cmd = '-l %d raw 0x%02x ' % (ord(raw_data[0]) & 0x3,
-                (ord(raw_data[0]) >> 2) & 0x3f)
-        cmd += ' '.join(['0x%02x' % ord(d) for d in raw_data[1:]])
+    def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
+        cmd = '-l %d raw 0x%02x ' % (lun, netfn)
+        cmd += ' '.join(['0x%02x' % ord(d) for d in raw_bytes])
 
         # run ipmitool
         output, rc = self._run_ipmitool(target, cmd)
@@ -90,14 +89,13 @@ class Ipmitool:
         return data
 
     def send_and_receive(self, req):
-
         log().debug('IPMI Request [%s]', req)
 
-        req_data = chr(req.netfn << 2 | req.lun)
-        req_data += (chr(req.cmdid))
+        req_data = (chr(req.cmdid))
         req_data += encode_message(req)
 
-        rsp_data = self.send_and_receive_raw(req.target, req_data)
+        rsp_data = self.send_and_receive_raw(req.target, req.lun, req.netfn,
+                req_data)
 
         rsp = create_message(req.cmdid, req.netfn + 1)
         decode_message(rsp, rsp_data.tostring())
@@ -143,7 +141,7 @@ class Ipmitool:
 
         cmd += (' %s' % ipmitool_cmd)
         cmd += (' 2>&1')
-        log().debug('Run ipmitool "%s"', cmd)
+        log().debug('Running ipmitool "%s"', cmd)
 
         child = Popen(cmd, shell=True, stdout=PIPE)
         output = child.communicate()[0]

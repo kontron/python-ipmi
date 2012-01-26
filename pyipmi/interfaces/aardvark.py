@@ -214,6 +214,50 @@ class Aardvark:
         cmd_data = data[5:-1]
         return (rs_sa, netfn, rq_lun, rq_sa, rs_lun, rq_seq, cmd_id, cmd_data)
 
+    def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
+
+        if hasattr(target, 'routing') and len(target.routing) > 1:
+            raise RuntimeError('Bridging is not supported yet')
+
+        tx_data = array.array('B')
+        tx_data.append(netfn << 2 | lun)
+        tx_data.append(self._csum((target.ipmb_address, tx_data[0])))
+        tx_data.append(self.slave_address)
+        tx_data.append(self.next_sequence_number << 2)
+        tx_data.extend([ord(c) for c in raw_bytes])
+        tx_data.append(self._csum(tx_data[2:]))
+
+        addr = target.ipmb_address >> 1
+        self._dev.i2c_write(addr, tx_data)
+        log().debug('I2C TX to %02Xh [%s]', addr,
+                ' '.join(['%02x' % b for b in tx_data]))
+
+        # receive messages
+        start_time = time.time()
+        timeout = self.timeout - (time.time() - start_time)
+        rsp_received = False
+        while not rsp_received and timeout > 0:
+            self._dev.poll(int(timeout * 1000))
+            (addr, rx_data) = self._dev.i2c_slave_read()
+            log().debug('I2C RX from %02Xh [%s]', addr,
+                    ' '.join(['%02x' % b for b in rx_data]))
+
+            addr <<= 1
+
+            if (self._csum((addr, rx_data[0], rx_data[1])) == 0  # hdr csum
+                    and self._csum(rx_data[2:]) == 0             # payload csum
+                    and addr == self.slave_address
+                    and rx_data[0] == tx_data[0] | 4             # fn + rq_lun
+                    and rx_data[2] == target.ipmb_address
+                    and (rx_data[3] & 0x3) == (tx_data[0] & 3)   # rs_lun
+                    and (rx_data[3] >> 2) == self.next_sequence_number
+                    and rx_data[4] == tx_data[4]):               # command id
+                rsp_received = True
+            self._inc_sequence_number()
+            timeout = self.timeout - (time.time() - start_time)
+
+        return rx_data.tostring()
+
     def send_and_receive(self, msg):
         """Sends an IPMI request message and waits for its response.
 
@@ -222,57 +266,22 @@ class Aardvark:
 
         log().debug('IPMI Request [%s]', msg)
 
-        tx_data = self._encode_ipmb_msg(msg.target.ipmb_address, msg.netfn,
-                msg.lun, self.slave_address, 0, self.next_sequence_number,
-                msg.cmdid, array.array('B', encode_message(msg)))
-
-        log().debug('IPMB Req to 0x%02x [%s]'
-                % (msg.target.ipmb_address,
-                    ' '.join(['%02x' % b for b in tx_data])))
-
-        rsp_received = False
         retries = 0
-        while not rsp_received and retries < self.max_retries - 1:
-            log().debug('IPMB Req to 0x%02x [%s]'
-                    % (msg.target.ipmb_address,
-                        ' '.join(['%02x' % b for b in tx_data])))
-            self._dev.i2c_write(msg.target.ipmb_address >> 1, tx_data.tostring())
-
-            # receive messages
-            start_time = time.time()
-            timeout = self.timeout - (time.time() - start_time)
-            while not rsp_received and timeout > 0:
-                try:
-                    self._dev.poll(int(timeout * 1000))
-                except TimeoutError:
-                    break
-
-                (addr, rx_data) = self._dev.i2c_slave_read()
-
-                (rs_sa, netfn, rq_lun, rq_sa, rs_lun, rq_seq, cmd_id,
-                        cmd_data) = self._decode_ipmb_msg(addr, rx_data)
-
-                if (rs_sa == self.slave_address
-                        and netfn == msg.netfn + 1
-                        and rs_lun == msg.lun
-                        and rq_sa == msg.target.ipmb_address
-                        and rq_seq == self.next_sequence_number
-                        and cmd_id == msg.cmdid):
-                    rsp_received = True
-                timeout = self.timeout - (time.time() - start_time)
+        while retries < self.max_retries:
+            try:
+                rx_data = self.send_and_receive_raw(msg.target, msg.lun,
+                        msg.netfn, chr(msg.cmdid) + encode_message(msg))
+                break
+            except TimeoutError:
+                pass
 
             retries += 1
 
-        if not rsp_received:
+        else:
             raise TimeoutError()
 
-        log().debug('IPMB Rsp to 0x%02x [%s]'
-                % (rs_sa, ' '.join(['%02x' % b for b in rx_data])))
-
-        self._inc_sequence_number()
-
         msg = create_message(msg.cmdid, msg.netfn + 1)
-        decode_message(msg, cmd_data.tostring())
+        decode_message(msg, rx_data[5:-1])
 
         log().debug('IPMI Response [%s])', msg)
 
