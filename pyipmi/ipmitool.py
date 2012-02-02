@@ -262,6 +262,9 @@ def cmd_picmg_get_portstate(ipmi, args):
     (p, s) = ipmi.get_port_state(channel, interface)
     print_link_state(p, s)
 
+def cmd_picmg_frucontrol_cold_reset(ipmi, args):
+    ipmi.fru_control_cold_reset(0)
+
 def usage(toplevel=False):
     commands = []
     maxlen = 0
@@ -468,6 +471,7 @@ COMMANDS = (
         Command('sdr list', cmd_sdr_list),
         Command('sdr show', cmd_sdr_show),
         Command('fru print', cmd_fru_print),
+        Command('picmg frucontrol cr', cmd_picmg_frucontrol_cold_reset),
         Command('picmg power get', cmd_picmg_get_power),
         Command('picmg portstate get', cmd_picmg_get_portstate),
         Command('picmg portstate getall', cmd_picmg_get_portstate_all),
@@ -508,6 +512,7 @@ COMMAND_HELP = (
         CommandHelp('bmc reset', '<cold|warm>', 'BMC reset control'),
 
         CommandHelp('picmg', None, 'PICMG commands'),
+        CommandHelp('picmg frucontrol', '<cr>', 'Issue frucontrol'),
         CommandHelp('picmg power get', 'get PICMG power level',
                 'Request the power level'),
         CommandHelp('picmg portstate getall', '',
