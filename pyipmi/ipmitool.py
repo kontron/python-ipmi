@@ -111,7 +111,7 @@ def cmd_sdr_list(ipmi, args):
                 if raw is not None:
                     value = s.convert_sensor_raw_to_value(raw)
                 else:
-                    raw = 'na'
+                    value = 'na'
                 print "0x%04x | %3d | %-16s | %9s | 0x%x" % (s.id, s.number,
                         s.device_id_string, value, states)
             elif s.type is pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
