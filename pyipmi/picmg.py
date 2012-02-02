@@ -275,11 +275,11 @@ class PowerLevel:
 
     def from_response(self, res):
         print res
-        self.dynamic_power_configuration = res.dynamic_power_configuration
-        self.power_level = res.power_level
+        self.dynamic_power_configuration = res.properties.dynamic_power_configuration
+        self.power_level = res.properties.power_level
         self.delay_to_stable = res.delay_to_stable_power
         self.power_mulitplier = res.power_multiplier
-        self.power_levels = [ord(c) for c in res.data]
+        self.power_levels = res.power_draw
 
 
 class LedState:
