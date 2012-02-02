@@ -112,6 +112,7 @@ class ManufacturingTestOnRsp(Message):
     __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
+        RemainingBytes('data'),
     )
 
 
