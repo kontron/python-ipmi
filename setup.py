@@ -33,7 +33,11 @@ def main():
                 'pyipmi.ext.totalphase':
                     ['aardvark.so', 'LICENSE.txt']
             },
-            scripts = ['bin/ipmitool.py'],
+            entry_points = {
+                'console_scripts': [
+                    'ipmitool.py = pyipmi.ipmitool:main',
+                ]
+            },
             test_suite = 'tests',
     )
 
