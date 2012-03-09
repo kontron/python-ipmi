@@ -14,6 +14,11 @@ import sel
 import sdr
 import hpm
 
+try:
+    from version import __version__
+except ImportError:
+    __version__ = 'dev'
+
 def create_connection(interface):
     session = Session()
     session.interface = interface

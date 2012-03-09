@@ -10,8 +10,6 @@ import array
 import pyipmi
 import pyipmi.interfaces
 
-IPMITOOL_VERSION = 0.1
-
 Command = namedtuple('Command', 'name fn')
 CommandHelp = namedtuple('CommandHelp', 'name arguments help')
 
@@ -345,7 +343,7 @@ Aardvark options:
         print '  %-*s   %s' % (maxlen, name, cmd.help)
 
 def version():
-    print 'ipmitool v%s' % IPMITOOL_VERSION
+    print 'ipmitool v%s' % pyipmi.__version__
 
 def main():
     try:
