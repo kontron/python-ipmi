@@ -410,7 +410,12 @@ def main():
         usage()
         sys.exit(1)
 
-    interface = pyipmi.interfaces.create_interface(interface_name)
+    try:
+        interface = pyipmi.interfaces.create_interface(interface_name)
+    except RuntimeError, e:
+        print e
+        sys.exit(1)
+
     for option in interface_options:
         (name, value) = option.split('=', 1)
         if (interface_name, name) == ('aardvark', 'pullups'):

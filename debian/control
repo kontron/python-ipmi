@@ -6,8 +6,9 @@ Build-Depends: debhelper (>= 7.3.5), python-all-dev, python-support (>= 0.7.2)
 Standards-Version: 3.8.2
 
 Package: python-ipmi
-Architecture: i386
-Depends: ${python:Depends}, ${misc:Depends}, ${shlibs:Depends}, libusb-0.1-4, python-pkg-resources
+Architecture: all
+Depends: ${python:Depends}, ${misc:Depends}, ${shlibs:Depends}, python-pkg-resources
+Suggests: python-aardvark
 Description: Native python IPMI implementation
  pyIPMI provides an IPMI implementation written in pure python code. Besides
  the library itself, the package provides an ipmitool replacement.

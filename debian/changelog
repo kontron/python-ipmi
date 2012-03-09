@@ -1,3 +1,9 @@
+pyipmi (0.3.99.1-1) unstable; urgency=low
+
+  * Removed Totalphase Aardvark binary blob
+
+ -- Michael Walle <michael.walle@kontron.com>  Fri, 09 Mar 2012 11:29:06 +0100
+
 pyipmi (0.3.99-1) unstable; urgency=low
 
   * Initial version
