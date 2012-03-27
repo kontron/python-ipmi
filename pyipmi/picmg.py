@@ -44,6 +44,29 @@ class Picmg:
         check_completion_code(rsp.completion_code)
         return PowerLevel(rsp)
 
+    def get_fan_speed_properties(self, fru_id):
+        req = create_request_by_name('GetFanSpeedProperties')
+        req.fru_id = fru_id
+        rsp = self.send_message(req)
+        return FanSpeedProperties(rsp)
+
+    def set_fan_level(self, fru_id, fan_level):
+        req = create_request_by_name('SetFanLevel')
+        req.fru_id = fru_id
+        req.fan_level = fan_level
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
+    def get_fan_level(self, fru_id):
+        req = create_request_by_name('GetFanLevel')
+        req.fru_id = fru_id
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        local_control_fan_level = None
+        if rsp.data:
+            local_control_fan_level = rsp.data[0]
+        return (rsp.override_fan_level, local_control_fan_level)
+
     def get_led_state(self, fru_id, led_id):
         req = create_request_by_name('GetFruLedState')
         req.fru_id = fru_id
@@ -281,6 +304,17 @@ class PowerLevel:
         self.power_mulitplier = res.power_multiplier
         self.power_levels = res.power_draw
 
+
+class FanSpeedProperties:
+    def __init__(self, res=None):
+        if res:
+            self.from_response(res)
+
+    def from_response(self, res):
+        self.minimum_speed_level = res.minimum_speed_level
+        self.maximum_speed_level = res.maximum_speed_level
+        self.normal_operation_level = res.normal_operation_level
+        self.local_control_supported = res.properties.local_control_supported
 
 class LedState:
     COLOR_BLUE = picmg.LED_COLOR_BLUE

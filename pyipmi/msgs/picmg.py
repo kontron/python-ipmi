@@ -8,6 +8,7 @@ from . import Bitfield
 from . import CompletionCode
 from . import Conditional
 from . import RemainingBytes
+from . import Optional
 
 PICMG_IDENTIFIER = 0x00
 
@@ -354,6 +355,78 @@ class GetPowerLevelRsp(Message):
             UnsignedInt('delay_to_stable_power', 1),
             UnsignedInt('power_multiplier', 1),
             RemainingBytes('power_draw'),
+    )
+
+@register_message_class
+class GetFanSpeedPropertiesReq(Message):
+    __cmdid__ = constants.CMDID_GET_FAN_SPEED_PROPERTIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
+            PicmgIdentifier(),
+            UnsignedInt('fru_id', 1),
+    )
+
+@register_message_class
+class GetFanSpeedPropertiesRsp(Message):
+    __cmdid__ = constants.CMDID_GET_FAN_SPEED_PROPERTIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            UnsignedInt('minimum_speed_level', 1),
+            UnsignedInt('maximum_speed_level', 1),
+            UnsignedInt('normal_operation_level', 1),
+            Bitfield('properties', 1,
+                Bitfield.ReservedBit(7, 0),
+                Bitfield.Bit('local_control_supported', 1),
+            ),
+    )
+
+@register_message_class
+class SetFanLevelReq(Message):
+    __cmdid__ = constants.CMDID_SET_FAN_LEVEL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
+           PicmgIdentifier(),
+            UnsignedInt('fru_id', 1),
+            UnsignedInt('fan_level', 1),
+    )
+
+@register_message_class
+class SetFanLevelRsp(Message):
+    __cmdid__ = constants.CMDID_SET_FAN_LEVEL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+    )
+
+@register_message_class
+class GetFanLevelReq(Message):
+    __cmdid__ = constants.CMDID_GET_FAN_LEVEL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
+            PicmgIdentifier(),
+            UnsignedInt('fru_id', 1),
+    )
+
+@register_message_class
+class GetFanLevelRsp(Message):
+    __cmdid__ = constants.CMDID_GET_FAN_LEVEL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            UnsignedInt('override_fan_level', 1),
+            Optional(
+                RemainingBytes('data'),
+            )
     )
 
 
