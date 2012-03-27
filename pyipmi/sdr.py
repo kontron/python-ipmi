@@ -631,8 +631,19 @@ class SdrEventOnlySensorRecord(SdrCommon):
         return 'Not supported yet.'
 
     def from_data(self, data):
-        pass
-
+        buffer = ByteBuffer(data[5:])
+        self.owner_id = buffer.pop_unsigned_int(1)
+        self.owner_lun = buffer.pop_unsigned_int(1)
+        self.number = buffer.pop_unsigned_int(1)
+        self.entity_id = buffer.pop_unsigned_int(1)
+        self.entity_instance = buffer.pop_unsigned_int(1)
+        self.sensor_type = buffer.pop_unsigned_int(1)
+        self.event_reading_type_code = buffer.pop_unsigned_int(1)
+        self.record_sharing = buffer.pop_unsigned_int(2)
+        self.reserved = buffer.pop_unsigned_int(1)
+        self.oem = buffer.pop_unsigned_int(1)
+        self.device_id_string_type_length = buffer.pop_unsigned_int(1)
+        self.device_id_string = buffer.to_string()
 
 ###
 # SDR type 0x11
