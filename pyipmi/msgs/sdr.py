@@ -295,6 +295,32 @@ class GetSensorEventEnableRsp(Message):
 
 
 @register_message_class
+class RearmSensorEventsReq(Message):
+    __cmdid__ = constants.CMDID_RE_ARM_SENSOR
+    __netfn__ = constants.NETFN_SENSOR_EVENT
+    __default_lun__ = 0
+    __fields__ = (
+        UnsignedInt('sensor_number', 1),
+        Bitfield('re_arm', 1,
+                Bitfield.ReservedBit(7, 0),
+                Bitfield.Bit('all_event_status', 1, 0),
+            ),
+        UnsignedInt('re_arm_assertion_event', 2, 0),
+        UnsignedInt('re_arm_deassertion_event', 2, 0),
+    )
+
+
+@register_message_class
+class RearmSensorEventsRsp(Message):
+    __cmdid__ = constants.CMDID_RE_ARM_SENSOR
+    __netfn__ = constants.NETFN_SENSOR_EVENT | 1
+    __default_lun__ = 0
+    __fields__ = (
+        CompletionCode(),
+    )
+
+
+@register_message_class
 class GetSensorReadingReq(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_READING
     __netfn__ = constants.NETFN_SENSOR_EVENT
