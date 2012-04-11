@@ -674,6 +674,7 @@ class TestGetDeviceSdr(unittest.TestCase):
         self.assertEqual(m.next_record_id, 0x2301)
         self.assertEqual(m.record_data, array('B', [0xaa, 0xbb]) )
 
+
 class TestSetSensorHysteresis(unittest.TestCase):
     def test_encode_req(self):
         m = pyipmi.msgs.sdr.SetSensorHysteresisReq()
@@ -853,6 +854,18 @@ class TestGetSensorEventEnable(unittest.TestCase):
         self.assertEqual(m.byte5, 0xcc)
         self.assertEqual(m.byte6, 0xdd)
 
+
+class TestRearmSensorEvents(unittest.TestCase):
+    def test_encode_req(self):
+        m = pyipmi.msgs.sdr.RearmSensorEventsReq()
+        m.sensor_number = 0xab
+        data = encode_message(m)
+        self.assertEqual(data, '\xab\x00\x00\x00\x00\x00')
+
+    def test_decode_rsp(self):
+        m = pyipmi.msgs.sdr.RearmSensorEventsRsp()
+        decode_message(m, '\x00')
+        self.assertEqual(m.completion_code, 0x00)
 
 class TestSetEventReceiver(unittest.TestCase):
     def test_encode_lun0_req(self):
