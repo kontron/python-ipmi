@@ -133,10 +133,11 @@ class Aardvark:
             if (self._csum((addr, rx_data[0], rx_data[1])) == 0  # hdr csum
                     and self._csum(rx_data[2:]) == 0             # payload csum
                     and addr == self.slave_address
-                    and rx_data[0] == tx_data[0] | 4             # fn + rq_lun
+                    and rx_data[0] & ~3 == (tx_data[0] & ~3) | 4 # netfn + 1
                     and rx_data[2] == target.ipmb_address
-                    and (rx_data[3] & 0x3) == (tx_data[0] & 3)   # rs_lun
-                    and (rx_data[3] >> 2) == self.next_sequence_number
+                    and rx_data[0] & 3 == tx_data[3] & 3         # rq_lun
+                    and rx_data[3] & 3 == tx_data[0] & 3         # rs_lun
+                    and rx_data[3] >> 2 == self.next_sequence_number
                     and rx_data[4] == tx_data[4]):               # command id
                 rsp_received = True
             self._inc_sequence_number()
