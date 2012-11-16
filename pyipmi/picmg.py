@@ -17,6 +17,12 @@ from pyipmi.msgs.picmg import \
         FRU_ACTIVATION_FRU_ACTIVATE, FRU_ACTIVATION_FRU_DEACTIVATE
 
 class Picmg:
+    def get_picmg_properties(self):
+        req = create_request_by_name('GetPicmgProperties')
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return rsp
+
     def fru_control(self, fru_id, option):
         req = create_request_by_name('FruControl')
         req.fru_id = fru_id
