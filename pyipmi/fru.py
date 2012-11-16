@@ -38,7 +38,6 @@ class Fru:
             check_completion_code(rsp.completion_code)
             offset += len(chunk)
 
-
     def read_fru_data(self, offset=None, count=None, fru_id=0):
         off = 0
         area_size = 0
@@ -230,6 +229,7 @@ class InventoryProductInfoArea(CommonInfoArea):
             self.custom_mfg_info.append(field)
             offset += field.length+1
 
+
 class FruDataMultiRecord:
     TYPE_POWER_SUPPLY_INFORMATION = 0
     TYPE_DC_OUTPUT = 1
@@ -238,24 +238,73 @@ class FruDataMultiRecord:
     TYPE_BASE_COMPATIBILITY_RECORD = 4
     TYPE_EXTENDED_COMPATIBILITY_RECORD = 5
     TYPE_OEM = range(0x0c, 0x100)
+    TYPE_OEM_PICMG = 0xc0
 
-    def __init__(self, data, offset=0):
+    def __init__(self, data):
         if data:
-            self.from_data(data, offset)
+            self.from_data(data)
 
     def __str__(self):
         return '%02x: %s' % (self.type,
                 ' '.join('%02x' % ord(b) for b in self.raw))
 
-    def from_data(self, data, offset=0):
-        self.type = ord(data[offset])
-        self.format_version = ord(data[offset+1]) & 0x0f
-        self.length = ord(data[offset+2])
-        if sum([ord(c) for c in data[offset:offset+5]]) % 256 != 0:
+    def from_data(self, data):
+        if len(data) < 5:
+            raise DecodingError('data too short')
+        self.record_type_id = ord(data[0])
+        self.format_version = ord(data[1]) & 0x0f
+        self.end_of_list = bool(ord(data[1]) & 0x80)
+        self.length = ord(data[2])
+        if sum([ord(c) for c in data[:5]]) % 256 != 0:
             raise DecodingError('FruDataMultiRecord header checksum failed')
-        self.raw = data[offset+5:offset+5+self.length]
-        if (sum([ord(c) for c in self.raw]) + ord(data[offset+3])) % 256 != 0:
+        self.raw = data[5:5+self.length]
+        if (sum([ord(c) for c in self.raw]) + ord(data[3])) % 256 != 0:
             raise DecodingError('FruDataMultiRecord record checksum failed')
+
+    @staticmethod
+    def create_from_record_id(data):
+        if ord(data[0]) == FruDataMultiRecord.TYPE_OEM_PICMG:
+            return FruPicmgRecord.create_from_record_id(data)
+        else:
+            return FruDataUnknown(data)
+
+
+class FruDataUnknown(FruDataMultiRecord):
+    """This class is used to indicate undecoded picmg record."""
+    pass
+
+class FruPicmgRecord(FruDataMultiRecord):
+    PICMG_RECORD_ID_POWER_MODULE_CAPABILITY = 0x27
+
+    def __init__(self, data):
+        FruDataMultiRecord.__init__(self, data)
+
+    @staticmethod
+    def create_from_record_id(data):
+        picmg_record = FruPicmgRecord(data)
+        if picmg_record.picmg_record_type_id ==\
+            FruPicmgRecord.PICMG_RECORD_ID_POWER_MODULE_CAPABILITY:
+            return FruPicmgPowerModuleCapabilityRecord(data)
+        else:
+            return FruPicmgRecord(data)
+
+    def from_data(self, data):
+        if len(data) < 10:
+            raise DecodingError('data too short')
+        FruDataMultiRecord.from_data(self, data)
+        self.manufacturer_id = ord(data[5])|ord(data[6])<<8|ord(data[7])<<16
+        self.picmg_record_type_id = ord(data[8])
+        self.format_version = ord(data[9])
+
+
+class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
+    def from_data(self, data):
+        if len(data) < 12:
+            raise DecodingError('data too short')
+        FruPicmgRecord.from_data(self,data)
+        maximum_current_output = ord(data[10])|ord(data[11])<<8
+        self.maximum_current_output = float(maximum_current_output/10)
+
 
 class InventoryMultiRecordArea:
     def __init__(self, data):
@@ -265,10 +314,13 @@ class InventoryMultiRecordArea:
     def from_data(self, data):
         self.records = list()
         offset = 0
-        while not ord(data[offset+1]) & 0x80:
-            record = FruDataMultiRecord(data, offset)
+        while True:
+            record = FruDataMultiRecord.create_from_record_id(data[offset:])
             self.records.append(record)
             offset += record.length+5
+            if record.end_of_list:
+                break
+
 
 class FruInventory:
     def __init__(self, data=None):
