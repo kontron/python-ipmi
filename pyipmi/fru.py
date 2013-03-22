@@ -67,6 +67,12 @@ class Fru:
                 if e.cc == constants.CC_CANT_RET_NUM_REQ_BYTES:
                     req_size -= 2
                     continue
+                if e.cc == constants.CC_REQ_DATA_FIELD_EXCEED:
+                    req_size -= 2
+                    continue
+                if e.cc == constants.CC_PARAM_OUT_OF_RANGE:
+                    req_size -= 2
+                    continue
                 else:
                     raise
 
