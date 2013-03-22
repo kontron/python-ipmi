@@ -208,6 +208,14 @@ class Sdr:
         """
         return list(self.sdr_entries())
 
+    def rearm_sensor_events(self, sensor_number):
+        """Rearm sensor events for the given sensor number.
+        """
+        req = create_request_by_name('RearmSensorEvents')
+        req.sensor_number = sensor_number
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
     def get_sensor_reading(self, sensor_number, sdr=None):
         """Returns the sensor reading at the assertion states for the given
         sensor number.
