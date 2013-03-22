@@ -7,6 +7,7 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import Conditional
+from . import Optional
 
 CONTROL_POWER_DOWN = 0
 CONTROL_POWER_UP = 1
@@ -14,6 +15,81 @@ CONTROL_POWER_CYCLE = 2
 CONTROL_HARD_RESET = 3
 CONTROL_DIAGNOSTIC_INTERRUPT = 4
 CONTROL_SOFT_SHUTDOWN = 5
+
+
+@register_message_class
+class GetChassisCapabilitiesReq(Message):
+    __cmdid__ = constants.CMDID_GET_CHASSIS_CAPABILITIES
+    __netfn__ = constants.NETFN_CHASSIS
+    __default_lun__ = 0
+    __fields__ = ()
+
+
+@register_message_class
+class GetChassisCapabilitiesRsp(Message):
+    __cmdid__ = constants.CMDID_GET_CHASSIS_CAPABILITIES
+    __netfn__ = constants.NETFN_CHASSIS | 1
+    __default_lun__ = 0
+    __fields__ = (
+        CompletionCode(),
+        Bitfield('capabilities_flags', 1,
+            Bitfield.Bit('intrusion_sensor', 1),
+            Bitfield.Bit('frontpanel_lockout', 1),
+            Bitfield.Bit('diagnostic_interrupt', 1),
+            Bitfield.Bit('power_interlock', 1),
+            Bitfield.ReservedBit(4, 0)
+        ),
+        UnsignedInt('fru_info_device_address', 1),
+        UnsignedInt('sdr_device_address', 1),
+        UnsignedInt('sel_device_address', 1),
+        UnsignedInt('system_managemnet_device_address', 1),
+        Optional(
+            UnsignedInt('bridge_device_address', 1)
+        ),
+    )
+
+
+@register_message_class
+class GetChassisStatusReq(Message):
+    __cmdid__ = constants.CMDID_GET_CHASSIS_STATUS
+    __netfn__ = constants.NETFN_CHASSIS
+    __default_lun__ = 0
+    __fields__ = ()
+
+
+@register_message_class
+class GetChassisStatusRsp(Message):
+    __cmdid__ = constants.CMDID_GET_CHASSIS_STATUS
+    __netfn__ = constants.NETFN_CHASSIS | 1
+    __default_lun__ = 0
+    __fields__ = (
+        CompletionCode(),
+        Bitfield('current_power_state', 1,
+            Bitfield.Bit('power_on', 1),
+            Bitfield.Bit('power_overload', 1),
+            Bitfield.Bit('interlock', 1),
+            Bitfield.Bit('power_fault', 1),
+            Bitfield.Bit('power_control_fault', 1),
+            Bitfield.Bit('power restore_policy', 2),
+            Bitfield.ReservedBit(1, 0),
+        ),
+        Bitfield('last_power_event', 1,
+            Bitfield.Bit('ac_failed', 1),
+            Bitfield.Bit('power_overload', 1),
+            Bitfield.Bit('power_interlock', 1),
+            Bitfield.Bit('power_fault', 1),
+            Bitfield.Bit('power_is_on_via_ipmi_command', 1),
+            Bitfield.ReservedBit(3, 0),
+        ),
+        Bitfield('misc_chassis_state', 1,
+            Bitfield.Bit('chassis_intrusion_active', 1),
+            Bitfield.Bit('front_panel_lockout_active', 1),
+            Bitfield.Bit('drive_fault', 1),
+            Bitfield.Bit('cooling_fault_detected', 1),
+            Bitfield.ReservedBit(4, 0),
+        ),
+    )
+
 
 @register_message_class
 class ChassisControlReq(Message):
