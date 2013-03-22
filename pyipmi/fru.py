@@ -92,7 +92,7 @@ class FruDataField:
         if self.type is FruDataField.TYPE_BINARY:
             return ' '.join('%02x' % ord(b) for b in self.value)
         else:
-            return self.value
+            return self.value.replace('\x00', '')
 
     def from_data(self, data, offset=0, force_lang_english=False):
         self.type = ord(data[offset]) >> 6 & 0x3
