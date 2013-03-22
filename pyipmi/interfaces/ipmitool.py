@@ -128,7 +128,8 @@ class Ipmitool:
                 raise RuntimeError('The impitool interface at most double '
                        'briding')
 
-        cmd += (' -t 0x%02x' % target.ipmb_address)
+        if target.ipmb_address:
+            cmd += (' -t 0x%02x' % target.ipmb_address)
 
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += ' -P ""'
