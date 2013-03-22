@@ -1,4 +1,4 @@
-import constants
+importconstants
 from . import register_message_class
 from . import Message
 from . import UnsignedInt
@@ -417,9 +417,10 @@ class SetFanLevelReq(Message):
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __default_lun__ = 0
     __fields__ = (
-           PicmgIdentifier(),
+            PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
             UnsignedInt('fan_level', 1),
+            UnsignedInt('extra_byte', 1),
     )
 
 @register_message_class
