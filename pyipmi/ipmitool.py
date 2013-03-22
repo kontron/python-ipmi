@@ -56,6 +56,12 @@ Additional Device Support:
         print 'Aux Firmware Rev Info:  [%02x %02x %02x %02x]' % (
                 id.aux[0], id.aux[1], id.aux[2], id.aux[3])
 
+def cmd_sensor_rearm(ipmi, args):
+    if len(args) < 1:
+        return
+    number = int(args[0], 0)
+    rsp = ipmi.rearm_sensor_events(number)
+
 def cmd_sdr_show(ipmi, args):
     if len(args) != 1:
         usage()
@@ -467,6 +473,7 @@ COMMANDS = (
         Command('bmc info', cmd_bmc_info),
         Command('bmc reset cold', lambda i, a: i.cold_reset()),
         Command('bmc reset warm', lambda i, a: i.warm_reset()),
+        Command('sensor rearm', cmd_sensor_rearm),
         Command('sel list', lambda i, a: map(_print, i.sel_entries())),
         Command('sdr list', cmd_sdr_list),
         Command('sdr show', cmd_sdr_show),
@@ -497,6 +504,9 @@ COMMAND_HELP = (
 
         CommandHelp('fru', None,
                 'Print built-in FRU and scan SDR for FRU locators'),
+
+        CommandHelp('sensor', None, None),
+        CommandHelp('sensor rearm', '<sensor-numer>', 'Rearm Sensor Events'),
 
         CommandHelp('sel', None, 'Print System Event Log (SEL)'),
         CommandHelp('sel list', None, 'List all SEL entries'),
