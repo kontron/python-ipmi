@@ -1,4 +1,4 @@
-importconstants
+import constants
 from . import register_message_class
 from . import Message
 from . import UnsignedInt
@@ -129,6 +129,9 @@ class GetAddressInfoRsp(Message):
             UnsignedInt('fru_id', 1),
             UnsignedInt('site_id', 1),
             UnsignedInt('site_type', 1),
+            Optional(
+                UnsignedInt('carrier_number', 1),
+            ),
     )
 
 
