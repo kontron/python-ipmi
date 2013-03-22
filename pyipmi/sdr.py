@@ -128,6 +128,10 @@ class Sdr:
                 time.sleep(0.1)
                 retry -= 1
                 continue
+            elif rsp.completion_code == constants.CC_TIMEOUT:
+                time.sleep(0.1)
+                retry -= 1
+                continue
             elif rsp.completion_code == constants.CC_RESP_COULD_NOT_BE_PRV:
                 time.sleep(0.1 * retry)
                 retry -= 1
