@@ -216,7 +216,7 @@ class Sdr:
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def get_sensor_reading(self, sensor_number, sdr=None):
+    def get_sensor_reading(self, sensor_number, lun=0):
         """Returns the sensor reading at the assertion states for the given
         sensor number.
 
@@ -226,6 +226,7 @@ class Sdr:
         """
         req = create_request_by_name('GetSensorReading')
         req.sensor_number = sensor_number
+        req.lun =  lun
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
