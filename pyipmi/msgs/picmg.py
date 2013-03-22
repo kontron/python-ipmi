@@ -217,6 +217,33 @@ class SetFruActivationPolicyRsp(Message):
 
 
 @register_message_class
+class GetFruActivationPolicyReq(Message):
+    __cmdid__ = constants.CMDID_GET_FRU_ACTIVATION_POLICY
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
+            PicmgIdentifier(),
+            UnsignedInt('fru_id', 1),
+    )
+
+
+@register_message_class
+class GetFruActivationPolicyRsp(Message):
+    __cmdid__ = constants.CMDID_GET_FRU_ACTIVATION_POLICY
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            Bitfield('policy', 1,
+                Bitfield.Bit('activation_locked', 1, default=0),
+                Bitfield.Bit('deactivation_locked', 1, default=0),
+                Bitfield.ReservedBit(6),
+            ),
+    )
+
+
+@register_message_class
 class SetFruActivationReq(Message):
     __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION
     __netfn__ = constants.NETFN_GROUP_EXTENSION
@@ -623,5 +650,108 @@ class GetSignalingClassRsp(Message):
             Bitfield('channel_signaling', 1,
                 Bitfield.Bit('class_capability', 4, 0),
                 Bitfield.ReservedBit(4)
+            ),
+    )
+
+
+@register_message_class
+class GetLocationInformationReq(Message):
+    __cmdid__ = constants.CMDID_GET_LOCATION_INFO
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
+            PicmgIdentifier(),
+            Bitfield('info', 1,
+                Bitfield.Bit('carrier_number', 5, 0),
+                Bitfield.ReservedBit(1),
+                Bitfield.Bit('mcs', 2, 0),
+            ),
+            UnsignedInt('site_number', 1),
+            UnsignedInt('site_type', 1),
+    )
+
+
+@register_message_class
+class GetLocationInformationRsp(Message):
+    __cmdid__ = constants.CMDID_GET_LOCATION_INFO
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            UnsignedInt('slot_number', 1),
+            UnsignedInt('tier_number', 1),
+            Bitfield('info', 1,
+                Bitfield.ReservedBit(5),
+                Bitfield.Bit('carrier_orientation', 1, 0),
+                Bitfield.Bit('tier_number', 1, 0),
+                Bitfield.Bit('slot_number', 1, 0),
+            ),
+            UnsignedInt('origin_x', 2),
+            UnsignedInt('origin_y', 2),
+    )
+
+
+@register_message_class
+class GetPowerChannelStatusReq(Message):
+    __cmdid__ = constants.CMDID_GET_POWER_CHANNEL_STATUS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
+            PicmgIdentifier(),
+            UnsignedInt('starting_power_channel_number', 1),
+            UnsignedInt('power_channel_count', 1),
+    )
+
+
+@register_message_class
+class GetPowerChannelStatusRsp(Message):
+    __cmdid__ = constants.CMDID_GET_POWER_CHANNEL_STATUS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            UnsignedInt('max_power_channel_number', 1),
+            UnsignedInt('channel_count', 1),
+            Bitfield('global_status', 1,
+                Bitfield.Bit('role', 1, 0),
+                Bitfield.Bit('management_power_good', 1, 0),
+                Bitfield.Bit('payload_power_good', 1, 0),
+                Bitfield.Bit('unidentified_fault', 1, 0),
+                Bitfield.ReservedBit(4),
+            ),
+            RemainingBytes('data'),
+    )
+
+
+@register_message_class
+class GetTelcoAlarmCapabilityReq(Message):
+    __cmdid__ = constants.CMDID_GET_TELCO_ALARM_CAPABILITY
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
+            PicmgIdentifier(),
+            UnsignedInt('fru_id', 1),
+    )
+
+
+@register_message_class
+class GetTelcoAlarmCapabilityRsp(Message):
+    __cmdid__ = constants.CMDID_GET_TELCO_ALARM_CAPABILITY
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            Bitfield('alarm_capabilities', 1,
+                Bitfield.Bit('critical_alarm', 1, 0),
+                Bitfield.Bit('major_alarm', 1, 0),
+                Bitfield.Bit('minor_alarm', 1, 0),
+                Bitfield.Bit('power_alarm', 1, 0),
+                Bitfield.Bit('test_alarm', 1, 0),
+                Bitfield.Bit('autonomous_alarm_cutoff', 1, 0),
+                Bitfield.Bit('autonomous_minor_reset', 1, 0),
+                Bitfield.Bit('autonomous_majorreset', 1, 0),
             ),
     )
