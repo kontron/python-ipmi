@@ -81,6 +81,12 @@ class Picmg:
         check_completion_code(rsp.completion_code)
         return LedState(rsp)
 
+    def set_led_state(self, led):
+        req = create_request_by_name('SetFruLedState')
+        led.to_request(req)
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
     def set_fru_activation(self, fru_id):
         req = create_request_by_name('SetFruActivation')
         req.fru_id = fru_id
@@ -333,9 +339,12 @@ class LedState:
     FUNCTION_OFF = 1
     FUNCTION_BLINKING = 2
     FUNCTION_ON = 3
+    FUNCTION_LAMP_TEST = 4
 
     PROPERTIES = [
             # (propery, description)
+            ('fru_id', ''),
+            ('led_id', ''),
             ('local_state_available', ''),
             ('override_enabled', ''),
             ('lamp_test_enabled', ''),
@@ -411,5 +420,26 @@ class LedState:
             self.lamp_test_duration = res.lamp_test_duration * 100
 
     def to_request(self, req):
-        raise NotImplementedError()
+        req.fru_id = self.fru_id
+        req.led_id = self.led_id
+        req.color = self.override_color
 
+        if self.led_function == self.FUNCTION_ON:
+            req.led_function = picmg.LED_FUNCTION_ON
+            req.on_duration = 0
+        elif self.led_function == self.FUNCTION_OFF:
+            req.led_function = picmg.LED_FUNCTION_OFF
+            req.on_duration = 0
+        elif self.led_function == self.FUNCTION_BLINKING:
+            if self.override_off_duration not in
+                    picmg.picmg.LED_FUNCTION_BLINKING_RANGE:
+                raise EncodingError()
+            req.led_function = self.override_off_duration
+            req.on_duration = self.override_on_duration
+        elif self.led_function == self.FUNCTION_LAMP_TEST:
+            req.led_function = picmg.LED_FUNCTION_LAMP_TEST
+            req.on_duration = self.lamp_test_duration
+        else:
+            raise AssertionError()
+
+        return req
