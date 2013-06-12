@@ -64,14 +64,12 @@ class Fru:
                 rsp = self.send_message(req)
                 check_completion_code(rsp.completion_code)
             except CompletionCodeError, e:
-                if e.cc == constants.CC_CANT_RET_NUM_REQ_BYTES:
+                if e.cc in (constants.CC_CANT_RET_NUM_REQ_BYTES,
+                            constants.CC_REQ_DATA_FIELD_EXCEED,
+                            constants.CC_PARAM_OUT_OF_RANGE):
                     req_size -= 2
-                    continue
-                if e.cc == constants.CC_REQ_DATA_FIELD_EXCEED:
-                    req_size -= 2
-                    continue
-                if e.cc == constants.CC_PARAM_OUT_OF_RANGE:
-                    req_size -= 2
+                    if req_size <= 0:
+                        raise
                     continue
                 else:
                     raise
