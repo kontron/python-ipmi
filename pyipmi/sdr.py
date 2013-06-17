@@ -241,7 +241,7 @@ class Sdr:
             states |= (rsp.states2 << 8)
         return (reading, states)
 
-    def set_sensor_thresholds(self, sensor_number, unr=None, ucr=None,
+    def set_sensor_thresholds(self, sensor_number, lun=0, unr=None, ucr=None,
                 unc=None, lnc=None, lcr=None, lnr=None):
         """Set the sensor thresholds that are not 'None'
 
@@ -255,6 +255,7 @@ class Sdr:
         """
         req = create_request_by_name('SetSensorThresholds')
         req.sensor_number = sensor_number
+        req.lun = lun
         if unr is not None:
             req.set_mask.unr = 1
             req.threshold.unr = unr
@@ -276,9 +277,10 @@ class Sdr:
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def get_sensor_thresholds(self, sensor_number):
+    def get_sensor_thresholds(self, sensor_number, lun=0):
         req = create_request_by_name('GetSensorThresholds')
         req.sensor_number = sensor_number
+        req.lun = lun
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
         thresholds = {}
@@ -447,7 +449,7 @@ class SdrFullSensorRecord(SdrCommon):
         buffer = ByteBuffer(data[5:])
         # record key bytes
         self.owner_id = buffer.pop_unsigned_int(1)
-        self.owner_lun = buffer.pop_unsigned_int(1)
+        self.owner_lun = buffer.pop_unsigned_int(1) & 0x3
         self.number = buffer.pop_unsigned_int(1)
         # record body bytes
         self.entity_id = buffer.pop_unsigned_int(1)
@@ -608,7 +610,7 @@ class SdrCompactSensorRecord(SdrCommon):
     def from_data(self, data):
         buffer = ByteBuffer(data[5:])
         self.owner_id = buffer.pop_unsigned_int(1)
-        self.owner_lun = buffer.pop_unsigned_int(1)
+        self.owner_lun = buffer.pop_unsigned_int(1) & 0x3
         self.number = buffer.pop_unsigned_int(1)
         self.entity_id = buffer.pop_unsigned_int(1)
         self.entity_instance = buffer.pop_unsigned_int(1)
@@ -646,7 +648,7 @@ class SdrEventOnlySensorRecord(SdrCommon):
     def from_data(self, data):
         buffer = ByteBuffer(data[5:])
         self.owner_id = buffer.pop_unsigned_int(1)
-        self.owner_lun = buffer.pop_unsigned_int(1)
+        self.owner_lun = buffer.pop_unsigned_int(1) & 0x3
         self.number = buffer.pop_unsigned_int(1)
         self.entity_id = buffer.pop_unsigned_int(1)
         self.entity_instance = buffer.pop_unsigned_int(1)
