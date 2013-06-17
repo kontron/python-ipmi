@@ -169,6 +169,22 @@ class Picmg:
 
         return (link, state)
 
+    def get_pm_global_status(self):
+        req = create_request_by_name('GetPowerChannelStatus')
+        req.starting_power_channel_number = 1
+        req.power_channel_count = 1
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return GlobalStatus(rsp)
+
+    def get_power_channel_status(self, starting_number):
+        req = create_request_by_name('GetPowerChannelStatus')
+        req.starting_power_channel_number = starting_number
+        req.power_channel_count = 1
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return PowerChannelStatus(rsp.data[0])
+
     def set_signaling_class(self, interface, channel, signaling_class):
         req = create_request_by_name('SetSignalingClass')
         req.channel_info.channel_number = channel
@@ -328,6 +344,7 @@ class FanSpeedProperties:
         self.normal_operation_level = res.normal_operation_level
         self.local_control_supported = res.properties.local_control_supported
 
+
 class LedState:
     COLOR_BLUE = picmg.LED_COLOR_BLUE
     COLOR_RED = picmg.LED_COLOR_RED
@@ -443,3 +460,56 @@ class LedState:
             raise AssertionError()
 
         return req
+
+
+class GlobalStatus:
+    PROPERTIES = [
+            # (propery, description)
+            ('role', ''),
+            ('management_power_good', ''),
+            ('payload_power_good', ''),
+            ('unidentified_fault', ''),
+    ]
+
+    def __init__(self, res=None):
+        for p in self.PROPERTIES:
+            setattr(self, p[0], None)
+        if res:
+            self.from_response(res)
+
+    def from_response(self, res):
+        self.role = res.global_status.role
+        self.management_power_good =\
+                bool(res.global_status.management_power_good)
+        self.payload_power_good =\
+                bool(res.global_status.payload_power_good)
+        self.unidentified_fault =\
+                bool(res.global_status.unidentified_fault)
+
+
+class PowerChannelStatus:
+    PROPERTIES = [
+            # (propery, description)
+            ('present', ''),
+            ('management_power', ''),
+            ('management_power_overcurrent', ''),
+            ('enable', ''),
+            ('payload_power', ''),
+            ('payload_power_overcurrent', ''),
+            ('pwr_on', ''),
+    ]
+
+    def __init__(self, res=None):
+        for p in self.PROPERTIES:
+            setattr(self, p[0], None)
+        if res:
+            self.from_response(res)
+
+    def from_response(self, data):
+        self.present = (data >> 0) & 1
+        self.management_power = (data >> 1) & 1
+        self.management_power_overcurrent = (data >> 2) & 1
+        self.enable = (data >> 3) & 1
+        self.payload_power = (data >> 4) & 1
+        self.payload_power_overcurrent = (data >> 5) & 1
+        self.pwr_on = (data >> 6) & 1

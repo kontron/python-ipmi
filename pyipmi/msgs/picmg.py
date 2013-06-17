@@ -718,7 +718,6 @@ class GetPowerChannelStatusRsp(Message):
             CompletionCode(),
             PicmgIdentifier(),
             UnsignedInt('max_power_channel_number', 1),
-            UnsignedInt('channel_count', 1),
             Bitfield('global_status', 1,
                 Bitfield.Bit('role', 1, 0),
                 Bitfield.Bit('management_power_good', 1, 0),
