@@ -14,6 +14,7 @@ import sel
 import event
 import sdr
 import hpm
+import lan
 
 try:
     from version import __version__
@@ -109,7 +110,7 @@ class Session:
     interface = property(_get_interface, _set_interface)
 
 class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm, sdr.Sdr,
-        event.Event, sel.Sel):
+        event.Event, sel.Sel, lan.Lan):
 
     def __init__(self):
         if (hasattr(bmc.Bmc, '__init__')):
@@ -128,6 +129,8 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm, sdr.Sdr,
             event.Event.__init__(self)
         if (hasattr(sel.Sel, '__init__')):
             sel.Sel.__init__(self)
+        if (hasattr(lan.Lan, '__init__')):
+            lan.Lan.__init__(self)
 
     def send_message(self, msg):
         msg.target = self.target
