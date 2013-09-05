@@ -52,6 +52,9 @@ class Aardvark:
         # just remember session parameters here
         self._session = session
 
+    def close_session(self, session):
+        self._dev.close()
+
     def _csum(self, data):
         csum = 0
         for b in data:
