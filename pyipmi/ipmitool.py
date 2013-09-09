@@ -70,7 +70,7 @@ def cmd_sdr_show(ipmi, args):
     try:
         s = ipmi.get_sdr(int(args[0], 0))
         if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
-            (raw, states) = ipmi.get_sensor_reading(s.number, s.lun)
+            (raw, states) = ipmi.get_sensor_reading(s.number, s.owner_lun)
             value = s.convert_sensor_raw_to_value(raw)
             if value is None:
                 value = "na"
