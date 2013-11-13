@@ -417,3 +417,32 @@ class ReadEventMessageBufferRsp(Message):
         CompletionCode(),
         RemainingBytes('event_data'),
     )
+
+
+@register_message_class
+class MasterWriteReadReq(Message):
+    __cmdid__ = constants.CMDID_MASTER_WRITE_READ
+    __netfn__ = constants.NETFN_APP
+    __default_lun__ = 0
+    __fields__ = (
+        Bitfield('bus_id', 2,
+            Bitfield.Bit('type', 1, 0),
+            Bitfield.Bit('id', 3, 0),
+            Bitfield.Bit('channel', 4, 0),
+            Bitfield.ReservedBit(1, 0),
+            Bitfield.Bit('slave_address', 7, 0),
+        ),
+        UnsignedInt('read_count', 1),
+        RemainingBytes('data'),
+    )
+
+
+@register_message_class
+class MasterWriteReadRsp(Message):
+    __cmdid__ = constants.CMDID_MASTER_WRITE_READ
+    __netfn__ = constants.NETFN_APP | 1
+    __default_lun__ = 0
+    __fields__ = (
+        CompletionCode(),
+        RemainingBytes('data'),
+    )

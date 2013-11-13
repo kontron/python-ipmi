@@ -545,6 +545,43 @@ class TestReadEventMessageBuffer(unittest.TestCase):
         self.assertEqual(m.event_data, array('B', '\x00\x01\x02\x03\x04'\
                 '\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'))
 
+class TestMasterWriteRead(unittest.TestCase):
+    def test_encode_req_all_zero_read(self):
+        m = pyipmi.msgs.bmc.MasterWriteReadReq()
+        m.bus_id.type = 0
+        m.bus_id.id = 0
+        m.bus_id.channel = 0
+        m.bus_id.slave_address = 0
+        m.read_count = 0
+        data = encode_message(m)
+        self.assertEqual(data,'\x00\x00\x00')
+
+    def test_encode_req_for_read(self):
+        m = pyipmi.msgs.bmc.MasterWriteReadReq()
+        m.bus_id.type = 1
+        m.bus_id.id = 2
+        m.bus_id.channel = 4
+        m.bus_id.slave_address = 0x3a
+        m.read_count = 5
+        data = encode_message(m)
+        self.assertEqual(data,'\x45\x74\x05')
+
+    def test_encode_req_for_read(self):
+        m = pyipmi.msgs.bmc.MasterWriteReadReq()
+        m.bus_id.type = 0
+        m.bus_id.id = 0
+        m.bus_id.channel = 0
+        m.bus_id.slave_address = 0
+        m.read_count = 0
+        m.data = '\x01\x23\x45'
+        data = encode_message(m)
+        self.assertEqual(data,'\x00\x00\x00\x01\x23\x45')
+
+    def test_decode_rsp(self):
+        m = pyipmi.msgs.bmc.MasterWriteReadRsp()
+        decode_message(m, '\x00\x11\x22\x33\x44')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.data, array('B', '\x11\x22\x33\x44'))
 
 class TestGetSelEntry(unittest.TestCase):
     def test_decode_rsp_with_cc(self):

@@ -26,6 +26,25 @@ class Bmc:
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
+    def i2c_write_read(self, type, id, channel, address, count, data=None):
+        req = create_request_by_name('MasterWriteRead')
+        req.bus_id.type = type
+        req.bus_id.id= id
+        req.bus_id.channel = channel
+        req.bus_id.slave_address = address
+        req.read_count = count
+        if data:
+            req.data = data
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return rsp.data
+
+    def i2c_write(self, type, id, channel, address, data):
+        self.i2c_write_read(type, id, channel, address, 0, data)
+
+    def i2c_read(self, type, id, channel, address, count):
+        return self.i2c_write_read(type, id, channel, address, count, None)
+
     def set_watchdog_timer(self, config):
         req = create_request_by_name('SetWatchdogTimer')
         req.timer_use.timer_use = config.timer_use
