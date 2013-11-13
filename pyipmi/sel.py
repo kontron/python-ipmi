@@ -141,7 +141,7 @@ class SelEntry:
             s = 'System Event'
         elif type in SelEntry.TYPE_OEM_TIMESTAMPED_RANGE:
             s = 'OEM timestamped (0x%02x)' % type
-        elif type in SelEntry.TYPE_NON_OEM_TIMESTAMPED_RANGE:
+        elif type in SelEntry.TYPE_OEM_NON_TIMESTAMPED_RANGE:
             s = 'OEM non-timestamped (0x%02x)' % type
         return s
 
@@ -158,7 +158,7 @@ class SelEntry:
         self.type = buffer.pop_unsigned_int(1)
         if (self.type != self.TYPE_SYSTEM_EVENT
                 and self.type not in self.TYPE_OEM_TIMESTAMPED_RANGE
-                and self.type not in self.TYPE_NON_OEM_TIMESTAMPED_RANGE):
+                and self.type not in self.TYPE_OEM_NON_TIMESTAMPED_RANGE):
             raise DecodingError('Unknown SEL type (0x%02x)' % self.type)
         self.timestamp = buffer.pop_unsigned_int(4)
         self.generator_id = buffer.pop_unsigned_int(2)
