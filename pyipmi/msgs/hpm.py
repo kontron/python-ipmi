@@ -125,6 +125,7 @@ class UploadFirmwareBlockReq(Message):
     __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
+            UnsignedInt('number', 1),
             RemainingBytes('data'),
     )
 
@@ -184,6 +185,7 @@ class GetUpgradeStatusRsp(Message):
             CompletionCode(),
             PicmgIdentifier(),
             UnsignedInt('command_in_progress', 1),
+            UnsignedInt('last_completion_code', 1),
             Optional(UnsignedInt('completion_estimate', 1)),
     )
 
