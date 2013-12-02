@@ -41,3 +41,23 @@ class RetryError(Exception):
             return "%s msg=%s" % (self.__class__.__name__, self.msg)
         else:
             return "%s" % (self.__class__.__name__)
+
+class DataNotFound(Exception):
+    def __init__(self, msg=None):
+        self.msg = msg
+
+    def __str__(self):
+        if self.msg:
+            return "%s msg=%s" % (self.__class__.__name__, self.msg)
+        else:
+            return "%s" % (self.__class__.__name__)
+
+class HpmError(Exception):
+    """HPM.1 error"""
+    def __init__(self, msg=None):
+        self.msg = msg
+    def __str__(self):
+        if self.msg:
+            return "%s msg=%s" % (self.__class__.__name__, self.msg)
+        else:
+            return "%s" % (self.__class__.__name__)
