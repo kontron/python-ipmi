@@ -341,6 +341,7 @@ class Hpm:
         self._activation_state_do_self_testing()
 
     def install_component_from_image(self, image, component):
+        self.abort_firmware_upgrade()
         if component not in image.header.components:
             raise HpmError('component=%d not in image' % component)
         self.preparation_stage(image)
