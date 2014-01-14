@@ -487,7 +487,7 @@ COMMANDS = (
         Command('picmg portstate get', cmd_picmg_get_portstate),
         Command('picmg portstate getall', cmd_picmg_get_portstate_all),
         Command('raw', cmd_raw),
-        Command('hpm cap', cmd_hpm_capabilities),
+        Command('hpm capabilities', cmd_hpm_capabilities),
         Command('hpm check', cmd_hpm_check_file),
         Command('chassis power off',
             lambda i, a: i.chassis_control_power_down()),
@@ -536,7 +536,7 @@ COMMAND_HELP = (
                 'Request the portstate for an interface'),
 
         CommandHelp('hpm', None, 'HPM.1 commands'),
-        CommandHelp('hpm cap', 'HPM.1 target upgrade capabilities',
+        CommandHelp('hpm capabilities', 'HPM.1 target upgrade capabilities',
                 'Request the target upgrade capabilities'),
         CommandHelp('hpm check', 'HPM.1 file check',
                 'Check the specified HPM.1 file'),
