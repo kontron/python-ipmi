@@ -5,9 +5,6 @@ from subprocess import Popen, PIPE
 
 def get_git_version():
     try:
-        # Somehow git describe is confused if fakeroot is used. The command
-        # below seems to work around that. I really don't have any clue :(
-        Popen(['git', 'diff']).wait()
         p = Popen(['git', 'describe', '--tags', '--always', '--dirty'],
                 stdout=PIPE, stderr=PIPE)
         p.stderr.close()
@@ -29,10 +26,17 @@ def main():
             description = 'Pure python IPMI library',
             author_email = 'michael.walle@kontron.com',
             packages = find_packages(exclude="test"),
-            package_data = {
-                'pyipmi.ext.totalphase':
-                    ['aardvark.so', 'LICENSE.txt']
-            },
+            license = 'LGPLv2+',
+            classifiers = [
+                'Development Status :: 4 - Beta',
+                'Environment :: Console',
+                'License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)',
+                'Natural Language :: English',
+                'Operating System :: OS Independent',
+                'Programming Language :: Python :: 2',
+                'Programming Language :: Python :: 2.7',
+                'Topic :: Software Development :: Libraries :: Python Modules',
+            ],
             entry_points = {
                 'console_scripts': [
                     'ipmitool.py = pyipmi.ipmitool:main',
