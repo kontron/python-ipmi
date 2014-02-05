@@ -1,9 +1,18 @@
+# Copyright (c) 2014  Kontron Europe GmbH
 #
-# pyipmi
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 2.1 of the License, or (at your option) any later version.
 #
-# author: Heiko Thiery <heiko.thiery@kontron.com>
-# author: Michael Walle <michael.walle@kontron.com>
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
 #
+# You should have received a copy of the GNU Lesser General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 import re
 from subprocess import Popen, PIPE
@@ -16,7 +25,7 @@ from pyipmi.msgs import encode_message, decode_message, create_message
 class Ipmitool:
     """This interface uses the ipmitool raw command to "emulate" a RMCP
     session.
-    
+
     It uses the session information to assemble the correct ipmitool
     parameters. Therefore, a session has to be established before any request
     can be sent.
@@ -85,7 +94,7 @@ class Ipmitool:
             if len(output):
                 for x in output.split(' '):
                     data.append(chr(int(x, 16)))
-        
+
         return data
 
     def send_and_receive(self, req):
@@ -102,7 +111,7 @@ class Ipmitool:
         log().debug('IPMI Response [%s])', rsp)
 
         return rsp
- 
+
     def _run_ipmitool(self, target, ipmitool_cmd):
         """Legacy call of ipmitool (will be removed in future).
         """
