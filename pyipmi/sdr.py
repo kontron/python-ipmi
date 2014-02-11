@@ -226,6 +226,27 @@ class Sdr:
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
+    def get_sensor_thresholds(self, sensor_number, lun=0):
+        req = create_request_by_name('GetSensorThresholds')
+        req.sensor_number = sensor_number
+        req.lun = lun
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        thresholds = {}
+        if rsp.readable_mask.unr:
+            thresholds['unr'] = rsp.threshold.unr
+        if rsp.readable_mask.ucr:
+            thresholds['ucr'] = rsp.threshold.ucr
+        if rsp.readable_mask.unc:
+            thresholds['unc'] = rsp.threshold.unc
+        if rsp.readable_mask.lnc:
+            thresholds['lnc'] = rsp.threshold.lnc
+        if rsp.readable_mask.lcr:
+            thresholds['lcr'] = rsp.threshold.lcr
+        if rsp.readable_mask.lnr:
+            thresholds['lnr'] = rsp.threshold.lnr
+        return thresholds
+
     def get_sensor_reading(self, sensor_number, lun=0):
         """Returns the sensor reading at the assertion states for the given
         sensor number.
@@ -286,28 +307,6 @@ class Sdr:
             req.threshold.lnr = lnr
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
-
-    def get_sensor_thresholds(self, sensor_number, lun=0):
-        req = create_request_by_name('GetSensorThresholds')
-        req.sensor_number = sensor_number
-        req.lun = lun
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
-        thresholds = {}
-        if rsp.readable_mask.unr:
-            thresholds['unr'] = rsp.threshold.unr
-        if rsp.readable_mask.ucr:
-            thresholds['ucr'] = rsp.threshold.ucr
-        if rsp.readable_mask.unc:
-            thresholds['unc'] = rsp.threshold.unc
-        if rsp.readable_mask.lnc:
-            thresholds['lnc'] = rsp.threshold.lnc
-        if rsp.readable_mask.lcr:
-            thresholds['lcr'] = rsp.threshold.lcr
-        if rsp.readable_mask.lnr:
-            thresholds['lnr'] = rsp.threshold.lnr
-        return thresholds
-
 
 def create_sdr(data, next_id=None):
     sdr_type = data[3]
