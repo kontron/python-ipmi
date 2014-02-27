@@ -42,12 +42,11 @@ class Aardvark:
         self.timeout = 0.25 # 250 ms
         self.max_retries = 3
         self.next_sequence_number = 0
-        self._dev = pyaardvark.Aardvark()
-        self._dev.open(0)
-        self._dev.configure(pyaardvark.Aardvark.CONFIG_SPI_I2C)
-        self._dev.i2c_enable_pullups(False)
+
+        self._dev = pyaardvark.open()
+        self._dev.enable_i2c = True
+        self._dev.i2c_pullups = True
         self._dev.i2c_slave_enable(self.slave_address >> 1)
-        self._dev.i2c_bitrate(100)
 
     def enable_pullups(self, enabled):
         self._dev.i2c_enable_pullups(enabled)
@@ -133,7 +132,7 @@ class Aardvark:
         rsp_received = False
         while not rsp_received and timeout > 0:
             ret = self._dev.poll(int(timeout * 1000))
-            if ret == pyaardvark.Aardvark.POLL_NO_DATA:
+            if ret == pyaardvark.POLL_NO_DATA:
                 raise TimeoutError()
 
             (addr, rx_data) = self._dev.i2c_slave_read()
