@@ -251,7 +251,7 @@ def cmd_hpm_capabilities(ipmi, args):
 def cmd_hpm_check_file(ipmi, args):
     if len(args) < 1:
         return
-    cap = ipmi.open_hpm_file(args[0])
+    cap = ipmi.open_upgrade_image(args[0])
 
     print cap.header
     for action in cap.actions:
