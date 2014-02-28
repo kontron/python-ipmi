@@ -80,6 +80,16 @@ class Hpm:
         self._check_completion_code(rsp)
         return ComponentProperty.create_from_id(property_id, rsp)
 
+    def get_component_properties(self, component_id):
+        properties = []
+        for p in (PROPERTY_GENERAL_PROPERTIES, PROPERTY_CURRENT_VERSION,
+                PROPERTY_DESCRIPTION_STRING, PROPERTY_ROLLBACK_VERSION,
+                PROPERTY_DEFERRED_VERSION):
+            property = self.get_component_property(component_id, p)
+            if property is not None:
+                properties.append(property)
+        return properties
+
     def find_component_id_by_descriptor(self, descriptor):
         caps = self.get_target_upgrade_capabilities()
         for component_id in caps.components:
