@@ -108,7 +108,7 @@ class Aardvark:
         cmd_data = data[5:-1]
         return (rs_sa, netfn, rq_lun, rq_sa, rs_lun, rq_seq, cmd_id, cmd_data)
 
-    def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
+    def _send_and_receive_raw(self, target, lun, netfn, raw_bytes):
 
         if hasattr(target, 'routing') and len(target.routing) > 1:
             raise RuntimeError('Bridging is not supported yet')
@@ -157,6 +157,10 @@ class Aardvark:
 
         return rx_data.tostring()
 
+    def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
+        rx_data = self._send_and_receive_raw(target, lun, netfn, raw_bytes)
+        return rx_data[5:-1]
+
     def send_and_receive(self, msg):
         """Sends an IPMI request message and waits for its response.
 
@@ -168,7 +172,7 @@ class Aardvark:
         retries = 0
         while retries < self.max_retries:
             try:
-                rx_data = self.send_and_receive_raw(msg.target, msg.lun,
+                rx_data = self._send_and_receive_raw(msg.target, msg.lun,
                         msg.netfn, chr(msg.cmdid) + encode_message(msg))
                 break
             except TimeoutError:
