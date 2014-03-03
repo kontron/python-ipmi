@@ -299,8 +299,6 @@ class Hpm:
                 print "do ACTION_UPLOAD_FOR_UPGRADE"
 
 
-
-
     def preparation_stage(self, image):
         ####################################################
         # match device ID, manfuacturer ID, etc.
@@ -348,9 +346,16 @@ class Hpm:
 
     def wait_until_new_firmware_comes_up(self, timeout, interval):
         start_time = time.time()
-        while time.time() < start_time + timeout:
+        while time.time() < start_time + (timeout * 2):
             try:
                 self.query_selftest_results()
+            except CompletionCodeError, e:
+                if e.cc == LONG_DURATION_CMD_IN_PROGRESS_CC:
+                    self.wait_for_long_duration_command(
+                            constants.CMDID_HPM_QUERY_SELFTEST_RESULTS,
+                            timeout, interval)
+                else:
+                    raise HpmError('query selftest CC=0x%02x' % e.cc)
             except TimeoutError:
                 time.sleep(interval)
 
