@@ -577,7 +577,7 @@ class SelfTestResult:
 
 class RollbackStatus:
     def __init__(self, rsp=None):
-        if data:
+        if rsp:
             self.from_rsp(rsp)
 
     def from_rsp(self, rsp):
