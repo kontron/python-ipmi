@@ -35,7 +35,7 @@ class Ipmitool:
     IPMITOOL_PATH = 'ipmitool'
 
     def __init__(self):
-        self.re_err = re.compile(
+        self.re_completion_code = re.compile(
                 "Unable to send RAW command \(.*rsp=(0x[0-9a-f]+)\)")
         self.re_timeout = re.compile(
                 "Unable to send RAW command \(.*cmd=0x[0-9a-f]+\)")
@@ -73,11 +73,11 @@ class Ipmitool:
         output, rc = self._run_ipmitool(target, cmd)
 
         # check for errors
-        match_err = self.re_err.match(output)
+        match_completion_code = self.re_completion_code.match(output)
         match_timeout = self.re_timeout.match(output)
         data = array('c')
-        if match_err:
-            cc = int(match_err.group(1), 16)
+        if match_completion_code:
+            cc = int(match_completion_code.group(1), 16)
             data.append(chr(cc))
         elif match_timeout:
             raise TimeoutError()
