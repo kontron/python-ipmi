@@ -28,6 +28,12 @@ ERASURE_IN_PROGRESS = 0x0
 ERASURE_COMPLETED = 0x1
 
 class Sel:
+    def get_sel_entries_count(self):
+        req = create_request_by_name('GetSelInfo')
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return rsp.entries
+
     def get_sel_reservation_id(self):
         req = create_request_by_name('ReserveSel')
         rsp = self.send_message(req)
