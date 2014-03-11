@@ -33,7 +33,7 @@ class ChecksumError(Exception):
 class Aardvark:
     NAME = 'aardvark'
 
-    def __init__(self):
+    def __init__(self, port=0, serial_number=None):
         if pyaardvark is None:
             raise RuntimeError('No pyaardvark module found. You can not '
                     'use this interface.')
@@ -43,7 +43,7 @@ class Aardvark:
         self.max_retries = 3
         self.next_sequence_number = 0
 
-        self._dev = pyaardvark.open()
+        self._dev = pyaardvark.open(port, serial_number)
         self._dev.enable_i2c = True
         self._dev.i2c_pullups = True
         self._dev.i2c_slave_enable(self.slave_address >> 1)
