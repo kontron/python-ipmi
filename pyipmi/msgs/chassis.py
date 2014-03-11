@@ -59,7 +59,7 @@ class GetChassisCapabilitiesRsp(Message):
         UnsignedInt('fru_info_device_address', 1),
         UnsignedInt('sdr_device_address', 1),
         UnsignedInt('sel_device_address', 1),
-        UnsignedInt('system_managemnet_device_address', 1),
+        UnsignedInt('system_management_device_address', 1),
         Optional(
             UnsignedInt('bridge_device_address', 1)
         ),
@@ -87,7 +87,7 @@ class GetChassisStatusRsp(Message):
             Bitfield.Bit('interlock', 1),
             Bitfield.Bit('power_fault', 1),
             Bitfield.Bit('power_control_fault', 1),
-            Bitfield.Bit('power restore_policy', 2),
+            Bitfield.Bit('power_restore_policy', 2),
             Bitfield.ReservedBit(1, 0),
         ),
         Bitfield('last_power_event', 1,
