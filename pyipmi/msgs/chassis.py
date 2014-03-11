@@ -129,3 +129,23 @@ class ChassisControlRsp(Message):
     __fields__ = (
         CompletionCode(),
     )
+
+
+@register_message_class
+class GetPohCounterReq(Message):
+    __cmdid__ = constants.CMDID_GET_POH_COUNTER
+    __netfn__ = constants.NETFN_CHASSIS
+    __default_lun__ = 0
+    __fields__ = ()
+
+
+@register_message_class
+class GetPohCounterRsp(Message):
+    __cmdid__ = constants.CMDID_GET_POH_COUNTER
+    __netfn__ = constants.NETFN_CHASSIS | 1
+    __default_lun__ = 0
+    __fields__ = (
+        CompletionCode(),
+        UnsignedInt('minutes_per_count', 1),
+        UnsignedInt('counter_reading', 4),
+    )
