@@ -87,7 +87,7 @@ def cmd_sdr_show(ipmi, args):
         return
 
     try:
-        s = ipmi.get_sdr(int(args[0], 0))
+        s = ipmi.get_device_sdr(int(args[0], 0))
         if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
             (raw, states) = ipmi.get_sensor_reading(s.number, s.owner_lun)
             value = s.convert_sensor_raw_to_value(raw)
@@ -129,7 +129,7 @@ def cmd_sdr_list(ipmi, args):
     print "SDR-ID |     | Device String    |"
     print "=======|=====|==================|===================="
 
-    for s in ipmi.sdr_entries():
+    for s in ipmi.device_sdr_entries():
         try:
             if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
                 (raw, states) = ipmi.get_sensor_reading(s.number)

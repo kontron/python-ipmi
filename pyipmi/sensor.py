@@ -193,7 +193,7 @@ class Sensor:
 
         return sdr.create_sdr(record_data, next_record_id)
 
-    def sdr_entries(self):
+    def device_sdr_entries(self):
         """A generator that returns the SDR list. Starting with ID=0x0000 and
         end when ID=0xffff is returned.
         """
@@ -207,10 +207,10 @@ class Sensor:
                 break
             record_id = s.next_id
 
-    def get_sdr_list(self, reservation_id=None):
+    def get_device_sdr_list(self, reservation_id=None):
         """Returns the complete SDR list.
         """
-        return list(self.sdr_entries())
+        return list(self.device_sdr_entries())
 
     def rearm_sensor_events(self, sensor_number):
         """Rearm sensor events for the given sensor number.
