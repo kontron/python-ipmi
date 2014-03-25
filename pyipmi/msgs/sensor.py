@@ -26,37 +26,6 @@ from . import Conditional
 from . import Optional
 from . import RemainingBytes
 
-@register_message_class
-class GetSDRRepositoryInfoReq(Message):
-    __cmdid__ = constants.CMDID_GET_SDR_REPOSITORY_INFO
-    __netfn__ = constants.NETFN_STORAGE
-    __default_lun__ = 0
-    __fields__ = ()
-
-
-@register_message_class
-class GetSDRRepositoryInfoRsp(Message):
-    __cmdid__ = constants.CMDID_GET_SDR_REPOSITORY_INFO
-    __netfn__ = constants.NETFN_STORAGE | 1
-    __default_lun__ = 0
-    __fields__ = (
-            CompletionCode(),
-            UnsignedInt('sdr_version', 1),
-            UnsignedInt('record_count', 2),
-            UnsignedInt('free_space', 2),
-            Timestamp('most_recent_addtion'),
-            Timestamp('most_recent_erase'),
-            Bitfield('operation_support', 1,
-                Bitfield.Bit('get_sdr_repository_allocation_command', 1),
-                Bitfield.Bit('reverse_sdr_repository_command', 1),
-                Bitfield.Bit('partial_add_sdr_command', 1),
-                Bitfield.Bit('delete_sdr_command', 1),
-                Bitfield.ReservedBit(1, 0),
-                Bitfield.Bit('sdr_repository_update_type', 2),
-                Bitfield.Bit('overflow_flag', 1)
-            ),
-    )
-
 
 @register_message_class
 class GetDeviceSdrInfoReq(Message):
