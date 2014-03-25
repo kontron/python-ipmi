@@ -38,7 +38,7 @@ import chassis
 import fru
 import hpm
 import picmg
-import sdr
+import sensor
 import sel
 import event
 import lan

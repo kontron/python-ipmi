@@ -21,7 +21,7 @@ import bmc
 import fru
 import sel
 import event
-import sdr
+import sensor
 import hpm
 import lan
 
@@ -118,8 +118,8 @@ class Session:
 
     interface = property(_get_interface, _set_interface)
 
-class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm, sdr.Sdr,
-        event.Event, sel.Sel, lan.Lan):
+class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
+        sensor.Sensor, event.Event, sel.Sel, lan.Lan):
 
     def __init__(self):
         if (hasattr(bmc.Bmc, '__init__')):
@@ -132,8 +132,8 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm, sdr.Sdr,
             picmg.Picmg.__init__(self)
         if (hasattr(hpm.Hpm, '__init__')):
             hpm.Hpm.__init__(self)
-        if (hasattr(sdr.Sdr, '__init__')):
-            sdr.Sdr.__init__(self)
+        if (hasattr(sensor.Sensor, '__init__')):
+            sensor.Sensor.__init__(self)
         if (hasattr(event.Event, '__init__')):
             event.Event.__init__(self)
         if (hasattr(sel.Sel, '__init__')):
