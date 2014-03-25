@@ -334,5 +334,4 @@ class GetSensorReadingRsp(Message):
             #Alias('event_disabled', 'stats.event_disabled'),
             Optional(UnsignedInt('states1', 1)),
             Optional(UnsignedInt('states2', 1)),
-
     )
