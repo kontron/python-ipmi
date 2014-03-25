@@ -102,13 +102,13 @@ SENSOR_TYPE_OEM_KONTRON_POWER_DENIED = 0xcd
 SENSOR_TYPE_OEM_KONTRON_RESET = 0xcf
 
 class Sensor:
-    def get_reservation_id(self):
+    def reserve_device_sdr_repository(self):
         req = create_request_by_name('ReserveDeviceSdrRepository')
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
         return  rsp.reservation_id
 
-    def get_sdr(self, record_id, reservation_id=None):
+    def get_device_sdr(self, record_id, reservation_id=None):
         """Collects all data for the given SDR record ID and returns
         the decoded SDR object.
 
@@ -118,7 +118,7 @@ class Sensor:
         be determined.
         """
         if reservation_id is None:
-            reservation_id = self.get_reservation_id()
+            reservation_id = self.reserve_device_sdr_repository()
 
         # get record header ... 5 bytes
         req = create_request_by_name('GetDeviceSdr')
@@ -134,7 +134,7 @@ class Sensor:
             if rsp.completion_code == 0:
                 break
             elif rsp.completion_code == constants.CC_RES_CANCELED:
-                req.reservation_id = self.get_reservation_id()
+                req.reservation_id = self.reserve_device_sdr_repository()
                 time.sleep(0.1)
                 retry -= 1
                 continue
@@ -178,7 +178,7 @@ class Sensor:
                     retry = 0
                 continue
             elif rsp.completion_code == constants.CC_RES_CANCELED:
-                req.reservation_id = self.get_reservation_id()
+                req.reservation_id = self.reserve_device_sdr_repository()
                 time.sleep(0.1 * retry)
                 # clean all previous data and retry with new reservation
                 del record_data[:]
@@ -203,11 +203,11 @@ class Sensor:
         """A generator that returns the SDR list. Starting with ID=0x0000 and
         end when ID=0xffff is returned.
         """
-        reservation_id = self.get_reservation_id()
+        reservation_id = self.reserve_device_sdr_repository()
         record_id = 0
 
         while True:
-            s = self.get_sdr(record_id, reservation_id)
+            s = self.get_device_sdr(record_id, reservation_id)
             yield s
             if s.next_id == 0xffff:
                 break
