@@ -102,6 +102,36 @@ class Sensor:
         check_completion_code(rsp.completion_code)
         return  rsp.reservation_id
 
+    def _get_device_sdr_chunk(self, reservation_id, record_id, offset, length):
+        req = create_request_by_name('GetDeviceSdr')
+        req.reservation_id = reservation_id
+        req.record_id = record_id
+        req.offset = offset
+        req.length = length
+        retry = 5
+
+        while True:
+            retry -= 1
+            if retry == 0:
+                raise RetryError()
+            rsp = self.send_message(req)
+            if rsp.completion_code == 0:
+                break
+            elif rsp.completion_code == constants.CC_RES_CANCELED:
+                req.reservation_id = self.reserve_device_sdr_repository()
+                time.sleep(0.1)
+                continue
+            elif rsp.completion_code == constants.CC_TIMEOUT:
+                time.sleep(0.1)
+                continue
+            elif rsp.completion_code == constants.CC_RESP_COULD_NOT_BE_PRV:
+                time.sleep(0.1 * retry)
+                continue
+            else:
+                check_completion_code(rsp.completion_code)
+
+        return (rsp.next_record_id, rsp.record_data)
+
     def get_device_sdr(self, record_id, reservation_id=None):
         """Collects all data for the given SDR record ID and returns
         the decoded SDR object.
@@ -114,80 +144,44 @@ class Sensor:
         if reservation_id is None:
             reservation_id = self.reserve_device_sdr_repository()
 
-        # get record header ... 5 bytes
-        req = create_request_by_name('GetDeviceSdr')
-        req.reservation_id = reservation_id
-        req.record_id = record_id
-        req.offset = 0
-        req.length = 5
-        retry = 5
-        while True:
-            if retry == 0:
-                raise RetryError()
-            rsp = self.send_message(req)
-            if rsp.completion_code == 0:
-                break
-            elif rsp.completion_code == constants.CC_RES_CANCELED:
-                req.reservation_id = self.reserve_device_sdr_repository()
-                time.sleep(0.1)
-                retry -= 1
-                continue
-            elif rsp.completion_code == constants.CC_TIMEOUT:
-                time.sleep(0.1)
-                retry -= 1
-                continue
-            elif rsp.completion_code == constants.CC_RESP_COULD_NOT_BE_PRV:
-                time.sleep(0.1 * retry)
-                retry -= 1
-                continue
-            else:
-                check_completion_code(rsp.completion_code)
 
-        next_record_id = rsp.next_record_id
+        (next_record_id, data) = self._get_device_sdr_chunk(reservation_id, record_id, 0, 5)
 
-        header = ByteBuffer(rsp.record_data)
+        header = ByteBuffer(data)
         record_id = header.pop_unsigned_int(2)
         record_version = header.pop_unsigned_int(1)
         record_type = header.pop_unsigned_int(1)
         record_payload_length = header.pop_unsigned_int(1)
         record_length = record_payload_length + 5
-        record_data = ByteBuffer(rsp.record_data)
+        record_data = ByteBuffer(data)
 
-        req.offset = len(record_data)
+        offset = len(record_data)
         self.max_req_len = 20
         retry = 20
+
         # now get the other record data
         while True:
+            retry -= 1
             if retry == 0:
                 raise RetryError()
 
-            req.length = self.max_req_len
-            if (req.offset + req.length) > record_length:
-                req.length = record_length - req.offset
-            rsp = self.send_message(req)
+            length = self.max_req_len
+            if (offset + length) > record_length:
+                length = record_length - offset
 
-            if rsp.completion_code == constants.CC_CANT_RET_NUM_REQ_BYTES:
-                self.max_req_len -= 4
-                if self.max_req_len <= 0:
-                    retry = 0
-                continue
-            elif rsp.completion_code == constants.CC_RES_CANCELED:
-                req.reservation_id = self.reserve_device_sdr_repository()
-                time.sleep(0.1 * retry)
-                # clean all previous data and retry with new reservation
-                del record_data[:]
-                req.offset = 0
-                retry -= 1
-                continue
-            elif rsp.completion_code == 0xce:
-                time.sleep(0.1 * retry)
-                retry -= 1
-                continue
-            else:
-                check_completion_code(rsp.completion_code)
+            try:
+                (next_record_id, data) = self._get_device_sdr_chunk(reservation_id, record_id, offset, length)
+            except CompletionCodeError, e:
+                if e.cc == constants.CC_CANT_RET_NUM_REQ_BYTES:
+                    # reduce max lenght
+                    self.max_req_len -= 4
+                    if self.max_req_len <= 0:
+                        retry = 0
+                else:
+                    Assert
 
-            record_data.append_array(rsp.record_data[:])
-            req.offset = len(record_data)
+            record_data.append_array(data[:])
+            offset = len(record_data)
             if len(record_data) >= record_length:
                 break
 
