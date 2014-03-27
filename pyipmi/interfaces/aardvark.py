@@ -42,12 +42,11 @@ class Aardvark:
         self.timeout = 0.25 # 250 ms
         self.max_retries = 3
         self.next_sequence_number = 0
-        self._dev = pyaardvark.Aardvark()
-        self._dev.open(0)
-        self._dev.configure(pyaardvark.Aardvark.CONFIG_SPI_I2C)
-        self._dev.i2c_enable_pullups(False)
+
+        self._dev = pyaardvark.open()
+        self._dev.enable_i2c = True
+        self._dev.i2c_pullups = True
         self._dev.i2c_slave_enable(self.slave_address >> 1)
-        self._dev.i2c_bitrate(100)
 
     def enable_pullups(self, enabled):
         self._dev.i2c_enable_pullups(enabled)
@@ -109,7 +108,7 @@ class Aardvark:
         cmd_data = data[5:-1]
         return (rs_sa, netfn, rq_lun, rq_sa, rs_lun, rq_seq, cmd_id, cmd_data)
 
-    def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
+    def _send_and_receive_raw(self, target, lun, netfn, raw_bytes):
 
         if hasattr(target, 'routing') and len(target.routing) > 1:
             raise RuntimeError('Bridging is not supported yet')
@@ -133,7 +132,7 @@ class Aardvark:
         rsp_received = False
         while not rsp_received and timeout > 0:
             ret = self._dev.poll(int(timeout * 1000))
-            if ret == pyaardvark.Aardvark.POLL_NO_DATA:
+            if ret == pyaardvark.POLL_NO_DATA:
                 raise TimeoutError()
 
             (addr, rx_data) = self._dev.i2c_slave_read()
@@ -158,6 +157,10 @@ class Aardvark:
 
         return rx_data.tostring()
 
+    def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
+        rx_data = self._send_and_receive_raw(target, lun, netfn, raw_bytes)
+        return rx_data[5:-1]
+
     def send_and_receive(self, msg):
         """Sends an IPMI request message and waits for its response.
 
@@ -169,7 +172,7 @@ class Aardvark:
         retries = 0
         while retries < self.max_retries:
             try:
-                rx_data = self.send_and_receive_raw(msg.target, msg.lun,
+                rx_data = self._send_and_receive_raw(msg.target, msg.lun,
                         msg.netfn, chr(msg.cmdid) + encode_message(msg))
                 break
             except TimeoutError:

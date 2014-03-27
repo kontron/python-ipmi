@@ -80,6 +80,16 @@ class Hpm:
         self._check_completion_code(rsp)
         return ComponentProperty.create_from_id(property_id, rsp)
 
+    def get_component_properties(self, component_id):
+        properties = []
+        for p in (PROPERTY_GENERAL_PROPERTIES, PROPERTY_CURRENT_VERSION,
+                PROPERTY_DESCRIPTION_STRING, PROPERTY_ROLLBACK_VERSION,
+                PROPERTY_DEFERRED_VERSION):
+            property = self.get_component_property(component_id, p)
+            if property is not None:
+                properties.append(property)
+        return properties
+
     def find_component_id_by_descriptor(self, descriptor):
         caps = self.get_target_upgrade_capabilities()
         for component_id in caps.components:
@@ -289,8 +299,6 @@ class Hpm:
                 print "do ACTION_UPLOAD_FOR_UPGRADE"
 
 
-
-
     def preparation_stage(self, image):
         ####################################################
         # match device ID, manfuacturer ID, etc.
@@ -338,9 +346,16 @@ class Hpm:
 
     def wait_until_new_firmware_comes_up(self, timeout, interval):
         start_time = time.time()
-        while time.time() < start_time + timeout:
+        while time.time() < start_time + (timeout * 2):
             try:
                 self.query_selftest_results()
+            except CompletionCodeError, e:
+                if e.cc == LONG_DURATION_CMD_IN_PROGRESS_CC:
+                    self.wait_for_long_duration_command(
+                            constants.CMDID_HPM_QUERY_SELFTEST_RESULTS,
+                            timeout, interval)
+                else:
+                    raise HpmError('query selftest CC=0x%02x' % e.cc)
             except TimeoutError:
                 time.sleep(interval)
 
@@ -562,7 +577,7 @@ class SelfTestResult:
 
 class RollbackStatus:
     def __init__(self, rsp=None):
-        if data:
+        if rsp:
             self.from_rsp(rsp)
 
     def from_rsp(self, rsp):

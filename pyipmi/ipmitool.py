@@ -251,11 +251,17 @@ def cmd_hpm_capabilities(ipmi, args):
 def cmd_hpm_check_file(ipmi, args):
     if len(args) < 1:
         return
-    cap = ipmi.open_hpm_file(args[0])
+    cap = ipmi.open_upgrade_image(args[0])
 
     print cap.header
     for action in cap.actions:
         print action
+
+def cmd_hpm_install(ipmi, args):
+    if len(args) < 2:
+        return
+    ipmi.install_component_from_file(args[0], int(args[1]))
+
 
 def cmd_picmg_get_power(ipmi, args):
     pwr = ipmi.get_power_level(0, 0)
@@ -505,6 +511,7 @@ COMMANDS = (
         Command('raw', cmd_raw),
         Command('hpm capabilities', cmd_hpm_capabilities),
         Command('hpm check', cmd_hpm_check_file),
+        Command('hpm install', cmd_hpm_install),
         Command('chassis power off',
             lambda i, a: i.chassis_control_power_down()),
         Command('chassis power on',
@@ -556,6 +563,8 @@ COMMAND_HELP = (
                 'Request the target upgrade capabilities'),
         CommandHelp('hpm check', 'HPM.1 file check',
                 'Check the specified HPM.1 file'),
+        CommandHelp('hpm install', '<file> <component id>',
+                'Install the specified HPM.1 file to the controller'),
 
         CommandHelp('chassis', None, 'Get chassis status and set power state'),
         CommandHelp('chassis power', '<on|off|cycle|reset|diag|soft>',
