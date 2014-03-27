@@ -66,7 +66,7 @@ class GetDeviceSdrReq(Message):
             UnsignedInt('reservation_id', 2, 0x0000),
             UnsignedInt('record_id', 2),
             UnsignedInt('offset', 1),
-            UnsignedInt('length', 1),
+            UnsignedInt('bytes_to_read', 1),
     )
 
 
