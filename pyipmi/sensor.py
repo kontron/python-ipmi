@@ -23,7 +23,7 @@ from pyipmi.utils import check_completion_code, ByteBuffer
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 
-from pyipmi.helper import get_sdr_helper
+from pyipmi.helper import get_sdr_data_helper
 
 import sdr
 
@@ -142,8 +142,9 @@ class Sensor:
         `reservation_id=None` can be set. if None the reservation ID will
         be determined.
         """
-        return get_sdr_helper(self.reserve_device_sdr_repository,
+        (next_id, record_id) = get_sdr_data_helper(self.reserve_device_sdr_repository,
                 self._get_device_sdr_chunk, record_id, reservation_id)
+        return sdr.create_sdr(record_data, next_id)
 
     def device_sdr_entries(self):
         """A generator that returns the SDR list. Starting with ID=0x0000 and

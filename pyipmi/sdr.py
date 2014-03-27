@@ -23,7 +23,7 @@ from pyipmi.utils import check_completion_code, ByteBuffer
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 
-from pyipmi.helper import get_sdr_helper, clear_repository_helper
+from pyipmi.helper import get_sdr_data_helper, clear_repository_helper
 
 SDR_TYPE_FULL_SENSOR_RECORD = 0x01
 SDR_TYPE_COMPACT_SENSOR_RECORD = 0x02
@@ -88,8 +88,10 @@ class Sdr:
         return (rsp.next_record_id, rsp.data)
 
     def get_repository_sdr(self, record_id, reservation_id=None):
-        return get_sdr_helper(self.reserve_sdr_repository,
-                self._get_sdr_chunk, record_id, reservation_id)
+        (next_id, record_data) = get_sdr_data_helper(
+                self.reserve_sdr_repository, self._get_sdr_chunk,
+                record_id, reservation_id)
+        return create_sdr(record_data, next_id)
 
     def sdr_repository_entries(self):
         """A generator that returns the SDR list. Starting with ID=0x0000 and

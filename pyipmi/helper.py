@@ -23,7 +23,7 @@ from pyipmi.msgs import constants
 
 import sdr
 
-def get_sdr_helper(reserve_fn, get_fn, record_id, reservation_id=None):
+def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
     """Helper function to retrieve the sdr data using the specified
     functions.
 
@@ -74,7 +74,7 @@ def get_sdr_helper(reserve_fn, get_fn, record_id, reservation_id=None):
         if len(record_data) >= record_length:
             break
 
-    return sdr.create_sdr(record_data, next_id)
+    return (next_id, record_data)
 
 
 INITIATE_ERASE = 0xaa
