@@ -59,7 +59,7 @@ class GetChassisCapabilitiesRsp(Message):
         UnsignedInt('fru_info_device_address', 1),
         UnsignedInt('sdr_device_address', 1),
         UnsignedInt('sel_device_address', 1),
-        UnsignedInt('system_managemnet_device_address', 1),
+        UnsignedInt('system_management_device_address', 1),
         Optional(
             UnsignedInt('bridge_device_address', 1)
         ),
@@ -87,7 +87,7 @@ class GetChassisStatusRsp(Message):
             Bitfield.Bit('interlock', 1),
             Bitfield.Bit('power_fault', 1),
             Bitfield.Bit('power_control_fault', 1),
-            Bitfield.Bit('power restore_policy', 2),
+            Bitfield.Bit('power_restore_policy', 2),
             Bitfield.ReservedBit(1, 0),
         ),
         Bitfield('last_power_event', 1,
@@ -128,4 +128,24 @@ class ChassisControlRsp(Message):
     __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
+    )
+
+
+@register_message_class
+class GetPohCounterReq(Message):
+    __cmdid__ = constants.CMDID_GET_POH_COUNTER
+    __netfn__ = constants.NETFN_CHASSIS
+    __default_lun__ = 0
+    __fields__ = ()
+
+
+@register_message_class
+class GetPohCounterRsp(Message):
+    __cmdid__ = constants.CMDID_GET_POH_COUNTER
+    __netfn__ = constants.NETFN_CHASSIS | 1
+    __default_lun__ = 0
+    __fields__ = (
+        CompletionCode(),
+        UnsignedInt('minutes_per_count', 1),
+        UnsignedInt('counter_reading', 4),
     )

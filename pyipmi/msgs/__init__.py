@@ -40,5 +40,6 @@ import hpm
 import picmg
 import sdr
 import sel
+import sensor
 import event
 import lan

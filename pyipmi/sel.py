@@ -22,10 +22,8 @@ from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 from pyipmi.event import EVENT_ASSERTION, EVENT_DEASSERTION
 
-INITIATE_ERASE = 0xaa
-GET_ERASE_STATUS = 0x00
-ERASURE_IN_PROGRESS = 0x0
-ERASURE_COMPLETED = 0x1
+from pyipmi.helper import clear_repository_helper
+
 
 class Sel:
     def get_sel_entries_count(self):
@@ -40,42 +38,17 @@ class Sel:
         check_completion_code(rsp.completion_code)
         return rsp.reservation_id
 
-    def clear_sel(self, retry=5):
+    def _clear_sel(self, cmd, reservation):
         req = create_request_by_name('ClearSel')
-        req.reservation_id = self.get_sel_reservation_id()
+        req.reservation_id = reservation
+        req.cmd = cmd
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return rsp.status.erase_in_progress
 
-        req.cmd = INITIATE_ERASE
-        while True:
-            rsp = self.send_message(req)
-            if rsp.completion_code == constants.CC_RES_CANCELED:
-                req.reservation_id = self.get_sel_reservation_id()
-                retry -= 1
-                continue
-            else:
-                check_completion_code(rsp.completion_code)
-                break
-
-        req.cmd = GET_ERASE_STATUS
-        while True:
-            if retry <= 0:
-                raise RetryError()
-
-            rsp = self.send_message(req)
-            if rsp.completion_code == constants.CC_OK:
-                if rsp.status.erase_in_progress == ERASURE_IN_PROGRESS:
-                    time.sleep(0.5)
-                    retry -= 1
-                    continue
-                else:
-                    break
-            elif rsp.completion_code == constants.CC_RES_CANCELED:
-                time.sleep(0.2)
-                req.reservation_id = self.get_sel_reservation_id()
-                retry -= 1
-                continue
-            else:
-                check_completion_code(rsp.completion_code)
-                break
+    def clear_sel(self, retry=5):
+        clear_repository_helper(self.get_sel_reservation_id,
+                self._clear_sel, retry)
 
     def sel_entries(self):
         """Generator which returns all SEL entries."""

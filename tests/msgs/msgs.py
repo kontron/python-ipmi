@@ -1,0 +1,438 @@
+#!/usr/bin/env python
+
+import unittest
+from array import array
+
+import pyipmi.msgs.bmc
+import pyipmi.msgs.event
+
+from pyipmi.errors import DecodingError, EncodingError
+from pyipmi.msgs import encode_message
+from pyipmi.msgs import decode_message
+
+
+class TestGetDeviceId(unittest.TestCase):
+    def test_decode_rsp_with_cc(self):
+        m = pyipmi.msgs.bmc.GetDeviceIdRsp()
+        decode_message(m, '\xc0')
+        self.assertEqual(m.completion_code, 0xc0)
+
+    def test_decode_valid_res(self):
+        m = pyipmi.msgs.bmc.GetDeviceIdRsp()
+        decode_message(m, '\x00\x0c\x89\x00\x00\x02\x3d\x98'
+                '\x3a\x00\xbe\x14\x04\x00\x02\x00')
+        self.assertEqual(m.completion_code, 0)
+        self.assertEqual(m.device_id, 0x0c)
+        self.assertEqual(m.device_revision.device_revision, 9)
+        self.assertEqual(m.device_revision.provides_device_sdrs, 1)
+        self.assertEqual(m.firmware_revision.major, 0)
+        self.assertEqual(m.firmware_revision.device_available, 0)
+        self.assertEqual(m.firmware_revision.minor, 0)
+        self.assertEqual(m.ipmi_version, 2)
+        self.assertEqual(m.additional_support.sensor, 1)
+        self.assertEqual(m.additional_support.sdr_repository, 0)
+        self.assertEqual(m.additional_support.sel, 1)
+        self.assertEqual(m.additional_support.fru_inventory, 1)
+        self.assertEqual(m.additional_support.ipmb_event_receiver, 1)
+        self.assertEqual(m.additional_support.ipmb_event_generator, 1)
+        self.assertEqual(m.additional_support.bridge, 0)
+        self.assertEqual(m.additional_support.chassis, 0)
+        self.assertEqual(m.manufacturer_id, 15000)
+        self.assertEqual(m.product_id, 5310)
+        self.assertEqual(m.auxiliary, array('B', '\x04\x00\x02\x00'))
+
+    def test_decode_valid_res_wo_aux(self):
+        m = pyipmi.msgs.bmc.GetDeviceIdRsp()
+        decode_message(m, '\x00\x0c\x89\x00\x00\x02\x3d\x98'
+                '\x3a\x00\xbe\x14')
+        self.assertEqual(m.completion_code, 0)
+        self.assertEqual(m.device_id, 0x0c)
+        self.assertEqual(m.device_revision.device_revision, 9)
+        self.assertEqual(m.device_revision.provides_device_sdrs, 1)
+        self.assertEqual(m.firmware_revision.major, 0)
+        self.assertEqual(m.firmware_revision.device_available, 0)
+        self.assertEqual(m.firmware_revision.minor, 0)
+        self.assertEqual(m.ipmi_version, 2)
+        self.assertEqual(m.additional_support.sensor, 1)
+        self.assertEqual(m.additional_support.sdr_repository, 0)
+        self.assertEqual(m.additional_support.sel, 1)
+        self.assertEqual(m.additional_support.fru_inventory, 1)
+        self.assertEqual(m.additional_support.ipmb_event_receiver, 1)
+        self.assertEqual(m.additional_support.ipmb_event_generator, 1)
+        self.assertEqual(m.additional_support.bridge, 0)
+        self.assertEqual(m.additional_support.chassis, 0)
+        self.assertEqual(m.manufacturer_id, 15000)
+        self.assertEqual(m.product_id, 5310)
+
+
+class TestGetSelftestResults(unittest.TestCase):
+    def test_decode_selftest_passed_rsp(self):
+        m = pyipmi.msgs.bmc.GetSelftestResultsRsp()
+        decode_message(m, '\x00\x55\x00')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.result, 0x55)
+        self.assertEqual(int(m.status), 0x00)
+
+    def test_decode_selftest_fail_not_implemented_rsp(self):
+        m = pyipmi.msgs.bmc.GetSelftestResultsRsp()
+        decode_message(m, '\x00\x56\x00')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.result, 0x56)
+        self.assertEqual(int(m.status), 0x00)
+
+    def test_decode_selftest_fail_corrupted_sel_rsp(self):
+        m = pyipmi.msgs.bmc.GetSelftestResultsRsp()
+        decode_message(m, '\x00\x57\x80')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.result, 0x57)
+        self.assertEqual(int(m.status), 0x80)
+        self.assertEqual(m.status.cannot_access_sel_device, 1)
+        self.assertEqual(m.status.cannot_access_sdr_device, 0)
+        self.assertEqual(m.status.cannot_access_bmc_fru_device, 0)
+        self.assertEqual(m.status.ipmb_signal_lines_do_not_respond, 0)
+        self.assertEqual(m.status.sdr_repository_empty, 0)
+        self.assertEqual(m.status.internal_use_area_corrupted, 0)
+        self.assertEqual(m.status.controller_bootblock_corrupted, 0)
+        self.assertEqual(m.status.controller_firmware_corrupted, 0)
+
+    def test_decode_selftest_fail_corrupted_sdr_rsp(self):
+        m = pyipmi.msgs.bmc.GetSelftestResultsRsp()
+        decode_message(m, '\x00\x57\x40')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.result, 0x57)
+        self.assertEqual(int(m.status), 0x40)
+        self.assertEqual(m.status.cannot_access_sel_device, 0)
+        self.assertEqual(m.status.cannot_access_sdr_device, 1)
+        self.assertEqual(m.status.cannot_access_bmc_fru_device, 0)
+        self.assertEqual(m.status.ipmb_signal_lines_do_not_respond, 0)
+        self.assertEqual(m.status.sdr_repository_empty, 0)
+        self.assertEqual(m.status.internal_use_area_corrupted, 0)
+        self.assertEqual(m.status.controller_bootblock_corrupted, 0)
+        self.assertEqual(m.status.controller_firmware_corrupted, 0)
+
+    def test_decode_selftest_fail_corrupted_sdr_rsp(self):
+        m = pyipmi.msgs.bmc.GetSelftestResultsRsp()
+        decode_message(m, '\x00\x57\x20')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.result, 0x57)
+        self.assertEqual(int(m.status), 0x20)
+        self.assertEqual(m.status.cannot_access_sel_device, 0)
+        self.assertEqual(m.status.cannot_access_sdr_device, 0)
+        self.assertEqual(m.status.cannot_access_bmc_fru_device, 1)
+        self.assertEqual(m.status.ipmb_signal_lines_do_not_respond, 0)
+        self.assertEqual(m.status.sdr_repository_empty, 0)
+        self.assertEqual(m.status.internal_use_area_corrupted, 0)
+        self.assertEqual(m.status.controller_bootblock_corrupted, 0)
+        self.assertEqual(m.status.controller_firmware_corrupted, 0)
+
+
+class TestSetBmcGlobalEnables(unittest.TestCase):
+    def test_encode_all_disabled_req(self):
+        m = pyipmi.msgs.bmc.SetBmcGlobalEnablesReq()
+        m.enables.oem_2 = 0
+        m.enables.oem_1 = 0
+        m.enables.oem_0 = 0
+        m.enables.system_event_logging = 0
+        m.enables.event_message_buffer = 0
+        m.enables.event_message_buffer_full_interrupt = 0
+        m.enables.receive_message_queue_interrupt = 0
+        data = encode_message(m)
+        self.assertEqual(data, '\x00')
+
+    def test_encode_enable_oem_2_req(self):
+        m = pyipmi.msgs.bmc.SetBmcGlobalEnablesReq()
+        m.enables.oem_2 = 1
+        m.enables.oem_1 = 0
+        m.enables.oem_0 = 0
+        m.enables.system_event_logging = 0
+        m.enables.event_message_buffer = 0
+        m.enables.event_message_buffer_full_interrupt = 0
+        m.enables.receive_message_queue_interrupt = 0
+        data = encode_message(m)
+        self.assertEqual(data, '\x80')
+
+    def test_encode_enable_oem_1_req(self):
+        m = pyipmi.msgs.bmc.SetBmcGlobalEnablesReq()
+        m.enables.oem_2 = 0
+        m.enables.oem_1 = 1
+        m.enables.oem_0 = 0
+        m.enables.system_event_logging = 0
+        m.enables.event_message_buffer = 0
+        m.enables.event_message_buffer_full_interrupt = 0
+        m.enables.receive_message_queue_interrupt = 0
+        data = encode_message(m)
+        self.assertEqual(data, '\x40')
+
+    def test_encode_enable_oem_0_req(self):
+        m = pyipmi.msgs.bmc.SetBmcGlobalEnablesReq()
+        m.enables.oem_2 = 0
+        m.enables.oem_1 = 0
+        m.enables.oem_0 = 1
+        m.enables.system_event_logging = 0
+        m.enables.event_message_buffer = 0
+        m.enables.event_message_buffer_full_interrupt = 0
+        m.enables.receive_message_queue_interrupt = 0
+        data = encode_message(m)
+        self.assertEqual(data, '\x20')
+
+    def test_encode_enable_receive_message_queue_interrupt_req(self):
+        m = pyipmi.msgs.bmc.SetBmcGlobalEnablesReq()
+        m.enables.oem_2 = 0
+        m.enables.oem_1 = 0
+        m.enables.oem_0 = 0
+        m.enables.system_event_logging = 0
+        m.enables.event_message_buffer = 0
+        m.enables.event_message_buffer_full_interrupt = 0
+        m.enables.receive_message_queue_interrupt = 1
+        data = encode_message(m)
+        self.assertEqual(data, '\x01')
+
+
+class TestGetBmcGlobalEnables(unittest.TestCase):
+    def test_decode_all_disabled_rsp(self):
+        m = pyipmi.msgs.bmc.GetBmcGlobalEnablesRsp()
+        decode_message(m, '\x00\x00')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.enables.oem_2, 0)
+        self.assertEqual(m.enables.oem_1, 0)
+        self.assertEqual(m.enables.oem_0, 0)
+        self.assertEqual(m.enables.system_event_logging, 0)
+        self.assertEqual(m.enables.event_message_buffer, 0)
+        self.assertEqual(m.enables.event_message_buffer_full_interrupt, 0)
+        self.assertEqual(m.enables.receive_message_queue_interrupt, 0)
+
+    def test_decode_oem_2_enabled_rsp(self):
+        m = pyipmi.msgs.bmc.GetBmcGlobalEnablesRsp()
+        decode_message(m, '\x00\x80')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.enables.oem_2, 1)
+        self.assertEqual(m.enables.oem_1, 0)
+        self.assertEqual(m.enables.oem_0, 0)
+        self.assertEqual(m.enables.system_event_logging, 0)
+        self.assertEqual(m.enables.event_message_buffer, 0)
+        self.assertEqual(m.enables.event_message_buffer_full_interrupt, 0)
+        self.assertEqual(m.enables.receive_message_queue_interrupt, 0)
+
+    def test_decode_oem_0_enabled_rsp(self):
+        m = pyipmi.msgs.bmc.GetBmcGlobalEnablesRsp()
+        decode_message(m, '\x00\x20')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.enables.oem_2, 0)
+        self.assertEqual(m.enables.oem_1, 0)
+        self.assertEqual(m.enables.oem_0, 1)
+        self.assertEqual(m.enables.system_event_logging, 0)
+        self.assertEqual(m.enables.event_message_buffer, 0)
+        self.assertEqual(m.enables.event_message_buffer_full_interrupt, 0)
+        self.assertEqual(m.enables.receive_message_queue_interrupt, 0)
+
+
+class TestClearMessageFlags(unittest.TestCase):
+    def test_encode_clear_none_req(self):
+        m = pyipmi.msgs.bmc.ClearMessageFlagsReq()
+        m.clear.oem_2 = 0
+        m.clear.oem_1 = 0
+        m.clear.oem_0 = 0
+        m.clear.watchdog_pretimeout_interrupt_flag = 0
+        m.clear.event_message_buffer = 0
+        m.clear.receive_message_queue = 0
+        data = encode_message(m)
+        self.assertEqual(data, '\x00')
+
+    def test_encode_clear_oem_2_req(self):
+        m = pyipmi.msgs.bmc.ClearMessageFlagsReq()
+        m.clear.oem_2 = 1
+        m.clear.oem_1 = 0
+        m.clear.oem_0 = 0
+        m.clear.watchdog_pretimeout_interrupt_flag = 0
+        m.clear.event_message_buffer = 0
+        m.clear.receive_message_queue = 0
+        data = encode_message(m)
+        self.assertEqual(data, '\x80')
+
+    def test_encode_clear_oem_0_req(self):
+        m = pyipmi.msgs.bmc.ClearMessageFlagsReq()
+        m.clear.oem_2 = 0
+        m.clear.oem_1 = 0
+        m.clear.oem_0 = 1
+        m.clear.watchdog_pretimeout_interrupt_flag = 0
+        m.clear.event_message_buffer = 0
+        m.clear.receive_message_queue = 0
+        data = encode_message(m)
+        self.assertEqual(data, '\x20')
+
+    def test_encode_clear_receive_message_queue_req(self):
+        m = pyipmi.msgs.bmc.ClearMessageFlagsReq()
+        m.clear.oem_2 = 0
+        m.clear.oem_1 = 0
+        m.clear.oem_0 = 0
+        m.clear.watchdog_pretimeout_interrupt_flag = 0
+        m.clear.event_message_buffer = 0
+        m.clear.receive_message_queue = 1
+        data = encode_message(m)
+        self.assertEqual(data, '\x01')
+
+
+class TestGetMessageFlags(unittest.TestCase):
+    def test_decode_not_flag_set_rsp(self):
+        m = pyipmi.msgs.bmc.GetMessageFlagsRsp()
+        decode_message(m, '\x00\x00')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.flag.oem_2, 0)
+        self.assertEqual(m.flag.oem_1, 0)
+        self.assertEqual(m.flag.oem_0, 0)
+        self.assertEqual(m.flag.watchdog_pretimeout_interrupt_occurred, 0)
+        self.assertEqual(m.flag.event_message_buffer_full, 0)
+        self.assertEqual(m.flag.receive_message_available, 0)
+
+    def test_decode_oem_2_set_rsp(self):
+        m = pyipmi.msgs.bmc.GetMessageFlagsRsp()
+        decode_message(m, '\x00\x80')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.flag.oem_2, 1)
+        self.assertEqual(m.flag.oem_1, 0)
+        self.assertEqual(m.flag.oem_0, 0)
+        self.assertEqual(m.flag.watchdog_pretimeout_interrupt_occurred, 0)
+        self.assertEqual(m.flag.event_message_buffer_full, 0)
+        self.assertEqual(m.flag.receive_message_available, 0)
+
+    def test_decode_event_message_full_set_rsp(self):
+        m = pyipmi.msgs.bmc.GetMessageFlagsRsp()
+        decode_message(m, '\x00\x02')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.flag.oem_2, 0)
+        self.assertEqual(m.flag.oem_1, 0)
+        self.assertEqual(m.flag.oem_0, 0)
+        self.assertEqual(m.flag.watchdog_pretimeout_interrupt_occurred, 0)
+        self.assertEqual(m.flag.event_message_buffer_full, 1)
+        self.assertEqual(m.flag.receive_message_available, 0)
+
+
+class TestEnableMessageChannelReceive(unittest.TestCase):
+    def test_encode_all_off_req(self):
+        m = pyipmi.msgs.bmc.EnableMessageChannelReceiveReq()
+        m.channel.number = 0
+        m.channel.state = 0
+        data = encode_message(m)
+        self.assertEqual(data, '\x00\x00')
+
+    def test_encode_channel1_enable_req(self):
+        m = pyipmi.msgs.bmc.EnableMessageChannelReceiveReq()
+        m.channel.number = 1
+        m.channel.state = 1
+        data = encode_message(m)
+        self.assertEqual(data, '\x01\x01')
+
+    def test_encode_channel2_enable_req(self):
+        m = pyipmi.msgs.bmc.EnableMessageChannelReceiveReq()
+        m.channel.number = 2
+        m.channel.state = 1
+        data = encode_message(m)
+        self.assertEqual(data, '\x02\x01')
+
+    def test_decode_channel1_enabled_rsp(self):
+        m = pyipmi.msgs.bmc.EnableMessageChannelReceiveRsp()
+        decode_message(m, '\x00\x01\x01')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.channel.number, 1)
+        self.assertEqual(m.channel.state, 1)
+
+
+class TestGetMessage(unittest.TestCase):
+	def test_decode_no_data_rsp(self):
+		m = pyipmi.msgs.bmc.GetMessageRsp()
+		decode_message(m, '\x00\x21')
+		self.assertEqual(m.completion_code, 0x00)
+		self.assertEqual(m.channel_number.channel_number, 1)
+		self.assertEqual(m.channel_number.privilege_level, 2)
+
+	def test_decode_with_data_rsp(self):
+		m = pyipmi.msgs.bmc.GetMessageRsp()
+		decode_message(m, '\x00\x21\xaa\xff\xff\xee')
+		self.assertEqual(m.completion_code, 0x00)
+		self.assertEqual(m.channel_number.channel_number, 1)
+		self.assertEqual(m.channel_number.privilege_level, 2)
+		self.assertEqual(m.data, array('B', '\xaa\xff\xff\xee'))
+
+
+class TestReadEventMessageBuffer(unittest.TestCase):
+    def test_decode_rsp(self):
+        m = pyipmi.msgs.bmc.ReadEventMessageBufferRsp()
+        decode_message(m, '\x00\x00\x01\x02\x03\x04\x05\x06\x07'\
+                '\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.event_data, array('B', '\x00\x01\x02\x03\x04'\
+                '\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'))
+
+class TestMasterWriteRead(unittest.TestCase):
+    def test_encode_req_all_zero_read(self):
+        m = pyipmi.msgs.bmc.MasterWriteReadReq()
+        m.bus_id.type = 0
+        m.bus_id.id = 0
+        m.bus_id.channel = 0
+        m.bus_id.slave_address = 0
+        m.read_count = 0
+        data = encode_message(m)
+        self.assertEqual(data,'\x00\x00\x00')
+
+    def test_encode_req_for_read(self):
+        m = pyipmi.msgs.bmc.MasterWriteReadReq()
+        m.bus_id.type = 1
+        m.bus_id.id = 2
+        m.bus_id.channel = 4
+        m.bus_id.slave_address = 0x3a
+        m.read_count = 5
+        data = encode_message(m)
+        self.assertEqual(data,'\x45\x74\x05')
+
+    def test_encode_req_for_read(self):
+        m = pyipmi.msgs.bmc.MasterWriteReadReq()
+        m.bus_id.type = 0
+        m.bus_id.id = 0
+        m.bus_id.channel = 0
+        m.bus_id.slave_address = 0
+        m.read_count = 0
+        m.data = '\x01\x23\x45'
+        data = encode_message(m)
+        self.assertEqual(data,'\x00\x00\x00\x01\x23\x45')
+
+    def test_decode_rsp(self):
+        m = pyipmi.msgs.bmc.MasterWriteReadRsp()
+        decode_message(m, '\x00\x11\x22\x33\x44')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.data, array('B', '\x11\x22\x33\x44'))
+
+
+class TestSetEventReceiver(unittest.TestCase):
+    def test_encode_lun0_req(self):
+        m = pyipmi.msgs.event.SetEventReceiverReq()
+        m.event_receiver.ipmb_i2c_slave_address = 0x10
+        m.event_receiver.lun = 0
+        data = encode_message(m)
+        self.assertEqual(data, '\x20\x00')
+
+    def test_encode_lun3_req(self):
+        m = pyipmi.msgs.event.SetEventReceiverReq()
+        m.event_receiver.ipmb_i2c_slave_address = 0x10
+        m.event_receiver.lun = 3
+        data = encode_message(m)
+        self.assertEqual(data, '\x20\x03')
+
+
+class TestGetEventReceiver(unittest.TestCase):
+    def test_decode_lun0_rsp(self):
+        m = pyipmi.msgs.event.GetEventReceiverRsp()
+        decode_message(m, '\x00\x20\x00')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.event_receiver.ipmb_i2c_slave_address, 0x10)
+        self.assertEqual(m.event_receiver.lun, 0)
+
+    def test_decode_lun3_rsp(self):
+        m = pyipmi.msgs.event.GetEventReceiverRsp()
+        decode_message(m, '\x00\x20\x03')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.event_receiver.ipmb_i2c_slave_address, 0x10)
+        self.assertEqual(m.event_receiver.lun, 3)
+
+
+if __name__ == '__main__':
+    unittest.main()

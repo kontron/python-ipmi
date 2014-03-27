@@ -206,8 +206,9 @@ class Hpm:
                 status = self.get_upgrade_status()
                 if status.command_in_progress is not expected_cmd \
                         and status.command_in_progress is not 0x34:
-                    raise HpmError('unexpected cmd=0x%02x' \
-                            % status.command_in_progress)
+                    #raise HpmError('unexpected cmd=0x%02x' \
+                    #        % status.command_in_progress)
+                    pass
                 if status.last_completion_code == LONG_DURATION_CMD_IN_PROGRESS_CC:
                     time.sleep(interval)
                 else:
@@ -351,9 +352,7 @@ class Hpm:
                 self.query_selftest_results()
             except CompletionCodeError, e:
                 if e.cc == LONG_DURATION_CMD_IN_PROGRESS_CC:
-                    self.wait_for_long_duration_command(
-                            constants.CMDID_HPM_QUERY_SELFTEST_RESULTS,
-                            timeout, interval)
+                    time.sleep(interval)
                 else:
                     raise HpmError('query selftest CC=0x%02x' % e.cc)
             except TimeoutError:

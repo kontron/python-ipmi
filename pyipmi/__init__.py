@@ -14,16 +14,17 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-import functools
-import picmg
-import chassis
 import bmc
-import fru
-import sel
+import chassis
 import event
-import sdr
+import fru
+import functools
 import hpm
 import lan
+import picmg
+import sdr
+import sel
+import sensor
 
 try:
     from version import __version__
@@ -118,8 +119,8 @@ class Session:
 
     interface = property(_get_interface, _set_interface)
 
-class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm, sdr.Sdr,
-        event.Event, sel.Sel, lan.Lan):
+class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
+        sdr.Sdr, sensor.Sensor, event.Event, sel.Sel, lan.Lan):
 
     def __init__(self):
         if (hasattr(bmc.Bmc, '__init__')):
@@ -134,6 +135,8 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm, sdr.Sdr,
             hpm.Hpm.__init__(self)
         if (hasattr(sdr.Sdr, '__init__')):
             sdr.Sdr.__init__(self)
+        if (hasattr(sensor.Sensor, '__init__')):
+            sensor.Sensor.__init__(self)
         if (hasattr(event.Event, '__init__')):
             event.Event.__init__(self)
         if (hasattr(sel.Sel, '__init__')):
