@@ -1,4 +1,4 @@
-# Copyright (c) 2014  Kontron Europe GmbH
+# cOPYRIGht (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -22,6 +22,8 @@ from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
 from pyipmi.utils import check_completion_code, ByteBuffer
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
+
+from pyipmi.helper import get_sdr_helper
 
 import sdr
 
@@ -107,7 +109,7 @@ class Sensor:
         req.reservation_id = reservation_id
         req.record_id = record_id
         req.offset = offset
-        req.length = length
+        req.bytes_to_read = length
         retry = 5
 
         while True:
@@ -133,59 +135,15 @@ class Sensor:
         return (rsp.next_record_id, rsp.record_data)
 
     def get_device_sdr(self, record_id, reservation_id=None):
-        """Collects all data for the given SDR record ID and returns
-        the decoded SDR object.
+        """Collects all data from the sensor device to get the SDR
+        specified by record id.
 
         `record_id` the Record ID.
-
         `reservation_id=None` can be set. if None the reservation ID will
         be determined.
         """
-        if reservation_id is None:
-            reservation_id = self.reserve_device_sdr_repository()
-
-
-        (next_record_id, data) = self._get_device_sdr_chunk(reservation_id, record_id, 0, 5)
-
-        header = ByteBuffer(data)
-        record_id = header.pop_unsigned_int(2)
-        record_version = header.pop_unsigned_int(1)
-        record_type = header.pop_unsigned_int(1)
-        record_payload_length = header.pop_unsigned_int(1)
-        record_length = record_payload_length + 5
-        record_data = ByteBuffer(data)
-
-        offset = len(record_data)
-        self.max_req_len = 20
-        retry = 20
-
-        # now get the other record data
-        while True:
-            retry -= 1
-            if retry == 0:
-                raise RetryError()
-
-            length = self.max_req_len
-            if (offset + length) > record_length:
-                length = record_length - offset
-
-            try:
-                (next_record_id, data) = self._get_device_sdr_chunk(reservation_id, record_id, offset, length)
-            except CompletionCodeError, e:
-                if e.cc == constants.CC_CANT_RET_NUM_REQ_BYTES:
-                    # reduce max lenght
-                    self.max_req_len -= 4
-                    if self.max_req_len <= 0:
-                        retry = 0
-                else:
-                    Assert
-
-            record_data.append_array(data[:])
-            offset = len(record_data)
-            if len(record_data) >= record_length:
-                break
-
-        return sdr.create_sdr(record_data, next_record_id)
+        return get_sdr_helper(self.reserve_device_sdr_repository,
+                self._get_device_sdr_chunk, record_id, reservation_id)
 
     def device_sdr_entries(self):
         """A generator that returns the SDR list. Starting with ID=0x0000 and
