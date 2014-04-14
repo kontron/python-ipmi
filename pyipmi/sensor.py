@@ -142,7 +142,7 @@ class Sensor:
         `reservation_id=None` can be set. if None the reservation ID will
         be determined.
         """
-        (next_id, record_id) = get_sdr_data_helper(self.reserve_device_sdr_repository,
+        (next_id, record_data) = get_sdr_data_helper(self.reserve_device_sdr_repository,
                 self._get_device_sdr_chunk, record_id, reservation_id)
         return sdr.create_sdr(record_data, next_id)
 
