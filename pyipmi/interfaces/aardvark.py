@@ -108,6 +108,40 @@ class Aardvark:
         cmd_data = data[5:-1]
         return (rs_sa, netfn, rq_lun, rq_sa, rs_lun, rq_seq, cmd_id, cmd_data)
 
+    def _rx_filter(self, target, addr, tx_data, rx_data):
+
+        match = True
+
+        if (self._csum((addr, rx_data[0], rx_data[1])) != 0):
+            log().debug('Header checksum failed')
+            match = False
+        if self._csum(rx_data[2:]) != 0:
+            log().debug('payload checksum failed')
+            match = False
+        if addr != self.slave_address:
+            log().debug('slave address missmatch')
+            match = False
+        if rx_data[0] & ~3 != (tx_data[0] & ~3) | 4:
+            log().debug('NetFn missmatch')
+            match = False
+        if rx_data[2] != target.ipmb_address:
+            log().debug('target address missmatch')
+            match = False
+        if rx_data[0] & 3 != tx_data[3] & 3:
+            log().debug('request LUN missmatch')
+            match = False
+        if rx_data[3] & 3 != tx_data[0] & 3:
+            log().debug('responder LUN missmatch')
+            match = False
+        if rx_data[3] >> 2 != self.next_sequence_number:
+            log().debug('sequence number missmatch')
+            match = False
+        if rx_data[4] != tx_data[4]:
+            log().debug('command id missmatch')
+            match = False
+
+        return match
+
     def _send_and_receive_raw(self, target, lun, netfn, raw_bytes):
 
         if hasattr(target, 'routing') and len(target.routing) > 1:
@@ -128,10 +162,15 @@ class Aardvark:
 
         # receive messages
         start_time = time.time()
-        timeout = self.timeout - (time.time() - start_time)
         rsp_received = False
-        while not rsp_received and timeout > 0:
+        while not rsp_received:
+            timeout = self.timeout - (time.time() - start_time)
+
+            if timeout < 0:
+                raise TimeoutError()
+
             ret = self._dev.poll(int(timeout * 1000))
+
             if ret == pyaardvark.POLL_NO_DATA:
                 raise TimeoutError()
 
@@ -141,20 +180,9 @@ class Aardvark:
             rx_data = array.array('B', rx_data)
 
             addr <<= 1
+            rsp_received = self._rx_filter(target, addr, tx_data, rx_data)
 
-            if (self._csum((addr, rx_data[0], rx_data[1])) == 0  # hdr csum
-                    and self._csum(rx_data[2:]) == 0             # payload csum
-                    and addr == self.slave_address
-                    and rx_data[0] & ~3 == (tx_data[0] & ~3) | 4 # netfn + 1
-                    and rx_data[2] == target.ipmb_address
-                    and rx_data[0] & 3 == tx_data[3] & 3         # rq_lun
-                    and rx_data[3] & 3 == tx_data[0] & 3         # rs_lun
-                    and rx_data[3] >> 2 == self.next_sequence_number
-                    and rx_data[4] == tx_data[4]):               # command id
-                rsp_received = True
-            self._inc_sequence_number()
-            timeout = self.timeout - (time.time() - start_time)
-
+        self._inc_sequence_number()
         return rx_data.tostring()
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
