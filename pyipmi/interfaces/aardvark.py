@@ -33,12 +33,12 @@ class ChecksumError(Exception):
 class Aardvark:
     NAME = 'aardvark'
 
-    def __init__(self, port=0, serial_number=None):
+    def __init__(self, slave_address=0x20, port=0, serial_number=None):
         if pyaardvark is None:
             raise RuntimeError('No pyaardvark module found. You can not '
                     'use this interface.')
 
-        self.slave_address = 0x20
+        self.slave_address = slave_address
         self.timeout = 0.25 # 250 ms
         self.max_retries = 3
         self.next_sequence_number = 0
