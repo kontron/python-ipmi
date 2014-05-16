@@ -65,6 +65,15 @@ class Ipmitool:
         if child.returncode:
             raise TimeoutError()
 
+    def is_ipmc_accessible(self, target):
+        try:
+            self.rmcp_ping()
+            accessible = True
+        except TimeoutError:
+            accessible = False
+
+        return accessible
+
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
         cmd = '-l %d raw 0x%02x ' % (lun, netfn)
         cmd += ' '.join(['0x%02x' % ord(d) for d in raw_bytes])
