@@ -225,7 +225,7 @@ class Hpm:
         self._check_completion_code(rsp)
 
     def activate_firmware_and_wait(self, rollback_override=None,
-            timeout=2, interval=0.1):
+            timeout=2, interval=1):
         """ Activate the new uploaded firmware and wait for
             long running command. """
         try:
@@ -346,17 +346,7 @@ class Hpm:
         pass
 
     def wait_until_new_firmware_comes_up(self, timeout, interval):
-        start_time = time.time()
-        while time.time() < start_time + (timeout * 2):
-            try:
-                self.query_selftest_results()
-            except CompletionCodeError, e:
-                if e.cc == LONG_DURATION_CMD_IN_PROGRESS_CC:
-                    time.sleep(interval)
-                else:
-                    raise HpmError('query selftest CC=0x%02x' % e.cc)
-            except TimeoutError:
-                time.sleep(interval)
+        self.wait_until_ipmb_is_accessible(timeout, interval)
 
     def activation_stage(self, image, component):
         self.activate_firmware_and_wait(image.header.inaccessibility_timeout, 1)
