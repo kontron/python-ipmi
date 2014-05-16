@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+import time
+
 import bmc
 import chassis
 import event
@@ -25,6 +27,8 @@ import picmg
 import sdr
 import sel
 import sensor
+
+from pyipmi.errors import TimeoutError
 
 try:
     from version import __version__
@@ -143,6 +147,19 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
             sel.Sel.__init__(self)
         if (hasattr(lan.Lan, '__init__')):
             lan.Lan.__init__(self)
+
+    def is_ipmc_accessible(self):
+        return self.interface.is_ipmc_accessible(self.target)
+
+    def wait_until_ipmb_is_accessible(self, timeout, interval=0.25):
+        start_time = time.time()
+        while time.time() < start_time + (timeout):
+            try:
+                self.is_ipmc_accessible()
+            except TimeoutError:
+                time.sleep(interval)
+
+        self.is_ipmc_accessible()
 
     def send_message(self, msg):
         msg.target = self.target
