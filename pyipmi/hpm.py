@@ -346,7 +346,14 @@ class Hpm:
         pass
 
     def wait_until_new_firmware_comes_up(self, timeout, interval):
-        self.wait_until_ipmb_is_accessible(timeout, interval)
+        start_time = time.time()
+        while time.time() < start_time + timeout:
+            try:
+                status = self.get_upgrade_status()
+                self.get_device_id()
+            except TimeoutError:
+                time.sleep(interval)
+        time.sleep(5)
 
     def activation_stage(self, image, component):
         self.activate_firmware_and_wait(image.header.inaccessibility_timeout, 1)
