@@ -107,6 +107,9 @@ def clear_repository_helper(reserve_fn, clear_fn, retry=5, reservation=None):
 
         break
 
+    # give some time to clear
+    time.sleep(0.5)
+
     # wait until finish
     while True:
         retry -= 1
@@ -114,7 +117,7 @@ def clear_repository_helper(reserve_fn, clear_fn, retry=5, reservation=None):
             raise RetryError()
 
         try:
-            in_progress = clear_fn(INITIATE_ERASE, reservation)
+            in_progress = clear_fn(GET_ERASE_STATUS, reservation)
         except CompletionCodeError, e:
             if e.cc == constants.CC_RES_CANCELED:
                 time.sleep(0.2)
