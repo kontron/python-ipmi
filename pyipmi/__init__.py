@@ -28,7 +28,7 @@ import sdr
 import sel
 import sensor
 
-from pyipmi.errors import TimeoutError
+from pyipmi.errors import TimeoutError, CompletionCodeError
 
 try:
     from version import __version__
@@ -164,7 +164,19 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
     def send_message(self, msg):
         msg.target = self.target
         msg.requester = self.requester
-        return self.interface.send_and_receive(msg)
+
+        retry = 3
+        while True:
+            retry -= 1
+            try:
+                ret = self.interface.send_and_receive(msg)
+                break
+            except CompletionCodeError, e:
+                if e.cc == msgs.constants.CC_NODE_BUSY:
+                    retry -= 1
+                    continue
+
+        return ret
 
     def raw_command(self, lun, netfn, raw_bytes):
         return self.interface.send_and_receive_raw(self.target, lun, netfn,
