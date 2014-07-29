@@ -264,7 +264,9 @@ class SdrFullSensorRecord(SdrCommon):
             self.from_data(data)
 
     def __str__(self):
-        s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % ord(b) for b in self.data]))
+        s = '["%-16s"] [%s:%s] [%s]' \
+                % (self.device_id_string, self.entity_id,
+                self.entity_instance, ' '.join(['%02x' % b for b in self.data]))
         return s
 
     def convert_sensor_raw_to_value(self, raw):
@@ -497,7 +499,7 @@ class SdrCompactSensorRecord(SdrCommon):
             self.from_data(data)
 
     def __str__(self):
-        s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % ord(b) for b in self.data]))
+        s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
         return s
 
     def from_data(self, data):
@@ -563,7 +565,7 @@ class SdrFruDeviceLocator(SdrCommon):
             self.from_data(data)
 
     def __str__(self):
-        s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % ord(b) for b in self.data]))
+        s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
         return s
 
     def from_data(self, data):
@@ -594,7 +596,7 @@ class SdrManagementContollerDeviceLocator(SdrCommon):
             self.from_data(data)
 
     def __str__(self):
-        s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % ord(b) for b in self.data]))
+        s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
         return s
 
     def from_data(self, data):
