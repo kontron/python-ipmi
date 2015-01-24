@@ -24,6 +24,7 @@ def main():
     setup(name = 'pyipmi',
             version = version,
             description = 'Pure python IPMI library',
+            url='https://github.com/kontron/python-ipmi',
             author_email = 'michael.walle@kontron.com',
             packages = find_packages(exclude="test"),
             license = 'LGPLv2+',
