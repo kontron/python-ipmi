@@ -14,6 +14,57 @@ from pyipmi.msgs import encode_message
 from pyipmi.msgs import decode_message
 
 
+class TestGetAddressInfo(unittest.TestCase):
+    def test_get_address_info_picmg_2_9_rsp(self):
+        m = pyipmi.msgs.picmg.GetAddressInfoRsp()
+        decode_message(m, '\x00\x00\x01\x02\x03')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.picmg_identifier, 0x00)
+        self.assertEqual(m.hardware_address, 0x01)
+        self.assertEqual(m.ipmb_0_address, 0x02)
+        self.assertEqual(m.ipmb_1_address, 0x03)
+        self.assertEqual(m.fru_id, None)
+        self.assertEqual(m.site_id, None)
+        self.assertEqual(m.site_type, None)
+        self.assertEqual(m.carrier_number, None)
+
+    def test_get_address_info_picmg_3_0_rsp(self):
+        m = pyipmi.msgs.picmg.GetAddressInfoRsp()
+        decode_message(m, '\x00\x00\x01\x02\xff\x04\x05\x06')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.picmg_identifier, 0x00)
+        self.assertEqual(m.hardware_address, 0x01)
+        self.assertEqual(m.ipmb_0_address, 0x02)
+        self.assertEqual(m.ipmb_1_address, 0xff)
+        self.assertEqual(m.fru_id, 0x04)
+        self.assertEqual(m.site_id, 0x05)
+        self.assertEqual(m.site_type, 0x06)
+        self.assertEqual(m.carrier_number, None)
+
+    def test_get_address_info_mtca_rsp(self):
+        m = pyipmi.msgs.picmg.GetAddressInfoRsp()
+        decode_message(m, '\x00\x00\x01\x02\x03\x04\x05\x06\x07')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.picmg_identifier, 0x00)
+        self.assertEqual(m.hardware_address, 0x01)
+        self.assertEqual(m.ipmb_0_address, 0x02)
+        self.assertEqual(m.ipmb_1_address, 0x03)
+        self.assertEqual(m.fru_id, 0x04)
+        self.assertEqual(m.site_id, 0x05)
+        self.assertEqual(m.site_type, 0x06)
+        self.assertEqual(m.carrier_number, 0x07)
+
+
+class TestGetShelfAddressInfo(unittest.TestCase):
+    def test_get_shelf_address_info_rsp(self):
+        m = pyipmi.msgs.picmg.GetShelfAddressInfoRsp()
+        decode_message(m, '\x00\x00\x01\x02')
+        self.assertEqual(m.completion_code, 0x00)
+        self.assertEqual(m.picmg_identifier, 0x00)
+        self.assertEqual(m.shelf_address[0], 0x01)
+        self.assertEqual(m.shelf_address[1], 0x02)
+
+
 class TestFruActivationPolicy(unittest.TestCase):
     def test_clear_activation_lock_req(self):
         m = pyipmi.msgs.picmg.SetFruActivationPolicyReq()

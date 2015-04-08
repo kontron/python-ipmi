@@ -142,13 +142,41 @@ class GetAddressInfoRsp(Message):
             PicmgIdentifier(),
             UnsignedInt('hardware_address', 1),
             UnsignedInt('ipmb_0_address', 1),
-            UnsignedInt('reserved', 1),
-            UnsignedInt('fru_id', 1),
-            UnsignedInt('site_id', 1),
-            UnsignedInt('site_type', 1),
+            UnsignedInt('ipmb_1_address', 1),
+            Optional(
+                UnsignedInt('fru_id', 1),
+            ),
+            Optional(
+                UnsignedInt('site_id', 1),
+            ),
+            Optional(
+                UnsignedInt('site_type', 1),
+            ),
             Optional(
                 UnsignedInt('carrier_number', 1),
             ),
+    )
+
+
+@register_message_class
+class GetShelfAddressInfoReq(Message):
+    __cmdid__ = constants.CMDID_GET_SHELF_ADDRESS_INFO
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __default_lun__ = 0
+    __fields__ = (
+            PicmgIdentifier(),
+    )
+
+
+@register_message_class
+class GetShelfAddressInfoRsp(Message):
+    __cmdid__ = constants.CMDID_GET_SHELF_ADDRESS_INFO
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __default_lun__ = 0
+    __fields__ = (
+            CompletionCode(),
+            PicmgIdentifier(),
+            RemainingBytes('shelf_address'),
     )
 
 
