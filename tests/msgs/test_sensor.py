@@ -46,7 +46,7 @@ class TestGetDeviceSdr(unittest.TestCase):
         m.reservation_id = 0x0123
         m.record_id = 0x4567
         m.offset = 0x89
-        m.length = 0xab
+        m.bytes_to_read = 0xab
         data = encode_message(m)
         self.assertEqual(data, '\x23\x01\x67\x45\x89\xab')
 

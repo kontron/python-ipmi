@@ -95,11 +95,11 @@ class TestReadFruData(unittest.TestCase):
         data = encode_message(m)
         self.assertEqual(data, '\x00\x05\x01\x02\x03\x04\x05')
 
-    def test_encode_rsp_with_cc(self):
-        m = pyipmi.msgs.fru.ReadFruDataRsp()
-        m.completion_code = 0xc0
-        data = encode_message(m)
-        self.assertEqual(data, '\xc0')
+#    def test_encode_rsp_with_cc(self):
+#        m = pyipmi.msgs.fru.ReadFruDataRsp()
+#        m.completion_code = 0xc0
+#        data = encode_message(m)
+#        self.assertEqual(data, '\xc0')
 
     def test_encode_invalid_rsp(self):
         m = pyipmi.msgs.fru.ReadFruDataRsp()

@@ -28,12 +28,12 @@ class TestGetSdrRepositoryInfo:
         eq_(m.free_space,  0xaa55)
         eq_(m.most_recent_addition, 0x44332211)
         eq_(m.most_recent_erase, 0x88776655)
-        eq_(m.operation_support.get_sdr_repository_allocation_command, 0)
-        eq_(m.operation_support.reserve_sdr_repository_command, 1)
-        eq_(m.operation_support.partial_add_sdr_command, 0)
-        eq_(m.operation_support.delete_sdr_command, 1)
-        eq_(m.operation_support.sdr_repository_update_type, 1)
-        eq_(m.operation_support.overflow_flag, 1)
+        eq_(m.support.get_allocation_info, 0)
+        eq_(m.support.reserve, 1)
+        eq_(m.support.partial_add, 0)
+        eq_(m.support.delete, 1)
+        eq_(m.support.update_type, 1)
+        eq_(m.support.overflow_flag, 1)
 
 
 class TestGetSdrRepositoryAllocationInfo:
