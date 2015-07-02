@@ -1,7 +1,7 @@
 Pure Python IPMI Library
 ========================
 
-|BuildStatus|
+|BuildStatus| |PyPiVersion|
 
 Features
 --------
