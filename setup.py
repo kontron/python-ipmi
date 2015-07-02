@@ -6,8 +6,7 @@ import os
 import subprocess
 
 name = 'python-ipmi'
-version_py = os.path.join(os.path.dirname(__file__), name, 'version.py')
-
+version_py = os.path.join(os.path.dirname(__file__), 'pyipmi', 'version.py')
 try:
     version = subprocess.check_output(
             ['git', 'describe', '--tags', '--always', '--dirty'],
