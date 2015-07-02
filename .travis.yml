@@ -3,3 +3,11 @@ python:
 - '2.7'
 install: true
 script: nosetests
+deploy:
+  provider: pypi
+  user: mwalle
+  password:
+    secure: ES9znx3LnSVqPVpQJmcR9Xtk5qvLeyjzSmD7on0fRjR3yvhnycd2Tlc+vGEYow27nqleAVkspUsom/FMiWjccJFhk5yuTql6vYnKiXGcmFtMPPtOv+hR0CHXH5hqniSKjqRVJyRlMyDEN+vzv0Wucg+Cb3pKUyly2+Zp9M9sphY=
+  on:
+    tags: true
+
