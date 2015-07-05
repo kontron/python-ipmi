@@ -48,5 +48,5 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
                  :target: https://travis-ci.org/kontron/python-ipmi
 .. |PyPiVersion| image:: https://badge.fury.io/py/python-ipmi.svg
                  :target: http://badge.fury.io/py/python-ipmi
-.. |CodeClimate| image:: https://codeclimate.com/github/kontron/pyhton-ipmi/badges/gpa.svg
-                 :target: http://codeclimate.com/github/kontron/pyhton-ipmi:alt Code Climate
+.. |CodeClimate| image:: https://codeclimate.com/github/kontron/python-ipmi/badges/gpa.svg
+                 :target: http://codeclimate.com/github/kontron/python-ipmi
