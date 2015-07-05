@@ -263,12 +263,6 @@ class SdrFullSensorRecord(SdrCommon):
         if data:
             self.from_data(data)
 
-    def __str__(self):
-        s = '["%-16s"] [%s:%s] [%s]' \
-                % (self.device_id_string, self.entity_id,
-                self.entity_instance, ' '.join(['%02x' % b for b in self.data]))
-        return s
-
     def convert_sensor_raw_to_value(self, raw):
         fmt = self.analog_data_format
         if (fmt == self.DATA_FMT_1S_COMPLEMENT):
@@ -498,10 +492,6 @@ class SdrCompactSensorRecord(SdrCommon):
         if data:
             self.from_data(data)
 
-    def __str__(self):
-        s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
-        return s
-
     def from_data(self, data):
         buffer = ByteBuffer(data[5:])
         self.owner_id = buffer.pop_unsigned_int(1)
@@ -564,10 +554,6 @@ class SdrFruDeviceLocator(SdrCommon):
         if data:
             self.from_data(data)
 
-    def __str__(self):
-        s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
-        return s
-
     def from_data(self, data):
         buffer = ByteBuffer(data[5:])
         # record key bytes
@@ -594,10 +580,6 @@ class SdrManagementContollerDeviceLocator(SdrCommon):
         SdrCommon.__init__(self, data, next_id)
         if data:
             self.from_data(data)
-
-    def __str__(self):
-        s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
-        return s
 
     def from_data(self, data):
         buffer = ByteBuffer(data[5:])
