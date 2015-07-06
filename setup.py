@@ -37,7 +37,7 @@ setup(name = name,
         packages = find_packages(exclude="test"),
         license = 'LGPLv2+',
         classifiers = [
-            'Development Status :: 4 - Beta',
+            'Development Status :: 3 - Alpha',
             'Environment :: Console',
             'License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)',
             'Natural Language :: English',
