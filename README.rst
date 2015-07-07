@@ -47,7 +47,7 @@ ipmitool command:
 Compatibility
 -------------
 
-Currently only python 2 is supported.
+Currently only python 2.7 is supported.
 
 Contributing
 ------------
