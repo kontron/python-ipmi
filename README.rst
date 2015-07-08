@@ -1,7 +1,7 @@
 Pure Python IPMI Library
 ========================
 
-|BuildStatus|
+|BuildStatus| |PyPiVersion| |CodeClimate|
 
 Features
 --------
@@ -13,6 +13,41 @@ Requirements
 
 You need an either the `ipmitool`_ for accessing RCMP interface or a
 `Total Phase`_ Aardvark for communication over the IPMB interface.
+
+Example
+-------
+
+Below is an example that shows how to setup the interface and the connection
+using the `ipmitool`_ as backend.
+
+.. code:: python
+
+    import pyipmi
+    import pyipmi.interfaces
+    
+    interface = pyipmi.interfaces.create_interface('ipmitool')
+    
+    connection = pyipmi.create_connection(interface)
+
+    connection.target = pyipmi.Target(0xb2)
+    connection.target.set_routing_information([(0x20,0)])
+
+    connection.session.set_session_type_rmcp('10.0.0.1', port=623)
+    connection.session.set_auth_type_user('admin', 'admin')
+    connection.session.establish()
+
+    connection.get_device_id()
+
+ipmitool command:
+
+.. code:: shell
+
+    ipmitool -I lan -H 10.0.0.1 -p 623 -b 0 -t 0xb2 -U "admin" -P "admin" -l 0 raw 0x06 0x01
+
+Compatibility
+-------------
+
+Currently only python 2.7 is supported.
 
 Contributing
 ------------
@@ -48,3 +83,5 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
                  :target: https://travis-ci.org/kontron/python-ipmi
 .. |PyPiVersion| image:: https://badge.fury.io/py/python-ipmi.svg
                  :target: http://badge.fury.io/py/python-ipmi
+.. |CodeClimate| image:: https://codeclimate.com/github/kontron/python-ipmi/badges/gpa.svg
+                 :target: http://codeclimate.com/github/kontron/python-ipmi
