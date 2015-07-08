@@ -258,7 +258,7 @@ class FruDataMultiRecord:
             self.from_data(data)
 
     def __str__(self):
-        return '%02x: %s' % (self.type,
+        return '%02x: %s' % (self.record_type_id,
                 ' '.join('%02x' % ord(b) for b in self.raw))
 
     def from_data(self, data):
