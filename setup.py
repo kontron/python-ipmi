@@ -36,6 +36,7 @@ setup(name = name,
         author_email = 'michael.walle@kontron.com, heiko.thiery@kontron.com',
         packages = find_packages(exclude="test"),
         license = 'LGPLv2+',
+        platforms = ["any"],
         classifiers = [
             'Development Status :: 3 - Alpha',
             'Environment :: Console',
