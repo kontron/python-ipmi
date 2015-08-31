@@ -47,7 +47,7 @@ class Aardvark:
         self._dev = pyaardvark.open(port, serial_number)
         self._dev.enable_i2c = True
         self._dev.i2c_pullups = enable_i2c_pullups
-        self._dev.i2c_slave_enable(self.slave_address >> 1)
+        self._dev.enable_i2c_slave(self.slave_address >> 1)
 
     def enable_target_power(self, enabled):
         self._dev.enable_target_power(enabled)
@@ -177,7 +177,8 @@ class Aardvark:
 
             ret = self._dev.poll(int(timeout * 1000))
 
-            if ret == pyaardvark.POLL_NO_DATA:
+            # poll returns an empty list if no event is pending
+            if not ret:
                 poll_returned_no_data = True
                 continue
 
