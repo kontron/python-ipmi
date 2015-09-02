@@ -534,7 +534,7 @@ COMMANDS = (
         Command('chassis power cycle',
             lambda i, a: i.chassis_control_power_cycle()),
         Command('chassis power reset',
-            lambda i, a: i.chassis_control_power_hard_reset()),
+            lambda i, a: i.chassis_control_hard_reset()),
         Command('chassis power diag',
             lambda i, a: i.chassis_control_power_diagnostic_interrupt()),
         Command('chassis power soft',
