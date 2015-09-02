@@ -365,6 +365,7 @@ Options:
 '''[1:]
         print '''
 Aardvark options:
+  serial=<SN>       Serial number of the device
   pullups=<on|off>  Enable/disable pullups
   power=<on|off>    Enable/disable target power
 '''[1:]
@@ -444,8 +445,19 @@ def main():
         usage()
         sys.exit(1)
 
+
+    aardvark_serial = None
+    for option in interface_options:
+        (name, value) = option.split('=', 1)
+        if (interface_name, name) == ('aardvark', 'serial'):
+            aardvark_serial=value
+
     try:
-        interface = pyipmi.interfaces.create_interface(interface_name)
+        if interface_name == 'aardvark':
+            interface = pyipmi.interfaces.create_interface(interface_name,
+                            serial_number=aardvark_serial)
+        else:
+            interface = pyipmi.interfaces.create_interface(interface_name)
     except RuntimeError, e:
         print e
         sys.exit(1)
