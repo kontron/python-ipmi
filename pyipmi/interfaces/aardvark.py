@@ -38,19 +38,19 @@ class Aardvark:
         if pyaardvark is None:
             raise RuntimeError('No pyaardvark module found. You can not '
                     'use this interface.')
-
         self.slave_address = slave_address
         self.timeout = 0.25 # 250 ms
         self.max_retries = 3
         self.next_sequence_number = 0
 
         self._dev = pyaardvark.open(port, serial_number)
-        self._dev.enable_i2c = True
-        self._dev.i2c_pullups = enable_i2c_pullups
         self._dev.enable_i2c_slave(self.slave_address >> 1)
 
+    def enable_pullups(self, enabled):
+        self._dev.i2c_pullups = enabled
+
     def enable_target_power(self, enabled):
-        self._dev.enable_target_power(enabled)
+        self._dev.target_power = enabled
 
     def raw_write(self, address, data):
         self._dev.i2c_master_write(address, data)
