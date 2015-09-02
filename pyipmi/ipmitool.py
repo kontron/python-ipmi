@@ -556,7 +556,7 @@ COMMAND_HELP = (
         CommandHelp('sdr', None,
                 'Print Sensor Data Repository entries and readings'),
         CommandHelp('sdr list', None, 'List all SDRs'),
-        CommandHelp('sdr show', '<sdr-id>', 'List all SDRs'),
+        CommandHelp('sdr show', '<sdr-id>', 'Show detail for one SDR'),
 
         CommandHelp('bmc', None,
                 'Management Controller status and global enables'),
