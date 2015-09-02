@@ -447,10 +447,23 @@ def main():
 
 
     aardvark_serial = None
+    aardvark_pullups = None
+    aardvark_target_power = None
+
     for option in interface_options:
         (name, value) = option.split('=', 1)
         if (interface_name, name) == ('aardvark', 'serial'):
-            aardvark_serial=value
+            aardvark_serial = value
+        elif (interface_name, name, value) == ('aardvark', 'pullups', 'on'):
+            aardvark_pullups = True
+        elif (interface_name, name, value) == ('aardvark', 'pullups', 'off'):
+            aardvark_pullups = False
+        elif (interface_name, name, value) == ('aardvark', 'power', 'on'):
+            aardvark_target_power = True
+        elif (interface_name, name, value) == ('aardvark', 'power', 'off'):
+            aardvark_target_power = False
+        else:
+            print 'Warning: unknown option %s' % name
 
     try:
         if interface_name == 'aardvark':
@@ -462,20 +475,10 @@ def main():
         print e
         sys.exit(1)
 
-    for option in interface_options:
-        (name, value) = option.split('=', 1)
-        if (interface_name, name) == ('aardvark', 'pullups'):
-            if value == 'on':
-                interface.enable_pullups(True)
-            else:
-                interface.enable_pullups(False)
-        elif (interface_name, name) == ('aardvark', 'power'):
-            if value == 'on':
-                interface.enable_target_power(True)
-            else:
-                interface.enable_target_power(False)
-        else:
-            print 'Warning: unknown option %s' % name
+    if aardvark_pullups:
+        interface.enable_pullups(aardvark_pullups)
+    if aardvark_target_power:
+        interface.enable_target_power(target_power)
 
     ipmi = pyipmi.create_connection(interface)
     ipmi.target = pyipmi.Target(target_address)
