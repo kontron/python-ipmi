@@ -38,6 +38,7 @@ class Picmg:
         req.option = option
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
+        return rsp.rsp_data
 
     def fru_control_cold_reset(self, fru_id=0):
         self.fru_control(fru_id, FRU_CONTROL_COLD_RESET)
@@ -49,7 +50,7 @@ class Picmg:
         self.fru_control(fru_id, FRU_CONTROL_GRACEFUL_REBOOT)
 
     def fru_control_diagnostic_interrupt(self, fru_id=0):
-        self.fru_control(fru_id, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT)
+        return self.fru_control(fru_id, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT)
 
     def get_power_level(self, fru_id, power_type):
         req = create_request_by_name('GetPowerLevel')
