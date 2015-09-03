@@ -459,7 +459,7 @@ class LedState:
             req.on_duration = 0
         elif self.local_function == self.FUNCTION_BLINKING:
             if self.override_off_duration not in \
-                    picmg.picmg.LED_FUNCTION_BLINKING_RANGE:
+                    picmg.LED_FUNCTION_BLINKING_RANGE:
                 raise EncodingError()
             req.led_function = self.override_off_duration
             req.on_duration = self.override_on_duration
