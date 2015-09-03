@@ -38,6 +38,7 @@ class Picmg:
         req.option = option
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
+        return rsp.rsp_data
 
     def fru_control_cold_reset(self, fru_id=0):
         self.fru_control(fru_id, FRU_CONTROL_COLD_RESET)
@@ -49,7 +50,7 @@ class Picmg:
         self.fru_control(fru_id, FRU_CONTROL_GRACEFUL_REBOOT)
 
     def fru_control_diagnostic_interrupt(self, fru_id=0):
-        self.fru_control(fru_id, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT)
+        return self.fru_control(fru_id, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT)
 
     def get_power_level(self, fru_id, power_type):
         req = create_request_by_name('GetPowerLevel')
@@ -450,19 +451,19 @@ class LedState:
         req.led_id = self.led_id
         req.color = self.override_color
 
-        if self.led_function == self.FUNCTION_ON:
+        if self.local_function == self.FUNCTION_ON:
             req.led_function = picmg.LED_FUNCTION_ON
             req.on_duration = 0
-        elif self.led_function == self.FUNCTION_OFF:
+        elif self.local_function == self.FUNCTION_OFF:
             req.led_function = picmg.LED_FUNCTION_OFF
             req.on_duration = 0
-        elif self.led_function == self.FUNCTION_BLINKING:
+        elif self.local_function == self.FUNCTION_BLINKING:
             if self.override_off_duration not in \
                     picmg.picmg.LED_FUNCTION_BLINKING_RANGE:
                 raise EncodingError()
             req.led_function = self.override_off_duration
             req.on_duration = self.override_on_duration
-        elif self.led_function == self.FUNCTION_LAMP_TEST:
+        elif self.local_function == self.FUNCTION_LAMP_TEST:
             req.led_function = picmg.LED_FUNCTION_LAMP_TEST
             req.on_duration = self.lamp_test_duration
         else:

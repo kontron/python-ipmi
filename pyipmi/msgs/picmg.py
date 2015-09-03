@@ -200,6 +200,7 @@ class FruControlRsp(Message):
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
+            RemainingBytes('rsp_data'),
     )
 
 
