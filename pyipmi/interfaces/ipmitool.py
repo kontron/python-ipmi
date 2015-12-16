@@ -75,11 +75,9 @@ class Ipmitool:
         return accessible
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
-        cmd = '-l %d raw 0x%02x ' % (lun, netfn)
-        cmd += ' '.join(['0x%02x' % ord(d) for d in raw_bytes])
 
-        # run ipmitool
-        output, rc = self._run_ipmitool(target, cmd)
+        cmd = self._build_ipmitool_cmd(target, lun, netfn, raw_bytes)
+        output, rc = self._run_ipmitool(cmd)
 
         # check for errors
         match_completion_code = self.re_completion_code.match(output)
@@ -121,9 +119,9 @@ class Ipmitool:
 
         return rsp
 
-    def _run_ipmitool(self, target, ipmitool_cmd):
-        """Legacy call of ipmitool (will be removed in future).
-        """
+    def _build_ipmitool_cmd(self, target, lun, netfn, raw_bytes):
+        cmd_data = '-l %d raw 0x%02x ' % (lun, netfn)
+        cmd_data += ' '.join(['0x%02x' % ord(d) for d in raw_bytes])
 
         if not hasattr(self, '_session'):
             raise RuntimeError('Session needs to be set')
@@ -158,8 +156,15 @@ class Ipmitool:
             raise RuntimeError('Session type %d not supported' %
                     self._session.auth_type)
 
-        cmd += (' %s' % ipmitool_cmd)
+        cmd += (' %s' % cmd_data)
         cmd += (' 2>&1')
+
+        return cmd
+
+    def _run_ipmitool(self, cmd):
+        """Legacy call of ipmitool (will be removed in future).
+        """
+
         log().debug('Running ipmitool "%s"', cmd)
 
         child = Popen(cmd, shell=True, stdout=PIPE)
