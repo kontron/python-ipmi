@@ -33,8 +33,15 @@ class Ipmitool:
 
     NAME = 'ipmitool'
     IPMITOOL_PATH = 'ipmitool'
+    supported_interfaces = ['lan', 'lanplus']
 
-    def __init__(self):
+    def __init__(self, interface_type='lan'):
+        if interface_type in self.supported_interfaces:
+            self._interface_type = interface_type
+        else:
+            raise RuntimeError('interface type %s not supported' %
+                    interface_type)
+
         self.re_completion_code = re.compile(
                 "Unable to send RAW command \(.*rsp=(0x[0-9a-f]+)\)")
         self.re_timeout = re.compile(
@@ -47,7 +54,7 @@ class Ipmitool:
     def rmcp_ping(self):
         # for now this uses impitool..
         cmd = self.IPMITOOL_PATH
-        cmd += (' -I lan')
+        cmd += (' -I %s' % self._interface_type)
         cmd += (' -H %s' % self._session._rmcp_host)
         cmd += (' -p %s' % self._session._rmcp_port)
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
@@ -127,7 +134,7 @@ class Ipmitool:
             raise RuntimeError('Session needs to be set')
 
         cmd = self.IPMITOOL_PATH
-        cmd += (' -I lan')
+        cmd += (' -I %s' % self._interface_type)
         cmd += (' -H %s' % self._session._rmcp_host)
         cmd += (' -p %s' % self._session._rmcp_port)
 

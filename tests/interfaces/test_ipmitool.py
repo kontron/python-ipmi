@@ -14,12 +14,12 @@ from pyipmi import Session, Target
 class TestIpmitool:
 
     def setup(self):
-        self._interface = Ipmitool()
-        session = Session()
-        session.interface = self._interface
-        session.set_session_type_rmcp('10.0.1.1')
-        session.set_auth_type_user('admin', 'secret')
-        self._interface.establish_session(session)
+        self._interface = Ipmitool(interface_type='lan')
+        self.session = Session()
+        self.session.interface = self._interface
+        self.session.set_session_type_rmcp('10.0.1.1')
+        self.session.set_auth_type_user('admin', 'secret')
+        self._interface.establish_session(self.session)
 
     def test_send_and_receive_raw_valid(self):
         mock = MagicMock()
@@ -30,6 +30,19 @@ class TestIpmitool:
         data = self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
 
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 -t 0x20 -U "admin" -P "secret" -l 0 raw 0x06 0x01 2>&1')
+
+    def test_send_and_receive_raw_lanplus(self):
+        interface = Ipmitool(interface_type='lanplus')
+        interface.establish_session(self.session)
+
+        mock = MagicMock()
+        mock.return_value = ('', 0)
+        interface._run_ipmitool = mock
+
+        target = Target(0x20)
+        data = interface.send_and_receive_raw(target, 0, 0x6, '\x01')
+
+        mock.assert_called_once_with('ipmitool -I lanplus -H 10.0.1.1 -p 623 -t 0x20 -U "admin" -P "secret" -l 0 raw 0x06 0x01 2>&1')
 
     def test_send_and_receive_raw_no_auth(self):
         mock = MagicMock()
