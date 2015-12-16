@@ -88,7 +88,7 @@ class Session:
     AUTH_TYPE_OEM         = 0x05
 
     def __init__(self):
-        self.auth_type = self.AUTH_TYPE_NONE
+        self.set_auth_type(self.AUTH_TYPE_NONE)
         self.established = False
 
     def _get_interface(self):
@@ -104,8 +104,11 @@ class Session:
         self._rmcp_host = host
         self._rmcp_port = port
 
+    def set_auth_type(self, auth_type):
+        self.auth_type = auth_type
+
     def set_auth_type_user(self, username, password):
-        self.auth_type = self.AUTH_TYPE_PASSWORD
+        self.set_auth_type(self.AUTH_TYPE_PASSWORD)
         self._auth_username = username
         self._auth_password = password
 
