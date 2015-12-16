@@ -501,7 +501,7 @@ class SdrCompactSensorRecord(SdrCommon):
         self.entity_instance = buffer.pop_unsigned_int(1)
         self.sensor_initialization = buffer.pop_unsigned_int(1)
         self.capabilities = buffer.pop_unsigned_int(1)
-        self.sensor_type = buffer.pop_unsigned_int(1)
+        self.sensor_type_code = buffer.pop_unsigned_int(1)
         self.event_reading_type_code = buffer.pop_unsigned_int(1)
         self.assertion_mask = buffer.pop_unsigned_int(2)
         self.deassertion_mask = buffer.pop_unsigned_int(2)
