@@ -67,7 +67,7 @@ def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
                 if max_req_len <= 0:
                     retry = 0
             else:
-                Assert
+                raise CompletionCodeError(e.cc)
 
         record_data.append_array(data[:])
         offset = len(record_data)
