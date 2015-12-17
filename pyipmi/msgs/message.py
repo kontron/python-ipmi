@@ -315,6 +315,9 @@ class Message:
         if hasattr(self, '__fields__'):
             self._create_fields()
 
+        # set default lun
+        self.lun = self.__default_lun__
+
         self.data = ''
         if args:
             self._decode(args[0])
