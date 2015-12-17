@@ -30,7 +30,6 @@ from . import RemainingBytes
 class GetSelInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_SEL_INFO
     __netfn__ = constants.NETFN_STORAGE
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -38,7 +37,6 @@ class GetSelInfoReq(Message):
 class GetSelInfoRsp(Message):
     __cmdid__ = constants.CMDID_GET_SEL_INFO
     __netfn__ = constants.NETFN_STORAGE | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             UnsignedInt('version', 1, default=0x51),
@@ -61,7 +59,6 @@ class GetSelInfoRsp(Message):
 class GetSelAllocationInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_SEL_ALLOCATION_INFO
     __netfn__ = constants.NETFN_STORAGE
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -69,7 +66,6 @@ class GetSelAllocationInfoReq(Message):
 class GetSelAllocationInfoRsp(Message):
     __cmdid__ = constants.CMDID_GET_SEL_ALLOCATION_INFO
     __netfn__ = constants.NETFN_STORAGE | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             UnsignedInt('possible_alloc_units', 2),
@@ -84,7 +80,6 @@ class GetSelAllocationInfoRsp(Message):
 class ReserveSelReq(Message):
     __cmdid__ = constants.CMDID_RESERVE_SEL
     __netfn__ = constants.NETFN_STORAGE
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -92,7 +87,6 @@ class ReserveSelReq(Message):
 class ReserveSelRsp(Message):
     __cmdid__ = constants.CMDID_RESERVE_SEL
     __netfn__ = constants.NETFN_STORAGE | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             UnsignedInt('reservation_id', 2)
@@ -103,7 +97,6 @@ class ReserveSelRsp(Message):
 class GetSelEntryReq(Message):
     __cmdid__ = constants.CMDID_GET_SEL_ENTRY
     __netfn__ = constants.NETFN_STORAGE
-    __default_lun__ = 0
     __fields__ = (
             UnsignedInt('reservation_id', 2),
             UnsignedInt('record_id', 2),
@@ -116,7 +109,6 @@ class GetSelEntryReq(Message):
 class GetSelEntryRsp(Message):
     __cmdid__ = constants.CMDID_GET_SEL_ENTRY
     __netfn__ = constants.NETFN_STORAGE | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             UnsignedInt('next_record_id', 2),
@@ -128,7 +120,6 @@ class GetSelEntryRsp(Message):
 class AddSelEntryReq(Message):
     __cmdid__ = constants.CMDID_ADD_SEL_ENTRY
     __netfn__ = constants.NETFN_STORAGE
-    __default_lun__ = 0
     __fields__ = (
             ByteArray('record_data', 16)
     )
@@ -138,7 +129,6 @@ class AddSelEntryReq(Message):
 class AddSelEntryRsp(Message):
     __cmdid__ = constants.CMDID_ADD_SEL_ENTRY
     __netfn__ = constants.NETFN_STORAGE | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             UnsignedInt('record_id', 2)
@@ -149,7 +139,6 @@ class AddSelEntryRsp(Message):
 class DeleteSelEntryReq(Message):
     __cmdid__ = constants.CMDID_DELETE_SEL_ENTRY
     __netfn__ = constants.NETFN_STORAGE
-    __default_lun__ = 0
     __fields__ = (
             UnsignedInt('reservation_id', 2),
             UnsignedInt('record_id', 2)
@@ -160,7 +149,6 @@ class DeleteSelEntryReq(Message):
 class DeleteSelEntryRsp(Message):
     __cmdid__ = constants.CMDID_DELETE_SEL_ENTRY
     __netfn__ = constants.NETFN_STORAGE | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             UnsignedInt('record_id', 2)
@@ -171,7 +159,6 @@ class DeleteSelEntryRsp(Message):
 class ClearSelReq(Message):
     __cmdid__ = constants.CMDID_CLEAR_SEL
     __netfn__ = constants.NETFN_STORAGE
-    __default_lun__ = 0
     __fields__ = (
             UnsignedInt('reservation_id', 2),
             ByteArray('key', 3, default='CLR'),
@@ -183,7 +170,6 @@ class ClearSelReq(Message):
 class ClearSelRsp(Message):
     __cmdid__ = constants.CMDID_CLEAR_SEL
     __netfn__ = constants.NETFN_STORAGE | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             Bitfield('status', 1,
@@ -197,7 +183,6 @@ class ClearSelRsp(Message):
 class GetSelTimeReq(Message):
     __cmdid__ = constants.CMDID_GET_SEL_TIME
     __netfn__ = constants.NETFN_STORAGE
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -205,7 +190,6 @@ class GetSelTimeReq(Message):
 class GetSelTimeRsp(Message):
     __cmdid__ = constants.CMDID_GET_SEL_TIME
     __netfn__ = constants.NETFN_STORAGE | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             Timestamp('timestamp')
@@ -216,7 +200,6 @@ class GetSelTimeRsp(Message):
 class SetSelTimeReq(Message):
     __cmdid__ = constants.CMDID_SET_SEL_TIME
     __netfn__ = constants.NETFN_STORAGE
-    __default_lun__ = 0
     __fields__ = (
             Timestamp('timestamp')
     )
@@ -226,7 +209,6 @@ class SetSelTimeReq(Message):
 class SetSelTimeRsp(Message):
     __cmdid__ = constants.CMDID_SET_SEL_TIME
     __netfn__ = constants.NETFN_STORAGE | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode()
     )

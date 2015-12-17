@@ -37,7 +37,6 @@ SELFTEST_RESULT_FATAL_HARDWARE_ERROR = 0x58
 class GetDeviceIdReq(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_ID
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -45,7 +44,6 @@ class GetDeviceIdReq(Message):
 class GetDeviceIdRsp(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_ID
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             UnsignedInt('device_id', 1),
@@ -80,7 +78,6 @@ class GetDeviceIdRsp(Message):
 class ColdResetReq(Message):
     __cmdid__ = constants.CMDID_COLD_RESET
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -88,7 +85,6 @@ class ColdResetReq(Message):
 class ColdResetRsp(Message):
     __cmdid__ = constants.CMDID_COLD_RESET
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
     )
@@ -98,7 +94,6 @@ class ColdResetRsp(Message):
 class WarmResetReq(Message):
     __cmdid__ = constants.CMDID_WARM_RESET
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -106,7 +101,6 @@ class WarmResetReq(Message):
 class WarmResetRsp(Message):
     __cmdid__ = constants.CMDID_WARM_RESET
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
     )
@@ -116,7 +110,6 @@ class WarmResetRsp(Message):
 class ManufacturingTestOnReq(Message):
     __cmdid__ = constants.CMDID_MANUFACTURING_TEST_ON
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = (
         RemainingBytes('data'),
     )
@@ -126,7 +119,6 @@ class ManufacturingTestOnReq(Message):
 class ManufacturingTestOnRsp(Message):
     __cmdid__ = constants.CMDID_MANUFACTURING_TEST_ON
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         RemainingBytes('data'),
@@ -137,7 +129,6 @@ class ManufacturingTestOnRsp(Message):
 class GetSelftestResultsReq(Message):
     __cmdid__ = constants.CMDID_GET_SELF_TEST_RESULTS
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -145,7 +136,6 @@ class GetSelftestResultsReq(Message):
 class GetSelftestResultsRsp(Message):
     __cmdid__ = constants.CMDID_GET_SELF_TEST_RESULTS
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
 
     __fields__ = (
             CompletionCode(),
@@ -167,7 +157,6 @@ class GetSelftestResultsRsp(Message):
 class ResetWatchdogTimerReq(Message):
     __cmdid__ = constants.CMDID_RESET_WATCHDOG_TIMER
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -175,7 +164,6 @@ class ResetWatchdogTimerReq(Message):
 class ResetWatchdogTimerRsp(Message):
     __cmdid__ = constants.CMDID_RESET_WATCHDOG_TIMER
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
     )
@@ -185,7 +173,6 @@ class ResetWatchdogTimerRsp(Message):
 class SetWatchdogTimerReq(Message):
     __cmdid__ = constants.CMDID_SET_WATCHDOG_TIMER
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = (
             Bitfield('timer_use', 1,
                 Bitfield.Bit('timer_use', 3),
@@ -209,7 +196,6 @@ class SetWatchdogTimerReq(Message):
 class SetWatchdogTimerRsp(Message):
     __cmdid__ = constants.CMDID_SET_WATCHDOG_TIMER
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
     )
@@ -219,7 +205,6 @@ class SetWatchdogTimerRsp(Message):
 class GetWatchdogTimerReq(Message):
     __cmdid__ = constants.CMDID_GET_WATCHDOG_TIMER
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -227,7 +212,6 @@ class GetWatchdogTimerReq(Message):
 class GetWatchdogTimerRsp(Message):
     __cmdid__ = constants.CMDID_GET_WATCHDOG_TIMER
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         Bitfield('timer_use', 1,
@@ -253,7 +237,6 @@ class GetWatchdogTimerRsp(Message):
 class SetBmcGlobalEnablesReq(Message):
     __cmdid__ = constants.CMDID_SET_BMC_GLOBAL_ENABLES
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = (
         Bitfield('enables', 1,
             Bitfield.Bit('receive_message_queue_interrupt', 1, 0),
@@ -272,7 +255,6 @@ class SetBmcGlobalEnablesReq(Message):
 class SetBmcGlobalEnablesRsp(Message):
     __cmdid__ = constants.CMDID_SET_BMC_GLOBAL_ENABLES
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
     )
@@ -282,7 +264,6 @@ class SetBmcGlobalEnablesRsp(Message):
 class GetBmcGlobalEnablesReq(Message):
     __cmdid__ = constants.CMDID_GET_BMC_GLOBAL_ENABLES
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -290,7 +271,6 @@ class GetBmcGlobalEnablesReq(Message):
 class GetBmcGlobalEnablesRsp(Message):
     __cmdid__ = constants.CMDID_GET_BMC_GLOBAL_ENABLES
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         Bitfield('enables', 1,
@@ -310,7 +290,6 @@ class GetBmcGlobalEnablesRsp(Message):
 class ClearMessageFlagsReq(Message):
     __cmdid__ = constants.CMDID_CLEAR_MESSAGE_FLAGS
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = (
         Bitfield('clear', 1,
             Bitfield.Bit('receive_message_queue', 1, 0),
@@ -329,7 +308,6 @@ class ClearMessageFlagsReq(Message):
 class ClearMessageFlagsRsp(Message):
     __cmdid__ = constants.CMDID_CLEAR_MESSAGE_FLAGS
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
     )
@@ -339,7 +317,6 @@ class ClearMessageFlagsRsp(Message):
 class GetMessageFlagsReq(Message):
     __cmdid__ = constants.CMDID_GET_MESSAGE_FLAGS
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -347,7 +324,6 @@ class GetMessageFlagsReq(Message):
 class GetMessageFlagsRsp(Message):
     __cmdid__ = constants.CMDID_GET_MESSAGE_FLAGS
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         Bitfield('flag', 1,
@@ -367,7 +343,6 @@ class GetMessageFlagsRsp(Message):
 class EnableMessageChannelReceiveReq(Message):
     __cmdid__ = constants.CMDID_ENABLE_MESSAGE_CHANNEL_RECEIVE
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = (
         Bitfield('channel', 2,
             Bitfield.Bit('number', 4, 0),
@@ -382,7 +357,6 @@ class EnableMessageChannelReceiveReq(Message):
 class EnableMessageChannelReceiveRsp(Message):
     __cmdid__ = constants.CMDID_ENABLE_MESSAGE_CHANNEL_RECEIVE
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         Bitfield('channel', 2,
@@ -398,7 +372,6 @@ class EnableMessageChannelReceiveRsp(Message):
 class GetMessageReq(Message):
     __cmdid__ = constants.CMDID_GET_MESSAGE
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -406,7 +379,6 @@ class GetMessageReq(Message):
 class GetMessageRsp(Message):
     __cmdid__ = constants.CMDID_GET_MESSAGE
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         Bitfield('channel_number', 1,
@@ -421,7 +393,6 @@ class GetMessageRsp(Message):
 class ReadEventMessageBufferReq(Message):
     __cmdid__ = constants.CMDID_READ_EVENT_MESSAGE_BUFFER
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -429,7 +400,6 @@ class ReadEventMessageBufferReq(Message):
 class ReadEventMessageBufferRsp(Message):
     __cmdid__ = constants.CMDID_READ_EVENT_MESSAGE_BUFFER
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         RemainingBytes('event_data'),
@@ -440,7 +410,6 @@ class ReadEventMessageBufferRsp(Message):
 class MasterWriteReadReq(Message):
     __cmdid__ = constants.CMDID_MASTER_WRITE_READ
     __netfn__ = constants.NETFN_APP
-    __default_lun__ = 0
     __fields__ = (
         Bitfield('bus_id', 2,
             Bitfield.Bit('type', 1, 0),
@@ -458,7 +427,6 @@ class MasterWriteReadReq(Message):
 class MasterWriteReadRsp(Message):
     __cmdid__ = constants.CMDID_MASTER_WRITE_READ
     __netfn__ = constants.NETFN_APP | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         RemainingBytes('data'),

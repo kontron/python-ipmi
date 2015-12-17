@@ -38,7 +38,6 @@ CONTROL_SOFT_SHUTDOWN = 5
 class GetChassisCapabilitiesReq(Message):
     __cmdid__ = constants.CMDID_GET_CHASSIS_CAPABILITIES
     __netfn__ = constants.NETFN_CHASSIS
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -46,7 +45,6 @@ class GetChassisCapabilitiesReq(Message):
 class GetChassisCapabilitiesRsp(Message):
     __cmdid__ = constants.CMDID_GET_CHASSIS_CAPABILITIES
     __netfn__ = constants.NETFN_CHASSIS | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         Bitfield('capabilities_flags', 1,
@@ -70,7 +68,6 @@ class GetChassisCapabilitiesRsp(Message):
 class GetChassisStatusReq(Message):
     __cmdid__ = constants.CMDID_GET_CHASSIS_STATUS
     __netfn__ = constants.NETFN_CHASSIS
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -78,7 +75,6 @@ class GetChassisStatusReq(Message):
 class GetChassisStatusRsp(Message):
     __cmdid__ = constants.CMDID_GET_CHASSIS_STATUS
     __netfn__ = constants.NETFN_CHASSIS | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         Bitfield('current_power_state', 1,
@@ -112,7 +108,6 @@ class GetChassisStatusRsp(Message):
 class ChassisControlReq(Message):
     __cmdid__ = constants.CMDID_CHASSIS_CONTROL
     __netfn__ = constants.NETFN_CHASSIS
-    __default_lun__ = 0
     __fields__ = (
         Bitfield('control', 1,
             Bitfield.Bit('option', 4),
@@ -125,7 +120,6 @@ class ChassisControlReq(Message):
 class ChassisControlRsp(Message):
     __cmdid__ = constants.CMDID_CHASSIS_CONTROL
     __netfn__ = constants.NETFN_CHASSIS | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
     )
@@ -135,7 +129,6 @@ class ChassisControlRsp(Message):
 class GetPohCounterReq(Message):
     __cmdid__ = constants.CMDID_GET_POH_COUNTER
     __netfn__ = constants.NETFN_CHASSIS
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -143,7 +136,6 @@ class GetPohCounterReq(Message):
 class GetPohCounterRsp(Message):
     __cmdid__ = constants.CMDID_GET_POH_COUNTER
     __netfn__ = constants.NETFN_CHASSIS | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         UnsignedInt('minutes_per_count', 1),

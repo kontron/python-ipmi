@@ -298,6 +298,8 @@ class Bitfield(BaseField):
 class Message:
     RESERVED_FIELD_NAMES = ['cmdid', 'netfn', 'lun']
 
+    __default_lun__ = 0
+
     def __init__(self, *args, **kwargs):
         """Message constructor with ([buf], [field=val,...]) prototype.
 
@@ -312,9 +314,6 @@ class Message:
         # create message fields
         if hasattr(self, '__fields__'):
             self._create_fields()
-
-        # set default lun
-        self.lun = self.__default_lun__
 
         self.data = ''
         if args:
@@ -373,6 +372,6 @@ class Message:
     netfn = property(lambda s: s.__netfn__)
     cmdid = property(lambda s: s.__cmdid__)
 
+
 encode_message = lambda m: m._encode()
 decode_message = lambda m,d: m._decode(d)
-

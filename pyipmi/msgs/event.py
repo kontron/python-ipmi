@@ -28,7 +28,6 @@ from . import Conditional
 class SetEventReceiverReq(Message):
     __cmdid__ = constants.CMDID_SET_EVENT_RECEIVER
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __default_lun__ = 0
     __fields__ = (
         Bitfield('event_receiver', 2,
             Bitfield.ReservedBit(1, 0),
@@ -43,7 +42,6 @@ class SetEventReceiverReq(Message):
 class SetEventReceiverRsp(Message):
     __cmdid__ = constants.CMDID_SET_EVENT_RECEIVER
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
     )
@@ -53,7 +51,6 @@ class SetEventReceiverRsp(Message):
 class GetEventReceiverReq(Message):
     __cmdid__ = constants.CMDID_GET_EVENT_RECEIVER
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __default_lun__ = 0
     __fields__ = ()
 
 
@@ -61,7 +58,6 @@ class GetEventReceiverReq(Message):
 class GetEventReceiverRsp(Message):
     __cmdid__ = constants.CMDID_GET_EVENT_RECEIVER
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         Bitfield('event_receiver', 2,

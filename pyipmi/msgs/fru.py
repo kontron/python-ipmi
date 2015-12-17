@@ -31,7 +31,6 @@ from . import VariableByteArray
 class GetFruInventoryAreaInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_FRU_INVENTORY_AREA_INFO
     __netfn__ = constants.NETFN_STORAGE
-    __default_lun__ = 0
     __fields__ = (
         UnsignedInt('fru_id', 1, 0),
     )
@@ -41,7 +40,6 @@ class GetFruInventoryAreaInfoReq(Message):
 class GetFruInventoryAreaInfoRsp(Message):
     __cmdid__ = constants.CMDID_GET_FRU_INVENTORY_AREA_INFO
     __netfn__ = constants.NETFN_STORAGE | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         UnsignedInt('area_size', 2),
@@ -56,7 +54,6 @@ class GetFruInventoryAreaInfoRsp(Message):
 class ReadFruDataReq(Message):
     __cmdid__ = constants.CMDID_READ_FRU_DATA
     __netfn__ = constants.NETFN_STORAGE
-    __default_lun__ = 0
     __fields__ = (
             UnsignedInt('fru_id', 1),
             UnsignedInt('offset', 2),
@@ -68,7 +65,6 @@ class ReadFruDataReq(Message):
 class ReadFruDataRsp(Message):
     __cmdid__ = constants.CMDID_READ_FRU_DATA
     __netfn__ = constants.NETFN_STORAGE | 1
-    __default_lun__ = 0
 
     def _length_count(obj):
         return obj.count
@@ -84,7 +80,6 @@ class ReadFruDataRsp(Message):
 class WriteFruDataReq(Message):
     __cmdid__ = constants.CMDID_WRITE_FRU_DATA
     __netfn__ = constants.NETFN_STORAGE
-    __default_lun__ = 0
     __fields__ = (
         UnsignedInt('fru_id', 1),
         UnsignedInt('offset', 2),
@@ -96,7 +91,6 @@ class WriteFruDataReq(Message):
 class WriteFruDataRsp(Message):
     __cmdid__ = constants.CMDID_WRITE_FRU_DATA
     __netfn__ = constants.NETFN_STORAGE | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         UnsignedInt('count_written', 1)
