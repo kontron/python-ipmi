@@ -339,7 +339,7 @@ class Message:
 
     def _encode(self):
         if not hasattr(self, '__fields__'):
-            raise NotImplementedError('You have to overwrite this method')
+            return ''
 
         data = ByteBuffer()
         for field in self.__fields__:

@@ -37,7 +37,6 @@ SELFTEST_RESULT_FATAL_HARDWARE_ERROR = 0x58
 class GetDeviceIdReq(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_ID
     __netfn__ = constants.NETFN_APP
-    __fields__ = ()
 
 
 @register_message_class
@@ -78,7 +77,6 @@ class GetDeviceIdRsp(Message):
 class ColdResetReq(Message):
     __cmdid__ = constants.CMDID_COLD_RESET
     __netfn__ = constants.NETFN_APP
-    __fields__ = ()
 
 
 @register_message_class
@@ -94,7 +92,6 @@ class ColdResetRsp(Message):
 class WarmResetReq(Message):
     __cmdid__ = constants.CMDID_WARM_RESET
     __netfn__ = constants.NETFN_APP
-    __fields__ = ()
 
 
 @register_message_class
@@ -129,7 +126,6 @@ class ManufacturingTestOnRsp(Message):
 class GetSelftestResultsReq(Message):
     __cmdid__ = constants.CMDID_GET_SELF_TEST_RESULTS
     __netfn__ = constants.NETFN_APP
-    __fields__ = ()
 
 
 @register_message_class
@@ -157,7 +153,6 @@ class GetSelftestResultsRsp(Message):
 class ResetWatchdogTimerReq(Message):
     __cmdid__ = constants.CMDID_RESET_WATCHDOG_TIMER
     __netfn__ = constants.NETFN_APP
-    __fields__ = ()
 
 
 @register_message_class
@@ -205,7 +200,6 @@ class SetWatchdogTimerRsp(Message):
 class GetWatchdogTimerReq(Message):
     __cmdid__ = constants.CMDID_GET_WATCHDOG_TIMER
     __netfn__ = constants.NETFN_APP
-    __fields__ = ()
 
 
 @register_message_class
@@ -264,7 +258,6 @@ class SetBmcGlobalEnablesRsp(Message):
 class GetBmcGlobalEnablesReq(Message):
     __cmdid__ = constants.CMDID_GET_BMC_GLOBAL_ENABLES
     __netfn__ = constants.NETFN_APP
-    __fields__ = ()
 
 
 @register_message_class
@@ -317,7 +310,6 @@ class ClearMessageFlagsRsp(Message):
 class GetMessageFlagsReq(Message):
     __cmdid__ = constants.CMDID_GET_MESSAGE_FLAGS
     __netfn__ = constants.NETFN_APP
-    __fields__ = ()
 
 
 @register_message_class
@@ -372,7 +364,6 @@ class EnableMessageChannelReceiveRsp(Message):
 class GetMessageReq(Message):
     __cmdid__ = constants.CMDID_GET_MESSAGE
     __netfn__ = constants.NETFN_APP
-    __fields__ = ()
 
 
 @register_message_class
@@ -393,7 +384,6 @@ class GetMessageRsp(Message):
 class ReadEventMessageBufferReq(Message):
     __cmdid__ = constants.CMDID_READ_EVENT_MESSAGE_BUFFER
     __netfn__ = constants.NETFN_APP
-    __fields__ = ()
 
 
 @register_message_class

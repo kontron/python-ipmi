@@ -30,7 +30,6 @@ from . import RemainingBytes
 class GetSelInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_SEL_INFO
     __netfn__ = constants.NETFN_STORAGE
-    __fields__ = ()
 
 
 @register_message_class
@@ -59,7 +58,6 @@ class GetSelInfoRsp(Message):
 class GetSelAllocationInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_SEL_ALLOCATION_INFO
     __netfn__ = constants.NETFN_STORAGE
-    __fields__ = ()
 
 
 @register_message_class
@@ -80,7 +78,6 @@ class GetSelAllocationInfoRsp(Message):
 class ReserveSelReq(Message):
     __cmdid__ = constants.CMDID_RESERVE_SEL
     __netfn__ = constants.NETFN_STORAGE
-    __fields__ = ()
 
 
 @register_message_class
@@ -183,7 +180,6 @@ class ClearSelRsp(Message):
 class GetSelTimeReq(Message):
     __cmdid__ = constants.CMDID_GET_SEL_TIME
     __netfn__ = constants.NETFN_STORAGE
-    __fields__ = ()
 
 
 @register_message_class

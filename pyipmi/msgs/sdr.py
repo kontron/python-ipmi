@@ -31,7 +31,6 @@ from . import VariableByteArray
 class GetSdrRepositoryInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_SDR_REPOSITORY_INFO
     __netfn__ = constants.NETFN_STORAGE
-    __fields__ = ()
 
 
 @register_message_class
@@ -61,7 +60,6 @@ class GetSdrRepositoryInfoRsp(Message):
 class GetSdrRepositoryAllocationInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_SDR_REPOSITORY_ALLOCATION_INFO
     __netfn__ = constants.NETFN_STORAGE
-    __fields__ = ()
 
 
 @register_message_class
@@ -82,7 +80,6 @@ class GetSdrRepositoryAllocationInfoRsp(Message):
 class ReserveSdrRepositoryReq(Message):
     __cmdid__ = constants.CMDID_RESERVE_SDR_REPOSITORY
     __netfn__ = constants.NETFN_STORAGE
-    __fields__ = ()
 
 
 @register_message_class

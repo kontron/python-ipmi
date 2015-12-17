@@ -38,7 +38,6 @@ CONTROL_SOFT_SHUTDOWN = 5
 class GetChassisCapabilitiesReq(Message):
     __cmdid__ = constants.CMDID_GET_CHASSIS_CAPABILITIES
     __netfn__ = constants.NETFN_CHASSIS
-    __fields__ = ()
 
 
 @register_message_class
@@ -68,7 +67,6 @@ class GetChassisCapabilitiesRsp(Message):
 class GetChassisStatusReq(Message):
     __cmdid__ = constants.CMDID_GET_CHASSIS_STATUS
     __netfn__ = constants.NETFN_CHASSIS
-    __fields__ = ()
 
 
 @register_message_class
@@ -129,7 +127,6 @@ class ChassisControlRsp(Message):
 class GetPohCounterReq(Message):
     __cmdid__ = constants.CMDID_GET_POH_COUNTER
     __netfn__ = constants.NETFN_CHASSIS
-    __fields__ = ()
 
 
 @register_message_class

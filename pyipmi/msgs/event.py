@@ -51,7 +51,6 @@ class SetEventReceiverRsp(Message):
 class GetEventReceiverReq(Message):
     __cmdid__ = constants.CMDID_GET_EVENT_RECEIVER
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __fields__ = ()
 
 
 @register_message_class

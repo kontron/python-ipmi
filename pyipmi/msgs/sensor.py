@@ -31,7 +31,6 @@ from . import RemainingBytes
 class GetDeviceSdrInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_SDR_INFO
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __fields__ = ()
 
 
 @register_message_class
@@ -82,7 +81,6 @@ class GetDeviceSdrRsp(Message):
 class ReserveDeviceSdrRepositoryReq(Message):
     __cmdid__ = constants.CMDID_RESERVE_DEVICE_SDR_REPOSITORY
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __fields__ = ()
 
 
 @register_message_class
