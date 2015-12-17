@@ -79,45 +79,18 @@ def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
 
 INITIATE_ERASE = 0xaa
 GET_ERASE_STATUS = 0x00
+
 ERASURE_IN_PROGRESS = 0x0
 ERASURE_COMPLETED = 0x1
 
-def clear_repository_helper(reserve_fn, clear_fn, retry=5, reservation=None):
-    """Helper function to start repository erasure and wait until finish.
-    This helper is used by clear_sel and clear_sdr_repository.
-    """
-
-    reservation = reserve_fn()
-
-    # start erasure
+def _clear_repository(reserve_fn, clear_fn, ctrl, retry, reservation):
     while True:
         retry -= 1
         if retry <= 0:
             raise RetryError()
 
         try:
-            clear_fn(INITIATE_ERASE, reservation)
-        except CompletionCodeError, e:
-            if e.cc == constants.CC_RES_CANCELED:
-                time.sleep(0.2)
-                reservation = reserve_fn()
-                continue
-            else:
-                check_completion_code(e.cc)
-
-        break
-
-    # give some time to clear
-    time.sleep(0.5)
-
-    # wait until finish
-    while True:
-        retry -= 1
-        if retry <= 0:
-            raise RetryError()
-
-        try:
-            in_progress = clear_fn(GET_ERASE_STATUS, reservation)
+            in_progress = clear_fn(ctrl, reservation)
         except CompletionCodeError, e:
             if e.cc == constants.CC_RES_CANCELED:
                 time.sleep(0.2)
@@ -129,4 +102,25 @@ def clear_repository_helper(reserve_fn, clear_fn, retry=5, reservation=None):
         if in_progress == ERASURE_IN_PROGRESS:
             time.sleep(0.5)
             continue
+
         break
+    return reservation
+
+def clear_repository_helper(reserve_fn, clear_fn, retry=5, reservation=None):
+    """Helper function to start repository erasure and wait until finish.
+    This helper is used by clear_sel and clear_sdr_repository.
+    """
+
+    if reservation is None:
+        reservation = reserve_fn()
+
+    # start erasure
+    reservation = _clear_repository(reserve_fn, clear_fn,
+            INITIATE_ERASE, retry, reservation)
+
+    # give some time to clear
+    time.sleep(0.5)
+
+    # wait until finish
+    reservation = _clear_repository(reserve_fn, clear_fn,
+            GET_ERASE_STATUS, retry, reservation)
