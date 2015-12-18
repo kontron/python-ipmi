@@ -250,7 +250,7 @@ class SdrFullSensorRecord(SdrCommon):
     def __init__(self, data, next_id=None):
         SdrCommon.__init__(self, data, next_id)
         if data:
-            self.from_data(data)
+            self._from_data(data)
 
     def convert_sensor_raw_to_value(self, raw):
         fmt = self.analog_data_format
@@ -323,7 +323,7 @@ class SdrFullSensorRecord(SdrCommon):
             value = -(1<<size) + value
         return value
 
-    def from_data(self, data):
+    def _from_data(self, data):
         buffer = ByteBuffer(data[5:])
         # record key bytes
         self.owner_id = buffer.pop_unsigned_int(1)
@@ -479,9 +479,9 @@ class SdrCompactSensorRecord(SdrCommon):
     def __init__(self, data, next_id=None):
         SdrCommon.__init__(self, data, next_id)
         if data:
-            self.from_data(data)
+            self._from_data(data)
 
-    def from_data(self, data):
+    def _from_data(self, data):
         buffer = ByteBuffer(data[5:])
         self.owner_id = buffer.pop_unsigned_int(1)
         self.owner_lun = buffer.pop_unsigned_int(1) & 0x3
@@ -514,12 +514,12 @@ class SdrEventOnlySensorRecord(SdrCommon):
     def __init__(self, data, next_id=None):
         SdrCommon.__init__(self, data, next_id)
         if data:
-            self.from_data(data)
+            self._from_data(data)
 
     def __str__(self):
         return 'Not supported yet.'
 
-    def from_data(self, data):
+    def _from_data(self, data):
         buffer = ByteBuffer(data[5:])
         self.owner_id = buffer.pop_unsigned_int(1)
         self.owner_lun = buffer.pop_unsigned_int(1) & 0x3
@@ -541,9 +541,9 @@ class SdrFruDeviceLocator(SdrCommon):
     def __init__(self, data, next_id=None):
         SdrCommon.__init__(self, data, next_id)
         if data:
-            self.from_data(data)
+            self._from_data(data)
 
-    def from_data(self, data):
+    def _from_data(self, data):
         buffer = ByteBuffer(data[5:])
         # record key bytes
         self.device_access_address = buffer.pop_unsigned_int(1) >> 1
@@ -568,9 +568,9 @@ class SdrManagementContollerDeviceLocator(SdrCommon):
     def __init__(self, data, next_id=None):
         SdrCommon.__init__(self, data, next_id)
         if data:
-            self.from_data(data)
+            self._from_data(data)
 
-    def from_data(self, data):
+    def _from_data(self, data):
         buffer = ByteBuffer(data[5:])
         self.device_slave_address = buffer.pop_unsigned_int(1) >> 1
         self.channel_number = buffer.pop_unsigned_int(1) & 0xf

@@ -95,51 +95,56 @@ class Picmg:
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def set_fru_activation(self, fru_id):
+    def _set_fru_activation(self, fru_id, control):
         req = create_request_by_name('SetFruActivation')
         req.fru_id = fru_id
-        req.control = FRU_ACTIVATION_FRU_ACTIVATE
+        req.control = control
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
+    def set_fru_activation(self, fru_id):
+        _set_fru_activation(FRU_ACTIVATION_FRU_ACTIVATE)
+
     def set_fru_deactivation(self, fru_id):
-        req = create_request_by_name('SetFruActivation')
+        _set_fru_activation(FRU_ACTIVATION_FRU_DEACTIVATE)
+
+
+    ACTIVATION_LOCK_SET = 0
+    ACTIVATION_LOCK_CLEAR = 1
+    DEACTIVATION_LOCK_SET = 2
+    DEACTIVATION_LOCK_CLEAR = 3
+
+    def set_fru_activation_policy(self, fru_id, ctrl):
+        req = create_request_by_name('SetFruActivationPolicy')
         req.fru_id = fru_id
-        req.control = FRU_ACTIVATION_FRU_DEACTIVATE
+
+        if ctrl == ACTIVATION_LOCK_SET:
+            req.mask.activation_locked = 1
+            req.set.activation_locked = 1
+        elif ctrl == ACTIVATION_LOCK_CLEAR:
+            req.mask.activation_locked = 1
+            req.set.activation_locked = 0
+        elif ctrl == DEACTIVATION_LOCK_SET:
+            req.mask.deactivation_locked = 1
+            req.set.deactivation_locked = 1
+        elif ctrl == DEACTIVATION_LOCK_CLEAR:
+            req.mask.deactivation_locked = 1
+            req.set.deactivation_locked = 0
+
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
     def set_fru_activation_lock(self, fru_id):
-        req = create_request_by_name('SetFruActivationPolicy')
-        req.fru_id = fru_id
-        req.mask.activation_locked = 1
-        req.set.activation_locked = 1
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        _set_fru_activation_policy(self, fru_id, ACTIVATION_LOCK_SET)
 
     def clear_fru_activation_lock(self, fru_id):
-        req = create_request_by_name('SetFruActivationPolicy')
-        req.fru_id = fru_id
-        req.mask.activation_locked = 1
-        req.set.activation_locked = 0
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        _set_fru_activation_policy(self, fru_id, ACTIVATION_LOCK_CLEAR)
 
     def set_fru_deactivation_lock(self, fru_id):
-        req = create_request_by_name('SetFruActivationPolicy')
-        req.fru_id = fru_id
-        req.mask.deactivation_locked = 1
-        req.set.deactivation_locked = 1
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        _set_fru_activation_policy(self, fru_id, DEACTIVATION_LOCK_SET)
 
     def clear_fru_deactivation_lock(self, fru_id):
-        req = create_request_by_name('SetFruActivationPolicy')
-        req.fru_id = fru_id
-        req.mask.deactivation_locked = 1
-        req.set.deactivation_locked = 0
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        _set_fru_activation_policy(self, fru_id, DEACTIVATION_LOCK_CLEAR)
 
     def set_port_state(self, link_descr, state):
         req = create_request_by_name('SetPortState')
