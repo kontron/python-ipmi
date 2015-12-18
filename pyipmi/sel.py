@@ -23,6 +23,7 @@ from pyipmi.msgs import constants
 from pyipmi.event import EVENT_ASSERTION, EVENT_DEASSERTION
 
 from pyipmi.helper import clear_repository_helper
+from pyipmi.state import State
 
 
 class Sel:
@@ -99,14 +100,10 @@ class Sel:
         '''Returns all SEL entries as a list.'''
         return list(self.sel_entries())
 
-class SelEntry:
+class SelEntry(State):
     TYPE_SYSTEM_EVENT = 0x02
     TYPE_OEM_TIMESTAMPED_RANGE = range(0xc0, 0xe0)
     TYPE_OEM_NON_TIMESTAMPED_RANGE = range(0xe0, 0x100)
-
-    def __init__(self, rsp=None):
-        if rsp:
-            self.from_response(rsp)
 
     def __str__(self):
         s = '[%s]' % (' '.join(['%02x' % b for b in self.data]))
@@ -134,7 +131,7 @@ class SelEntry:
             s = 'OEM non-timestamped (0x%02x)' % type
         return s
 
-    def from_response(self, data):
+    def _from_response(self, data):
         if len(data) != 16:
             raise DecodingError('Invalid SEL record length (%d)' % len(data))
 

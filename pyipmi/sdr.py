@@ -24,6 +24,7 @@ from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 
 from pyipmi.helper import get_sdr_data_helper, clear_repository_helper
+from pyipmi.state import State
 
 SDR_TYPE_FULL_SENSOR_RECORD = 0x01
 SDR_TYPE_COMPACT_SENSOR_RECORD = 0x02
@@ -162,12 +163,9 @@ class Sdr:
     def get_initialization_agent_status(self):
         return self._run_initialization_agent(GET_INITIALIZATION_AGENT_STATUS)
 
-class SdrRepositoryInfo:
-    def __init__(self, rsp):
-        if rsp:
-            self.from_response(rsp)
+class SdrRepositoryInfo(State):
 
-    def from_response(self, rsp):
+    def _from_response(self, rsp):
         self.sdr_version = rsp.sdr_version
         self.record_count = rsp.record_count
         self.free_space = rsp.free_space
@@ -179,12 +177,9 @@ class SdrRepositoryInfo:
         self.support_update_type = rsp.support.update_type
         self.support_overflow_flag = rsp.support.overflow_flag
 
-class SdrRepositoryAllocationInfo:
-    def __init__(self, rsp):
-        if rsp:
-            self.from_response(rsp)
+class SdrRepositoryAllocationInfo(State):
 
-    def from_response(self, rsp):
+    def _from_response(self, rsp):
         self.number_of_units = rsp.number_of_units
         self.unit_size = rsp.unit_size
         self.free_units = rsp.free_units
@@ -216,7 +211,7 @@ def create_sdr(data, next_id=None):
 class SdrCommon:
     def __init__(self, rsp=None, next_id=None):
         if rsp:
-            self.from_response(rsp)
+            self._from_response(rsp)
         if next_id:
             self.next_id = next_id
 
@@ -225,7 +220,7 @@ class SdrCommon:
             (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
         return s
 
-    def from_response(self, data):
+    def _from_response(self, data):
         if len(data) < 5:
             raise DecodingError('Invalid SDR length (%d)' % len(data))
 

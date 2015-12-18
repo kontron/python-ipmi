@@ -19,6 +19,7 @@ from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import picmg
 from pyipmi.utils import check_completion_code
+from pyipmi.state import State
 
 from pyipmi.msgs.picmg import \
         FRU_CONTROL_COLD_RESET, FRU_CONTROL_WARM_RESET, \
@@ -193,7 +194,7 @@ class Picmg:
         req.power_channel_count = 1
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
-        return PowerChannelStatus(rsp.data[0])
+        return PowerChannelStatus(rsp)
 
     def set_signaling_class(self, interface, channel, signaling_class):
         req = create_request_by_name('SetSignalingClass')
@@ -212,7 +213,7 @@ class Picmg:
         return rsp.channel_signaling.class_capability
 
 
-class LinkDescriptor:
+class LinkDescriptor(State):
     # TODO dont duplicate exports, import them instead
     from pyipmi.msgs import picmg
     INTERFACE_BASE = picmg.LINK_INTERFACE_BASE
@@ -252,7 +253,7 @@ class LinkDescriptor:
     STATE_DISABLE = picmg.LINK_STATE_DISABLE
     STATE_ENABLE = picmg.LINK_STATE_ENABLE
 
-    PROPERTIES = [
+    __properties__ = [
             # (propery, description)
             ('channel', ''),
             ('interface', ''),
@@ -262,12 +263,6 @@ class LinkDescriptor:
             ('extension', ''),
             ('grouping_id', ''),
     ]
-
-    def __init__(self, res=None):
-        for p in self.PROPERTIES:
-            setattr(self, p[0], None)
-        if res:
-            self.from_response(res)
 
     INTERFACE_DESCR_STRING = [
         # Interface, 'STRING'
@@ -329,13 +324,9 @@ class LinkDescriptor:
         return 'unknown'
 
 
-class PowerLevel:
-    def __init__(self, res=None):
-        if res:
-            self.from_response(res)
+class PowerLevel(State):
 
-    def from_response(self, res):
-        print res
+    def _from_response(self, rsp):
         self.dynamic_power_configuration = res.properties.dynamic_power_configuration
         self.power_level = res.properties.power_level
         self.delay_to_stable = res.delay_to_stable_power
@@ -343,19 +334,16 @@ class PowerLevel:
         self.power_levels = res.power_draw
 
 
-class FanSpeedProperties:
-    def __init__(self, res=None):
-        if res:
-            self.from_response(res)
+class FanSpeedProperties(State):
 
-    def from_response(self, res):
+    def _from_response(self, res):
         self.minimum_speed_level = res.minimum_speed_level
         self.maximum_speed_level = res.maximum_speed_level
         self.normal_operation_level = res.normal_operation_level
         self.local_control_supported = res.properties.local_control_supported
 
 
-class LedState:
+class LedState(State):
     COLOR_BLUE = picmg.LED_COLOR_BLUE
     COLOR_RED = picmg.LED_COLOR_RED
     COLOR_GREEN = picmg.LED_COLOR_GREEN
@@ -368,7 +356,7 @@ class LedState:
     FUNCTION_ON = 3
     FUNCTION_LAMP_TEST = 4
 
-    PROPERTIES = [
+    __properties__ = [
             # (propery, description)
             ('fru_id', ''),
             ('led_id', ''),
@@ -385,12 +373,6 @@ class LedState:
             ('override_color', ''),
             ('lamp_test_duration', ''),
     ]
-
-    def __init__(self, res=None):
-        for p in self.PROPERTIES:
-            setattr(self, p[0], None)
-        if res:
-            self.from_response(res)
 
     def __str__(self):
         s = '[flags '
@@ -409,7 +391,7 @@ class LedState:
         s += ']'
         return s
 
-    def from_response(self, res):
+    def _from_response(self, res):
         self.local_state_available = bool(res.led_states.local_avail)
         self.override_enabled = bool(res.led_states.override_en)
         self.lamp_test_enabled = bool(res.led_states.lamp_test_en)
@@ -472,8 +454,8 @@ class LedState:
         return req
 
 
-class GlobalStatus:
-    PROPERTIES = [
+class GlobalStatus(State):
+    __properties__ = [
             # (propery, description)
             ('role', ''),
             ('management_power_good', ''),
@@ -481,13 +463,7 @@ class GlobalStatus:
             ('unidentified_fault', ''),
     ]
 
-    def __init__(self, res=None):
-        for p in self.PROPERTIES:
-            setattr(self, p[0], None)
-        if res:
-            self.from_response(res)
-
-    def from_response(self, res):
+    def _from_response(self, rsp):
         self.role = res.global_status.role
         self.management_power_good =\
                 bool(res.global_status.management_power_good)
@@ -497,8 +473,8 @@ class GlobalStatus:
                 bool(res.global_status.unidentified_fault)
 
 
-class PowerChannelStatus:
-    PROPERTIES = [
+class PowerChannelStatus(State):
+    __properties__ = [
             # (propery, description)
             ('present', ''),
             ('management_power', ''),
@@ -509,13 +485,8 @@ class PowerChannelStatus:
             ('pwr_on', ''),
     ]
 
-    def __init__(self, res=None):
-        for p in self.PROPERTIES:
-            setattr(self, p[0], None)
-        if res:
-            self.from_response(res)
-
-    def from_response(self, data):
+    def _from_response(self, rsp):
+        data = rsp.data[0]
         self.present = (data >> 0) & 1
         self.management_power = (data >> 1) & 1
         self.management_power_overcurrent = (data >> 2) & 1
