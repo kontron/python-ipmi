@@ -18,6 +18,7 @@ import time
 
 from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
 from pyipmi.utils import check_completion_code, ByteBuffer
+from pyipmi.utils import send_message_with_name
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 from pyipmi.event import EVENT_ASSERTION, EVENT_DEASSERTION
@@ -28,15 +29,11 @@ from pyipmi.state import State
 
 class Sel:
     def get_sel_entries_count(self):
-        req = create_request_by_name('GetSelInfo')
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = send_message_with_name('GetSelInfo')
         return rsp.entries
 
     def get_sel_reservation_id(self):
-        req = create_request_by_name('ReserveSel')
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = send_message_with_name('ReserveSel')
         return rsp.reservation_id
 
     def _clear_sel(self, cmd, reservation):

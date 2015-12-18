@@ -18,7 +18,7 @@ import array
 from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import picmg
-from pyipmi.utils import check_completion_code
+from pyipmi.utils import check_completion_code, send_message_with_name
 from pyipmi.state import State
 
 from pyipmi.msgs.picmg import \
@@ -28,10 +28,7 @@ from pyipmi.msgs.picmg import \
 
 class Picmg:
     def get_picmg_properties(self):
-        req = create_request_by_name('GetPicmgProperties')
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
-        return rsp
+        return send_message_with_name('GetPicmgProperties')
 
     def fru_control(self, fru_id, option):
         req = create_request_by_name('FruControl')

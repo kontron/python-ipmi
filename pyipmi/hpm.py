@@ -26,6 +26,7 @@ from pyipmi.errors import DecodingError, CompletionCodeError, HpmError, TimeoutE
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 from pyipmi.utils import check_completion_code, bcd_search, chunks
+from pyipmi.utils import send_message_with_name
 
 
 PROPERTY_GENERAL_PROPERTIES = 0
@@ -67,9 +68,7 @@ class Hpm:
         return bin(components).count('1')
 
     def get_target_upgrade_capabilities(self):
-        req = create_request_by_name('GetTargetUpgradeCapabilities')
-        rsp = self.send_message(req)
-        self._check_completion_code(rsp)
+        rsp = send_message_with_name('GetTargetUpgradeCapabilities')
         return TargetUpgradeCapabilities(rsp)
 
     def get_component_property(self, component_id, property_id):
@@ -100,9 +99,7 @@ class Hpm:
         return None
 
     def abort_firmware_upgrade(self):
-        req = create_request_by_name('AbortFirmwareUpgrade')
-        rsp = self.send_message(req)
-        self._check_completion_code(rsp)
+        send_message_with_name('AbortFirmwareUpgrade')
 
     def initiate_upgrade_action(self, components_mask, action):
         """ Initiate Upgrade Action
@@ -242,22 +239,13 @@ class Hpm:
             pass
 
     def query_selftest_results(self):
-        req = create_request_by_name('QuerySelftestResults')
-        rsp = self.send_message(req)
-        self._check_completion_code(rsp)
-        return SelfTestResult(rsp.data)
+        return SelfTestResult(send_message_with_name('QuerySelftestResults'))
 
     def query_rollback_status(self):
-        req = create_request_by_name('QueryRollbackStatus')
-        rsp = self.send_message(req)
-        self._check_completion_code(rsp)
-        return RollbackStatus(rsp)
+        return RollbackStatus(send_message_with_name('QueryRollbackStatus'))
 
     def initiate_manual_rollback(self):
-        req = create_request_by_name('InitiateManualRollback')
-        rsp = self.send_message(req)
-        self._check_completion_code(rsp)
-        return RollbackStatus(rsp)
+        return RollbackStatus(send_message_with_name('InitiateManualRollback'))
 
     def initiate_maunal_rollback_and_wait(self, timeout=2, interval=0.1):
         try:
