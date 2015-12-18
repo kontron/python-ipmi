@@ -135,26 +135,42 @@ def cmd_sdr_show_all(ipmi, args):
             print ''
         print "\n"
 
+def print_sdr_list_entry(record_id, number, id_string, value, states):
+    if number:
+        number = str(number)
+    else:
+        number = 'na'
+
+    if states:
+        states = hex(states)
+    else:
+        states = 'na'
+
+    print "0x%04x | %3s | %-16s | %9s | %s" % (record_id, number,
+                        id_string, value, states)
+
 def cmd_sdr_list(ipmi, args):
     print "SDR-ID |     | Device String    |"
     print "=======|=====|==================|===================="
 
     for s in ipmi.device_sdr_entries():
         try:
+            number = None
+            value = None
+            states = None
+
             if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
-                (raw, states) = ipmi.get_sensor_reading(s.number)
-                if raw is not None:
-                    value = s.convert_sensor_raw_to_value(raw)
-                else:
-                    value = 'na'
-                print "0x%04x | %3d | %-16s | %9s | 0x%x" % (s.id, s.number,
-                        s.device_id_string, value, states)
+                (value, states) = ipmi.get_sensor_reading(s.number)
+                number = s.number
+                if value is not None:
+                    value = s.convert_sensor_raw_to_value(value)
+
             elif s.type is pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
-                (raw, states) = ipmi.get_sensor_reading(s.number)
-                print "0x%04x | %3d | %-16s | 0x%02x      | 0x%x" % (
-                        s.id, s.number, s.device_id_string, raw, states)
-            else:
-                print "0x%04x | --- | %-16s |" % (s.id, s.device_id_string)
+                (value, states) = ipmi.get_sensor_reading(s.number)
+                number = s.number
+
+            print_sdr_list_entry(s.id, number, s.device_id_string,
+                        value, states)
 
         except pyipmi.errors.CompletionCodeError, e:
             if s.type in (pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD,
