@@ -413,7 +413,7 @@ class VersionField:
 
         if data[1] is 0xff:
             self.minor = data[1]
-        elif data[1] < 0x99:
+        elif data[1] <= 0x99:
             self.minor = int(data[1:2].tostring().decode('bcd+'))
         else:
             raise DecodingError()
