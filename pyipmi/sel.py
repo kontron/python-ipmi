@@ -29,8 +29,8 @@ from pyipmi.state import State
 
 class Sel:
     def get_sel_entries_count(self):
-        rsp = send_message_with_name('GetSelInfo')
-        return rsp.entries
+        info = SelInfo(send_message_with_name('GetSelInfo'))
+        return info.entries
 
     def get_sel_reservation_id(self):
         rsp = send_message_with_name('ReserveSel')
@@ -96,6 +96,26 @@ class Sel:
     def get_sel_entries(self):
         '''Returns all SEL entries as a list.'''
         return list(self.sel_entries())
+
+class SelInfo(State):
+
+    def _from_response(self, rsp):
+        self.version = rsp.version
+        self.entries = rsp.entries
+        self.free_bytes = rsp.free_bytes
+        self.most_recent_addition = rsp.most_recent_addition
+        self.most_recent_erase = rsp.most_recent_erase
+        self.operation_support = []
+        if rsp.operation_support.get_sel_allocation_info:
+           operation_support.append('get_sel_allocation_info')
+        if rsp.operation_support.reserve_sel:
+           operation_support.append('reserve_sel:')
+        if rsp.operation_support.partial_add_sel_entry:
+           operation_support.append('partial_add_sel_entry')
+        if rsp.operation_support.delete_sel:
+           operation_support.append('delete_sel')
+        if rsp.operation_support.overflow_flag:
+           operation_support.append('overflow_flag')
 
 class SelEntry(State):
     TYPE_SYSTEM_EVENT = 0x02
