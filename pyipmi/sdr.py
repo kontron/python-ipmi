@@ -202,9 +202,9 @@ def create_sdr(data, next_id=None):
 
 
 class SdrCommon:
-    def __init__(self, rsp=None, next_id=None):
-        if rsp:
-            self._from_response(rsp)
+    def __init__(self, data, next_id=None):
+        if data:
+            self._from_response(data)
         if next_id:
             self.next_id = next_id
 
