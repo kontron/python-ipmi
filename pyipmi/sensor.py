@@ -144,6 +144,7 @@ class Sensor:
         """
         (next_id, record_data) = get_sdr_data_helper(self.reserve_device_sdr_repository,
                 self._get_device_sdr_chunk, record_id, reservation_id)
+
         return sdr.create_sdr(record_data, next_id)
 
     def device_sdr_entries(self):
@@ -194,8 +195,8 @@ class Sensor:
         states = None
         if rsp.states1 is not None:
             states = rsp.states1
-        if rsp.states2 is not None:
-            states |= (rsp.states2 << 8)
+            if rsp.states2 is not None:
+                states |= (rsp.states2 << 8)
         return (reading, states)
 
     def set_sensor_thresholds(self, sensor_number, lun=0, unr=None, ucr=None,
