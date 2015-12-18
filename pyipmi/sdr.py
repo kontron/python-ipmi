@@ -52,7 +52,6 @@ class Sdr:
         return rsp.reservation_id
 
     def _get_sdr_chunk(self, reservation_id, record_id, offset, length):
-        print length
         req = create_request_by_name('GetSdr')
         req.reservation_id = reservation_id
         req.record_id = record_id
