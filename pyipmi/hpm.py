@@ -27,6 +27,7 @@ from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 from pyipmi.utils import check_completion_code, bcd_search, chunks
 from pyipmi.utils import send_message_with_name
+from pyipmi.state import State
 
 
 PROPERTY_GENERAL_PROPERTIES = 0
@@ -76,7 +77,7 @@ class Hpm:
         req.id = component_id
         req.selector = property_id
         rsp = self.send_message(req)
-        self._check_completion_code(rsp)
+        check_completion_code(rsp.completion_code)
         return ComponentProperty.create_from_id(property_id, rsp)
 
     def get_component_properties(self, component_id):
@@ -189,10 +190,7 @@ class Hpm:
                 raise HpmError('finish_firmware_upload CC=0x%02x' % e.cc)
 
     def get_upgrade_status(self):
-        req = create_request_by_name('GetUpgradeStatus')
-        rsp = self.send_message(req)
-        self._check_completion_code(rsp)
-        return UpgradeStatus(rsp)
+        return UpgradeStatus(send_message_with_name('GetUpgradeStatus'))
 
     def wait_for_long_duration_command(self, expected_cmd,
             timeout=5, interval=1):
@@ -219,7 +217,7 @@ class Hpm:
         if rollback_override != None:
             req.rollback_override_policy = rollback_override
         rsp = self.send_message(req)
-        self._check_completion_code(rsp)
+        check_completion_code(rsp.completion_code)
 
     def activate_firmware_and_wait(self, rollback_override=None,
             timeout=2, interval=1):
@@ -361,10 +359,7 @@ class Hpm:
         self.install_component_from_image(image, component)
 
 
-class UpgradeStatus:
-    def __init__(self, rsp=None):
-        if rsp:
-            self._from_response(rsp)
+class UpgradeStatus(State):
 
     def _from_response(self, rsp):
         self.command_in_progress = rsp.command_in_progress
@@ -377,10 +372,7 @@ class UpgradeStatus:
         return "\n".join(str)
 
 
-class TargetUpgradeCapabilities:
-    def __init__(self, rsp=None):
-        if rsp:
-            self._from_response(rsp)
+class TargetUpgradeCapabilities(State):
 
     def _from_response(self, rsp):
         self.version = rsp.hpm_1_version
@@ -525,27 +517,24 @@ class ComponentPropertyDeferredVersion(ComponentProperty):
     def __init__(self, data=None):
         ComponentProperty.__init__(self, PROPERTY_DEFERRED_VERSION)
         if (data):
-            self._from_msg_response(data)
+            self._from_response(data)
 
-    def _from_msg_response(self, data):
+    def _from_response(self, data):
         self.version = VersionField(data)
 
 
 class ComponentPropertyOem(ComponentProperty):
     def __init__(self, data=None):
         if (data):
-            self._from_msg_response(data)
+            self._from_response(data)
 
-    def _from_msg_response(self, data):
+    def _from_response(self, data):
         raise NotImplementedError()
 
 
-class SelfTestResult:
-    def __init__(self, data=None):
-        if data:
-            self.from_data(data)
+class SelfTestResult(State):
 
-    def from_data(self, data):
+    def _from_response(self, data):
         self.status = data[0]
 
         if self.status  != 0x57:
