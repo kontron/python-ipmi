@@ -20,7 +20,6 @@ import array
 import time
 from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
 from pyipmi.utils import check_completion_code, ByteBuffer
-from pyipmi.utils import send_message_with_name
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 
@@ -41,14 +40,14 @@ RUN_INITIALIZATION_AGENT = 1
 
 class Sdr:
     def get_sdr_repository_info(self):
-        return SdrRepositoryInfo(send_message_with_name('GetSdrRepositoryInfo'))
+        return SdrRepositoryInfo(self.send_message_with_name('GetSdrRepositoryInfo'))
 
     def get_sdr_repository_allocation_info(self):
         return SdrRepositoryAllocationInfo(
-                send_message_with_name('GetSdrRepositoryAllocationInfo'))
+                self.send_message_with_name('GetSdrRepositoryAllocationInfo'))
 
     def reserve_sdr_repository(self):
-        rsp = send_message_with_name('ReserveSdrRepository')
+        rsp = self.send_message_with_name('ReserveSdrRepository')
         return rsp.reservation_id
 
     def _get_sdr_chunk(self, reservation_id, record_id, offset, length):

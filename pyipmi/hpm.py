@@ -26,7 +26,6 @@ from pyipmi.errors import DecodingError, CompletionCodeError, HpmError, TimeoutE
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 from pyipmi.utils import check_completion_code, bcd_search, chunks
-from pyipmi.utils import send_message_with_name
 from pyipmi.state import State
 
 
@@ -69,7 +68,7 @@ class Hpm:
         return bin(components).count('1')
 
     def get_target_upgrade_capabilities(self):
-        rsp = send_message_with_name('GetTargetUpgradeCapabilities')
+        rsp = self.send_message_with_name('GetTargetUpgradeCapabilities')
         return TargetUpgradeCapabilities(rsp)
 
     def get_component_property(self, component_id, property_id):
@@ -100,7 +99,7 @@ class Hpm:
         return None
 
     def abort_firmware_upgrade(self):
-        send_message_with_name('AbortFirmwareUpgrade')
+        self.send_message_with_name('AbortFirmwareUpgrade')
 
     def initiate_upgrade_action(self, components_mask, action):
         """ Initiate Upgrade Action
@@ -190,7 +189,7 @@ class Hpm:
                 raise HpmError('finish_firmware_upload CC=0x%02x' % e.cc)
 
     def get_upgrade_status(self):
-        return UpgradeStatus(send_message_with_name('GetUpgradeStatus'))
+        return UpgradeStatus(self.send_message_with_name('GetUpgradeStatus'))
 
     def wait_for_long_duration_command(self, expected_cmd,
             timeout=5, interval=1):
@@ -237,13 +236,13 @@ class Hpm:
             pass
 
     def query_selftest_results(self):
-        return SelfTestResult(send_message_with_name('QuerySelftestResults'))
+        return SelfTestResult(self.send_message_with_name('QuerySelftestResults'))
 
     def query_rollback_status(self):
-        return RollbackStatus(send_message_with_name('QueryRollbackStatus'))
+        return RollbackStatus(self.send_message_with_name('QueryRollbackStatus'))
 
     def initiate_manual_rollback(self):
-        return RollbackStatus(send_message_with_name('InitiateManualRollback'))
+        return RollbackStatus(self.send_message_with_name('InitiateManualRollback'))
 
     def initiate_maunal_rollback_and_wait(self, timeout=2, interval=0.1):
         try:
@@ -394,9 +393,9 @@ class VersionField:
         self.major = None
         self.minor = None
         if data:
-            self.from_data(data)
+            self._from_data(data)
 
-    def from_data(self, data):
+    def _from_data(self, data):
         if isinstance(data, str):
             data = array.array('B', [ord(c) for c in data])
         self.version = self._decode_version_string(data[0:2])
@@ -409,14 +408,15 @@ class VersionField:
         return '\n'.join(str)
 
     def _decode_version_string(self, data):
-        """`data` is array.array
-        """
+        """`data` is array.array"""
         self.major = data[0]
 
-        if data[1] is not 255:
-            self.minor = data[1:2].tostring().decode('bcd+')
-        else:
+        if data[1] is 0xff:
             self.minor = data[1]
+        elif data[1] < 0x99:
+            self.minor = int(data[1:2].tostring().decode('bcd+'))
+        else:
+            raise DecodingError()
 
     def version_to_string(self):
         return ''.join("%s.%s" % (self.major, self.minor))
@@ -531,21 +531,24 @@ class ComponentPropertyOem(ComponentProperty):
     def _from_response(self, data):
         raise NotImplementedError()
 
-
 class SelfTestResult(State):
 
-    def _from_response(self, data):
-        self.status = data[0]
+    CORRUPTED_OR_INACCESSIBLE_DATA_OR_DEVICES = 0x57
 
-        if self.status  != 0x57:
-            self.fail.sel = (data[1] & 0x80) >> 7
-            self.fail.sdrr = (data[1] & 0x40) >> 6
-            self.fail.bmc_fru = (data[1] & 0x20) >> 5
-            self.fail.ipmb = (data[1] & 0x10) >> 4
-            self.fail.sdrr_empty = (data[1] & 0x08) >> 3
-            self.fail.bmc_fru_interanl_area = (data[1] & 0x04) >> 2
-            self.fail.bootblock = (data[1] & 0x02) >> 1
-            self.fail.mc = (data[1] & 0x01) >> 0
+    def _from_response(self, rsp):
+        self.status = rsp.selftest_result_1
+
+        result2 = rsp.selftest_result_2
+
+        if self.status  != self.CORRUPTED_OR_INACCESSIBLE_DATA_OR_DEVICES:
+            self.fail_sel = (result2 & 0x80) >> 7
+            self.fail_sdrr = (result2 & 0x40) >> 6
+            self.fail_bmc_fru = (result2 & 0x20) >> 5
+            self.fail_ipmb = (result2 & 0x10) >> 4
+            self.fail_sdrr_empty = (result2 & 0x08) >> 3
+            self.fail_bmc_fru_interanl_area = (result2 & 0x04) >> 2
+            self.fail_bootblock = (result2 & 0x02) >> 1
+            self.fail_mc = (result2 & 0x01) >> 0
 
 
 class RollbackStatus:

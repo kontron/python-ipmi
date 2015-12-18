@@ -16,18 +16,18 @@
 
 from pyipmi.msgs import create_request_by_name
 from pyipmi.errors import DecodingError, CompletionCodeError
-from pyipmi.utils import check_completion_code, send_message_with_name
+from pyipmi.utils import check_completion_code
 from pyipmi.state import State
 
 class Bmc:
     def get_device_id(self):
-        return DeviceId(send_message_with_name('GetDeviceId'))
+        return DeviceId(self.send_message_with_name('GetDeviceId'))
 
     def cold_reset(self):
-        send_message_with_name('ColdReset')
+        self.send_message_with_name('ColdReset')
 
     def warm_reset(self):
-        send_message_with_name('WarmReset')
+        self.send_message_with_name('WarmReset')
 
     def i2c_write_read(self, type, id, channel, address, count, data=None):
         req = create_request_by_name('MasterWriteRead')
@@ -66,10 +66,10 @@ class Bmc:
         check_completion_code(rsp.completion_code)
 
     def get_watchdog_timer(self):
-        return Watchdog(send_message_with_name('GetWatchdogTimer'))
+        return Watchdog(self.send_message_with_name('GetWatchdogTimer'))
 
     def reset_watchdog_timer(self):
-        send_message_with_name('ResetWatchdogTimer')
+        self.send_message_with_name('ResetWatchdogTimer')
 
 
 class Watchdog(State):

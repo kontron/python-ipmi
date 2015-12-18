@@ -29,6 +29,8 @@ import sel
 import sensor
 
 from pyipmi.errors import TimeoutError, CompletionCodeError
+from pyipmi.msgs.registry import create_request_by_name
+from pyipmi.utils import check_completion_code
 
 try:
     from version import __version__
@@ -180,6 +182,12 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
                     continue
 
         return ret
+
+    def send_message_with_name(self, name):
+        req = create_request_by_name(name)
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return rsp
 
     def raw_command(self, lun, netfn, raw_bytes):
         return self.interface.send_and_receive_raw(self.target, lun, netfn,

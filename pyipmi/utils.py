@@ -18,16 +18,11 @@ import codecs
 from array import array
 import pyipmi.msgs.constants
 import pyipmi.errors
+from pyipmi.msgs import create_request_by_name
 
 def check_completion_code(cc):
     if cc != pyipmi.msgs.constants.CC_OK:
         raise pyipmi.errors.CompletionCodeError(cc)
-
-def send_message_with_name(name):
-        req = create_request_by_name(name)
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
-        return rsp
 
 def chunks(d, n):
     for i in xrange(0, len(d), n):
