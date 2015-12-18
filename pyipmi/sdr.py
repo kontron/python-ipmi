@@ -222,7 +222,7 @@ class SdrCommon:
         self.id = buffer.pop_unsigned_int(2)
         self.version = buffer.pop_unsigned_int(1)
         self.type = buffer.pop_unsigned_int(1)
-        self.lenght = buffer.pop_unsigned_int(1)
+        self.length = buffer.pop_unsigned_int(1)
 
 ###
 # SDR type 0x01
