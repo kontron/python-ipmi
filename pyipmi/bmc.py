@@ -32,7 +32,7 @@ class Bmc:
     def i2c_write_read(self, type, id, channel, address, count, data=None):
         req = create_request_by_name('MasterWriteRead')
         req.bus_id.type = type
-        req.bus_id.id= id
+        req.bus_id.id = id
         req.bus_id.channel = channel
         req.bus_id.slave_address = address
         req.read_count = count
