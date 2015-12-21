@@ -514,9 +514,6 @@ class SdrEventOnlySensorRecord(SdrCommon):
         if data:
             self._from_data(data)
 
-    def __str__(self):
-        return 'Not supported yet.'
-
     def _from_data(self, data):
         buffer = ByteBuffer(data[5:])
         self.owner_id = buffer.pop_unsigned_int(1)
