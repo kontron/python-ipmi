@@ -38,7 +38,7 @@ SDR_TYPE_BMC_MESSAGE_CHANNEL_INFO_RECORD = 0x14
 GET_INITIALIZATION_AGENT_STATUS = 0
 RUN_INITIALIZATION_AGENT = 1
 
-class Sdr:
+class Sdr(object):
     def get_sdr_repository_info(self):
         return SdrRepositoryInfo(self.send_message_with_name('GetSdrRepositoryInfo'))
 
@@ -200,7 +200,7 @@ def create_sdr(data, next_id=None):
         raise DecodingError('Unsupported SDR type(0x%02x)' % sdr_type)
 
 
-class SdrCommon:
+class SdrCommon(object):
     def __init__(self, data, next_id=None):
         if data:
             self._from_response(data)

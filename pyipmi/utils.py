@@ -28,7 +28,7 @@ def chunks(d, n):
     for i in xrange(0, len(d), n):
         yield d[i:i+n]
 
-class ByteBuffer:
+class ByteBuffer(object):
     def __init__(self, data=None):
         if data is not None:
             self.array = array('B', data)

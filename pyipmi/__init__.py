@@ -46,7 +46,7 @@ def create_connection(interface):
     ipmi.requester = NullRequester()
     return ipmi
 
-class Requester:
+class Requester(object):
     '''The Requester class represents an IPMI device which initiates a
     request/response message exchange.
     '''
@@ -54,7 +54,7 @@ class Requester:
     def __init__(self, ipmb_address):
         self.ipmb_address = ipmb_address
 
-class NullRequester:
+class NullRequester(object):
     '''The NullRequester is used for interfaces which doesn't require a
     valid requester.
     '''
@@ -63,7 +63,7 @@ class NullRequester:
     def ipmb_address():
         raise AssertionError('NullRequester does not provide an IPMB address')
 
-class Target:
+class Target(object):
     '''The Target class represents an IPMI target.'''
     class Routing:
         def __init__(self, address, bridge_channel):
@@ -82,7 +82,7 @@ class Target:
 
         self.routing = [ self.Routing(*r) for r in rinfo ]
 
-class Session:
+class Session(object):
     AUTH_TYPE_NONE        = 0x00
     AUTH_TYPE_MD2         = 0x01
     AUTH_TYPE_MD5         = 0x02
@@ -132,26 +132,10 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
         sdr.Sdr, sensor.Sensor, event.Event, sel.Sel, lan.Lan):
 
     def __init__(self):
-        if (hasattr(bmc.Bmc, '__init__')):
-            bmc.Bmc.__init__(self)
-        if (hasattr(chassis.Chassis, '__init__')):
-            chassis.Chassis.__init__(self)
-        if (hasattr(fru.Fru, '__init__')):
-            fru.Fru.__init__(self)
-        if (hasattr(picmg.Picmg, '__init__')):
-            picmg.Picmg.__init__(self)
-        if (hasattr(hpm.Hpm, '__init__')):
-            hpm.Hpm.__init__(self)
-        if (hasattr(sdr.Sdr, '__init__')):
-            sdr.Sdr.__init__(self)
-        if (hasattr(sensor.Sensor, '__init__')):
-            sensor.Sensor.__init__(self)
-        if (hasattr(event.Event, '__init__')):
-            event.Event.__init__(self)
-        if (hasattr(sel.Sel, '__init__')):
-            sel.Sel.__init__(self)
-        if (hasattr(lan.Lan, '__init__')):
-            lan.Lan.__init__(self)
+        for base in Ipmi.__bases__:
+            base.__init__(self)
+
+        print dir(self)
 
     def is_ipmc_accessible(self):
         return self.interface.is_ipmc_accessible(self.target)

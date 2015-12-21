@@ -19,7 +19,7 @@ from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.utils import check_completion_code
 from pyipmi.state import State
 
-class Bmc:
+class Bmc(object):
     def get_device_id(self):
         return DeviceId(self.send_message_with_name('GetDeviceId'))
 

@@ -97,7 +97,7 @@ SENSOR_TYPE_OEM_KONTRON_SYSTEM_FIRMWARE_UPGRADE = 0xca
 SENSOR_TYPE_OEM_KONTRON_POWER_DENIED = 0xcd
 SENSOR_TYPE_OEM_KONTRON_RESET = 0xcf
 
-class Sensor:
+class Sensor(object):
     def reserve_device_sdr_repository(self):
         req = create_request_by_name('ReserveDeviceSdrRepository')
         rsp = self.send_message(req)

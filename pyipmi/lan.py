@@ -52,7 +52,7 @@ LAN_PARAMETER_IP_ADDRESS_SOURCE_DHCP = 2
 LAN_PARAMETER_IP_ADDRESS_SOURCE_BIOS_OR_SYSTEM_SOFTWARE = 3
 LAN_PARAMETER_IP_ADDRESS_SOURCE_BMC_OTHER_PROTOCOL = 4
 
-class Lan:
+class Lan(object):
     def get_lan_configuration_parameters(self, channel=0, parameter_selector=0,
             set_selector=0, block_selector=0, revision_only=0):
         req = create_request_by_name('GetLanConfigurationParameters')
@@ -75,5 +75,5 @@ class Lan:
         check_completion_code(rsp.completion_code)
 
 
-class LanParameter:
+class LanParameter(object):
     pass

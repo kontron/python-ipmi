@@ -58,7 +58,7 @@ CC_QUERY_SELFTEST_NO_RESULTS_AVAILABLE = 0xD5
 CC_ABORT_UPGRADE_CANNOT_ABORT = 0x80
 CC_ABORT_UPGRADE_CANNOT_RESUME_OPERATION = 0x81
 
-class Hpm:
+class Hpm(object):
 
     def _get_component_count(self, components):
         """Return the number of components"""
@@ -385,7 +385,7 @@ class TargetUpgradeCapabilities(State):
 
 
 VERSION_FIELD_LEN = 6
-class VersionField:
+class VersionField(object):
     def __init__(self, data=None):
         self.major = None
         self.minor = None
@@ -421,7 +421,7 @@ class VersionField:
 
 codecs.register(bcd_search)
 
-class ComponentProperty:
+class ComponentProperty(object):
     def __init__(self, id):
         self.id = id
 
@@ -542,13 +542,13 @@ class SelfTestResult(State):
             self.fail_sdrr = (result2 & 0x40) >> 6
             self.fail_bmc_fru = (result2 & 0x20) >> 5
             self.fail_ipmb = (result2 & 0x10) >> 4
-            self.fail_sdrr_empty = (result2 & 0x08) >> 3
-            self.fail_bmc_fru_interanl_area = (result2 & 0x04) >> 2
-            self.fail_bootblock = (result2 & 0x02) >> 1
-            self.fail_mc = (result2 & 0x01) >> 0
+        self.fail_sdrr_empty = (result2 & 0x08) >> 3
+        self.fail_bmc_fru_interanl_area = (result2 & 0x04) >> 2
+        self.fail_bootblock = (result2 & 0x02) >> 1
+        self.fail_mc = (result2 & 0x01) >> 0
 
 
-class RollbackStatus:
+class RollbackStatus(object):
     def __init__(self, rsp=None):
         if rsp:
             self.from_rsp(rsp)
@@ -561,7 +561,7 @@ class RollbackStatus:
 
 ImageHeader = collections.namedtuple('ImageHeader', ['field_name', 'format', 'start', 'len'])
 
-class UpgradeImageHeaderRecord:
+class UpgradeImageHeaderRecord(object):
     FORMAT  = [
         ImageHeader('format_version', 'B', 8, 1),
         ImageHeader('device_id', 'B', 9, 1),
@@ -622,7 +622,7 @@ class UpgradeImageHeaderRecord:
         return "\n".join(str)
 
 
-class UpgradeActionRecord:
+class UpgradeActionRecord(object):
 
     ACTIONS = (
         "Backup",
@@ -693,7 +693,7 @@ class UpgradeActionRecordUploadForCompare(UpgradeActionRecord):
             UpgradeActionRecord.__init__(self, data)
 
 
-class ImageChecksumRecord:
+class ImageChecksumRecord(object):
     def __init__(self, data=None):
         if data:
             self._from_data(data)
@@ -704,7 +704,7 @@ class ImageChecksumRecord:
 
 HPM_IMAGE_CHECKSUM_SIZE = 16
 
-class UpgradeImage:
+class UpgradeImage(object):
     def __init__(self, filename=None):
         if filename:
             self._from_file(filename)

@@ -22,7 +22,7 @@ from pyipmi.errors import TimeoutError
 from pyipmi.logger import log
 from pyipmi.msgs import encode_message, decode_message, create_message
 
-class Ipmitool:
+class Ipmitool(object):
     """This interface uses the ipmitool raw command to "emulate" a RMCP
     session.
 

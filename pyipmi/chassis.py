@@ -25,7 +25,7 @@ from pyipmi.msgs.chassis import \
         CONTROL_HARD_RESET, CONTROL_DIAGNOSTIC_INTERRUPT, \
         CONTROL_SOFT_SHUTDOWN
 
-class Chassis:
+class Chassis(object):
     def chassis_control(self, option):
         req = create_request_by_name('ChassisControl')
         req.control.option = option

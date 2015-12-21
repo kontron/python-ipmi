@@ -26,7 +26,7 @@ from pyipmi.msgs.picmg import \
         FRU_CONTROL_GRACEFUL_REBOOT, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT, \
         FRU_ACTIVATION_FRU_ACTIVATE, FRU_ACTIVATION_FRU_DEACTIVATE
 
-class Picmg:
+class Picmg(object):
     def get_picmg_properties(self):
         return self.send_message_with_name('GetPicmgProperties')
 

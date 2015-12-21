@@ -30,7 +30,7 @@ except ImportError:
 class ChecksumError(Exception):
     pass
 
-class Aardvark:
+class Aardvark(object):
     NAME = 'aardvark'
 
     def __init__(self, slave_address=0x20, port=0, serial_number=None,

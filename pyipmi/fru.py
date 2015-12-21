@@ -25,7 +25,7 @@ from pyipmi.utils import check_completion_code, bcd_search, chunks
 
 codecs.register(bcd_search)
 
-class Fru:
+class Fru(object):
     def __init__(self):
         self.write_length = 16
 
@@ -91,7 +91,7 @@ class Fru:
     def get_fru_inventory(self, fru_id=0):
         return FruInventory(self.read_fru_data(fru_id=fru_id))
 
-class FruDataField:
+class FruDataField(object):
     TYPE_BINARY = 0
     TYPE_BCD_PLUS = 1
     TYPE_6BIT_ASCII = 2
@@ -122,7 +122,7 @@ class FruDataField:
 
         self.value = value
 
-class InventoryCommonHeader:
+class InventoryCommonHeader(object):
     def __init__(self, data=None):
         if data:
             self.from_data(data)
@@ -140,7 +140,7 @@ class InventoryCommonHeader:
             raise DecodingError('InventoryCommonHeader checksum failed')
 
 
-class CommonInfoArea:
+class CommonInfoArea(object):
     def __init__(self, data=None):
         if data:
             self.from_data(data)
@@ -243,7 +243,7 @@ class InventoryProductInfoArea(CommonInfoArea):
             offset += field.length+1
 
 
-class FruDataMultiRecord:
+class FruDataMultiRecord(object):
     TYPE_POWER_SUPPLY_INFORMATION = 0
     TYPE_DC_OUTPUT = 1
     TYPE_DC_LOAD = 2
@@ -345,7 +345,7 @@ class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
         self.maximum_current_output = float(maximum_current_output/10)
 
 
-class InventoryMultiRecordArea:
+class InventoryMultiRecordArea(object):
     def __init__(self, data):
         if data:
             self.from_data(data)
@@ -361,7 +361,7 @@ class InventoryMultiRecordArea:
                 break
 
 
-class FruInventory:
+class FruInventory(object):
     def __init__(self, data=None):
         self.chassis_info_area = None
         self.board_info_area = None

@@ -26,7 +26,7 @@ from pyipmi.helper import clear_repository_helper
 from pyipmi.state import State
 
 
-class Sel:
+class Sel(object):
     def get_sel_entries_count(self):
         info = SelInfo(self.send_message_with_name('GetSelInfo'))
         return info.entries

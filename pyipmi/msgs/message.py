@@ -21,7 +21,7 @@ from pyipmi.utils import ByteBuffer
 from pyipmi.errors import CompletionCodeError, EncodingError, DecodingError, \
         DescriptionError
 
-class BaseField:
+class BaseField(object):
     def __init__(self, name, length, default=None):
         self.name = name
         self.length = length
@@ -143,7 +143,7 @@ class Timestamp(UnsignedInt):
         UnsignedInt.__init__(self, name, 4, None)
 
 
-class Conditional:
+class Conditional(object):
     def __init__(self, cond_fn, field):
         self._condition_fn = cond_fn
         self._field = field
@@ -163,7 +163,7 @@ class Conditional:
         return self._field.create()
 
 
-class Optional:
+class Optional(object):
     def __init__(self, field):
         self._field = field
 
@@ -295,7 +295,7 @@ class Bitfield(BaseField):
     def create(self):
         return Bitfield.BitWrapper(self._bits, self.length)
 
-class Message:
+class Message(object):
     RESERVED_FIELD_NAMES = ['cmdid', 'netfn', 'lun']
 
     __default_lun__ = 0
