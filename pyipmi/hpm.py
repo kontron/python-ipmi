@@ -60,9 +60,6 @@ CC_ABORT_UPGRADE_CANNOT_RESUME_OPERATION = 0x81
 
 class Hpm:
 
-    def _check_completion_code(self, rsp):
-        check_completion_code(rsp.completion_code)
-
     def _get_component_count(self, components):
         """Return the number of components"""
         return bin(components).count('1')
