@@ -41,7 +41,7 @@ ACTION_PREPARE_COMPONENT = 0x01
 ACTION_UPLOAD_FOR_UPGRADE = 0x02
 ACTION_UPLOAD_FOR_COMPARE = 0x03
 
-LONG_DURATION_CMD_IN_PROGRESS_CC = 0x80
+CC_LONG_DURATION_CMD_IN_PROGRESS = 0x80
 
 CC_GET_COMP_PROP_UPGRADE_NOT_SUPPORTED_OVER_INTF = 0x81
 CC_GET_COMP_PROP_INVALID_COMPONENT = 0x82
@@ -74,16 +74,20 @@ class Hpm(object):
         req.selector = property_id
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
-        return ComponentProperty.create_from_id(property_id, rsp)
+        return ComponentProperty.from_data(property_id, rsp.data)
 
     def get_component_properties(self, component_id):
         properties = []
         for p in (PROPERTY_GENERAL_PROPERTIES, PROPERTY_CURRENT_VERSION,
                 PROPERTY_DESCRIPTION_STRING, PROPERTY_ROLLBACK_VERSION,
                 PROPERTY_DEFERRED_VERSION):
-            property = self.get_component_property(component_id, p)
-            if property is not None:
-                properties.append(property)
+            try:
+                property = self.get_component_property(component_id, p)
+                if property is not None:
+                    properties.append(property)
+            except CompletionCodeError, e:
+                if e.cc == CC_GET_COMP_PROP_INVALID_PROPERTIES_SELECTOR:
+                    continue
         return properties
 
     def find_component_id_by_descriptor(self, descriptor):
@@ -126,7 +130,7 @@ class Hpm(object):
         try:
             self.initiate_upgrade_action(components_mask, action)
         except CompletionCodeError, e:
-            if e.cc == LONG_DURATION_CMD_IN_PROGRESS_CC:
+            if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
                 self.wait_for_long_duration_command(
                         constants.CMDID_HPM_INITIATE_UPGRADE_ACTION,
                         timeout, interval)
@@ -154,7 +158,7 @@ class Hpm(object):
             try:
                 self.upload_firmware_block(block_number, chunk)
             except CompletionCodeError, e:
-                if e.cc == LONG_DURATION_CMD_IN_PROGRESS_CC:
+                if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
                     self.wait_for_long_duration_command(
                             constants.CMDID_HPM_UPLOAD_FIRMWARE_BLOCK,
                             timeout, interval)
@@ -178,7 +182,7 @@ class Hpm(object):
             rsp = self.finish_firmware_upload(component, length)
             check_completion_code(rsp.completion_code)
         except CompletionCodeError, e:
-            if e.cc == LONG_DURATION_CMD_IN_PROGRESS_CC:
+            if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
                 self.wait_for_long_duration_command(
                             constants.CMDID_HPM_FINISH_FIRMWARE_UPLOAD,
                             timeout, interval)
@@ -188,8 +192,7 @@ class Hpm(object):
     def get_upgrade_status(self):
         return UpgradeStatus(self.send_message_with_name('GetUpgradeStatus'))
 
-    def wait_for_long_duration_command(self, expected_cmd,
-            timeout=5, interval=1):
+    def wait_for_long_duration_command(self, expected_cmd, timeout, interval):
 
         start_time = time.time()
         while time.time() < start_time + timeout:
@@ -197,10 +200,8 @@ class Hpm(object):
                 status = self.get_upgrade_status()
                 if status.command_in_progress is not expected_cmd \
                         and status.command_in_progress is not 0x34:
-                    #raise HpmError('unexpected cmd=0x%02x' \
-                    #        % status.command_in_progress)
                     pass
-                if status.last_completion_code == LONG_DURATION_CMD_IN_PROGRESS_CC:
+                if status.last_completion_code == CC_LONG_DURATION_CMD_IN_PROGRESS:
                     time.sleep(interval)
                 else:
                     return
@@ -222,7 +223,7 @@ class Hpm(object):
         try:
             self.activate_firmware(rollback_override)
         except CompletionCodeError, e:
-            if e.cc == LONG_DURATION_CMD_IN_PROGRESS_CC:
+            if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
                 self.wait_for_long_duration_command(
                             constants.CMDID_HPM_ACTIVATE_FIRMWARE,
                             timeout, interval)
@@ -245,7 +246,7 @@ class Hpm(object):
         try:
             self.initiate_manual_rollback()
         except CompletionCodeError, e:
-            if e.cc == LONG_DURATION_CMD_IN_PROGRESS_CC:
+            if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
                 self.wait_for_long_duration_command(
                             constants.CMDID_HPM_INITIATE_MANUAL_ROLLBACK,
                             60, interval)
@@ -262,23 +263,23 @@ class Hpm(object):
     def get_upgrade_version_from_file(self, filename):
         image = UpgradeImage(filename)
         for action in image.actions:
-            if action.type == ACTION_UPLOAD_FOR_UPGRADE:
+            if type(action) == UpgradeActionRecordUploadForUpgrade:
                 return action.firmware_version
         return None
 
     def _do_upgrade_action_backup(self, image):
         for action in image.actions:
-            if action.type == ACTION_BACKUP_COMPONENT:
+            if type(action) == UpgradeActionRecordBackup:
                 pass
 
     def _do_upgrade_action_prepare(self, image):
         for action in image.actions:
-            if action.type == ACTION_PREPARE_COMPONENT:
+            if type(action) == UpgradeActionRecordPrepare:
                 print "do ACTION_PREPARE_COMPONENT"
 
     def _do_upgrade_action_upload(self, image):
         for action in image.actions:
-            if action.type == ACTION_UPLOAD_FOR_UPGRADE:
+            if type(action) == UpgradeActionRecordUploadForUpgrade:
                 print "do ACTION_UPLOAD_FOR_UPGRADE"
 
 
@@ -319,8 +320,8 @@ class Hpm(object):
         for action in image.actions:
             if action.components & (1 << component) == 0:
                 continue
-            self.initiate_upgrade_action_and_wait(1 << component, action.type)
-            if action.type == ACTION_UPLOAD_FOR_UPGRADE:
+            self.initiate_upgrade_action_and_wait(1 << component, action.action_type)
+            if type(action) == UpgradeActionRecordUploadForUpgrade:
                 self.upload_binary(action.firmware_image_data)
                 self.finish_upload_and_wait(component, action.firmware_length)
 
@@ -379,8 +380,9 @@ class TargetUpgradeCapabilities(State):
 
     def __str__(self):
         str = []
-        str.append("target upgrade capabilities %s" % self.components)
+        str.append("Target Upgrade Capabilities")
         str.append(" HPM.1 version: %s" % self.version)
+        str.append(" Components: %s" % self.components)
         return "\n".join(str)
 
 
@@ -394,8 +396,10 @@ class VersionField(object):
 
     def _from_data(self, data):
         if isinstance(data, str):
-            data = array.array('B', [ord(c) for c in data])
-        self.version = self._decode_version_string(data[0:2])
+            data = [ord(c) for c in data]
+
+        data = array.array('B', data)
+        self.version = self._decode_data(data[0:2])
         if len(data) == 6:
             self.auxiliary = data[2:6]
 
@@ -404,7 +408,7 @@ class VersionField(object):
         str.append('%s' % (self.version_to_string()))
         return '\n'.join(str)
 
-    def _decode_version_string(self, data):
+    def _decode_data(self, data):
         """`data` is array.array"""
         self.major = data[0]
 
@@ -422,111 +426,91 @@ class VersionField(object):
 codecs.register(bcd_search)
 
 class ComponentProperty(object):
-    def __init__(self, id):
-        self.id = id
+    def __init__(self, data=None):
+        if (data):
+            self._from_rsp_data(data)
 
     @staticmethod
-    def create_from_id(id, rsp):
-        if id is PROPERTY_GENERAL_PROPERTIES:
-            return ComponentPropertyGeneral(rsp.data)
+    def from_data(component_id, data):
+        if isinstance(data, str):
+            data = [ord(c) for c in data]
 
-        elif id is PROPERTY_CURRENT_VERSION:
-            return ComponentPropertyCurrentVersion(rsp.data)
-
-        elif id is PROPERTY_DESCRIPTION_STRING:
-            return ComponentPropertyDescriptionString(rsp.data)
-
-        elif id is PROPERTY_ROLLBACK_VERSION:
-            return ComponentPropertyRollbackVersion(rsp.data)
-
-        elif id is PROPERTY_DEFERRED_VERSION:
-            return ComponentPropertyDeferredVersion(rsp.data)
-
-        elif id in PROPERTY_OEM:
+        if component_id is PROPERTY_GENERAL_PROPERTIES:
+            return ComponentPropertyGeneral(data)
+        elif component_id is PROPERTY_CURRENT_VERSION:
+            return ComponentPropertyCurrentVersion(data)
+        elif component_id is PROPERTY_DESCRIPTION_STRING:
+            return ComponentPropertyDescriptionString(data)
+        elif component_id is PROPERTY_ROLLBACK_VERSION:
+            return ComponentPropertyRollbackVersion(data)
+        elif component_id is PROPERTY_DEFERRED_VERSION:
+            return ComponentPropertyDeferredVersion(data)
+        elif component_id in PROPERTY_OEM:
             raise NotImplementedError
 
 
 class ComponentPropertyGeneral(ComponentProperty):
-    def __init__(self, data=None):
-        ComponentProperty.__init__(self, PROPERTY_GENERAL_PROPERTIES)
-        if (data):
-            self._from_data(data)
 
-    def _from_data(self, data):
-        ROLLBACK_SUPPORT_MASK = 0x03
-        PREPARATION_SUPPORT_MASK = 0x04
-        COMPARISON_SUPPORT_MASK = 0x08
-        DEFERRED_ACTIVATION_SUPPORT_MASK = 0x10
-        PAYLOAD_COLD_RESET_REQ_SUPPORT_MASK = 0x20
+    ROLLBACK_SUPPORT_MASK = 0x03
+    PREPARATION_SUPPORT_MASK = 0x04
+    COMPARISON_SUPPORT_MASK = 0x08
+    DEFERRED_ACTIVATION_SUPPORT_MASK = 0x10
+    PAYLOAD_COLD_RESET_REQ_SUPPORT_MASK = 0x20
+
+    def _from_rsp_data(self, data):
         support = []
         cap = data[0]
-        if cap & ROLLBACK_SUPPORT_MASK == 0:
+
+        if cap & self.ROLLBACK_SUPPORT_MASK == 0:
             support.append('rollback_backup_not_supported')
-        elif cap & ROLLBACK_SUPPORT_MASK == 1:
+        elif cap & self.ROLLBACK_SUPPORT_MASK == 1:
             support.append('rollback_is_supported')
-        elif cap & ROLLBACK_SUPPORT_MASK == 2:
+        elif cap & self.ROLLBACK_SUPPORT_MASK == 2:
             support.append('rollback_is_supported')
-        elif cap & ROLLBACK_SUPPORT_MASK == 3:
+        elif cap & self.ROLLBACK_SUPPORT_MASK == 3:
             support.append('reserved')
-        if cap & PREPARATION_SUPPORT_MASK:
+
+        if cap & self.PREPARATION_SUPPORT_MASK:
             support.append('prepartion')
-        if cap & COMPARISON_SUPPORT_MASK:
+        if cap & self.COMPARISON_SUPPORT_MASK:
             support.append('comparison')
-        if cap & DEFERRED_ACTIVATION_SUPPORT_MASK:
+        if cap & self.DEFERRED_ACTIVATION_SUPPORT_MASK:
             support.append('deferred_activation')
-        if cap & PAYLOAD_COLD_RESET_REQ_SUPPORT_MASK:
+        if cap & self.PAYLOAD_COLD_RESET_REQ_SUPPORT_MASK:
             support.append('payload_cold_reset_required')
+
         self.general = support
 
 
 class ComponentPropertyCurrentVersion(ComponentProperty):
-    def __init__(self, data=None):
-        ComponentProperty.__init__(self, PROPERTY_CURRENT_VERSION)
-        if (data):
-            self._from_msg_response(data)
 
-    def _from_msg_response(self, data):
+    def _from_rsp_data(self, data):
         self.version = VersionField(data)
 
 
 class ComponentPropertyDescriptionString(ComponentProperty):
-    def __init__(self, data=None):
-        ComponentProperty.__init__(self, PROPERTY_DESCRIPTION_STRING)
-        if (data):
-            self._from_msg_response(data)
 
-    def _from_msg_response(self, data):
-        descr =  data.tostring().replace('\0', '')
-        self.description = descr
+    def _from_rsp_data(self, data):
+        self.description =  array.array('B', data).tostring().replace('\0', '')
 
 
 class ComponentPropertyRollbackVersion(ComponentProperty):
-    def __init__(self, data=None):
-        ComponentProperty.__init__(self, PROPERTY_ROLLBACK_VERSION)
-        if (data):
-            self._from_msg_response(data)
 
-    def _from_msg_response(self, data):
+    def _from_rsp_data(self, data):
         self.version = VersionField(data)
 
 
 class ComponentPropertyDeferredVersion(ComponentProperty):
-    def __init__(self, data=None):
-        ComponentProperty.__init__(self, PROPERTY_DEFERRED_VERSION)
-        if (data):
-            self._from_response(data)
 
-    def _from_response(self, data):
+    def _from_rsp_data(self, data):
         self.version = VersionField(data)
 
 
 class ComponentPropertyOem(ComponentProperty):
-    def __init__(self, data=None):
-        if (data):
-            self._from_response(data)
 
-    def _from_response(self, data):
-        raise NotImplementedError()
+    def _from_rsp_data(self, data):
+        self.oem_data = data
+
 
 class SelfTestResult(State):
 
@@ -551,56 +535,59 @@ class SelfTestResult(State):
 class RollbackStatus(object):
     def __init__(self, rsp=None):
         if rsp:
-            self.from_rsp(rsp)
+            self._from_rsp(rsp)
 
-    def from_rsp(self, rsp):
+    def _from_rsp(self, rsp):
 
         if rsp.completion_estimate:
             self.percent_complete  = rsp.completion_estimate
 
 
-ImageHeader = collections.namedtuple('ImageHeader', ['field_name', 'format', 'start', 'len'])
+image_header = collections.namedtuple('image_header', ['field_name', 'format', 'start', 'len'])
 
 class UpgradeImageHeaderRecord(object):
     FORMAT  = [
-        ImageHeader('format_version', 'B', 8, 1),
-        ImageHeader('device_id', 'B', 9, 1),
-        ImageHeader('product_id', '<H', 13, 2),
-        ImageHeader('time', '<L', 15, 4),
-        ImageHeader('capabilities', 'B', 19,1),
-        #ImageHeader('components', 'B',  20, 1),
-        ImageHeader('selftest_timeout', 'B', 21, 1),
-        ImageHeader('rollback_timeout', 'B', 22, 1),
-        ImageHeader('inaccessibility_timeout', 'B', 23, 1),
-        ImageHeader('earliest_compatible_revision', '<H', 24, 2),
-        ImageHeader('oem_data_length', '<H', 32, 2),
+        image_header('format_version', 'B', 8, 1),
+        image_header('device_id', 'B', 9, 1),
+        image_header('product_id', '<H', 13, 2),
+        image_header('time', '<L', 15, 4),
+        image_header('capabilities', 'B', 19,1),
+        image_header('selftest_timeout', 'B', 21, 1),
+        image_header('rollback_timeout', 'B', 22, 1),
+        image_header('inaccessibility_timeout', 'B', 23, 1),
+        image_header('earliest_compatible_revision', '<H', 24, 2),
+        image_header('oem_data_length', '<H', 32, 2),
     ]
 
     def __init__(self, data=None):
         for a in self.FORMAT:
             setattr(self, a.field_name, None)
         if data:
-            self.from_data(data)
+            self._from_data(data)
 
-    def from_data(self, data):
+    def _from_data(self, data):
         self.signature = data[0:8]
 
         for a in self.FORMAT:
-            setattr(self, a.field_name, struct.unpack(a.format, data[a.start:a.start+a.len])[0])
-        self.manufacturer_id = ord(data[10]) | ord(data[11]) << 8|ord(data[12])<<16
+            setattr(self, a.field_name, struct.unpack(
+                    a.format, data[a.start:a.start+a.len])[0])
+
+        if isinstance(data, str):
+            data = [ord(c) for c in data]
+
+        self.manufacturer_id = data[10] | data[11] << 8 | data[12] << 16
         self.components = []
         for i in range(8):
-            if ord(data[20]) & (1<<i):
+            if data[20] & (1 << i):
                 self.components.append(i)
         self.earliest_compatible_revision = VersionField(data[24:24+2])
-        self.firmware_revision = VersionField(data[26:26+VERSION_FIELD_LEN])
+        self.firmware_revision = VersionField(data[26:26 + VERSION_FIELD_LEN])
 
-
-        if self.oem_data_length != 0:
-            self.oem_data = [ord(d) for d in data[34:-1]]
+        if self.oem_data_length:
+            self.oem_data = data[34:-1]
         # XXX checksum check
-        self.checksum = data[34+self.oem_data_length]
-        self.length = 34+self.oem_data_length+1
+        self.checksum = data[34 + self.oem_data_length]
+        self.length = 34 + self.oem_data_length+1
 
     def __str__(self):
         str = []
@@ -632,55 +619,47 @@ class UpgradeActionRecord(object):
     )
 
     def __init__(self, data=None):
+        self.action_type = ord(data[0])
         if data:
-            (self.type, self.components, self.checksum) = struct.unpack('BBB', data[0:3])
-            #self.components = struct.unpack('B', data[1:2])
-            #self.checksum = struct.unpack('B', data[2:3])
+            (self.action, self.components, self.checksum) \
+                = struct.unpack('BBB', data[0:3])
             self.length = 3
 
     @staticmethod
     def create_from_data(data):
-        type = ord(data[0])
-        if type == ACTION_BACKUP_COMPONENT:
+        action_type = ord(data[0])
+        if action_type == ACTION_BACKUP_COMPONENT:
             return UpgradeActionRecordBackup(data)
-        elif type == ACTION_PREPARE_COMPONENT:
+        elif action_type == ACTION_PREPARE_COMPONENT:
             return UpgradeActionRecordPrepare(data)
-        elif type == ACTION_UPLOAD_FOR_UPGRADE:
+        elif action_type == ACTION_UPLOAD_FOR_UPGRADE:
             return UpgradeActionRecordUploadForUpgrade(data)
-        elif type == ACTION_UPLOAD_FOR_COMPARE:
+        elif action_type == ACTION_UPLOAD_FOR_COMPARE:
             return UpgradeActionRecordUploadForCompare(data)
         else:
             raise HpmError('unsupported ActionRecord')
 
     def __str__(self):
         str = []
-        str.append("Action Record Type: 0x%x (%s) " % (self.type, self.ACTIONS[self.type]))
+        str.append("Action Record Type: 0x%x (%s) " %
+            (self.action, self.ACTIONS[self.action]))
         str.append(" Components: 0x%02x" % self.components)
         return "\n".join(str)
 
 
 class UpgradeActionRecordBackup(UpgradeActionRecord):
-    def __init__(self, data=None):
-        if (data):
-            UpgradeActionRecord.__init__(self, data)
+    pass
 
 
 class UpgradeActionRecordPrepare(UpgradeActionRecord):
-    def __init__(self, data=None):
-        if (data):
-            UpgradeActionRecord.__init__(self, data)
+    pass
 
 
 class UpgradeActionRecordUploadForUpgrade(UpgradeActionRecord):
     def __init__(self, data=None):
-        if (data):
-            UpgradeActionRecord.__init__(self, data)
-
-            ###################################################
-            # PICMG HPM.1 R1.0 - Table 4-3
-            #    Upgrade action recordThe following bytes 3:(34+m) are only present
-            #   if the Upgrade action type = 02h (Upload Firmware Image)
-            self.firmware_version = VersionField(data[3:3+VERSION_FIELD_LEN])
+        UpgradeActionRecord.__init__(self, data)
+        if data:
+            self.firmware_version = VersionField(data[3:3 + VERSION_FIELD_LEN])
             self.firmware_description_string = data[9:30]
             self.firmware_length = struct.unpack('<L', data[30:34])[0]
             self.firmware_image_data = data[34:(34 + self.firmware_length)]
@@ -688,9 +667,7 @@ class UpgradeActionRecordUploadForUpgrade(UpgradeActionRecord):
 
 
 class UpgradeActionRecordUploadForCompare(UpgradeActionRecord):
-    def __init__(self, data=None):
-        if (data):
-            UpgradeActionRecord.__init__(self, data)
+    pass
 
 
 class ImageChecksumRecord(object):
