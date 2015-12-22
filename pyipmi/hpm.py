@@ -22,11 +22,12 @@ import collections
 import hashlib
 import time
 
-from pyipmi.errors import DecodingError, CompletionCodeError, HpmError, TimeoutError
+from pyipmi.errors import CompletionCodeError, HpmError, TimeoutError
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 from pyipmi.utils import check_completion_code, bcd_search, chunks
 from pyipmi.state import State
+from pyipmi.fields import VersionField
 
 
 PROPERTY_GENERAL_PROPERTIES = 0
@@ -386,43 +387,6 @@ class TargetUpgradeCapabilities(State):
         return "\n".join(str)
 
 
-VERSION_FIELD_LEN = 6
-class VersionField(object):
-    def __init__(self, data=None):
-        self.major = None
-        self.minor = None
-        if data:
-            self._from_data(data)
-
-    def _from_data(self, data):
-        if isinstance(data, str):
-            data = [ord(c) for c in data]
-
-        data = array.array('B', data)
-        self.version = self._decode_data(data[0:2])
-        if len(data) == 6:
-            self.auxiliary = data[2:6]
-
-    def __str__(self):
-        str = []
-        str.append('%s' % (self.version_to_string()))
-        return '\n'.join(str)
-
-    def _decode_data(self, data):
-        """`data` is array.array"""
-        self.major = data[0]
-
-        if data[1] is 0xff:
-            self.minor = data[1]
-        elif data[1] <= 0x99:
-            self.minor = int(data[1:2].tostring().decode('bcd+'))
-        else:
-            raise DecodingError()
-
-    def version_to_string(self):
-        return ''.join("%s.%s" % (self.major, self.minor))
-
-
 codecs.register(bcd_search)
 
 class ComponentProperty(object):
@@ -580,8 +544,9 @@ class UpgradeImageHeaderRecord(object):
         for i in range(8):
             if data[20] & (1 << i):
                 self.components.append(i)
-        self.earliest_compatible_revision = VersionField(data[24:24+2])
-        self.firmware_revision = VersionField(data[26:26 + VERSION_FIELD_LEN])
+        self.earliest_compatible_revision = VersionField(data[24:24 +
+        VersionField.VERSION_FIELD_LEN])
+        self.firmware_revision = VersionField(data[26:26 + VersionField.VERSION_WITH_AUX_FIELD_LEN])
 
         if self.oem_data_length:
             self.oem_data = data[34:-1]
@@ -659,7 +624,8 @@ class UpgradeActionRecordUploadForUpgrade(UpgradeActionRecord):
     def __init__(self, data=None):
         UpgradeActionRecord.__init__(self, data)
         if data:
-            self.firmware_version = VersionField(data[3:3 + VERSION_FIELD_LEN])
+            self.firmware_version = VersionField(data[3:3 +
+            VersionField.VERSION_WITH_AUX_FIELD_LEN])
             self.firmware_description_string = data[9:30]
             self.firmware_length = struct.unpack('<L', data[30:34])[0]
             self.firmware_image_data = data[34:(34 + self.firmware_length)]

@@ -43,10 +43,10 @@ def _get_command_function(name):
 def cmd_bmc_info(ipmi, args):
     id = ipmi.get_device_id()
     print '''
-Device ID:          %(id)s
+Device ID:          %(device_id)s
 Device Revision:    %(revision)s
-Firmware Revision:  %(major_fw_revision)d.%(minor_fw_revision)d
-IPMI Version:       %(major_ipmi_version)d.%(minor_ipmi_version)d
+Firmware Revision:  %(fw_revision)s
+IPMI Version:       %(ipmi_version)s
 Manufacturer ID:    %(manufacturer_id)d (0x%(manufacturer_id)04x)
 Product ID:         %(product_id)d (0x%(product_id)04x)
 Device Available:   %(available)d

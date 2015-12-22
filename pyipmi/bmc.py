@@ -18,6 +18,7 @@ from pyipmi.msgs import create_request_by_name
 from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.utils import check_completion_code
 from pyipmi.state import State
+from pyipmi.fields import VersionField
 
 class Bmc(object):
     def get_device_id(self):
@@ -113,11 +114,11 @@ class Watchdog(State):
 class DeviceId(State):
 
     def __str__(self):
-        s = 'Device ID: %d' % self.id
+        s = 'Device ID: %d' % self.device_id
         s+= ' revision: %d' % self.revision
         s+= ' available: %d' % self.available
-        s+= ' fw version: %d.%d' % (self.major_fw_revision, self.minor_fw_revision)
-        s+= ' ipmi: %d.%d' % (self.major_ipmi_version, self.minor_ipmi_version)
+        s+= ' fw version: %s' % (self.fw_revision)
+        s+= ' ipmi: %s' % self.ipmi_version
         s+= ' manufacturer: %d' % self.manufacturer_id
         s+= ' product: %d' % self.product_id
         return s
@@ -132,16 +133,16 @@ class DeviceId(State):
         return name.lower() in self.supported_functions
 
     def _from_response(self, rsp):
-        self.id = rsp.device_id
+        self.device_id = rsp.device_id
         self.revision = rsp.device_revision.device_revision
         self.provides_sdrs = bool(rsp.device_revision.provides_device_sdrs)
         self.available = bool(rsp.firmware_revision.device_available)
-        self.major_fw_revision = rsp.firmware_revision.major
-        self.minor_fw_revision = (
-                ((rsp.firmware_revision.minor >> 4) & 0xf) * 10
-                + (rsp.firmware_revision.minor & 0xf))
-        self.major_ipmi_version = rsp.ipmi_version & 0xf
-        self.minor_ipmi_version = (rsp.ipmi_version >> 4) & 0xf
+
+        self.fw_revision = VersionField(
+                (rsp.firmware_revision.major, rsp.firmware_revision.minor))
+
+        self.ipmi_version = VersionField(
+                (rsp.ipmi_version & 0xf, (rsp.ipmi_version >> 4) & 0xf))
 
         self.manufacturer_id = rsp.manufacturer_id
         self.product_id = rsp.product_id
