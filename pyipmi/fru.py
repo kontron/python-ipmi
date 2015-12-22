@@ -99,59 +99,61 @@ class FruDataField(object):
 
     def __init__(self, data=None, offset=0, force_lang_english=False):
         if data:
-            self.from_data(data, offset, force_lang_english)
+            self._from_data(data, offset, force_lang_english)
 
     def __str__(self):
-        if self.type is FruDataField.TYPE_BINARY:
-            return ' '.join('%02x' % ord(b) for b in self.value)
-        else:
-            return self.value.replace('\x00', '')
+        #if self.type is FruDataField.TYPE_BINARY:
+        #    return ' '.join('%02x' % b for b in self.value)
+        #else:
 
-    def from_data(self, data, offset=0, force_lang_english=False):
-        self.type = ord(data[offset]) >> 6 & 0x3
-        self.length = ord(data[offset]) & 0x3f
+        return self.value.replace('\x00', '')
+
+    def _from_data(self, data, offset=0, force_lang_english=False):
+        self.type = data[offset] >> 6 & 0x3
+        self.length = data[offset] & 0x3f
 
         self.raw = data[offset+1:offset+1+self.length]
 
+        chr_data = ''.join([chr(c) for c in self.raw])
         if type == self.TYPE_BCD_PLUS:
-            value = self.raw.decode('bcd+')
+            self.value = chr_data.decode('bcd+')
         elif type == self.TYPE_6BIT_ASCII:
-            value = self.raw.decode('6bitascii')
+            self.value = chr_data.decode('6bitascii')
         else:
-            value = self.raw
+            self.value = chr_data
 
-        self.value = value
 
-class InventoryCommonHeader(object):
+class FruData(object):
     def __init__(self, data=None):
         if data:
-            self.from_data(data)
+            if isinstance(data, str):
+                data = [ord(c) for c in data]
+            self.data = data
+            if hasattr(self, '_from_data'):
+                self._from_data(data)
 
-    def from_data(self, data):
+class InventoryCommonHeader(FruData):
+    def _from_data(self, data):
         if len(data) != 8:
             raise DecodingError('InventoryCommonHeader length != 8')
-        self.format_version = ord(data[0]) & 0x0f
-        self.internal_use_area_offset = ord(data[1]) * 8 or None
-        self.chassis_info_area_offset = ord(data[2]) * 8 or None
-        self.board_info_area_offset = ord(data[3]) * 8 or None
-        self.product_info_area_offset = ord(data[4]) * 8 or None
-        self.multirecord_area_offset = ord(data[5]) * 8 or None
-        if sum([ord(c) for c in data]) % 256 != 0:
+        self.format_version = data[0] & 0x0f
+        self.internal_use_area_offset = data[1] * 8 or None
+        self.chassis_info_area_offset = data[2] * 8 or None
+        self.board_info_area_offset = data[3] * 8 or None
+        self.product_info_area_offset = data[4] * 8 or None
+        self.multirecord_area_offset = data[5] * 8 or None
+        if sum(data) % 256 != 0:
             raise DecodingError('InventoryCommonHeader checksum failed')
 
 
-class CommonInfoArea(object):
-    def __init__(self, data=None):
-        if data:
-            self.from_data(data)
-
-    def from_data(self, data):
-        self.format_version = ord(data[0]) & 0x0f
+class CommonInfoArea(FruData):
+    def _from_data(self, data):
+        self.format_version = data[0] & 0x0f
         if self.format_version != 1:
             raise DecodingError('unsupported format version (%d)' %
                     self.format_version)
-        self.length = ord(data[1]) * 8
-        if sum([ord(c) for c in data[:self.length]]) % 256 != 0:
+        self.length = data[1] * 8
+        if sum(data[:self.length]) % 256 != 0:
             raise DecodingError('checksum failed')
 
 class InventoryChassisInfoArea(CommonInfoArea):
@@ -179,71 +181,71 @@ class InventoryChassisInfoArea(CommonInfoArea):
     TYPE_RAID_CHASSIS = 22
     TYPE_RACK_MOUNT_CHASSIS = 23
 
-    def from_data(self, data):
-        CommonInfoArea.from_data(self, data)
-        self.type = ord(data[2])
+    def _from_data(self, data):
+        CommonInfoArea._from_data(self, data)
+        self.type = data[2]
         offset = 3
         self.part_number = FruDataField(data, offset)
-        offset += self.part_number.length+1
+        offset += self.part_number.length + 1
         self.serial_number = FruDataField(data, offset, True)
-        offset += self.serial_number.length+1
+        offset += self.serial_number.length + 1
         self.custom_chassis_info = list()
-        while ord(data[offset]) != 0xc1:
+        while data[offset] != 0xc1:
             field = FruDataField(data, offset)
             self.custom_chassis_info.append(field)
-            offset += field.length+1
+            offset += field.length + 1
 
 class InventoryBoardInfoArea(CommonInfoArea):
-    def from_data(self, data):
-        CommonInfoArea.from_data(self, data)
-        self.language_code = ord(data[2])
-        minutes = ord(data[5]) << 16 | ord(data[4]) << 8 | ord(data[3])
+    def _from_data(self, data):
+        CommonInfoArea._from_data(self, data)
+        self.language_code = data[2]
+        minutes = data[5] << 16 | data[4] << 8 | data[3]
         self.mfg_date = (datetime.datetime(1996, 1, 1)
                 + datetime.timedelta(minutes=minutes))
         offset = 6
         self.manufacturer = FruDataField(data, offset)
-        offset += self.manufacturer.length+1
+        offset += self.manufacturer.length + 1
         self.product_name = FruDataField(data, offset)
-        offset += self.product_name.length+1
+        offset += self.product_name.length + 1
         self.serial_number = FruDataField(data, offset, True)
-        offset += self.serial_number.length+1
+        offset += self.serial_number.length + 1
         self.part_number = FruDataField(data, offset)
-        offset += self.part_number.length+1
+        offset += self.part_number.length + 1
         self.fru_file_id = FruDataField(data, offset, True)
-        offset += self.fru_file_id.length+1
+        offset += self.fru_file_id.length + 1
         self.custom_mfg_info = list()
-        while ord(data[offset]) != 0xc1:
+        while data[offset] != 0xc1:
             field = FruDataField(data, offset)
             self.custom_mfg_info.append(field)
-            offset += field.length+1
+            offset += field.length + 1
 
 class InventoryProductInfoArea(CommonInfoArea):
-    def from_data(self, data):
-        CommonInfoArea.from_data(self, data)
-        self.language_code = ord(data[2])
+    def _from_data(self, data):
+        CommonInfoArea._from_data(self, data)
+        self.language_code = data[2]
         offset = 3
         self.manufacturer = FruDataField(data, offset)
-        offset += self.manufacturer.length+1
+        offset += self.manufacturer.length + 1
         self.name = FruDataField(data, offset)
-        offset += self.name.length+1
+        offset += self.name.length + 1
         self.part_number = FruDataField(data, offset)
-        offset += self.part_number.length+1
+        offset += self.part_number.length + 1
         self.version = FruDataField(data, offset)
-        offset += self.version.length+1
+        offset += self.version.length + 1
         self.serial_number = FruDataField(data, offset, True)
-        offset += self.serial_number.length+1
+        offset += self.serial_number.length + 1
         self.asset_tag = FruDataField(data, offset)
-        offset += self.asset_tag.length+1
+        offset += self.asset_tag.length + 1
         self.fru_file_id = FruDataField(data, offset, True)
-        offset += self.fru_file_id.length+1
+        offset += self.fru_file_id.length + 1
         self.custom_mfg_info = list()
-        while ord(data[offset]) != 0xc1:
+        while data[offset] != 0xc1:
             field = FruDataField(data, offset)
             self.custom_mfg_info.append(field)
-            offset += field.length+1
+            offset += field.length + 1
 
 
-class FruDataMultiRecord(object):
+class FruDataMultiRecord(FruData):
     TYPE_POWER_SUPPLY_INFORMATION = 0
     TYPE_DC_OUTPUT = 1
     TYPE_DC_LOAD = 2
@@ -253,30 +255,26 @@ class FruDataMultiRecord(object):
     TYPE_OEM = range(0x0c, 0x100)
     TYPE_OEM_PICMG = 0xc0
 
-    def __init__(self, data):
-        if data:
-            self.from_data(data)
-
     def __str__(self):
         return '%02x: %s' % (self.record_type_id,
-                ' '.join('%02x' % ord(b) for b in self.raw))
+                ' '.join('%02x' % b for b in self.raw))
 
-    def from_data(self, data):
+    def _from_data(self, data):
         if len(data) < 5:
             raise DecodingError('data too short')
-        self.record_type_id = ord(data[0])
-        self.format_version = ord(data[1]) & 0x0f
-        self.end_of_list = bool(ord(data[1]) & 0x80)
-        self.length = ord(data[2])
-        if sum([ord(c) for c in data[:5]]) % 256 != 0:
+        self.record_type_id = data[0]
+        self.format_version = data[1] & 0x0f
+        self.end_of_list = bool(data[1] & 0x80)
+        self.length = data[2]
+        if sum(data[:5]) % 256 != 0:
             raise DecodingError('FruDataMultiRecord header checksum failed')
         self.raw = data[5:5+self.length]
-        if (sum([ord(c) for c in self.raw]) + ord(data[3])) % 256 != 0:
+        if (sum(self.raw) + data[3]) % 256 != 0:
             raise DecodingError('FruDataMultiRecord record checksum failed')
 
     @staticmethod
     def create_from_record_id(data):
-        if ord(data[0]) == FruDataMultiRecord.TYPE_OEM_PICMG:
+        if data[0] == FruDataMultiRecord.TYPE_OEM_PICMG:
             return FruPicmgRecord.create_from_record_id(data)
         else:
             return FruDataUnknown(data)
@@ -327,20 +325,20 @@ class FruPicmgRecord(FruDataMultiRecord):
         else:
             return FruPicmgRecord(data)
 
-    def from_data(self, data):
+    def _from_data(self, data):
         if len(data) < 10:
             raise DecodingError('data too short')
-        FruDataMultiRecord.from_data(self, data)
+        FruDataMultiRecord._from_data(self, data)
         self.manufacturer_id = ord(data[5])|ord(data[6])<<8|ord(data[7])<<16
         self.picmg_record_type_id = ord(data[8])
         self.format_version = ord(data[9])
 
 
 class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
-    def from_data(self, data):
+    def _from_data(self, data):
         if len(data) < 12:
             raise DecodingError('data too short')
-        FruPicmgRecord.from_data(self,data)
+        FruPicmgRecord._from_data(self,data)
         maximum_current_output = ord(data[10])|ord(data[11])<<8
         self.maximum_current_output = float(maximum_current_output/10)
 
@@ -348,15 +346,15 @@ class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
 class InventoryMultiRecordArea(object):
     def __init__(self, data):
         if data:
-            self.from_data(data)
+            self._from_data(data)
 
-    def from_data(self, data):
+    def _from_data(self, data):
         self.records = list()
         offset = 0
         while True:
             record = FruDataMultiRecord.create_from_record_id(data[offset:])
             self.records.append(record)
-            offset += record.length+5
+            offset += record.length + 5
             if record.end_of_list:
                 break
 
@@ -368,9 +366,9 @@ class FruInventory(object):
         self.product_info_area = None
 
         if data:
-            self.from_data(data)
+            self._from_data(data)
 
-    def from_data(self, data):
+    def _from_data(self, data):
         self.raw = data
         self.common_header = InventoryCommonHeader(data[:8])
 
