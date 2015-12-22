@@ -288,6 +288,21 @@ def cmd_hpm_install(ipmi, args):
         return
     ipmi.install_component_from_file(args[0], int(args[1]))
 
+def cmd_chassis_status(ipmi, args):
+    status = ipmi.get_chassis_status()
+    print '''
+Power ON:          %(power_on)s
+Overload:          %(overload)s
+Interlock:         %(interlock)s
+Fault:             %(fault)s
+Ctrl Fault:        %(control_fault)s
+Restore Policy:    %(restore_policy)s
+'''[1:-1] % status.__dict__
+
+    for event in status.last_event:
+        print event
+    for state in status.chassis_state:
+        print state
 
 def cmd_picmg_get_power(ipmi, args):
     pwr = ipmi.get_power_level(0, 0)
@@ -554,6 +569,7 @@ COMMANDS = (
         Command('hpm capabilities', cmd_hpm_capabilities),
         Command('hpm check', cmd_hpm_check_file),
         Command('hpm install', cmd_hpm_install),
+        Command('chassis status', cmd_chassis_status),
         Command('chassis power off',
             lambda i, a: i.chassis_control_power_down()),
         Command('chassis power on',
@@ -610,6 +626,7 @@ COMMAND_HELP = (
                 'Install the specified HPM.1 file to the controller'),
 
         CommandHelp('chassis', None, 'Get chassis status and set power state'),
+        CommandHelp('chassis status', '', 'Get chassis status'),
         CommandHelp('chassis power', '<on|off|cycle|reset|diag|soft>',
             'Set power state')
 )
