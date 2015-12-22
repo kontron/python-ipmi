@@ -102,25 +102,35 @@ class FruDataField(object):
             self._from_data(data, offset, force_lang_english)
 
     def __str__(self):
-        #if self.type is FruDataField.TYPE_BINARY:
-        #    return ' '.join('%02x' % b for b in self.value)
-        #else:
-
-        return self.value.replace('\x00', '')
+        if self.field_type is FruDataField.TYPE_BINARY:
+            return ' '.join('%02x' % b for b in self.raw)
+        else:
+            return self.value.replace('\x00', '')
 
     def _from_data(self, data, offset=0, force_lang_english=False):
-        self.type = data[offset] >> 6 & 0x3
+        self.field_type = data[offset] >> 6 & 0x3
         self.length = data[offset] & 0x3f
 
         self.raw = data[offset+1:offset+1+self.length]
 
         chr_data = ''.join([chr(c) for c in self.raw])
-        if type == self.TYPE_BCD_PLUS:
+        if self.field_type == self.TYPE_BCD_PLUS:
             self.value = chr_data.decode('bcd+')
-        elif type == self.TYPE_6BIT_ASCII:
+        elif self.field_type == self.TYPE_6BIT_ASCII:
             self.value = chr_data.decode('6bitascii')
         else:
             self.value = chr_data
+
+
+CUSTOM_FIELD_END = 0xc1
+def _decode_custom_fields(data):
+    offset = 0
+    fields = []
+    while data[offset] != CUSTOM_FIELD_END:
+        field = FruDataField(data, offset)
+        fields.append(field)
+        offset += field.length + 1
+    return fields
 
 
 class FruData(object):
@@ -131,6 +141,7 @@ class FruData(object):
             self.data = data
             if hasattr(self, '_from_data'):
                 self._from_data(data)
+
 
 class InventoryCommonHeader(FruData):
     def _from_data(self, data):
@@ -155,6 +166,7 @@ class CommonInfoArea(FruData):
         self.length = data[1] * 8
         if sum(data[:self.length]) % 256 != 0:
             raise DecodingError('checksum failed')
+
 
 class InventoryChassisInfoArea(CommonInfoArea):
     TYPE_OTHER = 1
@@ -189,11 +201,8 @@ class InventoryChassisInfoArea(CommonInfoArea):
         offset += self.part_number.length + 1
         self.serial_number = FruDataField(data, offset, True)
         offset += self.serial_number.length + 1
-        self.custom_chassis_info = list()
-        while data[offset] != 0xc1:
-            field = FruDataField(data, offset)
-            self.custom_chassis_info.append(field)
-            offset += field.length + 1
+        self.custom_chassis_info = _decode_custom_fields(data[offset:])
+
 
 class InventoryBoardInfoArea(CommonInfoArea):
     def _from_data(self, data):
@@ -213,11 +222,8 @@ class InventoryBoardInfoArea(CommonInfoArea):
         offset += self.part_number.length + 1
         self.fru_file_id = FruDataField(data, offset, True)
         offset += self.fru_file_id.length + 1
-        self.custom_mfg_info = list()
-        while data[offset] != 0xc1:
-            field = FruDataField(data, offset)
-            self.custom_mfg_info.append(field)
-            offset += field.length + 1
+        self.custom_mfg_info = _decode_custom_fields(data[offset:])
+
 
 class InventoryProductInfoArea(CommonInfoArea):
     def _from_data(self, data):
@@ -239,10 +245,7 @@ class InventoryProductInfoArea(CommonInfoArea):
         self.fru_file_id = FruDataField(data, offset, True)
         offset += self.fru_file_id.length + 1
         self.custom_mfg_info = list()
-        while data[offset] != 0xc1:
-            field = FruDataField(data, offset)
-            self.custom_mfg_info.append(field)
-            offset += field.length + 1
+        self.custom_mfg_info = _decode_custom_fields(data[offset:])
 
 
 class FruDataMultiRecord(FruData):
@@ -283,6 +286,7 @@ class FruDataMultiRecord(FruData):
 class FruDataUnknown(FruDataMultiRecord):
     """This class is used to indicate undecoded picmg record."""
     pass
+
 
 class FruPicmgRecord(FruDataMultiRecord):
     PICMG_RECORD_ID_BACKPLANE_PTP_CONNECTIVITY = 0x04
