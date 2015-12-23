@@ -179,7 +179,7 @@ class Aardvark(object):
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
         header = IpmbHeader()
         header.netfn = netfn
-        header.rs_lun = rs_lun
+        header.rs_lun = lun
         header.rs_sa = target.ipmb_address
         header.rq_seq = self.next_sequence_number
         header.rq_lun = 0
