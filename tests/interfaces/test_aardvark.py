@@ -1,18 +1,14 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
-
+import sys
 from array import array
 
 import nose
 from mock import MagicMock, patch
 from nose.tools import eq_, ok_, raises
 
-from pyipmi.errors import TimeoutError
-from pyipmi import Session, Target
-from pyipmi.interfaces.ipmb import IpmbHeader
-
-class MockedAardvark:
-    def enable_i2c_slave(self):
+class MockPyaardvark:
+    def enable_i2c_slave(self, d):
         pass
 
 class TestIpmitool:
@@ -22,16 +18,20 @@ class TestIpmitool:
         """Mock pyaardvark import
         http://erikzaadi.com/2012/07/03/mocking-python-imports/
         """
-        self.pyaardvark = MagicMock()
-        self.pyaardvark.open.return_value = MockedAardvark()
-        modules = {
-            'open': self.pyaardvark.open
-        }
-        self.module_patcher = patch('sys.modules', modules)
-        self.module_patcher.start()
+        self.pyaardvark_mock = MagicMock()
+        self.pyaardvark_mock.open.return_value = MockPyaardvark()
 
-        from pyipmi.interfaces.aardvark import Aardvark
-        self.my_aardvark = Aardvark()
+        modules = {
+            'pyaardvark': self.pyaardvark_mock,
+            'pyaardvark.open': self.pyaardvark_mock.open,
+        }
+
+        self.module_patcher = patch.dict('sys.modules', modules)
+        self.module_patcher.start()
+        ok_('pyaardvark' in sys.modules.keys())
+        ok_('pyaardvark.open' in sys.modules.keys())
+        import pyipmi.interfaces.aardvark
+        self.my_aardvark = pyipmi.interfaces.aardvark.Aardvark()
 
     @classmethod
     def teardown_class(self):
@@ -39,6 +39,7 @@ class TestIpmitool:
         self.module_patcher.stop()
 
     def test_rx_filter(self):
+        from pyipmi.interfaces.ipmb import IpmbHeader
         header = IpmbHeader()
         header.rs_lun = 0
         header.rs_sa = 0x72
@@ -60,4 +61,3 @@ class TestIpmitool:
         self.my_aardvark.next_sequence_number = 63
         self.my_aardvark._inc_sequence_number()
         eq_(self.my_aardvark.next_sequence_number, 0)
-

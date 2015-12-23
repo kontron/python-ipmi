@@ -23,10 +23,12 @@ from pyipmi.errors import TimeoutError
 from pyipmi.logger import log
 from pyipmi.interfaces.ipmb import IpmbHeader, checksum
 
+import pyaardvark
 try:
     import pyaardvark
 except ImportError:
     pyaardvark = None
+    pass
 
 class ChecksumError(Exception):
     pass
