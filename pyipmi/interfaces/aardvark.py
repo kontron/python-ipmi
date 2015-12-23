@@ -16,6 +16,7 @@
 
 import time
 import array
+from operator import eq, ne
 
 from pyipmi import Session
 from pyipmi.msgs import create_message, encode_message, decode_message
@@ -73,8 +74,9 @@ class Aardvark(object):
         header.rq_lun = 0
         header.rq_sa = self.slave_address
         header.cmd_id = ord(1)
+        raw_data = []
 
-        self._send_raw(header, chr(cmd_id))
+        self._send_raw(header, raw_data)
         rx_data = self._receive_raw(header)
         return True
 
@@ -89,65 +91,32 @@ class Aardvark(object):
 
         return data
 
-#    def _decode_ipmb_msg_rsp(self, addr, data):
-#        # shift i2c address by one
-#        addr = addr << 1
-#
-#        # verify checksums
-#        if checksum((addr, data[0], data[1])) != 0:
-#            raise ChecksumError()
-#
-#        if checksum(data[2:]) != 0:
-#            raise ChecksumError()
-#
-#        # decode fields
-#        rs_sa = addr
-#        netfn = (data[0] >> 2) & 0x3f
-#        rq_lun = data[0] & 0x3
-#        rq_sa = data[2]
-#        rs_lun = data[3] & 0x3
-#        rq_seq = (data[3] >> 2) & 0x3f
-#        cmd_id = data[4]
-#        cmd_data = data[5:-1]
-#        return (rs_sa, netfn, rq_lun, rq_sa, rs_lun, rq_seq, cmd_id, cmd_data)
+    def _rx_filter(self, header, rx_data):
 
-    def _rx_filter(self, rq_sa, header, rx_data):
+        checks = [
+            (checksum(rx_data[0:3]), 0, 'Header checksum'),
+            (checksum(rx_data[3:]), 0, 'payload checksum failed'),
+            (rx_data[0], header.rq_sa, 'slave address mismatch'),
+            (rx_data[1] & ~3, header.netfn << 2 | 4, 'NetFn mismatch'),
+            (rx_data[3], header.rs_sa, 'target address mismatch'),
+            (rx_data[1] & 3, header.rq_lun, 'request LUN mismatch'),
+            (rx_data[4] & 3, header.rs_lun & 3, 'responder LUN mismatch'),
+            (rx_data[4] >> 2, header.rq_seq, 'sequence number mismatch'),
+            (rx_data[5], header.cmd_id, 'command id mismatch'),
+        ]
 
         match = True
 
-        if (checksum((rq_sa, rx_data[0], rx_data[1])) != 0):
-            log().warning('Header checksum failed')
-            match = False
-        if checksum(rx_data[2:]) != 0:
-            log().warning('payload checksum failed')
-            match = False
-        if rq_sa != self.slave_address:
-            log().debug('slave address mismatch')
-            match = False
-        if rx_data[0] & ~3 != (header.netfn << 2) | 4:
-            log().debug('NetFn mismatch')
-            match = False
-        if rx_data[2] != header.rs_sa:
-            log().debug('target address mismatch')
-            match = False
-        if rx_data[0] & 3 != header.rq_lun:
-            log().debug('request LUN mismatch')
-            match = False
-        if rx_data[3] & 3 != header.rs_lun & 3:
-            log().debug('responder LUN mismatch')
-            match = False
-        if rx_data[3] >> 2 != header.rq_seq:
-            log().debug('sequence number mismatch')
-            match = False
-        if rx_data[4] != header.cmd_id:
-            log().debug('command id mismatch')
-            match = False
+        for (left, right, msg) in checks:
+            if ne(left, right):
+                log().debug('%s missmatch' % msg)
+                match = False
 
         return match
 
     def _send_raw(self, header, raw_bytes):
 
-        cmd_data =  [ord(c) for c in raw_bytes[1:]]
+        cmd_data =  [ord(c) for c in raw_bytes]
         tx_data = self._encode_ipmb_msg_req(header, cmd_data)
 
         i2c_addr = header.rs_sa >> 1
@@ -175,26 +144,18 @@ class Aardvark(object):
             (i2c_addr, rx_data) = self._dev.i2c_slave_read()
             log().debug('I2C RX from %02Xh [%s]', i2c_addr,
                     ' '.join(['%02x' % ord(c) for c in rx_data]))
-            rx_data = array.array('B', rx_data)
 
-            rq_sa = i2c_addr << 1
-            rsp_received = self._rx_filter(rq_sa, header, rx_data)
+            rx_data = array.array('B', rx_data)
+            rq_sa = array.array('B', [i2c_addr << 1,])
+
+            rsp_received = self._rx_filter(header, rq_sa + rx_data)
 
         return rx_data
 
-    def _send_and_receive_raw(self, target, rs_lun, netfn, raw_bytes):
+    def _send_and_receive_raw(self, header, raw_bytes):
 
-        if hasattr(target, 'routing') and len(target.routing) > 1:
-            raise RuntimeError('Bridging is not supported yet')
-
-        header = IpmbHeader()
-        header.netfn = netfn
-        header.rs_lun = rs_lun
-        header.rs_sa = target.ipmb_address
-        header.rq_seq = self.next_sequence_number
-        header.rq_lun = 0
-        header.rq_sa = self.slave_address
-        header.cmd_id = ord(raw_bytes[0])
+#        if hasattr(target, 'routing') and len(target.routing) > 1:
+#            raise RuntimeError('Bridging is not supported yet')
 
         self._inc_sequence_number()
 
@@ -216,7 +177,16 @@ class Aardvark(object):
         return rx_data.tostring()
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
-        rx_data = self._send_and_receive_raw(target, lun, netfn, raw_bytes)
+        header = IpmbHeader()
+        header.netfn = netfn
+        header.rs_lun = rs_lun
+        header.rs_sa = target.ipmb_address
+        header.rq_seq = self.next_sequence_number
+        header.rq_lun = 0
+        header.rq_sa = self.slave_address
+        header.cmd_id = ord(raw_bytes[0])
+
+        rx_data = self._send_and_receive_raw(header, raw_bytes[1:])
         return rx_data[5:-1]
 
     def send_and_receive(self, msg):
@@ -227,8 +197,16 @@ class Aardvark(object):
 
         log().debug('IPMI Request [%s]', msg)
 
-        rx_data = self._send_and_receive_raw(msg.target, msg.lun,
-                    msg.netfn, chr(msg.cmdid) + encode_message(msg))
+        header = IpmbHeader()
+        header.netfn = msg.netfn
+        header.rs_lun = msg.lun
+        header.rs_sa = msg.target.ipmb_address
+        header.rq_seq = self.next_sequence_number
+        header.rq_lun = 0
+        header.rq_sa = self.slave_address
+        header.cmd_id = msg.cmdid
+
+        rx_data = self._send_and_receive_raw(header, encode_message(msg))
 
         msg = create_message(msg.cmdid, msg.netfn + 1)
         decode_message(msg, rx_data[5:-1])
