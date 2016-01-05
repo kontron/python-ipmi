@@ -117,7 +117,7 @@ class Sensor(object):
             if retry == 0:
                 raise RetryError()
             rsp = self.send_message(req)
-            if rsp.completion_code == 0:
+            if rsp.completion_code == constants.CC_OK:
                 break
             elif rsp.completion_code == constants.CC_RES_CANCELED:
                 req.reservation_id = self.reserve_device_sdr_repository()

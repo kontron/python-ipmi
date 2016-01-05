@@ -78,7 +78,7 @@ class Sdr(object):
             else:
                 check_completion_code(rsp.completion_code)
 
-        return (rsp.next_record_id, rsp.data)
+        return (rsp.next_record_id, rsp.record_data)
 
     def get_repository_sdr(self, record_id, reservation_id=None):
         (next_id, record_data) = get_sdr_data_helper(

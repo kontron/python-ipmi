@@ -112,7 +112,7 @@ class GetSdrRsp(Message):
     __fields__ = (
             CompletionCode(),
             UnsignedInt('next_record_id', 2),
-            RemainingBytes('data'),
+            RemainingBytes('record_data'),
     )
 
 
