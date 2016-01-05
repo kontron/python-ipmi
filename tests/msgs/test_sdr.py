@@ -81,13 +81,13 @@ class TestGetSdr:
         decode_message(m,'\x00\x11\x22\x33\x44\x55\x66')
         eq_(m.completion_code, 0x00)
         eq_(m.next_record_id, 0x2211)
-        eq_(m.data, array('B', [0x33, 0x44, 0x55, 0x66]))
+        eq_(m.record_data, array('B', [0x33, 0x44, 0x55, 0x66]))
 
 
 class TestAddSdr:
     def test_encode_req(self):
         m = pyipmi.msgs.sdr.AddSdrReq()
-        m.data = array('B', [0x55, 0x44])
+        m.record_data = array('B', [0x55, 0x44])
         data = encode_message(m)
         eq_(data, '\x55\x44')
 
@@ -105,7 +105,7 @@ class TestPartialAddSdr:
         m.record_id = 0x4433
         m.offset = 0xaa
         m.status.in_progress = 0xaa
-        m.data = array('B', [0x55, 0x44])
+        m.record_data = array('B', [0x55, 0x44])
         data = encode_message(m)
         eq_(data, '\x11\x22\x33\x44\xaa\x0a\x55\x44')
 

@@ -121,7 +121,7 @@ class AddSdrReq(Message):
     __cmdid__ = constants.CMDID_ADD_SDR
     __netfn__ = constants.NETFN_STORAGE
     __fields__ = (
-            RemainingBytes('data'),
+            RemainingBytes('record_data'),
     )
 
 
@@ -147,7 +147,7 @@ class PartialAddSdrReq(Message):
                 Bitfield.Bit('in_progress', 4),
                 Bitfield.ReservedBit(4, 0),
             ),
-            RemainingBytes('data'),
+            RemainingBytes('record_data'),
     )
 
 
