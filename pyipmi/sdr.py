@@ -232,19 +232,6 @@ class SdrFullSensorRecord(SdrCommon):
     DATA_FMT_2S_COMPLEMENT = 2
     DATA_FMT_NONE = 3
 
-    L_LINEAR = 0
-    L_LN = 1
-    L_LOG = 2
-    L_LOG2 = 3
-    L_E = 4
-    L_EXP10 = 5
-    L_EXP2 = 6
-    L_1_X = 7
-    L_SQR = 8
-    L_CUBE = 9
-    L_SQRT = 10
-    L_CUBERT = 11
-
     def __init__(self, data, next_id=None):
         SdrCommon.__init__(self, data, next_id)
         if data:
@@ -286,34 +273,42 @@ class SdrFullSensorRecord(SdrCommon):
 
     @property
     def l(self):
+        L_LINEAR = 0
+        L_LN = 1
+        L_LOG = 2
+        L_LOG2 = 3
+        L_E = 4
+        L_EXP10 = 5
+        L_EXP2 = 6
+        L_1_X = 7
+        L_SQR = 8
+        L_CUBE = 9
+        L_SQRT = 10
+        L_CUBERT = 11
+
+        __function_list__ = {
+            L_LN:     math.log,
+            L_LOG:    lambda x: math.log(x, 10),
+            L_LOG2:   lambda x: math.log(x, 2),
+            L_E:      math.exp,
+            L_EXP10:  lambda x: math.pow(10, x),
+            L_EXP2:   lambda x: math.pow(2, x),
+            L_1_X:    lambda x: 1.0 / x,
+            L_SQR:    lambda x: math.pow(x, 2),
+            L_CUBE:   lambda x: math.pow(x, 3),
+            L_SQRT:   math.sqrt,
+            L_CUBERT: lambda x: math.pow(x, 1.0/3),
+            L_LINEAR: lambda x: x,
+        }
+
         linearization = self.linearization & 0x7f
-        if linearization == self.L_LN:
-            l = math.log
-        elif linearization == self.L_LOG:
-            l = lambda x: math.log(x, 10)
-        elif linearization == self.L_LOG2:
-            l = lambda x: math.log(x, 2)
-        elif linearization == self.L_E:
-            l = math.exp
-        elif linearization == self.L_EXP10:
-            l = lambda x: math.pow(10, x)
-        elif linearization == self.L_EXP2:
-            l = lambda x: math.pow(2, x)
-        elif linearization == self.L_1_X:
-            l = lambda x: 1.0 / x
-        elif linearization == self.L_SQR:
-            l = lambda x: math.pow(x, 2)
-        elif linearization == self.L_CUBE:
-            l = lambda x: math.pow(x, 3)
-        elif linearization == self.L_SQRT:
-            l = math.sqrt
-        elif linearization == self.L_CUBERT:
-            l = lambda x: math.pow(x, 1.0/3)
-        elif linearization == self.L_LINEAR:
-            l = lambda x: x
+
+        if linearization in __function_list__:
+            l = __function_list__[linearization]
         else:
             raise errors.DecodingError('unknown linearization %d' %
                     linearization)
+
         return l
 
     def _convert_complement(self, value, size):

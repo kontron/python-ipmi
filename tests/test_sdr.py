@@ -28,6 +28,71 @@ class TestSdr:
         sdr = SdrFullSensorRecord(data)
 
     @raises(DecodingError)
+    def test_SdrFullSensorRecord_linearization_key_error(self):
+        sdr = SdrFullSensorRecord(None)
+        sdr.linearization = 12
+        sdr.l(1)
+
+    def test_SdrFullSensorRecord_linearization(self):
+        sdr = SdrFullSensorRecord(None)
+
+        # linear
+        sdr.linearization = 0
+        eq_(sdr.l(1), 1)
+        eq_(sdr.l(10), 10)
+
+        # ln
+        sdr.linearization = 1
+        eq_(sdr.l(1), 0)
+
+        # log
+        sdr.linearization = 2
+        eq_(sdr.l(10), 1)
+        eq_(sdr.l(100), 2)
+
+        # log
+        sdr.linearization = 3
+        eq_(sdr.l(8), 3)
+        eq_(sdr.l(16), 4)
+
+        # e
+        sdr.linearization = 4
+        eq_(sdr.l(1), 2.718281828459045)
+
+        # exp10
+        sdr.linearization = 5
+        eq_(sdr.l(1), 10)
+        eq_(sdr.l(2), 100)
+
+        # exp2
+        sdr.linearization = 6
+        eq_(sdr.l(3), 8)
+        eq_(sdr.l(4), 16)
+
+        # 1/x
+        sdr.linearization = 7
+        eq_(sdr.l(2), 0.5)
+        eq_(sdr.l(4), 0.25)
+
+        # sqr
+        sdr.linearization = 8
+        eq_(sdr.l(2), 4)
+
+        # cube
+        sdr.linearization = 9
+        eq_(sdr.l(2), 8)
+        eq_(sdr.l(3), 27)
+
+        # sqrt
+        sdr.linearization = 10
+        eq_(sdr.l(16), 4)
+
+        # cubert
+        sdr.linearization = 11
+        eq_(sdr.l(8), 2)
+        eq_(sdr.l(27), 3)
+
+    @raises(DecodingError)
     def test_SdrCompactSensorRecord(self):
         data = (0, 0, 0, 0, 0)
         sdr = SdrCompactSensorRecord(data)
