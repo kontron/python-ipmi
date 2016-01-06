@@ -24,6 +24,7 @@ from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 
 from pyipmi.helper import get_sdr_data_helper, clear_repository_helper
+from pyipmi.helper import get_sdr_chunk_helper
 from pyipmi.state import State
 
 SDR_TYPE_FULL_SENSOR_RECORD = 0x01
@@ -69,27 +70,9 @@ class Sdr(object):
         req.record_id = record_id
         req.offset = offset
         req.bytes_to_read = length
-        retry = 5
 
-        while True:
-            retry -= 1
-            if retry == 0:
-                raise RetryError()
-            rsp = self.send_message(req)
-            if rsp.completion_code == constants.CC_OK:
-                break
-            elif rsp.completion_code == constants.CC_RES_CANCELED:
-                req.reservation_id = self.reserve_sdr_repository()
-                time.sleep(0.1)
-                continue
-            elif rsp.completion_code == constants.CC_TIMEOUT:
-                time.sleep(0.1)
-                continue
-            elif rsp.completion_code == constants.CC_RESP_COULD_NOT_BE_PRV:
-                time.sleep(0.1 * retry)
-                continue
-            else:
-                check_completion_code(rsp.completion_code)
+        rsp = get_sdr_chunk_helper(self.send_message, req, \
+                self.reserve_device_sdr_repository)
 
         return (rsp.next_record_id, rsp.record_data)
 

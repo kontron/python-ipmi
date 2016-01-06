@@ -23,7 +23,7 @@ from pyipmi.utils import check_completion_code, ByteBuffer
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 
-from pyipmi.helper import get_sdr_data_helper
+from pyipmi.helper import get_sdr_data_helper, get_sdr_chunk_helper
 
 import sdr
 
@@ -97,6 +97,7 @@ SENSOR_TYPE_OEM_KONTRON_SYSTEM_FIRMWARE_UPGRADE = 0xca
 SENSOR_TYPE_OEM_KONTRON_POWER_DENIED = 0xcd
 SENSOR_TYPE_OEM_KONTRON_RESET = 0xcf
 
+
 class Sensor(object):
     def reserve_device_sdr_repository(self):
         req = create_request_by_name('ReserveDeviceSdrRepository')
@@ -110,27 +111,9 @@ class Sensor(object):
         req.record_id = record_id
         req.offset = offset
         req.bytes_to_read = length
-        retry = 5
 
-        while True:
-            retry -= 1
-            if retry == 0:
-                raise RetryError()
-            rsp = self.send_message(req)
-            if rsp.completion_code == constants.CC_OK:
-                break
-            elif rsp.completion_code == constants.CC_RES_CANCELED:
-                req.reservation_id = self.reserve_device_sdr_repository()
-                time.sleep(0.1)
-                continue
-            elif rsp.completion_code == constants.CC_TIMEOUT:
-                time.sleep(0.1)
-                continue
-            elif rsp.completion_code == constants.CC_RESP_COULD_NOT_BE_PRV:
-                time.sleep(0.1 * retry)
-                continue
-            else:
-                check_completion_code(rsp.completion_code)
+        rsp = get_sdr_chunk_helper(self.send_message, req, \
+                self.reserve_device_sdr_repository)
 
         return (rsp.next_record_id, rsp.record_data)
 
@@ -145,7 +128,6 @@ class Sensor(object):
         (next_id, record_data) = get_sdr_data_helper(self.reserve_device_sdr_repository,
                 self._get_device_sdr_chunk, record_id, reservation_id)
 
-#        return sdr.create_sdr(record_data, next_id)
         return sdr.SdrCommon.from_data(record_data, next_id)
 
     def device_sdr_entries(self):

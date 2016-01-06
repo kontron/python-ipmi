@@ -23,6 +23,30 @@ from pyipmi.msgs import constants
 
 import sdr
 
+def get_sdr_chunk_helper(send_fn, req, reserv_fn, retry=5):
+
+    while True:
+        retry -= 1
+        if retry == 0:
+            raise RetryError()
+        rsp = send_fn(req)
+        if rsp.completion_code == constants.CC_OK:
+            break
+        elif rsp.completion_code == constants.CC_RES_CANCELED:
+            req.reservation_id = reserve_fn()
+            time.sleep(0.1)
+            continue
+        elif rsp.completion_code == constants.CC_TIMEOUT:
+            time.sleep(0.1)
+            continue
+        elif rsp.completion_code == constants.CC_RESP_COULD_NOT_BE_PRV:
+            time.sleep(0.1 * retry)
+            continue
+        else:
+            check_completion_code(rsp.completion_code)
+
+    return rsp
+
 def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
     """Helper function to retrieve the sdr data using the specified
     functions.
