@@ -463,7 +463,7 @@ class SdrFullSensorRecord(SdrCommon):
         self.reserved = buffer.pop_unsigned_int(2)
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = buffer.to_string()
+        self.device_id_string = buffer.tostring()
 
 
 ###
@@ -496,7 +496,7 @@ class SdrCompactSensorRecord(SdrCommon):
         self.reserved = buffer.pop_unsigned_int(3)
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = buffer.to_string()
+        self.device_id_string = buffer.tostring()
 
 
 ###
@@ -519,7 +519,7 @@ class SdrEventOnlySensorRecord(SdrCommon):
         self.reserved = buffer.pop_unsigned_int(1)
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = buffer.to_string()
+        self.device_id_string = buffer.tostring()
 
 
 ###
@@ -539,7 +539,7 @@ class SdrFruDeviceLocator(SdrCommon):
         self.entity_instance = buffer.pop_unsigned_int(1)
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = buffer.to_string()
+        self.device_id_string = buffer.tostring()
 
 
 ###
@@ -558,4 +558,4 @@ class SdrManagementContollerDeviceLocator(SdrCommon):
         self.entity_instance = buffer.pop_unsigned_int(1)
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = buffer.to_string()
+        self.device_id_string = buffer.tostring()

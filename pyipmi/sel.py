@@ -80,7 +80,7 @@ class Sel(object):
                 else:
                     check_completion_code(rsp.completion_code)
 
-                record_data.append_array(rsp.record_data)
+                record_data.extend(rsp.record_data)
                 req.offset = len(record_data)
 
                 if len(record_data) >= 16:

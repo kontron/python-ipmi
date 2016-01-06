@@ -69,7 +69,7 @@ def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
             else:
                 raise CompletionCodeError(e.cc)
 
-        record_data.append_array(data[:])
+        record_data.extend(data[:])
         offset = len(record_data)
         if len(record_data) >= record_length:
             break

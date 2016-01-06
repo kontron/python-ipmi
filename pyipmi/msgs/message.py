@@ -347,7 +347,7 @@ class Message(object):
         data = ByteBuffer()
         for field in self.__fields__:
             field.encode(self, data)
-        return data.to_string()
+        return data.tostring()
 
     def _decode(self, data):
         if not hasattr(self, '__fields__'):

@@ -15,7 +15,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 import codecs
-from array import array
+import array
 import pyipmi.msgs.constants
 import pyipmi.errors
 from pyipmi.msgs import create_request_by_name
@@ -28,51 +28,34 @@ def chunks(d, n):
     for i in xrange(0, len(d), n):
         yield d[i:i+n]
 
-class ByteBuffer(object):
-    def __init__(self, data=None):
+
+class ByteBuffer(array.array):
+    def __new__(cls, data=None):
+        args = (cls, 'B')
         if data is not None:
-            self.array = array('B', data)
-        else:
-            self.array = array('B')
+            args = args + (data,)
+        return array.array.__new__(*args)
 
     def push_unsigned_int(self, value, length):
         for i in xrange(length):
-            self.array.append((value >> (8*i) & 0xff))
+            self.append((value >> (8*i) & 0xff))
 
     def pop_unsigned_int(self, length):
         value = 0
         for i in xrange(length):
             try:
-                value |= self.array.pop(0) << (8*i)
+                value |= self.pop(0) << (8*i)
             except IndexError:
                 raise pyipmi.errors.DecodingError('Data too short for message')
         return value
 
     def push_string(self, value):
-        self.array.fromstring(value)
+        self.fromstring(value)
 
     def pop_string(self, length):
-        s = self.array[0:length]
-        del self.array[0:length]
+        s = self[0:length]
+        del self[0:length]
         return s.tostring()
-
-    def to_string(self):
-        return self.array.tostring()
-
-    def append_array(self, a):
-        self.array.extend(a)
-
-    def __getslice__(self, a, b):
-        return self.array[a:b]
-
-    def __delslice__(self, a, b):
-        del self.array[a:b]
-
-    def __len__(self):
-        return len(self.array)
-
-    def __getitem__(self, idx):
-        return self.array[idx]
 
 
 bcd_map = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '-', '.' ]
