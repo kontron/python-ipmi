@@ -192,27 +192,6 @@ class SdrRepositoryAllocationInfo(State):
         self.maximum_record_size = rsp.maximum_record_size
 
 
-def create_sdr(data, next_id=None):
-    sdr_type = data[3]
-
-    if sdr_type == SDR_TYPE_FULL_SENSOR_RECORD:
-        return SdrFullSensorRecord(data, next_id)
-    elif sdr_type == SDR_TYPE_COMPACT_SENSOR_RECORD:
-        return SdrCompactSensorRecord(data, next_id)
-    elif sdr_type == SDR_TYPE_EVENT_ONLY_SENSOR_RECORD:
-        return SdrEventOnlySensorRecord(data, next_id)
-    elif sdr_type == SDR_TYPE_FRU_DEVICE_LOCATOR_RECORD:
-        return SdrFruDeviceLocator(data, next_id)
-    elif sdr_type == SDR_TYPE_MANAGEMENT_CONTROLLER_DEVICE_LOCATOR_RECORD:
-        return SdrManagementContollerDeviceLocator(data, next_id)
-    elif sdr_type == SDR_TYPE_MANAGEMENT_CONTROLLER_CONFIRMATION_RECORD:
-        raise DecodingError('Unsupported SDR type(0x%02x)' % sdr_type)
-    elif sdr_type == SDR_TYPE_BMC_MESSAGE_CHANNEL_INFO_RECORD:
-        raise DecodingError('Unsupported SDR type(0x%02x)' % sdr_type)
-    else:
-        raise DecodingError('Unsupported SDR type(0x%02x)' % sdr_type)
-
-
 class SdrCommon(object):
     def __init__(self, data, next_id=None):
         if data:
