@@ -219,11 +219,14 @@ class SdrCommon(object):
         except:
             raise DecodingError('Invalid SDR length (%d)' % len(data))
 
-    def _common_record_key(self, data):
-        pass
+    def _common_record_key(self, buffer):
+        self.owner_id = buffer.pop_unsigned_int(1)
+        self.owner_lun = buffer.pop_unsigned_int(1) & 0x3
+        self.number = buffer.pop_unsigned_int(1)
 
-    def _common_record_body(self, data):
-        pass
+    def _entity(self, buffer):
+        self.entity_id = buffer.pop_unsigned_int(1)
+        self.entity_instance = buffer.pop_unsigned_int(1)
 
     @staticmethod
     def from_data(data, next_id=None):
@@ -320,12 +323,9 @@ class SdrFullSensorRecord(SdrCommon):
     def _from_data(self, data):
         buffer = ByteBuffer(data[5:])
         # record key bytes
-        self.owner_id = buffer.pop_unsigned_int(1)
-        self.owner_lun = buffer.pop_unsigned_int(1) & 0x3
-        self.number = buffer.pop_unsigned_int(1)
+        self._common_record_key(buffer.pop_slice(3))
         # record body bytes
-        self.entity_id = buffer.pop_unsigned_int(1)
-        self.entity_instance = buffer.pop_unsigned_int(1)
+        self._entity(buffer.pop_slice(2))
 
         # byte 11
         initialization = buffer.pop_unsigned_int(1)
@@ -472,13 +472,12 @@ class SdrFullSensorRecord(SdrCommon):
 class SdrCompactSensorRecord(SdrCommon):
     def _from_data(self, data):
         buffer = ByteBuffer(data[5:])
+
         # record key bytes
-        self.owner_id = buffer.pop_unsigned_int(1)
-        self.owner_lun = buffer.pop_unsigned_int(1) & 0x3
-        self.number = buffer.pop_unsigned_int(1)
+        self._common_record_key(buffer.pop_slice(3))
+
         # record body bytes
-        self.entity_id = buffer.pop_unsigned_int(1)
-        self.entity_instance = buffer.pop_unsigned_int(1)
+        self._entity(buffer.pop_slice(2))
 
         self.sensor_initialization = buffer.pop_unsigned_int(1)
         self.capabilities = buffer.pop_unsigned_int(1)
@@ -505,13 +504,12 @@ class SdrCompactSensorRecord(SdrCommon):
 class SdrEventOnlySensorRecord(SdrCommon):
     def _from_data(self, data):
         buffer = ByteBuffer(data[5:])
+
         # record key bytes
-        self.owner_id = buffer.pop_unsigned_int(1)
-        self.owner_lun = buffer.pop_unsigned_int(1) & 0x3
-        self.number = buffer.pop_unsigned_int(1)
+        self._common_record_key(buffer.pop_slice(3))
+
         # record body bytes
-        self.entity_id = buffer.pop_unsigned_int(1)
-        self.entity_instance = buffer.pop_unsigned_int(1)
+        self._entity(buffer.pop_slice(2))
 
         self.sensor_type = buffer.pop_unsigned_int(1)
         self.event_reading_type_code = buffer.pop_unsigned_int(1)
@@ -535,8 +533,7 @@ class SdrFruDeviceLocator(SdrCommon):
         self.reserved = buffer.pop_unsigned_int(1)
         self.device_type = buffer.pop_unsigned_int(1)
         self.device_type_modifier= buffer.pop_unsigned_int(1)
-        self.entity_id = buffer.pop_unsigned_int(1)
-        self.entity_instance = buffer.pop_unsigned_int(1)
+        self._entity(buffer.pop_slice(2))
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
         self.device_id_string = buffer.tostring()
@@ -554,8 +551,7 @@ class SdrManagementContollerDeviceLocator(SdrCommon):
         self.global_initialization = 0
         self.device_capabilities = buffer.pop_unsigned_int(1)
         self.reserved = buffer.pop_unsigned_int(3)
-        self.entity_id = buffer.pop_unsigned_int(1)
-        self.entity_instance = buffer.pop_unsigned_int(1)
+        self._entity(buffer.pop_slice(2))
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
         self.device_id_string = buffer.tostring()
