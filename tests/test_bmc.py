@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
-import nose
-from mock import MagicMock, call
 from nose.tools import eq_, raises
 
 from pyipmi.bmc import *
@@ -10,7 +8,7 @@ import pyipmi.msgs.bmc
 from pyipmi.msgs import encode_message
 from pyipmi.msgs import decode_message
 
-class TestBmc:
+def test_deviceid_object():
     m = pyipmi.msgs.bmc.GetDeviceIdRsp()
     decode_message(m, '\x00\x12\x84\x05\x67\x51\x55\x12\x34\x56\x44\x55')
 

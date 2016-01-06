@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
-import nose
-from mock import MagicMock, call
 from nose.tools import eq_, ok_, raises
 
 from pyipmi.chassis import *
@@ -10,7 +8,7 @@ import pyipmi.msgs.chassis
 from pyipmi.msgs import encode_message
 from pyipmi.msgs import decode_message
 
-class TestBmc:
+def test_chassisstatus_object():
     m = pyipmi.msgs.chassis.GetChassisStatusRsp()
     decode_message(m, '\x00\xff\xff\xff')
 

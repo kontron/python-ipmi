@@ -1,44 +1,42 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
-import nose
 from nose.tools import raises
 
 from pyipmi.errors import *
 
-class TestErrors:
-    @raises(DecodingError)
-    def test_DecodingError(self):
-        raise DecodingError()
+@raises(DecodingError)
+def test_DecodingError():
+    raise DecodingError()
 
-    @raises(EncodingError)
-    def test_EncodingError(self):
-        raise EncodingError()
+@raises(EncodingError)
+def test_EncodingError():
+    raise EncodingError()
 
-    @raises(TimeoutError)
-    def test_TimeoutError(self):
-        raise TimeoutError()
+@raises(TimeoutError)
+def test_TimeoutError():
+    raise TimeoutError()
 
-    @raises(CompletionCodeError)
-    def test_CompletionCodeError(self):
-        raise CompletionCodeError(cc=0x09)
+@raises(CompletionCodeError)
+def test_CompletionCodeError():
+    raise CompletionCodeError(cc=0x09)
 
-    @raises(NotSupportedError)
-    def test_NotSupportedError(self):
-        raise NotSupportedError()
+@raises(NotSupportedError)
+def test_NotSupportedError():
+    raise NotSupportedError()
 
-    @raises(DescriptionError)
-    def test_DescriptionError(self):
-        raise (DescriptionError)
+@raises(DescriptionError)
+def test_DescriptionError():
+    raise (DescriptionError)
 
-    @raises(RetryError)
-    def test_RetryError(self):
-        raise (RetryError)
+@raises(RetryError)
+def test_RetryError():
+    raise (RetryError)
 
-    @raises(DataNotFound)
-    def test_DataNotFound(self):
-        raise DataNotFound()
+@raises(DataNotFound)
+def test_DataNotFound():
+    raise DataNotFound()
 
-    @raises(HpmError)
-    def test_HpmError_no_msg(self):
-        raise HpmError()
+@raises(HpmError)
+def test_HpmError_no_msg():
+    raise HpmError()
