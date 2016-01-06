@@ -17,7 +17,7 @@
 import codecs
 import array
 import pyipmi.msgs.constants
-import pyipmi.errors
+from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.msgs import create_request_by_name
 
 def check_completion_code(cc):
@@ -56,6 +56,14 @@ class ByteBuffer(array.array):
         s = self[0:length]
         del self[0:length]
         return s.tostring()
+
+    def pop_slice(self, length):
+        if len(self) < length:
+            raise pyipmi.errors.DecodingError('Data too short for message')
+
+        c = ByteBuffer(self[0:length])
+        self.__delslice__(0, length)
+        return c
 
 
 bcd_map = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '-', '.' ]
