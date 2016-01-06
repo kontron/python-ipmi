@@ -145,7 +145,8 @@ class Sensor(object):
         (next_id, record_data) = get_sdr_data_helper(self.reserve_device_sdr_repository,
                 self._get_device_sdr_chunk, record_id, reservation_id)
 
-        return sdr.create_sdr(record_data, next_id)
+#        return sdr.create_sdr(record_data, next_id)
+        return sdr.SdrCommon.from_data(record_data, next_id)
 
     def device_sdr_entries(self):
         """A generator that returns the SDR list. Starting with ID=0x0000 and

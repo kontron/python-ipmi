@@ -38,6 +38,19 @@ SDR_TYPE_BMC_MESSAGE_CHANNEL_INFO_RECORD = 0x14
 GET_INITIALIZATION_AGENT_STATUS = 0
 RUN_INITIALIZATION_AGENT = 1
 
+L_LINEAR = 0
+L_LN = 1
+L_LOG = 2
+L_LOG2 = 3
+L_E = 4
+L_EXP10 = 5
+L_EXP2 = 6
+L_1_X = 7
+L_SQR = 8
+L_CUBE = 9
+L_SQRT = 10
+L_CUBERT = 11
+
 class Sdr(object):
     def get_sdr_repository_info(self):
         return SdrRepositoryInfo(self.send_message_with_name('GetSdrRepositoryInfo'))
@@ -84,7 +97,7 @@ class Sdr(object):
         (next_id, record_data) = get_sdr_data_helper(
                 self.reserve_sdr_repository, self._get_sdr_chunk,
                 record_id, reservation_id)
-        return create_sdr(record_data, next_id)
+        return SdrCommon.from_data(record_data, next_id)
 
     def sdr_repository_entries(self):
         """A generator that returns the SDR list. Starting with ID=0x0000 and
@@ -155,8 +168,8 @@ class Sdr(object):
     def get_initialization_agent_status(self):
         return self._run_initialization_agent(GET_INITIALIZATION_AGENT_STATUS)
 
-class SdrRepositoryInfo(State):
 
+class SdrRepositoryInfo(State):
     def _from_response(self, rsp):
         self.sdr_version = rsp.sdr_version
         self.record_count = rsp.record_count
@@ -169,8 +182,8 @@ class SdrRepositoryInfo(State):
         self.support_update_type = rsp.support.update_type
         self.support_overflow_flag = rsp.support.overflow_flag
 
-class SdrRepositoryAllocationInfo(State):
 
+class SdrRepositoryAllocationInfo(State):
     def _from_response(self, rsp):
         self.number_of_units = rsp.number_of_units
         self.unit_size = rsp.unit_size
@@ -203,7 +216,15 @@ def create_sdr(data, next_id=None):
 class SdrCommon(object):
     def __init__(self, data, next_id=None):
         if data:
-            self._from_response(data)
+            if len(data) < 5:
+                raise DecodingError('Invalid SDR length (%d)' % len(data))
+
+            self.data = data
+            self._common_header(data)
+
+            if hasattr(self, '_from_data'):
+                self._from_data(data)
+
         if next_id:
             self.next_id = next_id
 
@@ -212,16 +233,35 @@ class SdrCommon(object):
             (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
         return s
 
-    def _from_response(self, data):
-        if len(data) < 5:
-            raise DecodingError('Invalid SDR length (%d)' % len(data))
-
-        self.data = data
+    def _common_header(self, data):
         buffer = ByteBuffer(data[:])
         self.id = buffer.pop_unsigned_int(2)
         self.version = buffer.pop_unsigned_int(1)
         self.type = buffer.pop_unsigned_int(1)
         self.length = buffer.pop_unsigned_int(1)
+
+    @staticmethod
+    def from_data(data, next_id=None):
+        sdr_type = data[3]
+
+        try:
+            cls = {
+                SDR_TYPE_FULL_SENSOR_RECORD:
+                        SdrFullSensorRecord,
+                SDR_TYPE_COMPACT_SENSOR_RECORD:
+                        SdrCompactSensorRecord,
+                SDR_TYPE_EVENT_ONLY_SENSOR_RECORD:
+                        SdrEventOnlySensorRecord,
+                SDR_TYPE_FRU_DEVICE_LOCATOR_RECORD:
+                        SdrFruDeviceLocator,
+                SDR_TYPE_MANAGEMENT_CONTROLLER_DEVICE_LOCATOR_RECORD:
+                        SdrManagementContollerDeviceLocator,
+            }[sdr_type]
+        except KeyError:
+            raise DecodingError('Unsupported SDR type(0x%02x)' % sdr_type)
+
+        return cls(data, next_id)
+
 
 ###
 # SDR type 0x01
@@ -231,11 +271,6 @@ class SdrFullSensorRecord(SdrCommon):
     DATA_FMT_1S_COMPLEMENT = 1
     DATA_FMT_2S_COMPLEMENT = 2
     DATA_FMT_NONE = 3
-
-    def __init__(self, data, next_id=None):
-        SdrCommon.__init__(self, data, next_id)
-        if data:
-            self._from_data(data)
 
     def convert_sensor_raw_to_value(self, raw):
         fmt = self.analog_data_format
@@ -273,43 +308,24 @@ class SdrFullSensorRecord(SdrCommon):
 
     @property
     def l(self):
-        L_LINEAR = 0
-        L_LN = 1
-        L_LOG = 2
-        L_LOG2 = 3
-        L_E = 4
-        L_EXP10 = 5
-        L_EXP2 = 6
-        L_1_X = 7
-        L_SQR = 8
-        L_CUBE = 9
-        L_SQRT = 10
-        L_CUBERT = 11
-
-        __function_list__ = {
-            L_LN:     math.log,
-            L_LOG:    lambda x: math.log(x, 10),
-            L_LOG2:   lambda x: math.log(x, 2),
-            L_E:      math.exp,
-            L_EXP10:  lambda x: math.pow(10, x),
-            L_EXP2:   lambda x: math.pow(2, x),
-            L_1_X:    lambda x: 1.0 / x,
-            L_SQR:    lambda x: math.pow(x, 2),
-            L_CUBE:   lambda x: math.pow(x, 3),
-            L_SQRT:   math.sqrt,
-            L_CUBERT: lambda x: math.pow(x, 1.0/3),
-            L_LINEAR: lambda x: x,
-        }
-
-        linearization = self.linearization & 0x7f
-
-        if linearization in __function_list__:
-            l = __function_list__[linearization]
-        else:
+        try:
+            return {
+                L_LN:     math.log,
+                L_LOG:    lambda x: math.log(x, 10),
+                L_LOG2:   lambda x: math.log(x, 2),
+                L_E:      math.exp,
+                L_EXP10:  lambda x: math.pow(10, x),
+                L_EXP2:   lambda x: math.pow(2, x),
+                L_1_X:    lambda x: 1.0 / x,
+                L_SQR:    lambda x: math.pow(x, 2),
+                L_CUBE:   lambda x: math.pow(x, 3),
+                L_SQRT:   math.sqrt,
+                L_CUBERT: lambda x: math.pow(x, 1.0/3),
+                L_LINEAR: lambda x: x,
+            }[self.linearization & 0x7f]
+        except KeyError:
             raise errors.DecodingError('unknown linearization %d' %
-                    linearization)
-
-        return l
+                    (self.linearization & 0x7f))
 
     def _convert_complement(self, value, size):
         if (value & (1 << (size-1))):
@@ -469,11 +485,6 @@ class SdrFullSensorRecord(SdrCommon):
 # SDR type 0x02
 ##################################################
 class SdrCompactSensorRecord(SdrCommon):
-    def __init__(self, data, next_id=None):
-        SdrCommon.__init__(self, data, next_id)
-        if data:
-            self._from_data(data)
-
     def _from_data(self, data):
         buffer = ByteBuffer(data[5:])
         self.owner_id = buffer.pop_unsigned_int(1)
@@ -504,11 +515,6 @@ class SdrCompactSensorRecord(SdrCommon):
 # SDR type 0x03
 ##################################################
 class SdrEventOnlySensorRecord(SdrCommon):
-    def __init__(self, data, next_id=None):
-        SdrCommon.__init__(self, data, next_id)
-        if data:
-            self._from_data(data)
-
     def _from_data(self, data):
         buffer = ByteBuffer(data[5:])
         self.owner_id = buffer.pop_unsigned_int(1)
@@ -524,15 +530,11 @@ class SdrEventOnlySensorRecord(SdrCommon):
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
         self.device_id_string = buffer.to_string()
 
+
 ###
 # SDR type 0x11
 ##################################################
 class SdrFruDeviceLocator(SdrCommon):
-    def __init__(self, data, next_id=None):
-        SdrCommon.__init__(self, data, next_id)
-        if data:
-            self._from_data(data)
-
     def _from_data(self, data):
         buffer = ByteBuffer(data[5:])
         # record key bytes
@@ -555,11 +557,6 @@ class SdrFruDeviceLocator(SdrCommon):
 # SDR type 0x12
 ##################################################
 class SdrManagementContollerDeviceLocator(SdrCommon):
-    def __init__(self, data, next_id=None):
-        SdrCommon.__init__(self, data, next_id)
-        if data:
-            self._from_data(data)
-
     def _from_data(self, data):
         buffer = ByteBuffer(data[5:])
         self.device_slave_address = buffer.pop_unsigned_int(1) >> 1
