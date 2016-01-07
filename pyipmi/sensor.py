@@ -197,24 +197,14 @@ class Sensor(object):
         req = create_request_by_name('SetSensorThresholds')
         req.sensor_number = sensor_number
         req.lun = lun
-        if unr is not None:
-            req.set_mask.unr = 1
-            req.threshold.unr = unr
-        if ucr is not None:
-            req.set_mask.ucr = 1
-            req.threshold.ucr = ucr
-        if unc is not None:
-            req.set_mask.unc = 1
-            req.threshold.unc = unc
-        if lnc is not None:
-            req.set_mask.lnc = 1
-            req.threshold.lnc = lnc
-        if lcr is not None:
-            req.set_mask.lcr = 1
-            req.threshold.lcr = lcr
-        if lnr is not None:
-            req.set_mask.lnr = 1
-            req.threshold.lnr = lnr
+
+        thresholds = dict(unr=unr, ucr=ucr, unc=unc, lnc=lnc, lcr=lcr, lnr=lnr)
+
+        for k, v in thresholds.iteritems():
+            if v is not None:
+                setattr(req.set_mask, k, 1)
+                setattr(req.threshold, k, v)
+
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
