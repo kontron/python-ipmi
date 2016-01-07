@@ -205,6 +205,3 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
     target = property(_get_target, _set_target)
     interface = property(_get_interface, _set_interface)
     session = property(_get_session, _set_session)
-
-
-
