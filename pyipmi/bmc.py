@@ -148,24 +148,14 @@ class DeviceId(State):
         self.product_id = rsp.product_id
 
         self.supported_functions = []
-        if rsp.additional_support.sensor:
-            self.supported_functions.append('sensor')
-        if rsp.additional_support.sdr_repository:
-            self.supported_functions.append('sdr_repository')
-        if rsp.additional_support.sel:
-            self.supported_functions.append('sel')
-        if rsp.additional_support.fru_inventory:
-            self.supported_functions.append('fru_inventory')
-        if rsp.additional_support.ipmb_event_receiver:
-            self.supported_functions.append('ipmb_event_receiver')
-        if rsp.additional_support.ipmb_event_generator:
-            self.supported_functions.append('ipmb_event_generator')
-        if rsp.additional_support.bridge:
-            self.supported_functions.append('bridge')
-        if rsp.additional_support.chassis:
-            self.supported_functions.append('chassis')
+        functions = ('sensor', 'sdr_repository', 'sel', 'fru_inventory',
+            'ipmb_event_receiver', 'ipmb_event_generator', 'bridge', 'chassis')
 
+        for function in functions:
+            if hasattr(rsp.additional_support, function):
+                if getattr(rsp.additional_support, function):
+                    self.supported_functions.append(function)
+
+        self.aux = None
         if rsp.auxiliary is not None:
             self.aux = list(rsp.auxiliary)
-        else:
-            self.aux = None
