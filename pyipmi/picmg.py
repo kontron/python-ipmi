@@ -376,6 +376,18 @@ class LedState(State):
             ('lamp_test_duration', ''),
     ]
 
+    def __init__(self, fru_id=None, led_id=None, color=None, function=None,
+                rsp=None):
+        State.__init__(self, rsp)
+        if fru_id is not None:
+            self.fru_id = fru_id
+        if led_id is not None:
+            self.led_id = led_id
+        if color is not None:
+            self.override_color = color
+        if function is not None:
+            self.override_function = function
+
     def __str__(self):
         s = '[flags '
         s += self.local_state_available and ' LOCAL_STATE' or ''
@@ -435,19 +447,19 @@ class LedState(State):
         req.led_id = self.led_id
         req.color = self.override_color
 
-        if self.local_function == self.FUNCTION_ON:
+        if self.override_function == self.FUNCTION_ON:
             req.led_function = picmg.LED_FUNCTION_ON
             req.on_duration = 0
-        elif self.local_function == self.FUNCTION_OFF:
+        elif self.override_function == self.FUNCTION_OFF:
             req.led_function = picmg.LED_FUNCTION_OFF
             req.on_duration = 0
-        elif self.local_function == self.FUNCTION_BLINKING:
+        elif self.override_function == self.FUNCTION_BLINKING:
             if self.override_off_duration not in \
                     picmg.LED_FUNCTION_BLINKING_RANGE:
                 raise EncodingError()
             req.led_function = self.override_off_duration
             req.on_duration = self.override_on_duration
-        elif self.local_function == self.FUNCTION_LAMP_TEST:
+        elif self.override_function == self.FUNCTION_LAMP_TEST:
             req.led_function = picmg.LED_FUNCTION_LAMP_TEST
             req.on_duration = self.lamp_test_duration
         else:
