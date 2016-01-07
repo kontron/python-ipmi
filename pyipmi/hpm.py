@@ -243,7 +243,7 @@ class Hpm(object):
     def initiate_manual_rollback(self):
         return RollbackStatus(self.send_message_with_name('InitiateManualRollback'))
 
-    def initiate_maunal_rollback_and_wait(self, timeout=2, interval=0.1):
+    def initiate_manual_rollback_and_wait(self, timeout=2, interval=0.1):
         try:
             self.initiate_manual_rollback()
         except CompletionCodeError, e:
