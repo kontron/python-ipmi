@@ -16,10 +16,12 @@
 
 from .ipmitool import Ipmitool
 from .aardvark import Aardvark
+from .mock import Mock
 
 INTERFACES = [
         Ipmitool,
         Aardvark,
+        Mock,
 ]
 
 def create_interface(interface, *args, **kwargs):
