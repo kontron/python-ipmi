@@ -19,7 +19,6 @@ import codecs
 import datetime
 
 from pyipmi.errors import DecodingError, CompletionCodeError
-from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 from pyipmi.utils import check_completion_code, bcd_search, chunks
 
@@ -30,21 +29,14 @@ class Fru(object):
         self.write_length = 16
 
     def get_fru_inventory_area_info(self, fru_id=0):
-        req = create_request_by_name('GetFruInventoryAreaInfo')
-        req.fru_id = fru_id
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('GetFruInventoryAreaInfo',
+                fru_id=fru_id)
         return rsp.area_size
 
     def write_fru_data(self, data, offset=0, fru_id=0):
-        req = create_request_by_name('WriteFruData')
-        req.fru_id = fru_id
-
         for chunk in chunks(data, self.write_length):
-            req.offset = offset
-            req.data = chunk
-            rsp = self.send_message(req)
-            check_completion_code(rsp.completion_code)
+            self.send_message_with_name('WriteFruData',
+                            fru_id=fru_id, offset=off, data=chunk)
             offset += len(chunk)
 
     def read_fru_data(self, offset=None, count=None, fru_id=0):
@@ -65,13 +57,9 @@ class Fru(object):
             if (off + req_size) > area_size:
                 req_size = area_size - off
 
-            req = create_request_by_name('ReadFruData')
-            req.fru_id = fru_id
-            req.offset = off
-            req.count = req_size
             try:
-                rsp = self.send_message(req)
-                check_completion_code(rsp.completion_code)
+                rsp = self.send_message_with_name('ReadFruData',
+                            fru_id=fru_id, offset=off, count=req_size)
             except CompletionCodeError, e:
                 if e.cc in (constants.CC_CANT_RET_NUM_REQ_BYTES,
                             constants.CC_REQ_DATA_FIELD_EXCEED,

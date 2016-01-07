@@ -36,11 +36,8 @@ class Sel(object):
         return rsp.reservation_id
 
     def _clear_sel(self, cmd, reservation):
-        req = create_request_by_name('ClearSel')
-        req.reservation_id = reservation
-        req.cmd = cmd
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('ClearSel',
+                reservation_id=reservation, cmd=cmd)
         return rsp.status.erase_in_progress
 
     def clear_sel(self, retry=5):
@@ -49,9 +46,7 @@ class Sel(object):
 
     def sel_entries(self):
         """Generator which returns all SEL entries."""
-        req = create_request_by_name('GetSelInfo')
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('GetSelInfo')
         if rsp.entries == 0:
             return
         reservation_id = self.get_sel_reservation_id()

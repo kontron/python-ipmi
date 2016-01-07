@@ -70,11 +70,8 @@ class Hpm(object):
         return TargetUpgradeCapabilities(rsp)
 
     def get_component_property(self, component_id, property_id):
-        req = create_request_by_name('GetComponentProperties')
-        req.id = component_id
-        req.selector = property_id
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('GetComponentProperties',
+                id=component_id, selector=property_id)
         return ComponentProperty.from_data(property_id, rsp.data)
 
     def get_component_properties(self, component_id):
@@ -117,12 +114,8 @@ class Hpm(object):
             if self._get_component_count(components_mask) != 1:
                 raise HpmError("more than 1 component not support for action")
 
-        req = create_request_by_name('InitiateUpgradeAction')
-        req.components = components_mask
-        req.action = action
-
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        self.send_message_with_name('InitiateUpgradeAction',
+                   components=components_mask, action=action)
 
     def initiate_upgrade_action_and_wait(self, components_mask, action,
             timeout=2, interval=0.1):
@@ -139,11 +132,8 @@ class Hpm(object):
                 raise HpmError('initiate_upgrade_action CC=0x%02x' % e.cc)
 
     def upload_firmware_block(self, block_number, data):
-        req = create_request_by_name('UploadFirmwareBlock')
-        req.number = block_number
-        req.data = data
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        self.send_message_with_name('UploadFirmwareBlock', number=block_number,
+                data=data)
 
     def _determine_max_block_size(self):
         #tbd
@@ -169,11 +159,8 @@ class Hpm(object):
             block_number &= 0xff
 
     def finish_firmware_upload(self, component, length):
-        req = create_request_by_name('FinishFirmwareUpload')
-        req.component_id = component
-        req.image_length = length
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        self.send_message_with_name('FinishFirmwareUpload',
+                component_id=component, image_length=length)
 
     def finish_upload_and_wait(self, component, length,
             timeout=2, interval=0.1):

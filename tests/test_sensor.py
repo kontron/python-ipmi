@@ -5,8 +5,7 @@ from nose.tools import eq_, raises
 from mock import MagicMock, call
 
 from pyipmi.sensor import *
-from pyipmi import interfaces
-from pyipmi import create_connection
+from pyipmi import interfaces, create_connection
 from pyipmi.msgs.sensor import SetSensorThresholdsRsp
 
 def test_set_sensor_thresholds():

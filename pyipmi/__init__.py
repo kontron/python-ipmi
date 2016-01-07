@@ -148,25 +148,29 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
 
         self.is_ipmc_accessible()
 
-    def send_message(self, msg):
-        msg.target = self.target
-        msg.requester = self.requester
+    def send_message(self, req):
+        req.target = self.target
+        req.requester = self.requester
 
         retry = 3
         while True:
             retry -= 1
             try:
-                ret = self.interface.send_and_receive(msg)
+                rsp = self.interface.send_and_receive(req)
                 break
             except CompletionCodeError, e:
                 if e.cc == msgs.constants.CC_NODE_BUSY:
                     retry -= 1
                     continue
 
-        return ret
+        return rsp
 
-    def send_message_with_name(self, name):
+    def send_message_with_name(self, name, *args, **kwargs):
         req = create_request_by_name(name)
+
+        for k, v in kwargs.iteritems():
+            setattr(req, k, v)
+
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
         return rsp

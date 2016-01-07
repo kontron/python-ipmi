@@ -31,11 +31,8 @@ class Picmg(object):
         return self.send_message_with_name('GetPicmgProperties')
 
     def fru_control(self, fru_id, option):
-        req = create_request_by_name('FruControl')
-        req.fru_id = fru_id
-        req.option = option
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('FruControl', fru_id=fru_id,
+                option=option)
         return rsp.rsp_data
 
     def fru_control_cold_reset(self, fru_id=0):
@@ -51,56 +48,40 @@ class Picmg(object):
         return self.fru_control(fru_id, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT)
 
     def get_power_level(self, fru_id, power_type):
-        req = create_request_by_name('GetPowerLevel')
-        req.fru_id = fru_id
-        req.power_type = power_type
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('GetPowerLevel', fru_id=fru_id,
+                power_type=power_type)
         return PowerLevel(rsp)
 
     def get_fan_speed_properties(self, fru_id):
-        req = create_request_by_name('GetFanSpeedProperties')
-        req.fru_id = fru_id
-        rsp = self.send_message(req)
+        rsp = self.send_message_with_name('GetFanSpeedProperties',
+                fru_id=fru_id)
         return FanSpeedProperties(rsp)
 
     def set_fan_level(self, fru_id, fan_level):
-        req = create_request_by_name('SetFanLevel')
-        req.fru_id = fru_id
-        req.fan_level = fan_level
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('SetFanLevel',
+                fru_id=fru_id, fan_level=fan_level)
 
     def get_fan_level(self, fru_id):
-        req = create_request_by_name('GetFanLevel')
-        req.fru_id = fru_id
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('GetFanLevel', fru_id=fru_id)
         local_control_fan_level = None
         if rsp.data:
             local_control_fan_level = rsp.data[0]
         return (rsp.override_fan_level, local_control_fan_level)
 
     def get_led_state(self, fru_id, led_id):
-        req = create_request_by_name('GetFruLedState')
-        req.fru_id = fru_id
-        req.led_id = led_id
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('GetFruLedState', fru_id=fru_id,
+                    led_id=led_id)
         return LedState(rsp)
 
     def set_led_state(self, led):
         req = create_request_by_name('SetFruLedState')
-        led.to_request(req)
+        req = led.to_request(req)
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
     def _set_fru_activation(self, fru_id, control):
-        req = create_request_by_name('SetFruActivation')
-        req.fru_id = fru_id
-        req.control = control
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('SetFruActivation', fru_id=fru_id,
+                    control=control)
 
     def set_fru_activation(self, fru_id):
         _set_fru_activation(FRU_ACTIVATION_FRU_ACTIVATE)
@@ -183,19 +164,13 @@ class Picmg(object):
         return (link, state)
 
     def get_pm_global_status(self):
-        req = create_request_by_name('GetPowerChannelStatus')
-        req.starting_power_channel_number = 1
-        req.power_channel_count = 1
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('GetPowerChannelStatus',
+                starting_power_channel_number=1, power_channel_count=1)
         return GlobalStatus(rsp)
 
     def get_power_channel_status(self, starting_number):
-        req = create_request_by_name('GetPowerChannelStatus')
-        req.starting_power_channel_number = starting_number
-        req.power_channel_count = 1
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('GetPowerChannelStatus',
+                starting_power_channel_number=starting_number, power_channel_count=1)
         return PowerChannelStatus(rsp)
 
     def set_signaling_class(self, interface, channel, signaling_class):

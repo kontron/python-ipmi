@@ -100,9 +100,7 @@ SENSOR_TYPE_OEM_KONTRON_RESET = 0xcf
 
 class Sensor(object):
     def reserve_device_sdr_repository(self):
-        req = create_request_by_name('ReserveDeviceSdrRepository')
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('ReserveDeviceSdrRepository')
         return  rsp.reservation_id
 
     def _get_device_sdr_chunk(self, reservation_id, record_id, offset, length):
@@ -152,10 +150,8 @@ class Sensor(object):
     def rearm_sensor_events(self, sensor_number):
         """Rearm sensor events for the given sensor number.
         """
-        req = create_request_by_name('RearmSensorEvents')
-        req.sensor_number = sensor_number
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        self.send_message_with_name('RearmSensorEvents',
+                sensor_number=sensor_number)
 
     def get_sensor_reading(self, sensor_number, lun=0):
         """Returns the sensor reading at the assertion states for the given
@@ -165,11 +161,8 @@ class Sensor(object):
 
         Returns a tuple with `raw reading`and `assertion states`.
         """
-        req = create_request_by_name('GetSensorReading')
-        req.sensor_number = sensor_number
-        req.lun =  lun
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('GetSensorReading',
+                sensor_number=sensor_number, lun=lun)
 
         reading = rsp.sensor_reading
         if rsp.config.initial_update_in_progress:
@@ -209,11 +202,9 @@ class Sensor(object):
         check_completion_code(rsp.completion_code)
 
     def get_sensor_thresholds(self, sensor_number, lun=0):
-        req = create_request_by_name('GetSensorThresholds')
-        req.sensor_number = sensor_number
-        req.lun = lun
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('GetSensorThresholds',
+                sensor_number=number, lun=lun)
+
         thresholds = {}
         if rsp.readable_mask.unr:
             thresholds['unr'] = rsp.threshold.unr
@@ -228,4 +219,3 @@ class Sensor(object):
         if rsp.readable_mask.lnr:
             thresholds['lnr'] = rsp.threshold.lnr
         return thresholds
-

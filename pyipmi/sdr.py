@@ -54,7 +54,8 @@ L_CUBERT = 11
 
 class Sdr(object):
     def get_sdr_repository_info(self):
-        return SdrRepositoryInfo(self.send_message_with_name('GetSdrRepositoryInfo'))
+        return SdrRepositoryInfo(
+                self.send_message_with_name('GetSdrRepositoryInfo'))
 
     def get_sdr_repository_allocation_info(self):
         return SdrRepositoryAllocationInfo(
@@ -117,21 +118,14 @@ class Sdr(object):
     def delete_sdr(self, record_id):
         """Deletes the sensor record specified by 'record_id'.
         """
-
         reservation_id = self.reserve_device_sdr_repository()
-        req = create_request_by_name('DeleteSdr')
-        req.reservation_id = reservation_id
-        req.record_id = record_id
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('DeleteSdr',
+                reservation_id=reservation_id, record_id=record_id)
         return rsp.record_id
 
     def _clear_sdr_repository(self, cmd, reservation_id):
-        req = create_request_by_name('ClearSdrRepository')
-        req.reservation_id = reservation_id
-        req.cmd = cmd
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('ClearSdrRepository',
+                reservation_id=reservation_id, cmd=cmd)
         return rsp.status.erase_in_progress
 
     def clear_sdr_repository(self, retry=5):
@@ -139,10 +133,7 @@ class Sdr(object):
                 self._clear_sdr_repository, retry)
 
     def _run_initialization_agent(self, cmd):
-        req = create_request_by_name('RunInitializationAgent')
-        req.cmd = cmd
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('RunInitializationAgent', cmd=cmd)
         return rsp.status.initialization_completed
 
     def start_initialization_agent(self):
