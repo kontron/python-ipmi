@@ -203,19 +203,12 @@ class Sensor(object):
 
     def get_sensor_thresholds(self, sensor_number, lun=0):
         rsp = self.send_message_with_name('GetSensorThresholds',
-                sensor_number=number, lun=lun)
+                sensor_number=sensor_number, lun=lun)
 
         thresholds = {}
-        if rsp.readable_mask.unr:
-            thresholds['unr'] = rsp.threshold.unr
-        if rsp.readable_mask.ucr:
-            thresholds['ucr'] = rsp.threshold.ucr
-        if rsp.readable_mask.unc:
-            thresholds['unc'] = rsp.threshold.unc
-        if rsp.readable_mask.lnc:
-            thresholds['lnc'] = rsp.threshold.lnc
-        if rsp.readable_mask.lcr:
-            thresholds['lcr'] = rsp.threshold.lcr
-        if rsp.readable_mask.lnr:
-            thresholds['lnr'] = rsp.threshold.lnr
+        threshold_list = ('unr', 'ucr', 'unc', 'lnc', 'lcr', 'lnr')
+        for t in threshold_list:
+            if hasattr(rsp.readable_mask, t):
+                if getattr(rsp.readable_mask, t):
+                    thresholds[t] = getattr(rsp.threshold, t)
         return thresholds
