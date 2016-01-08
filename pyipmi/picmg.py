@@ -84,10 +84,10 @@ class Picmg(object):
                     control=control)
 
     def set_fru_activation(self, fru_id):
-        _set_fru_activation(FRU_ACTIVATION_FRU_ACTIVATE)
+        self._set_fru_activation(FRU_ACTIVATION_FRU_ACTIVATE)
 
     def set_fru_deactivation(self, fru_id):
-        _set_fru_activation(FRU_ACTIVATION_FRU_DEACTIVATE)
+        self._set_fru_activation(FRU_ACTIVATION_FRU_DEACTIVATE)
 
 
     ACTIVATION_LOCK_SET = 0
@@ -116,16 +116,16 @@ class Picmg(object):
         check_completion_code(rsp.completion_code)
 
     def set_fru_activation_lock(self, fru_id):
-        _set_fru_activation_policy(self, fru_id, ACTIVATION_LOCK_SET)
+        self.set_fru_activation_policy(self, fru_id, ACTIVATION_LOCK_SET)
 
     def clear_fru_activation_lock(self, fru_id):
-        _set_fru_activation_policy(self, fru_id, ACTIVATION_LOCK_CLEAR)
+        self.set_fru_activation_policy(self, fru_id, ACTIVATION_LOCK_CLEAR)
 
     def set_fru_deactivation_lock(self, fru_id):
-        _set_fru_activation_policy(self, fru_id, DEACTIVATION_LOCK_SET)
+        self.set_fru_activation_policy(self, fru_id, DEACTIVATION_LOCK_SET)
 
     def clear_fru_deactivation_lock(self, fru_id):
-        _set_fru_activation_policy(self, fru_id, DEACTIVATION_LOCK_CLEAR)
+        self.set_fru_activation_policy(self, fru_id, DEACTIVATION_LOCK_CLEAR)
 
     def set_port_state(self, link_descr, state):
         req = create_request_by_name('SetPortState')
