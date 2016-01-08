@@ -249,7 +249,7 @@ class SdrFullSensorRecord(SdrCommon):
     def convert_sensor_value_to_raw(self, value):
         linearization = self.linearization & 0x7f
 
-        if linearization is not self.L_LINEAR:
+        if linearization is not L_LINEAR:
             raise NotImplementedError()
 
         raw = ((float(value) * 10**(-1 * self.k2)) / self.m) - (self.b * 10**self.k1)
