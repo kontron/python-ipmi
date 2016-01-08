@@ -84,10 +84,10 @@ class Picmg(object):
                     control=control)
 
     def set_fru_activation(self, fru_id):
-        self._set_fru_activation(FRU_ACTIVATION_FRU_ACTIVATE)
+        self._set_fru_activation(fru_id, FRU_ACTIVATION_FRU_ACTIVATE)
 
     def set_fru_deactivation(self, fru_id):
-        self._set_fru_activation(FRU_ACTIVATION_FRU_DEACTIVATE)
+        self._set_fru_activation(fru_id, FRU_ACTIVATION_FRU_DEACTIVATE)
 
 
     ACTIVATION_LOCK_SET = 0
@@ -99,16 +99,16 @@ class Picmg(object):
         req = create_request_by_name('SetFruActivationPolicy')
         req.fru_id = fru_id
 
-        if ctrl == ACTIVATION_LOCK_SET:
+        if ctrl == self.ACTIVATION_LOCK_SET:
             req.mask.activation_locked = 1
             req.set.activation_locked = 1
-        elif ctrl == ACTIVATION_LOCK_CLEAR:
+        elif ctrl == self.ACTIVATION_LOCK_CLEAR:
             req.mask.activation_locked = 1
             req.set.activation_locked = 0
-        elif ctrl == DEACTIVATION_LOCK_SET:
+        elif ctrl == self.DEACTIVATION_LOCK_SET:
             req.mask.deactivation_locked = 1
             req.set.deactivation_locked = 1
-        elif ctrl == DEACTIVATION_LOCK_CLEAR:
+        elif ctrl == self.DEACTIVATION_LOCK_CLEAR:
             req.mask.deactivation_locked = 1
             req.set.deactivation_locked = 0
 
@@ -116,16 +116,16 @@ class Picmg(object):
         check_completion_code(rsp.completion_code)
 
     def set_fru_activation_lock(self, fru_id):
-        self.set_fru_activation_policy(self, fru_id, ACTIVATION_LOCK_SET)
+        self.set_fru_activation_policy(fru_id, self.ACTIVATION_LOCK_SET)
 
     def clear_fru_activation_lock(self, fru_id):
-        self.set_fru_activation_policy(self, fru_id, ACTIVATION_LOCK_CLEAR)
+        self.set_fru_activation_policy(fru_id, self.ACTIVATION_LOCK_CLEAR)
 
     def set_fru_deactivation_lock(self, fru_id):
-        self.set_fru_activation_policy(self, fru_id, DEACTIVATION_LOCK_SET)
+        self.set_fru_activation_policy(fru_id, self.DEACTIVATION_LOCK_SET)
 
     def clear_fru_deactivation_lock(self, fru_id):
-        self.set_fru_activation_policy(self, fru_id, DEACTIVATION_LOCK_CLEAR)
+        self.set_fru_activation_policy(fru_id, self.DEACTIVATION_LOCK_CLEAR)
 
     def set_port_state(self, link_descr, state):
         req = create_request_by_name('SetPortState')
@@ -351,8 +351,8 @@ class LedState(State):
             ('lamp_test_duration', ''),
     ]
 
-    def __init__(self, fru_id=None, led_id=None, color=None, function=None,
-                rsp=None):
+    def __init__(self, rsp=None, fru_id=None, led_id=None, color=None,
+            function=None):
         State.__init__(self, rsp)
         if fru_id is not None:
             self.fru_id = fru_id
