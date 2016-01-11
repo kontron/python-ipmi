@@ -36,7 +36,7 @@ class Fru(object):
     def write_fru_data(self, data, offset=0, fru_id=0):
         for chunk in chunks(data, self.write_length):
             self.send_message_with_name('WriteFruData',
-                            fru_id=fru_id, offset=off, data=chunk)
+                            fru_id=fru_id, offset=offset, data=chunk)
             offset += len(chunk)
 
     def read_fru_data(self, offset=None, count=None, fru_id=0):
