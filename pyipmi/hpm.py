@@ -278,9 +278,9 @@ class Hpm(object):
 
         header = image.header
 
-        if header.device_id != device_id.id:
+        if header.device_id != device_id.device_id:
             raise HpmError('Device ID: image=0x%x device=0x%x' \
-                    % (header.device_id, device_id.id))
+                    % (header.device_id, device_id.device_id))
         if header.manufacturer_id != device_id.manufacturer_id:
             raise HpmError('Manufacturer ID: image=0x%x device=0x%x' \
                     % (header.manufacturer_id, device_id.manufacturer_id))
