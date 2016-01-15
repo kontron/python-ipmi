@@ -101,15 +101,15 @@ class SelInfo(State):
         self.most_recent_erase = rsp.most_recent_erase
         self.operation_support = []
         if rsp.operation_support.get_sel_allocation_info:
-           operation_support.append('get_sel_allocation_info')
+           self.operation_support.append('get_sel_allocation_info')
         if rsp.operation_support.reserve_sel:
-           operation_support.append('reserve_sel:')
+           self.operation_support.append('reserve_sel:')
         if rsp.operation_support.partial_add_sel_entry:
-           operation_support.append('partial_add_sel_entry')
+           self.operation_support.append('partial_add_sel_entry')
         if rsp.operation_support.delete_sel:
-           operation_support.append('delete_sel')
+           self.operation_support.append('delete_sel')
         if rsp.operation_support.overflow_flag:
-           operation_support.append('overflow_flag')
+           self.operation_support.append('overflow_flag')
 
 class SelEntry(State):
     TYPE_SYSTEM_EVENT = 0x02
