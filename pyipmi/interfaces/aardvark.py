@@ -16,9 +16,7 @@
 
 import time
 import array
-from operator import eq, ne
 
-from pyipmi import Session
 from pyipmi.msgs import create_message, encode_message, decode_message
 from pyipmi.errors import TimeoutError
 from pyipmi.logger import log
@@ -28,9 +26,6 @@ try:
     import pyaardvark
 except ImportError:
     pyaardvark = None
-
-class ChecksumError(Exception):
-    pass
 
 
 class Aardvark(object):
@@ -80,7 +75,6 @@ class Aardvark(object):
         rx_data = self._receive_raw(header)
         return True
 
-
     def _inc_sequence_number(self):
         self.next_sequence_number = (self.next_sequence_number + 1) % 64
 
@@ -93,8 +87,10 @@ class Aardvark(object):
 
     def _rx_filter(self, header, rx_data):
 
+        log().debug('[%s]' % ' '.join(['%02x' % b for b in rx_data]))
+
         checks = [
-            (checksum(rx_data[0:3]), 0, 'Header checksum'),
+            (checksum(rx_data[0:3]), 0, 'Header checksum failed'),
             (checksum(rx_data[3:]), 0, 'payload checksum failed'),
             (rx_data[0], header.rq_sa, 'slave address mismatch'),
             (rx_data[1] & ~3, header.netfn << 2 | 4, 'NetFn mismatch'),
@@ -107,9 +103,9 @@ class Aardvark(object):
 
         match = True
 
-        for (left, right, msg) in checks:
-            if ne(left, right):
-                log().debug('%s missmatch' % msg)
+        for left, right, msg in checks:
+            if left != right:
+                log().debug('%s (%02Xh != %02Xh)' % (msg, left, right))
                 match = False
 
         return match
@@ -142,7 +138,7 @@ class Aardvark(object):
                 continue
 
             (i2c_addr, rx_data) = self._dev.i2c_slave_read()
-            log().debug('I2C RX from %02Xh [%s]', i2c_addr,
+            log().debug('I2C RX from %02Xh [%s]', i2c_addr << 1,
                     ' '.join(['%02x' % ord(c) for c in rx_data]))
 
             rx_data = array.array('B', rx_data)
@@ -152,17 +148,23 @@ class Aardvark(object):
 
         return rx_data
 
-    def _send_and_receive_raw(self, header, raw_bytes):
-
-#        if hasattr(target, 'routing') and len(target.routing) > 1:
-#            raise RuntimeError('Bridging is not supported yet')
-
+    def _send_and_receive(self, target, lun, netfn, cmdid, payload):
         self._inc_sequence_number()
+
+        # assemble IPMB header
+        header = IpmbHeader()
+        header.netfn = netfn
+        header.rs_lun = lun
+        header.rs_sa = target.ipmb_address
+        header.rq_seq = self.next_sequence_number
+        header.rq_lun = 0
+        header.rq_sa = self.slave_address
+        header.cmd_id = cmdid
 
         retries = 0
         while retries < self.max_retries:
             try:
-                self._send_raw(header, raw_bytes)
+                self._send_raw(header, payload)
                 rx_data = self._receive_raw(header)
                 break
             except TimeoutError:
@@ -174,20 +176,11 @@ class Aardvark(object):
         else:
             raise TimeoutError()
 
-        return rx_data.tostring()
+        return rx_data.tostring()[5:-1]
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
-        header = IpmbHeader()
-        header.netfn = netfn
-        header.rs_lun = lun
-        header.rs_sa = target.ipmb_address
-        header.rq_seq = self.next_sequence_number
-        header.rq_lun = 0
-        header.rq_sa = self.slave_address
-        header.cmd_id = ord(raw_bytes[0])
-
-        rx_data = self._send_and_receive_raw(header, raw_bytes[1:])
-        return rx_data[5:-1]
+        return self._send_and_receive(target, lun, netfn, ord(raw_bytes[0]),
+                raw_bytes[1:])
 
     def send_and_receive(self, msg):
         """Sends an IPMI request message and waits for its response.
@@ -197,19 +190,10 @@ class Aardvark(object):
 
         log().debug('IPMI Request [%s]', msg)
 
-        header = IpmbHeader()
-        header.netfn = msg.netfn
-        header.rs_lun = msg.lun
-        header.rs_sa = msg.target.ipmb_address
-        header.rq_seq = self.next_sequence_number
-        header.rq_lun = 0
-        header.rq_sa = self.slave_address
-        header.cmd_id = msg.cmdid
-
-        rx_data = self._send_and_receive_raw(header, encode_message(msg))
-
+        rx_data = self._send_and_receive(msg.target, msg.lun, msg.netfn,
+                msg.cmdid, encode_message(msg))
         msg = create_message(msg.cmdid, msg.netfn + 1)
-        decode_message(msg, rx_data[5:-1])
+        decode_message(msg, rx_data)
 
         log().debug('IPMI Response [%s])', msg)
 
