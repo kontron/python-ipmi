@@ -22,7 +22,7 @@ from pyipmi.msgs import constants
 EVENT_ASSERTION = 0
 EVENT_DEASSERTION = 1
 
-class Event:
+class Event(object):
     def set_event_receiver(self, ipmb_address, lun):
         req = create_request_by_name('SetEventReceiver')
         req.event_receiver.ipmb_i2c_slave_address = ipmb_address

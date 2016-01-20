@@ -35,7 +35,6 @@ from pyipmi.utils import ByteBuffer
 class SetLanConfigurationParametersReq(Message):
     __cmdid__ = constants.CMDID_SET_LAN_CONFIGURATION_PARAMETERS
     __netfn__ = constants.NETFN_TRANSPORT
-    __default_lun__ = 0
     __fields__ = (
             Bitfield('command', 1,
                 Bitfield.Bit('channel_number', 4, 0),
@@ -50,7 +49,6 @@ class SetLanConfigurationParametersReq(Message):
 class SetLanConfigurationParametersRsp(Message):
     __cmdid__ = constants.CMDID_SET_LAN_CONFIGURATION_PARAMETERS
     __netfn__ = constants.NETFN_TRANSPORT | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             Optional(ByteArray('auxiliary', 4))
@@ -61,7 +59,6 @@ class SetLanConfigurationParametersRsp(Message):
 class GetLanConfigurationParametersReq(Message):
     __cmdid__ = constants.CMDID_GET_LAN_CONFIGURATION_PARAMETERS
     __netfn__ = constants.NETFN_TRANSPORT
-    __default_lun__ = 0
     __fields__ = (
             Bitfield('command', 1,
                 Bitfield.Bit('channel_number', 4),
@@ -78,7 +75,6 @@ class GetLanConfigurationParametersReq(Message):
 class GetLanConfigurationParametersRsp(Message):
     __cmdid__ = constants.CMDID_GET_LAN_CONFIGURATION_PARAMETERS
     __netfn__ = constants.NETFN_TRANSPORT | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             UnsignedInt('parameter_revision', 1, 0),

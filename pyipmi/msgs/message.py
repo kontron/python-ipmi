@@ -21,7 +21,7 @@ from pyipmi.utils import ByteBuffer
 from pyipmi.errors import CompletionCodeError, EncodingError, DecodingError, \
         DescriptionError
 
-class BaseField:
+class BaseField(object):
     def __init__(self, name, length, default=None):
         self.name = name
         self.length = length
@@ -143,7 +143,7 @@ class Timestamp(UnsignedInt):
         UnsignedInt.__init__(self, name, 4, None)
 
 
-class Conditional:
+class Conditional(object):
     def __init__(self, cond_fn, field):
         self._condition_fn = cond_fn
         self._field = field
@@ -163,7 +163,7 @@ class Conditional:
         return self._field.create()
 
 
-class Optional:
+class Optional(object):
     def __init__(self, field):
         self._field = field
 
@@ -295,8 +295,10 @@ class Bitfield(BaseField):
     def create(self):
         return Bitfield.BitWrapper(self._bits, self.length)
 
-class Message:
+class Message(object):
     RESERVED_FIELD_NAMES = ['cmdid', 'netfn', 'lun']
+
+    __default_lun__ = 0
 
     def __init__(self, *args, **kwargs):
         """Message constructor with ([buf], [field=val,...]) prototype.
@@ -340,12 +342,12 @@ class Message:
 
     def _encode(self):
         if not hasattr(self, '__fields__'):
-            raise NotImplementedError('You have to overwrite this method')
+            return ''
 
         data = ByteBuffer()
         for field in self.__fields__:
             field.encode(self, data)
-        return data.to_string()
+        return data.tostring()
 
     def _decode(self, data):
         if not hasattr(self, '__fields__'):
@@ -373,6 +375,6 @@ class Message:
     netfn = property(lambda s: s.__netfn__)
     cmdid = property(lambda s: s.__cmdid__)
 
+
 encode_message = lambda m: m._encode()
 decode_message = lambda m,d: m._decode(d)
-

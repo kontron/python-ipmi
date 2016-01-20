@@ -101,7 +101,6 @@ class PicmgIdentifier(UnsignedInt):
 class GetPicmgPropertiesReq(Message):
     __cmdid__ = constants.CMDID_GET_PICMG_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
     )
@@ -111,7 +110,6 @@ class GetPicmgPropertiesReq(Message):
 class GetPicmgPropertiesRsp(Message):
     __cmdid__ = constants.CMDID_GET_PICMG_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -125,7 +123,6 @@ class GetPicmgPropertiesRsp(Message):
 class GetAddressInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_ADDRESS_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
@@ -136,7 +133,6 @@ class GetAddressInfoReq(Message):
 class GetAddressInfoRsp(Message):
     __cmdid__ = constants.CMDID_GET_ADDRESS_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -162,7 +158,6 @@ class GetAddressInfoRsp(Message):
 class GetShelfAddressInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_SHELF_ADDRESS_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
     )
@@ -172,7 +167,6 @@ class GetShelfAddressInfoReq(Message):
 class GetShelfAddressInfoRsp(Message):
     __cmdid__ = constants.CMDID_GET_SHELF_ADDRESS_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -184,7 +178,6 @@ class GetShelfAddressInfoRsp(Message):
 class FruControlReq(Message):
     __cmdid__ = constants.CMDID_FRU_CONTROL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
@@ -196,10 +189,10 @@ class FruControlReq(Message):
 class FruControlRsp(Message):
     __cmdid__ = constants.CMDID_FRU_CONTROL
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
+            RemainingBytes('rsp_data'),
     )
 
 
@@ -207,7 +200,6 @@ class FruControlRsp(Message):
 class GetFruControlCapabilitiesReq(Message):
     __cmdid__ = constants.CMDID_FRU_CONTROL_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
@@ -218,7 +210,6 @@ class GetFruControlCapabilitiesReq(Message):
 class GetFruControlCapabilitiesRsp(Message):
     __cmdid__ = constants.CMDID_FRU_CONTROL_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -236,7 +227,6 @@ class GetFruControlCapabilitiesRsp(Message):
 class SetFruActivationPolicyReq(Message):
     __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION_POLICY
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
@@ -257,7 +247,6 @@ class SetFruActivationPolicyReq(Message):
 class SetFruActivationPolicyRsp(Message):
     __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION_POLICY
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -268,7 +257,6 @@ class SetFruActivationPolicyRsp(Message):
 class GetFruActivationPolicyReq(Message):
     __cmdid__ = constants.CMDID_GET_FRU_ACTIVATION_POLICY
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
@@ -279,7 +267,6 @@ class GetFruActivationPolicyReq(Message):
 class GetFruActivationPolicyRsp(Message):
     __cmdid__ = constants.CMDID_GET_FRU_ACTIVATION_POLICY
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -295,7 +282,6 @@ class GetFruActivationPolicyRsp(Message):
 class SetFruActivationReq(Message):
     __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
@@ -307,7 +293,6 @@ class SetFruActivationReq(Message):
 class SetFruActivationRsp(Message):
     __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -318,7 +303,6 @@ class SetFruActivationRsp(Message):
 class GetDeviceLocatorRecordIdReq(Message):
     __cmdid__ = constants.CMDID_GET_DEVLOC_RECORD_ID
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
@@ -329,7 +313,6 @@ class GetDeviceLocatorRecordIdReq(Message):
 class GetDeviceLocatorRecordIdRsp(Message):
     __cmdid__ = constants.CMDID_GET_DEVLOC_RECORD_ID
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -341,7 +324,6 @@ class GetDeviceLocatorRecordIdRsp(Message):
 class GetFruLedPropertiesReq(Message):
     __cmdid__ = constants.CMDID_GET_FRU_LED_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
@@ -352,7 +334,6 @@ class GetFruLedPropertiesReq(Message):
 class GetFruLedPropertiesRsp(Message):
     __cmdid__ = constants.CMDID_GET_FRU_LED_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -371,7 +352,6 @@ class GetFruLedPropertiesRsp(Message):
 class GetFruLedColorCapabilitiesReq(Message):
     __cmdid__ = constants.CMDID_GET_FRU_LED_COLOR_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
@@ -383,7 +363,6 @@ class GetFruLedColorCapabilitiesReq(Message):
 class GetFruLedColorCapabilitiesRsp(Message):
     __cmdid__ = constants.CMDID_GET_FRU_LED_COLOR_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -406,7 +385,6 @@ class GetFruLedColorCapabilitiesRsp(Message):
 class GetPowerLevelReq(Message):
     __cmdid__ = constants.CMDID_GET_POWER_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
         PicmgIdentifier(),
         UnsignedInt('fru_id', 1),
@@ -418,7 +396,6 @@ class GetPowerLevelReq(Message):
 class GetPowerLevelRsp(Message):
     __cmdid__ = constants.CMDID_GET_POWER_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -436,7 +413,6 @@ class GetPowerLevelRsp(Message):
 class GetFanSpeedPropertiesReq(Message):
     __cmdid__ = constants.CMDID_GET_FAN_SPEED_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
@@ -446,7 +422,6 @@ class GetFanSpeedPropertiesReq(Message):
 class GetFanSpeedPropertiesRsp(Message):
     __cmdid__ = constants.CMDID_GET_FAN_SPEED_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -463,7 +438,6 @@ class GetFanSpeedPropertiesRsp(Message):
 class SetFanLevelReq(Message):
     __cmdid__ = constants.CMDID_SET_FAN_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
@@ -475,7 +449,6 @@ class SetFanLevelReq(Message):
 class SetFanLevelRsp(Message):
     __cmdid__ = constants.CMDID_SET_FAN_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -485,7 +458,6 @@ class SetFanLevelRsp(Message):
 class GetFanLevelReq(Message):
     __cmdid__ = constants.CMDID_GET_FAN_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
@@ -495,7 +467,6 @@ class GetFanLevelReq(Message):
 class GetFanLevelRsp(Message):
     __cmdid__ = constants.CMDID_GET_FAN_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -510,7 +481,6 @@ class GetFanLevelRsp(Message):
 class SetFruLedStateReq(Message):
     __cmdid__ = constants.CMDID_SET_FRU_LED_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
@@ -525,7 +495,6 @@ class SetFruLedStateReq(Message):
 class SetFruLedStateRsp(Message):
     __cmdid__ = constants.CMDID_SET_FRU_LED_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -536,7 +505,6 @@ class SetFruLedStateRsp(Message):
 class GetFruLedStateReq(Message):
     __cmdid__ = constants.CMDID_GET_FRU_LED_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
 
     __fields__ = (
             PicmgIdentifier(),
@@ -549,7 +517,6 @@ class GetFruLedStateReq(Message):
 class GetFruLedStateRsp(Message):
     __cmdid__ = constants.CMDID_GET_FRU_LED_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
 
     def _cond_override(obj):
         return (obj.led_states.override_en == 1
@@ -585,7 +552,6 @@ class GetFruLedStateRsp(Message):
 class SetPortStateReq(Message):
     __cmdid__ = constants.CMDID_SET_PORT_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             Bitfield('link_info', 4,
@@ -608,7 +574,6 @@ class SetPortStateReq(Message):
 class SetPortStateRsp(Message):
     __cmdid__ = constants.CMDID_SET_PORT_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -619,7 +584,6 @@ class SetPortStateRsp(Message):
 class GetPortStateReq(Message):
     __cmdid__ = constants.CMDID_GET_PORT_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             Bitfield('channel', 1,
@@ -633,7 +597,6 @@ class GetPortStateReq(Message):
 class GetPortStateRsp(Message):
     __cmdid__ = constants.CMDID_GET_PORT_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -645,7 +608,6 @@ class GetPortStateRsp(Message):
 class SetSignalingClassReq(Message):
     __cmdid__ = constants.CMDID_SET_CHANNEL_SIGNALING_CLASS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             Bitfield('channel_info', 1,
@@ -663,7 +625,6 @@ class SetSignalingClassReq(Message):
 class SetSignalingClassRsp(Message):
     __cmdid__ = constants.CMDID_SET_CHANNEL_SIGNALING_CLASS
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -674,7 +635,6 @@ class SetSignalingClassRsp(Message):
 class GetSignalingClassReq(Message):
     __cmdid__ = constants.CMDID_GET_CHANNEL_SIGNALING_CLASS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             Bitfield('channel_info', 1,
@@ -688,7 +648,6 @@ class GetSignalingClassReq(Message):
 class GetSignalingClassRsp(Message):
     __cmdid__ = constants.CMDID_GET_CHANNEL_SIGNALING_CLASS
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -707,7 +666,6 @@ class GetSignalingClassRsp(Message):
 class GetLocationInformationReq(Message):
     __cmdid__ = constants.CMDID_GET_LOCATION_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             Bitfield('info', 1,
@@ -724,7 +682,6 @@ class GetLocationInformationReq(Message):
 class GetLocationInformationRsp(Message):
     __cmdid__ = constants.CMDID_GET_LOCATION_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -745,7 +702,6 @@ class GetLocationInformationRsp(Message):
 class GetPowerChannelStatusReq(Message):
     __cmdid__ = constants.CMDID_GET_POWER_CHANNEL_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('starting_power_channel_number', 1),
@@ -757,7 +713,6 @@ class GetPowerChannelStatusReq(Message):
 class GetPowerChannelStatusRsp(Message):
     __cmdid__ = constants.CMDID_GET_POWER_CHANNEL_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),
@@ -777,7 +732,6 @@ class GetPowerChannelStatusRsp(Message):
 class GetTelcoAlarmCapabilityReq(Message):
     __cmdid__ = constants.CMDID_GET_TELCO_ALARM_CAPABILITY
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __default_lun__ = 0
     __fields__ = (
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
@@ -788,7 +742,6 @@ class GetTelcoAlarmCapabilityReq(Message):
 class GetTelcoAlarmCapabilityRsp(Message):
     __cmdid__ = constants.CMDID_GET_TELCO_ALARM_CAPABILITY
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             PicmgIdentifier(),

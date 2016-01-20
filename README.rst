@@ -24,9 +24,10 @@ using the `ipmitool`_ as backend.
 
     import pyipmi
     import pyipmi.interfaces
-    
-    interface = pyipmi.interfaces.create_interface('ipmitool')
-    
+
+    # Supported interface_types for ipmitool are: lan and lanplus
+    interface = pyipmi.interfaces.create_interface('ipmitool', interface_type='lan')
+
     connection = pyipmi.create_connection(interface)
 
     connection.target = pyipmi.Target(0xb2)

@@ -29,6 +29,8 @@ import sel
 import sensor
 
 from pyipmi.errors import TimeoutError, CompletionCodeError
+from pyipmi.msgs.registry import create_request_by_name
+from pyipmi.utils import check_completion_code
 
 try:
     from version import __version__
@@ -44,7 +46,7 @@ def create_connection(interface):
     ipmi.requester = NullRequester()
     return ipmi
 
-class Requester:
+class Requester(object):
     '''The Requester class represents an IPMI device which initiates a
     request/response message exchange.
     '''
@@ -52,7 +54,7 @@ class Requester:
     def __init__(self, ipmb_address):
         self.ipmb_address = ipmb_address
 
-class NullRequester:
+class NullRequester(object):
     '''The NullRequester is used for interfaces which doesn't require a
     valid requester.
     '''
@@ -61,7 +63,7 @@ class NullRequester:
     def ipmb_address():
         raise AssertionError('NullRequester does not provide an IPMB address')
 
-class Target:
+class Target(object):
     '''The Target class represents an IPMI target.'''
     class Routing:
         def __init__(self, address, bridge_channel):
@@ -80,7 +82,7 @@ class Target:
 
         self.routing = [ self.Routing(*r) for r in rinfo ]
 
-class Session:
+class Session(object):
     AUTH_TYPE_NONE        = 0x00
     AUTH_TYPE_MD2         = 0x01
     AUTH_TYPE_MD5         = 0x02
@@ -88,7 +90,7 @@ class Session:
     AUTH_TYPE_OEM         = 0x05
 
     def __init__(self):
-        self.auth_type = self.AUTH_TYPE_NONE
+        self.set_auth_type(self.AUTH_TYPE_NONE)
         self.established = False
 
     def _get_interface(self):
@@ -104,8 +106,11 @@ class Session:
         self._rmcp_host = host
         self._rmcp_port = port
 
+    def set_auth_type(self, auth_type):
+        self.auth_type = auth_type
+
     def set_auth_type_user(self, username, password):
-        self.auth_type = self.AUTH_TYPE_PASSWORD
+        self.set_auth_type(self.AUTH_TYPE_PASSWORD)
         self._auth_username = username
         self._auth_password = password
 
@@ -127,26 +132,8 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
         sdr.Sdr, sensor.Sensor, event.Event, sel.Sel, lan.Lan):
 
     def __init__(self):
-        if (hasattr(bmc.Bmc, '__init__')):
-            bmc.Bmc.__init__(self)
-        if (hasattr(chassis.Chassis, '__init__')):
-            chassis.Chassis.__init__(self)
-        if (hasattr(fru.Fru, '__init__')):
-            fru.Fru.__init__(self)
-        if (hasattr(picmg.Picmg, '__init__')):
-            picmg.Picmg.__init__(self)
-        if (hasattr(hpm.Hpm, '__init__')):
-            hpm.Hpm.__init__(self)
-        if (hasattr(sdr.Sdr, '__init__')):
-            sdr.Sdr.__init__(self)
-        if (hasattr(sensor.Sensor, '__init__')):
-            sensor.Sensor.__init__(self)
-        if (hasattr(event.Event, '__init__')):
-            event.Event.__init__(self)
-        if (hasattr(sel.Sel, '__init__')):
-            sel.Sel.__init__(self)
-        if (hasattr(lan.Lan, '__init__')):
-            lan.Lan.__init__(self)
+        for base in Ipmi.__bases__:
+            base.__init__(self)
 
     def is_ipmc_accessible(self):
         return self.interface.is_ipmc_accessible(self.target)
@@ -161,22 +148,32 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
 
         self.is_ipmc_accessible()
 
-    def send_message(self, msg):
-        msg.target = self.target
-        msg.requester = self.requester
+    def send_message(self, req):
+        req.target = self.target
+        req.requester = self.requester
 
         retry = 3
         while True:
             retry -= 1
             try:
-                ret = self.interface.send_and_receive(msg)
+                rsp = self.interface.send_and_receive(req)
                 break
             except CompletionCodeError, e:
                 if e.cc == msgs.constants.CC_NODE_BUSY:
                     retry -= 1
                     continue
 
-        return ret
+        return rsp
+
+    def send_message_with_name(self, name, *args, **kwargs):
+        req = create_request_by_name(name)
+
+        for k, v in kwargs.iteritems():
+            setattr(req, k, v)
+
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return rsp
 
     def raw_command(self, lun, netfn, raw_bytes):
         return self.interface.send_and_receive_raw(self.target, lun, netfn,
@@ -212,6 +209,3 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
     target = property(_get_target, _set_target)
     interface = property(_get_interface, _set_interface)
     session = property(_get_session, _set_session)
-
-
-

@@ -37,6 +37,7 @@ class CompletionCodeError(Exception):
     def __str__(self):
         return "%s cc=0x%02x" % (self.__class__.__name__, self.cc)
 
+
 class NotSupportedError(Exception):
     """Not supported yet."""
     pass
@@ -49,31 +50,14 @@ class DescriptionError(Exception):
 
 class RetryError(Exception):
     """Maxium number of retries exceeded."""
-    def __init__(self, msg=None):
-        self.msg = msg
+    pass
 
-    def __str__(self):
-        if self.msg:
-            return "%s msg=%s" % (self.__class__.__name__, self.msg)
-        else:
-            return "%s" % (self.__class__.__name__)
 
 class DataNotFound(Exception):
-    def __init__(self, msg=None):
-        self.msg = msg
+    """Requested data not found."""
+    pass
 
-    def __str__(self):
-        if self.msg:
-            return "%s msg=%s" % (self.__class__.__name__, self.msg)
-        else:
-            return "%s" % (self.__class__.__name__)
 
 class HpmError(Exception):
     """HPM.1 error"""
-    def __init__(self, msg=None):
-        self.msg = msg
-    def __str__(self):
-        if self.msg:
-            return "%s msg=%s" % (self.__class__.__name__, self.msg)
-        else:
-            return "%s" % (self.__class__.__name__)
+    pass

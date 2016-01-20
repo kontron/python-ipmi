@@ -23,7 +23,7 @@ from pyipmi.utils import check_completion_code, ByteBuffer
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 
-from pyipmi.helper import get_sdr_data_helper
+from pyipmi.helper import get_sdr_data_helper, get_sdr_chunk_helper
 
 import sdr
 
@@ -97,11 +97,10 @@ SENSOR_TYPE_OEM_KONTRON_SYSTEM_FIRMWARE_UPGRADE = 0xca
 SENSOR_TYPE_OEM_KONTRON_POWER_DENIED = 0xcd
 SENSOR_TYPE_OEM_KONTRON_RESET = 0xcf
 
-class Sensor:
+
+class Sensor(object):
     def reserve_device_sdr_repository(self):
-        req = create_request_by_name('ReserveDeviceSdrRepository')
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('ReserveDeviceSdrRepository')
         return  rsp.reservation_id
 
     def _get_device_sdr_chunk(self, reservation_id, record_id, offset, length):
@@ -110,27 +109,9 @@ class Sensor:
         req.record_id = record_id
         req.offset = offset
         req.bytes_to_read = length
-        retry = 5
 
-        while True:
-            retry -= 1
-            if retry == 0:
-                raise RetryError()
-            rsp = self.send_message(req)
-            if rsp.completion_code == 0:
-                break
-            elif rsp.completion_code == constants.CC_RES_CANCELED:
-                req.reservation_id = self.reserve_device_sdr_repository()
-                time.sleep(0.1)
-                continue
-            elif rsp.completion_code == constants.CC_TIMEOUT:
-                time.sleep(0.1)
-                continue
-            elif rsp.completion_code == constants.CC_RESP_COULD_NOT_BE_PRV:
-                time.sleep(0.1 * retry)
-                continue
-            else:
-                check_completion_code(rsp.completion_code)
+        rsp = get_sdr_chunk_helper(self.send_message, req, \
+                self.reserve_device_sdr_repository)
 
         return (rsp.next_record_id, rsp.record_data)
 
@@ -144,7 +125,8 @@ class Sensor:
         """
         (next_id, record_data) = get_sdr_data_helper(self.reserve_device_sdr_repository,
                 self._get_device_sdr_chunk, record_id, reservation_id)
-        return sdr.create_sdr(record_data, next_id)
+
+        return sdr.SdrCommon.from_data(record_data, next_id)
 
     def device_sdr_entries(self):
         """A generator that returns the SDR list. Starting with ID=0x0000 and
@@ -168,10 +150,8 @@ class Sensor:
     def rearm_sensor_events(self, sensor_number):
         """Rearm sensor events for the given sensor number.
         """
-        req = create_request_by_name('RearmSensorEvents')
-        req.sensor_number = sensor_number
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        self.send_message_with_name('RearmSensorEvents',
+                sensor_number=sensor_number)
 
     def get_sensor_reading(self, sensor_number, lun=0):
         """Returns the sensor reading at the assertion states for the given
@@ -181,11 +161,8 @@ class Sensor:
 
         Returns a tuple with `raw reading`and `assertion states`.
         """
-        req = create_request_by_name('GetSensorReading')
-        req.sensor_number = sensor_number
-        req.lun =  lun
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        rsp = self.send_message_with_name('GetSensorReading',
+                sensor_number=sensor_number, lun=lun)
 
         reading = rsp.sensor_reading
         if rsp.config.initial_update_in_progress:
@@ -194,8 +171,8 @@ class Sensor:
         states = None
         if rsp.states1 is not None:
             states = rsp.states1
-        if rsp.states2 is not None:
-            states |= (rsp.states2 << 8)
+            if rsp.states2 is not None:
+                states |= (rsp.states2 << 8)
         return (reading, states)
 
     def set_sensor_thresholds(self, sensor_number, lun=0, unr=None, ucr=None,
@@ -213,45 +190,25 @@ class Sensor:
         req = create_request_by_name('SetSensorThresholds')
         req.sensor_number = sensor_number
         req.lun = lun
-        if unr is not None:
-            req.set_mask.unr = 1
-            req.threshold.unr = unr
-        if ucr is not None:
-            req.set_mask.ucr = 1
-            req.threshold.ucr = ucr
-        if unc is not None:
-            req.set_mask.unc = 1
-            req.threshold.unc = unc
-        if lnc is not None:
-            req.set_mask.lnc = 1
-            req.threshold.lnc = lnc
-        if lcr is not None:
-            req.set_mask.lcr = 1
-            req.threshold.lcr = lcr
-        if lnr is not None:
-            req.set_mask.lnr = 1
-            req.threshold.lnr = lnr
+
+        thresholds = dict(unr=unr, ucr=ucr, unc=unc, lnc=lnc, lcr=lcr, lnr=lnr)
+
+        for k, v in thresholds.iteritems():
+            if v is not None:
+                setattr(req.set_mask, k, 1)
+                setattr(req.threshold, k, v)
+
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
     def get_sensor_thresholds(self, sensor_number, lun=0):
-        req = create_request_by_name('GetSensorThresholds')
-        req.sensor_number = sensor_number
-        req.lun = lun
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
-        thresholds = {}
-        if rsp.readable_mask.unr:
-            thresholds['unr'] = rsp.threshold.unr
-        if rsp.readable_mask.ucr:
-            thresholds['ucr'] = rsp.threshold.ucr
-        if rsp.readable_mask.unc:
-            thresholds['unc'] = rsp.threshold.unc
-        if rsp.readable_mask.lnc:
-            thresholds['lnc'] = rsp.threshold.lnc
-        if rsp.readable_mask.lcr:
-            thresholds['lcr'] = rsp.threshold.lcr
-        if rsp.readable_mask.lnr:
-            thresholds['lnr'] = rsp.threshold.lnr
-        return thresholds
+        rsp = self.send_message_with_name('GetSensorThresholds',
+                sensor_number=sensor_number, lun=lun)
 
+        thresholds = {}
+        threshold_list = ('unr', 'ucr', 'unc', 'lnc', 'lcr', 'lnr')
+        for t in threshold_list:
+            if hasattr(rsp.readable_mask, t):
+                if getattr(rsp.readable_mask, t):
+                    thresholds[t] = getattr(rsp.threshold, t)
+        return thresholds

@@ -17,28 +17,23 @@
 from pyipmi.msgs import create_request_by_name
 from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.utils import check_completion_code
+from pyipmi.state import State
+from pyipmi.fields import VersionField
 
-class Bmc:
+class Bmc(object):
     def get_device_id(self):
-        req = create_request_by_name('GetDeviceId')
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
-        return DeviceId(rsp)
+        return DeviceId(self.send_message_with_name('GetDeviceId'))
 
     def cold_reset(self):
-        req = create_request_by_name('ColdReset')
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        self.send_message_with_name('ColdReset')
 
     def warm_reset(self):
-        req = create_request_by_name('WarmReset')
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        self.send_message_with_name('WarmReset')
 
     def i2c_write_read(self, type, id, channel, address, count, data=None):
         req = create_request_by_name('MasterWriteRead')
         req.bus_id.type = type
-        req.bus_id.id= id
+        req.bus_id.id = id
         req.bus_id.channel = channel
         req.bus_id.slave_address = address
         req.read_count = count
@@ -72,18 +67,13 @@ class Bmc:
         check_completion_code(rsp.completion_code)
 
     def get_watchdog_timer(self):
-        req = create_request_by_name('GetWatchdogTimer')
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
-        return Watchdog(rsp)
+        return Watchdog(self.send_message_with_name('GetWatchdogTimer'))
 
     def reset_watchdog_timer(self):
-        req = create_request_by_name('ResetWatchdogTimer')
-        rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        self.send_message_with_name('ResetWatchdogTimer')
 
 
-class Watchdog:
+class Watchdog(State):
     TIMER_USE_OEM = 5
     TIMER_USE_SMS_OS = 4
     TIMER_USE_OS_LOAD = 3
@@ -95,7 +85,7 @@ class Watchdog:
     TIMEOUT_ACTION_POWER_DOWN = 2
     TIMEOUT_ACTION_POWER_CYCLE = 3
 
-    PROPERTIES = [
+    __properties__ = [
             # (propery, description)
             ('timer_use', ''),
             ('dont_stop', ''),
@@ -109,13 +99,7 @@ class Watchdog:
             ('present_countdown', ''),
     ]
 
-    def __init__(self, res=None):
-        for p in self.PROPERTIES:
-            setattr(self, p[0], None)
-        if res:
-            self.from_response(res)
-
-    def from_response(self, rsp):
+    def _from_response(self, rsp):
         self.timer_use = rsp.timer_use.timer_use
         self.is_running = bool(rsp.timer_use.is_running)
         self.dont_log = bool(rsp.timer_use.dont_log)
@@ -127,17 +111,14 @@ class Watchdog:
         self.present_countdown = rsp.present_countdown
 
 
-class DeviceId:
-    def __init__(self, rsp=None):
-        if rsp is not None:
-            self.from_response(rsp)
+class DeviceId(State):
 
     def __str__(self):
-        s = 'Device ID: %d' % self.id
+        s = 'Device ID: %d' % self.device_id
         s+= ' revision: %d' % self.revision
         s+= ' available: %d' % self.available
-        s+= ' fw version: %d.%d' % (self.major_fw_revision, self.minor_fw_revision)
-        s+= ' ipmi: %d.%d' % (self.major_ipmi_version, self.minor_ipmi_version)
+        s+= ' fw version: %s' % (self.fw_revision)
+        s+= ' ipmi: %s' % self.ipmi_version
         s+= ' manufacturer: %d' % self.manufacturer_id
         s+= ' product: %d' % self.product_id
         return s
@@ -151,40 +132,30 @@ class DeviceId:
 
         return name.lower() in self.supported_functions
 
-    def from_response(self, rsp):
-        self.id = rsp.device_id
+    def _from_response(self, rsp):
+        self.device_id = rsp.device_id
         self.revision = rsp.device_revision.device_revision
         self.provides_sdrs = bool(rsp.device_revision.provides_device_sdrs)
         self.available = bool(rsp.firmware_revision.device_available)
-        self.major_fw_revision = rsp.firmware_revision.major
-        self.minor_fw_revision = (
-                ((rsp.firmware_revision.minor >> 4) & 0xf) * 10
-                + (rsp.firmware_revision.minor & 0xf))
-        self.major_ipmi_version = rsp.ipmi_version & 0xf
-        self.minor_ipmi_version = (rsp.ipmi_version >> 4) & 0xf
+
+        self.fw_revision = VersionField(
+                (rsp.firmware_revision.major, rsp.firmware_revision.minor))
+
+        self.ipmi_version = VersionField(
+                (rsp.ipmi_version & 0xf, (rsp.ipmi_version >> 4) & 0xf))
 
         self.manufacturer_id = rsp.manufacturer_id
         self.product_id = rsp.product_id
 
         self.supported_functions = []
-        if rsp.additional_support.sensor:
-            self.supported_functions.append('sensor')
-        if rsp.additional_support.sdr_repository:
-            self.supported_functions.append('sdr_repository')
-        if rsp.additional_support.sel:
-            self.supported_functions.append('sel')
-        if rsp.additional_support.fru_inventory:
-            self.supported_functions.append('fru_inventory')
-        if rsp.additional_support.ipmb_event_receiver:
-            self.supported_functions.append('ipmb_event_receiver')
-        if rsp.additional_support.ipmb_event_generator:
-            self.supported_functions.append('ipmb_event_generator')
-        if rsp.additional_support.bridge:
-            self.supported_functions.append('bridge')
-        if rsp.additional_support.chassis:
-            self.supported_functions.append('chassis')
+        functions = ('sensor', 'sdr_repository', 'sel', 'fru_inventory',
+            'ipmb_event_receiver', 'ipmb_event_generator', 'bridge', 'chassis')
 
+        for function in functions:
+            if hasattr(rsp.additional_support, function):
+                if getattr(rsp.additional_support, function):
+                    self.supported_functions.append(function)
+
+        self.aux = None
         if rsp.auxiliary is not None:
             self.aux = list(rsp.auxiliary)
-        else:
-            self.aux = None

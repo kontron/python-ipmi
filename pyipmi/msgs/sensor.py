@@ -31,15 +31,12 @@ from . import RemainingBytes
 class GetDeviceSdrInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_SDR_INFO
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __default_lun__ = 0
-    __fields__ = ()
 
 
 @register_message_class
 class GetDeviceSdrInfoRsp(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_SDR_INFO
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             UnsignedInt('number_of_sensors', 1),
@@ -61,7 +58,6 @@ class GetDeviceSdrInfoRsp(Message):
 class GetDeviceSdrReq(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_SDR
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __default_lun__ = 0
     __fields__ = (
             UnsignedInt('reservation_id', 2, 0x0000),
             UnsignedInt('record_id', 2),
@@ -74,7 +70,6 @@ class GetDeviceSdrReq(Message):
 class GetDeviceSdrRsp(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_SDR
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             UnsignedInt('next_record_id', 2),
@@ -86,15 +81,12 @@ class GetDeviceSdrRsp(Message):
 class ReserveDeviceSdrRepositoryReq(Message):
     __cmdid__ = constants.CMDID_RESERVE_DEVICE_SDR_REPOSITORY
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __default_lun__ = 0
-    __fields__ = ()
 
 
 @register_message_class
 class ReserveDeviceSdrRepositoryRsp(Message):
     __cmdid__ = constants.CMDID_RESERVE_DEVICE_SDR_REPOSITORY
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             UnsignedInt('reservation_id', 2)
@@ -105,7 +97,6 @@ class ReserveDeviceSdrRepositoryRsp(Message):
 class GetSensorThresholdsReq(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_THRESHOLD
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __default_lun__ = 0
     __fields__ = (
         UnsignedInt('sensor_number', 1),
     )
@@ -115,7 +106,6 @@ class GetSensorThresholdsReq(Message):
 class GetSensorThresholdsRsp(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_THRESHOLD
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
         Bitfield('readable_mask', 1,
@@ -142,7 +132,6 @@ class GetSensorThresholdsRsp(Message):
 class SetSensorHysteresisReq(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_HYSTERESIS
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __default_lun__ = 0
     __fields__ = (
             UnsignedInt('sensor_number', 1),
             UnsignedInt('reserved', 1, 0xff),
@@ -155,7 +144,6 @@ class SetSensorHysteresisReq(Message):
 class SetSensorHysteresisRsp(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_HYSTERESIS
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
     )
@@ -165,7 +153,6 @@ class SetSensorHysteresisRsp(Message):
 class GetSensorHysteresisReq(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_HYSTERESIS
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __default_lun__ = 0
     __fields__ = (
             UnsignedInt('sensor_number', 1),
             UnsignedInt('reserved', 1, 0xff),
@@ -176,7 +163,6 @@ class GetSensorHysteresisReq(Message):
 class GetSensorHysteresisRsp(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_HYSTERESIS
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             UnsignedInt('positive_going_hysteresis', 1),
@@ -188,7 +174,6 @@ class GetSensorHysteresisRsp(Message):
 class SetSensorThresholdsReq(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_THRESHOLD
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __default_lun__ = 0
     __fields__ = (
         UnsignedInt('sensor_number', 1),
         Bitfield('set_mask', 1,
@@ -215,7 +200,6 @@ class SetSensorThresholdsReq(Message):
 class SetSensorThresholdsRsp(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_THRESHOLD
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
     )
@@ -225,7 +209,6 @@ class SetSensorThresholdsRsp(Message):
 class SetSensorEventEnableReq(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_EVENT_ENABLE
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __default_lun__ = 0
     __fields__ = (
             UnsignedInt('sensor_number', 1),
             Bitfield('enable', 1,
@@ -244,7 +227,6 @@ class SetSensorEventEnableReq(Message):
 class SetSensorEventEnableRsp(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_EVENT_ENABLE
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
     )
@@ -254,7 +236,6 @@ class SetSensorEventEnableRsp(Message):
 class GetSensorEventEnableReq(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_EVENT_ENABLE
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __default_lun__ = 0
     __fields__ = (
         UnsignedInt('sensor_number', 1),
     )
@@ -264,7 +245,6 @@ class GetSensorEventEnableReq(Message):
 class GetSensorEventEnableRsp(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_EVENT_ENABLE
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             Bitfield('enabled', 1,
@@ -283,7 +263,6 @@ class GetSensorEventEnableRsp(Message):
 class RearmSensorEventsReq(Message):
     __cmdid__ = constants.CMDID_RE_ARM_SENSOR
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __default_lun__ = 0
     __fields__ = (
         UnsignedInt('sensor_number', 1),
         Bitfield('re_arm', 1,
@@ -299,7 +278,6 @@ class RearmSensorEventsReq(Message):
 class RearmSensorEventsRsp(Message):
     __cmdid__ = constants.CMDID_RE_ARM_SENSOR
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
-    __default_lun__ = 0
     __fields__ = (
         CompletionCode(),
     )
@@ -309,7 +287,6 @@ class RearmSensorEventsRsp(Message):
 class GetSensorReadingReq(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_READING
     __netfn__ = constants.NETFN_SENSOR_EVENT
-    __default_lun__ = 0
     __fields__ = (
         UnsignedInt('sensor_number', 1),
     )
@@ -319,7 +296,6 @@ class GetSensorReadingReq(Message):
 class GetSensorReadingRsp(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_READING
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
-    __default_lun__ = 0
     __fields__ = (
             CompletionCode(),
             UnsignedInt('sensor_reading', 1),
