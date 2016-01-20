@@ -1,18 +1,13 @@
 import socket
 import struct
 
-from error import UnpackError
-from utils import hexdump
-import asf
+from pyipmi.errors import DecodingError
 
 CLASS_NORMAL_MSG = 0x00
 CLASS_ACK_MSG = 0x80
 CLASS_ASF = 0x06
 CLASS_IPMI = 0x07
 CLASS_OEM = 0x08
-
-from error import UnpackError
-from utils import MsgPPrinter
 
 PRESENCE_PONG = 0x40
 PRESENCE_PING = 0x80
@@ -23,6 +18,7 @@ class _Msg:
     def __init__(self):
         self.iana_enterprise_number = 4542
         self.data = None
+        self.sdu = None
         self.tag = 0
 
     def pack(self):
@@ -40,6 +36,7 @@ class _Msg:
         return sdu
 
     def unpack(self, sdu):
+        self.sdu = sdu
         header_len = struct.calcsize(self.HEADER_FORMAT)
 
         header = sdu[:header_len]
@@ -47,9 +44,9 @@ class _Msg:
                 struct.unpack(self.HEADER_FORMAT, header)
 
         if len(sdu) < header_len + data_len:
-            raise UnpackError('short SDU')
+            raise DecodingError('short SDU')
         elif len(sdu) > header_len + data_len:
-            raise UnpackError('SDU has extra bytes')
+            raise DecodingError('SDU has extra bytes')
 
         if data_len != 0:
             self.data = sdu[header_len:header_len + data_len]
@@ -59,7 +56,16 @@ class _Msg:
         if hasattr(self, 'check_header'):
             self.check_header()
 
-class Ping(_Msg, MsgPPrinter):
+    def __str__(self):
+        if self.data:
+#            return self.data
+            return ' '.join('%02x' % ord(b) for b in self.data)
+        if self.sdu:
+#            return self.sdu
+            return ' '.join('%02x' % ord(b) for b in self.sdu)
+        return ''
+
+class Ping(_Msg):
     pp_fields = []
 
     def __init__(self):
@@ -68,11 +74,11 @@ class Ping(_Msg, MsgPPrinter):
 
     def check_header(self):
         if self.type != PRESENCE_PING:
-            raise UnpackError('type does not match')
+            raise DecodingError('type does not match')
         if self.data:
-            raise UnpackError('Data length is not zero')
+            raise DecodingError('Data length is not zero')
 
-class Pong(_Msg, MsgPPrinter):
+class Pong(_Msg):
     DATA_FORMAT = '!IIBB6x'
     pp_fields = [
                 ('type', lambda i: '%02x' % i),
@@ -110,15 +116,15 @@ class Pong(_Msg, MsgPPrinter):
 
     def check_data(self):
         if self.oem_iana_enterprise_number == 4542 and self.oem_defined != 0:
-            raise UnpackError('SDU malformed')
+            raise DecodingError('SDU malformed')
         if self.supported_interactions != 0:
-            raise UnpackError('SDU malformed')
+            raise DecodingError('SDU malformed')
 
     def check_header(self):
         if self.type != PRESENCE_PONG:
-            raise UnpackError('type does not match')
+            raise DecodingError('type does not match')
         if len(self.data) != struct.calcsize(self.DATA_FORMAT):
-            raise UnpackError('Data length mismatch')
+            raise DecodingError('Data length mismatch')
 
 
 class Rmcp:
@@ -138,7 +144,7 @@ class Rmcp:
                 self.version, self.seq_number, class_of_msg)
         pdu = header + sdu
         if self._debug:
-            hexdump(pdu)
+            print pdu
         self._sock.sendto(pdu, (self.host, self.port))
         if self.seq_number != 255:
             self.seq_number = (self.seq_number + 1) % 254
@@ -146,7 +152,7 @@ class Rmcp:
     def _receive(self):
         (data, _) = self._sock.recvfrom(4096)
         if self._debug:
-            hexdump(data)
+            print data
         header_len = struct.calcsize(self.HEADER_FORMAT)
         header = data[:header_len]
         (version, seq_number, class_of_msg) = \
@@ -164,7 +170,7 @@ class Rmcp:
     def receive_ipmi_pdu(self):
         (_, class_of_msg, pdu) = self._receive()
         if class_of_msg != CLASS_IPMI:
-            raise UnpackError('invalid class field in ASF message')
+            raise DecodingError('invalid class field in ASF message')
         return pdu
 
     def send_asf_msg(self, asf_msg):
@@ -174,17 +180,18 @@ class Rmcp:
     def receive_asf_msg(self, type):
         (_, class_of_msg, data) = self._receive()
         if class_of_msg != CLASS_ASF:
-            raise UnpackError('invalid class field in ASF message')
+            raise DecodingError('invalid class field in ASF message')
         msg = type()
         msg.unpack(data)
         return msg
 
     def ping(self):
-        self.send_asf_msg(asf.Ping())
-        pong = self.receive_asf_msg(asf.Pong)
+        p = Ping()
+        self.send_asf_msg(p)
+        pong = self.receive_asf_msg(Pong)
         print pong
 
 if __name__ == '__main__':
-    host = '10.0.113.200'
+    host = '10.0.114.12'
     r = Rmcp(host)
     r.ping()
