@@ -30,6 +30,7 @@ from pyipmi.msgs.message import CompletionCode
 from pyipmi.msgs.message import Conditional
 from pyipmi.msgs.message import Optional
 from pyipmi.msgs.message import RemainingBytes
+from pyipmi.msgs.message import String
 from pyipmi.msgs.message import encode_message
 from pyipmi.msgs.message import decode_message
 

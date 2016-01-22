@@ -81,7 +81,7 @@ class Aardvark(object):
     def _encode_ipmb_msg_req(self, header, cmd_data):
         data = header.encode()
         data.extend(cmd_data)
-        data.append(checksum(data[2:]))
+        data.append(checksum(data[3:]))
 
         return data
 
@@ -116,9 +116,9 @@ class Aardvark(object):
         tx_data = self._encode_ipmb_msg_req(header, cmd_data)
 
         i2c_addr = header.rs_sa >> 1
-        self._dev.i2c_master_write(i2c_addr, tx_data.tostring())
+        self._dev.i2c_master_write(i2c_addr, tx_data[1:].tostring())
         log().debug('I2C TX to %02Xh [%s]', i2c_addr,
-                ' '.join(['%02x' % b for b in tx_data]))
+                ' '.join(['%02x' % b for b in tx_data[1:]]))
 
     def _receive_raw(self, header):
         start_time = time.time()

@@ -33,8 +33,9 @@ class IpmbHeader(object):
 
     def encode(self):
         data = array.array('B')
+        data.append(self.rs_sa)
         data.append(self.netfn << 2 | self.rs_lun)
-        data.append(checksum((self.rs_sa, data[0])))
+        data.append(checksum((self.rs_sa, data[1])))
         data.append(self.rq_sa)
         data.append(self.rq_seq << 2 | self.rq_lun)
         data.append(self.cmd_id)

@@ -19,4 +19,4 @@ class TestIpmb:
         header.netfn = 6
         header.cmd_id = 1
         data = header.encode()
-        eq_(data, array('B', [0x18, 0x76, 0x20, 0x08, 0x01]))
+        eq_(data, array('B', [0x72, 0x18, 0x76, 0x20, 0x08, 0x01]))
