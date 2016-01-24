@@ -21,8 +21,30 @@ RMCP_CLASS_OEM = 0x08
 ASF_TYPE_PRESENCE_PONG = 0x40
 ASF_TYPE_PRESENCE_PING = 0x80
 
+
 class RmcpMsg:
-    pass
+    RMCP_HEADER_FORMAT = '!BxBB'
+    ASF_RMCP_V_1_0  = 6
+
+    def __init__(self, class_of_msg=None):
+        if class_of_msg is not None:
+            self.class_of_msg = class_of_msg
+
+    def pack(self, sdu, seq_number):
+        pdu = struct.pack(self.RMCP_HEADER_FORMAT,
+                self.ASF_RMCP_V_1_0, seq_number, self.class_of_msg)
+        if sdu is not None:
+            pdu += sdu
+        return pdu
+
+    def unpack(self, pdu):
+        header_len = struct.calcsize(self.RMCP_HEADER_FORMAT)
+        header = pdu[:header_len]
+        (self.version, self.seq_number, self.class_of_msg) = \
+                struct.unpack(self.RMCP_HEADER_FORMAT, header)
+        sdu = pdu[header_len:]
+        return sdu
+
 
 class AsfMsg:
     ASF_HEADER_FORMAT = '!IBBxB'
@@ -41,12 +63,12 @@ class AsfMsg:
         else:
             data_len = 0
 
-        sdu = struct.pack(self.ASF_HEADER_FORMAT, self.iana_enterprise_number,
+        pdu = struct.pack(self.ASF_HEADER_FORMAT, self.iana_enterprise_number,
                     self.asf_type, self.tag, data_len)
         if self.data:
-            sdu += self.data
+            pdu += self.data
 
-        return sdu
+        return pdu
 
     def unpack(self, sdu):
         self.sdu = sdu
@@ -78,8 +100,6 @@ class AsfMsg:
 
 
 class AsfPing(AsfMsg):
-    pp_fields = []
-
     def __init__(self):
         AsfMsg.__init__(self)
         self.asf_type = ASF_TYPE_PRESENCE_PING
@@ -93,13 +113,6 @@ class AsfPing(AsfMsg):
 
 class AsfPong(AsfMsg):
     DATA_FORMAT = '!IIBB6x'
-    pp_fields = [
-                ('asf_type', lambda i: '%02x' % i),
-                ('oem_iana_enterprise_number', lambda i: '%04x' % i),
-                ('oem_defined', lambda i: '%04x' % i),
-                ('supported_entities', lambda i: '%02x' % i),
-                ('supported_interactions', lambda i: '%02x' % i),
-            ]
 
     def __init__(self):
         self.asf_type = ASF_TYPE_PRESENCE_PONG
@@ -146,7 +159,7 @@ class IpmiMsg():
     session_id = 0
     authentication_code = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
-    def __init__(self, session=None, data=None):
+    def __init__(self, session=None):
 
         if session != None:
             self.authentication_type = sesssion.authentication_type
@@ -154,69 +167,71 @@ class IpmiMsg():
             self.session_id = session.session_id
             self.authentication_code = session.authentication_code
 
-        self.data = data
-
-    def pack(self):
-        if self.data is not None:
-            data_len = len(self.data)
+    def pack(self, sdu):
+        if sdu is not None:
+            data_len = len(sdu)
         else:
             data_len = 0
 
         if self.authentication_type != 0:
-            sdu = struct.pack('!BII',
+            pdu = struct.pack('!BII',
                         self.authentication_type,
                         self.sequence_number,
                         self.session_id)
             # TBD .. find a way to do this with pack
-            sdu +=  array.array('B', self.authentication_code).tostring()
-            sdu += chr(data_len)
+            pdu +=  array.array('B', self.authentication_code).tostring()
+            pdu += chr(data_len)
 
         else:
-            sdu = struct.pack(self.HEADER_FORMAT_NO_AUTH,
+            pdu = struct.pack(self.HEADER_FORMAT_NO_AUTH,
                         self.authentication_type,
                         self.sequence_number,
                         self.session_id,
                         data_len)
 
-        if self.data is not None:
-            sdu += self.data
+        if sdu is not None:
+            pdu += sdu
 
-        return sdu
+        return pdu
 
-    def unpack(self, sdu):
-        self.sdu = sdu
-        authentication_type = ord(sdu[0])
+    def unpack(self, pdu):
+        self.pdu = pdu
+        authentication_type = ord(pdu[0])
 
         if authentication_type != 0:
             header_len = struct.calcsize(self.HEADER_FORMAT_AUTH)
         else:
             header_len = struct.calcsize(self.HEADER_FORMAT_NO_AUTH)
 
-        header = sdu[:header_len]
+        header = pdu[:header_len]
         if authentication_type != 0:
             # TBD .. find a way to do this better
-            self.authentication_type = ord(sdu[0])
-            (self.sequence_number,) = struct.unpack('!I', sdu[1:5])
-            (self.session_id,) = struct.unpack('!I', sdu[5:9])
+            self.authentication_type = ord(pdu[0])
+            (self.sequence_number,) = struct.unpack('!I', pdu[1:5])
+            (self.session_id,) = struct.unpack('!I', pdu[5:9])
             self.authentication_code =\
-                    [a for a in struct.unpack('!16B', sdu[9:25])]
-            data_len = ord(sdu[25])
+                    [a for a in struct.unpack('!16B', pdu[9:25])]
+            data_len = ord(pdu[25])
         else:
             (self.authentication_type, self.sequence_number,
-                    self.session_id, data_len) = struct.unpack(self.HEADER_FORMAT_NO_AUTH, header)
+                    self.session_id, data_len) =\
+                            struct.unpack(self.HEADER_FORMAT_NO_AUTH, header)
 
-        if len(sdu) < header_len + data_len:
+        if len(pdu) < header_len + data_len:
             raise DecodingError('short SDU')
-        elif len(sdu) > header_len + data_len:
+        elif len(pdu) > header_len + data_len:
             raise DecodingError('SDU has extra bytes')
-
-        if data_len != 0:
-            self.data = sdu[header_len:header_len + data_len]
-        else:
-            self.data = None
 
         if hasattr(self, 'check_header'):
             self.check_header()
+
+        if data_len != 0:
+            self.sdu = pdu[header_len:header_len + data_len]
+        else:
+            self.sdu = None
+
+        return self.sdu
+
 
     def check_data(self):
         pass
@@ -226,6 +241,8 @@ class IpmiMsg():
 
 
 class Rmcp:
+    NAME = 'rmcp'
+
     RMCP_HEADER_FORMAT = '!BxBB'
     ASF_RMCP_V_1_0  = 6
 
@@ -243,41 +260,44 @@ class Rmcp:
         self._debug = False
 
     def _send(self, sdu, class_of_msg):
-        header = struct.pack(self.RMCP_HEADER_FORMAT,
-                self.version, self.seq_number, class_of_msg)
-        pdu = header + sdu
+        rmcp = RmcpMsg(class_of_msg)
+        pdu = rmcp.pack(pdu, self.seq_number)
+
         if self._debug:
             print 'TX: %s' %(' '.join('%02x' % ord(b) for b in pdu))
+
         self._sock.sendto(pdu, (self.host, self.port))
         if self.seq_number != 255:
             self.seq_number = (self.seq_number + 1) % 254
 
     def _receive(self):
-        (data, _) = self._sock.recvfrom(4096)
+        (pdu, _) = self._sock.recvfrom(4096)
         if self._debug:
-            print 'RX: %s' %(' '.join('%02x' % ord(b) for b in data))
+            print 'RX: %s' %(' '.join('%02x' % ord(b) for b in pdu))
+
         header_len = struct.calcsize(self.RMCP_HEADER_FORMAT)
-        header = data[:header_len]
+        header = pdu[:header_len]
         (version, seq_number, class_of_msg) = \
                 struct.unpack(self.RMCP_HEADER_FORMAT, header)
         if version != self.version:
             raise UnpackException('invalid RMCP version field')
+
         return (seq_number, class_of_msg, data[header_len:])
 
     def set_timeout(self, timeout):
         self._sock.settimeout(timeout)
 
     def _send_ipmi_msg(self, data):
-        msg = IpmiMsg(data=data)
-        self._send(msg.pack(), RMCP_CLASS_IPMI)
+        ipmi = IpmiMsg()
+        pdu = ipmi.pack(data)
+        self._send(ipmi.pack(data), RMCP_CLASS_IPMI)
 
     def _receive_ipmi_msg(self):
         (_, class_of_msg, pdu) = self._receive()
         if class_of_msg != RMCP_CLASS_IPMI:
             raise DecodingError('invalid class field in ASF message')
         msg = IpmiMsg()
-        msg.unpack(pdu)
-        return msg
+        return msg.unpack(pdu)
 
     def _send_asf_msg(self, msg):
         self._send(msg.pack(), RMCP_CLASS_ASF)
@@ -361,10 +381,10 @@ class Rmcp:
         cmd_data =  [ord(c) for c in payload]
         tx_data = self._encode_ipmb_msg_req(header, cmd_data)
         self._send_ipmi_msg(tx_data.tostring())
-        msg = self._receive_ipmi_msg()
-        print 'RX IPMI: %s' %(' '.join('%02x' % ord(b) for b in msg.data))
+        data = self._receive_ipmi_msg()
+        print 'RX IPMI: %s' %(' '.join('%02x' % ord(b) for b in data))
 
-        return msg.data[6:-1]
+        return data[6:-1]
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
         return self._send_and_receive(target, lun, netfn, ord(raw_bytes[0]),
