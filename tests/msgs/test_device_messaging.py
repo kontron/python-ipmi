@@ -308,7 +308,8 @@ def test_get_session_challenge_req():
     data = encode_message(m)
     eq_(m.cmdid, 0x39)
     eq_(m.netfn, 6)
-    eq_(data, '\x01                ')
+    eq_(data,'\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'\
+            '\x00\x00')
 
     m.authentication.type = 1
     m.user_name = '0123456789abcdef'
