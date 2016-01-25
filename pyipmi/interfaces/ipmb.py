@@ -41,3 +41,8 @@ class IpmbHeader(object):
         data.append(self.cmd_id)
         return data
 
+def encode_ipmb_msg(header, data):
+    msg = header.encode()
+    msg.extend(data)
+    msg.append(checksum(msg[3:]))
+    return msg

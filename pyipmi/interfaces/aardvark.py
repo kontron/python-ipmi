@@ -20,7 +20,7 @@ import array
 from pyipmi.msgs import create_message, encode_message, decode_message
 from pyipmi.errors import TimeoutError
 from pyipmi.logger import log
-from pyipmi.interfaces.ipmb import IpmbHeader, checksum
+from pyipmi.interfaces.ipmb import IpmbHeader, checksum, encode_ipmb_msg
 
 try:
     import pyaardvark
@@ -78,13 +78,6 @@ class Aardvark(object):
     def _inc_sequence_number(self):
         self.next_sequence_number = (self.next_sequence_number + 1) % 64
 
-    def _encode_ipmb_msg_req(self, header, cmd_data):
-        data = header.encode()
-        data.extend(cmd_data)
-        data.append(checksum(data[3:]))
-
-        return data
-
     def _rx_filter(self, header, rx_data):
 
         log().debug('[%s]' % ' '.join(['%02x' % b for b in rx_data]))
@@ -113,7 +106,7 @@ class Aardvark(object):
     def _send_raw(self, header, raw_bytes):
 
         cmd_data =  [ord(c) for c in raw_bytes]
-        tx_data = self._encode_ipmb_msg_req(header, cmd_data)
+        tx_data = encode_ipmb_msg(header, cmd_data)
 
         i2c_addr = header.rs_sa >> 1
         self._dev.i2c_master_write(i2c_addr, tx_data[1:].tostring())

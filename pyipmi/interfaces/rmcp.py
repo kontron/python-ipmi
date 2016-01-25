@@ -8,7 +8,7 @@ from pyipmi.msgs import create_message, create_request_by_name, \
         encode_message, decode_message, device_messaging
 from pyipmi.errors import DecodingError
 from pyipmi.logger import log
-from pyipmi.interfaces.ipmb import IpmbHeader, checksum
+from pyipmi.interfaces.ipmb import IpmbHeader, checksum, encode_ipmb_msg
 from pyipmi.utils import check_completion_code
 
 CLASS_NORMAL_MSG = 0x00
@@ -143,29 +143,24 @@ class AsfPong(AsfMsg):
             raise DecodingError('Data length mismatch')
 
 
-class IpmiSession():
-    authentication_type = 0
-    sequence_number = 0
-    session_id = 0
-    authentication_code = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-
-
 class IpmiMsg():
     HEADER_FORMAT_NO_AUTH = '!BIIB'
     HEADER_FORMAT_AUTH = '!BII16BB'
 
-    authentication_type = 0
+    auth_type = 0
     sequence_number = 0
     session_id = 0
-    authentication_code = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    auth_code = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
     def __init__(self, session=None):
 
         if session != None:
-            self.authentication_type = sesssion.authentication_type
-            self.sequence_number = session.sequence_number
-            self.session_id = session.session_id
-            self.authentication_code = session.authentication_code
+            self.auth_type = session.get_auth_type()
+            self.session_id = session.get_session_id()
+
+            if session._auth_username is not None:
+                for idx, c in enumerate(session._auth_username):
+                    self.auth_code[idx] = ord(c)
 
     def pack(self, sdu):
         if sdu is not None:
@@ -173,21 +168,16 @@ class IpmiMsg():
         else:
             data_len = 0
 
-        if self.authentication_type != 0:
-            pdu = struct.pack('!BII',
-                        self.authentication_type,
+        pdu = struct.pack('!BII',
+                        self.auth_type,
                         self.sequence_number,
                         self.session_id)
-            # TBD .. find a way to do this with pack
-            pdu +=  array.array('B', self.authentication_code).tostring()
-            pdu += chr(data_len)
 
-        else:
-            pdu = struct.pack(self.HEADER_FORMAT_NO_AUTH,
-                        self.authentication_type,
-                        self.sequence_number,
-                        self.session_id,
-                        data_len)
+        if self.auth_type != 0:
+            # TBD .. find a way to do this with pack
+            pdu +=  array.array('B', self.auth_code).tostring()
+
+        pdu += chr(data_len)
 
         if sdu is not None:
             pdu += sdu
@@ -196,24 +186,24 @@ class IpmiMsg():
 
     def unpack(self, pdu):
         self.pdu = pdu
-        authentication_type = ord(pdu[0])
+        auth_type = ord(pdu[0])
 
-        if authentication_type != 0:
+        if auth_type != 0:
             header_len = struct.calcsize(self.HEADER_FORMAT_AUTH)
         else:
             header_len = struct.calcsize(self.HEADER_FORMAT_NO_AUTH)
 
         header = pdu[:header_len]
-        if authentication_type != 0:
+        if auth_type != 0:
             # TBD .. find a way to do this better
-            self.authentication_type = ord(pdu[0])
+            self.auth_type = ord(pdu[0])
             (self.sequence_number,) = struct.unpack('!I', pdu[1:5])
             (self.session_id,) = struct.unpack('!I', pdu[5:9])
-            self.authentication_code =\
+            self.auth_code =\
                     [a for a in struct.unpack('!16B', pdu[9:25])]
             data_len = ord(pdu[25])
         else:
-            (self.authentication_type, self.sequence_number,
+            (self.auth_type, self.sequence_number,
                     self.session_id, data_len) =\
                             struct.unpack(self.HEADER_FORMAT_NO_AUTH, header)
 
@@ -246,22 +236,21 @@ class Rmcp:
     RMCP_HEADER_FORMAT = '!BxBB'
     ASF_RMCP_V_1_0  = 6
 
-    session_id = None
+    _session = None
 
-    def __init__(self, host, port=623, slave_address=0x81):
-        self.host = host
-        self.port = port
+    def __init__(self, slave_address=0x81):
+        self.host = None
+        self.port = None
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.version = self.ASF_RMCP_V_1_0
         self.seq_number = 0xff
         self.slave_address = slave_address
         self.set_timeout(2.0)
         self.next_sequence_number = 0
         self._debug = False
 
-    def _send(self, sdu, class_of_msg):
+    def _send_rmcp_msg(self, sdu, class_of_msg):
         rmcp = RmcpMsg(class_of_msg)
-        pdu = rmcp.pack(pdu, self.seq_number)
+        pdu = rmcp.pack(sdu, self.seq_number)
 
         if self._debug:
             print 'TX: %s' %(' '.join('%02x' % ord(b) for b in pdu))
@@ -275,22 +264,20 @@ class Rmcp:
         if self._debug:
             print 'RX: %s' %(' '.join('%02x' % ord(b) for b in pdu))
 
-        header_len = struct.calcsize(self.RMCP_HEADER_FORMAT)
-        header = pdu[:header_len]
-        (version, seq_number, class_of_msg) = \
-                struct.unpack(self.RMCP_HEADER_FORMAT, header)
-        if version != self.version:
+        rmcp = RmcpMsg()
+        sdu = rmcp.unpack(pdu)
+
+        if rmcp.version != self.ASF_RMCP_V_1_0:
             raise UnpackException('invalid RMCP version field')
 
-        return (seq_number, class_of_msg, data[header_len:])
+        return (rmcp.seq_number, rmcp.class_of_msg, sdu)
 
     def set_timeout(self, timeout):
         self._sock.settimeout(timeout)
 
     def _send_ipmi_msg(self, data):
-        ipmi = IpmiMsg()
-        pdu = ipmi.pack(data)
-        self._send(ipmi.pack(data), RMCP_CLASS_IPMI)
+        ipmi = IpmiMsg(self._session)
+        self._send_rmcp_msg(ipmi.pack(data), RMCP_CLASS_IPMI)
 
     def _receive_ipmi_msg(self):
         (_, class_of_msg, pdu) = self._receive()
@@ -300,7 +287,7 @@ class Rmcp:
         return msg.unpack(pdu)
 
     def _send_asf_msg(self, msg):
-        self._send(msg.pack(), RMCP_CLASS_ASF)
+        self._send_rmcp_msg(msg.pack(), RMCP_CLASS_ASF)
 
     def _receive_asf_msg(self, cls):
         (_, class_of_msg, data) = self._receive()
@@ -317,57 +304,53 @@ class Rmcp:
 
     def establish_session(self, session):
         # just remember session parameters here
-        self._session = session
+
+        self.host = session._rmcp_host
+        self.port = session._rmcp_port
 
         t = Target(0x20)
 
         # get channel auth cap
         req = create_request_by_name('GetChannelAuthenticationCapabilities')
+        req.target = t
         req.channel.number = 0xe
         req.privilege_level.requested = 4
-        rx_data = self._send_and_receive(t, req.lun, req.netfn, req.cmdid, encode_message(req))
-        rsp = create_message(req.cmdid, req.netfn + 1)
-        decode_message(rsp, rx_data)
+        rsp = self.send_and_receive(req)
         check_completion_code(rsp.completion_code)
 
         # get session challenge
         req = create_request_by_name('GetSessionChallenge')
-        req.authentication.type = self._session.auth_type
-        if self._session._auth_username:
-            req.user_name = self._session._auth_username
-
-        tx_data = encode_message(req)
-        rx_data = self._send_and_receive(t, req.lun, req.netfn, req.cmdid,tx_data)
-        rsp = create_message(req.cmdid, req.netfn + 1)
-        decode_message(rsp, rx_data)
+        req.target = t
+        req.authentication.type = session.get_auth_type()
+        if session._auth_username:
+            req.user_name = session._auth_username
+        rsp = self.send_and_receive(req)
         check_completion_code(rsp.completion_code)
-        self.session_id = rsp.temporary_session_id
+
         session_challenge = rsp.challenge_string
+
+        # now set session
+        self._session = session
+        # swap
+        session_id = struct.unpack("<I", struct.pack(">I", rsp.temporary_session_id))[0]
+        self._session.set_session_id(session_id)
 
         # activate session
         req = create_request_by_name('ActivateSession')
-        req.authentication.type = self._session.auth_type
+        req.target = t
+        req.authentication.type = session.get_auth_type()
         req.privilege_level.maximum_requested = 4
         req.challenge_string = session_challenge
+        req.session_id = self._session.get_session_id()
         req.initial_outbound_sequence_number = 1
-        tx_data = encode_message(req)
-        rx_data = self._send_and_receive(t, req.lun, req.netfn, req.cmdid,tx_data)
-        rsp = create_message(req.cmdid, req.netfn + 1)
-        decode_message(rsp, rx_data)
+        rsp = self.send_and_receive(req)
         check_completion_code(rsp.completion_code)
 
     def _inc_sequence_number(self):
         self.next_sequence_number = (self.next_sequence_number + 1) % 64
 
-    def _encode_ipmb_msg_req(self, header, cmd_data):
-        data = header.encode()
-        data.extend(cmd_data)
-        data.append(checksum(data[3:]))
-
-        return data
-
     def _send_and_receive(self, target, lun, netfn, cmdid, payload):
-#        self._inc_sequence_number()
+        self._inc_sequence_number()
 
         header = IpmbHeader()
         header.netfn = netfn
@@ -379,10 +362,11 @@ class Rmcp:
         header.cmd_id = cmdid
 
         cmd_data =  [ord(c) for c in payload]
-        tx_data = self._encode_ipmb_msg_req(header, cmd_data)
+        tx_data = encode_ipmb_msg(header, cmd_data)
         self._send_ipmi_msg(tx_data.tostring())
         data = self._receive_ipmi_msg()
-        print 'RX IPMI: %s' %(' '.join('%02x' % ord(b) for b in data))
+        if self._debug:
+            print 'RX IPMI: %s' %(' '.join('%02x' % ord(b) for b in data))
 
         return data[6:-1]
 
@@ -391,15 +375,18 @@ class Rmcp:
                 raw_bytes[1:])
 
     def send_and_receive(self, msg):
-        pass
-
+        rx_data = self._send_and_receive(msg.target, msg.lun, msg.netfn,
+                        msg.cmdid, encode_message(msg))
+        msg = create_message(msg.cmdid, msg.netfn + 1)
+        decode_message(msg, rx_data)
+        return msg
 
 if __name__ == '__main__':
     host = '10.0.114.12'
-    s = Session()
+    session = Session()
+    session.set_auth_type_user('admin', 'admin')
 
-    s.set_auth_type_user('admin', 'admin')
     r = Rmcp(host)
     r._debug = True
     r.ping()
-    r.establish_session(s)
+    r.establish_session(session)

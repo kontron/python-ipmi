@@ -92,6 +92,9 @@ class Session(object):
     def __init__(self):
         self.set_auth_type(self.AUTH_TYPE_NONE)
         self.established = False
+        self._session_id = 0
+        self._auth_username = None
+        self._auth_password = None
 
     def _get_interface(self):
         try:
@@ -109,10 +112,19 @@ class Session(object):
     def set_auth_type(self, auth_type):
         self.auth_type = auth_type
 
+    def get_auth_type(self):
+        return self.auth_type
+
     def set_auth_type_user(self, username, password):
         self.set_auth_type(self.AUTH_TYPE_PASSWORD)
         self._auth_username = username
         self._auth_password = password
+
+    def set_session_id(self, session_id):
+        self._session_id = session_id
+
+    def get_session_id(self):
+        return self._session_id
 
     def establish(self):
         if hasattr(self.interface, 'establish_session'):
