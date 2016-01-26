@@ -3,9 +3,9 @@ import struct
 import array
 
 from pyipmi import Target, Session
-from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import create_message, create_request_by_name, \
         encode_message, decode_message, device_messaging
+from pyipmi.messaging import ChannelAuthenticationCapabilities
 from pyipmi.errors import DecodingError
 from pyipmi.logger import log
 from pyipmi.interfaces.ipmb import IpmbHeader, checksum, encode_ipmb_msg
@@ -156,11 +156,17 @@ class IpmiMsg():
 
         if session != None:
             self.auth_type = session.get_auth_type()
-            self.session_id = session.get_session_id()
+            self.session_id = struct.unpack("<I", struct.pack(">I",
+                           session.get_session_id()))[0]
 
-            if session._auth_username is not None:
-                for idx, c in enumerate(session._auth_username):
-                    self.auth_code[idx] = ord(c)
+            if session.get_auth_type() == session.AUTH_TYPE_PASSWORD:
+                if session._auth_password is not None:
+                    for idx, c in enumerate(session._auth_password):
+                        self.auth_code[idx] = ord(c)
+            elif session.get_auth_type() == session.AUTH_TYPE_MD2:
+                pass
+            elif session.get_auth_type() == session.AUTH_TYPE_MD5:
+                fail
 
     def pack(self, sdu):
         if sdu is not None:
@@ -238,15 +244,16 @@ class Rmcp:
 
     _session = None
 
-    def __init__(self, slave_address=0x81):
+    def __init__(self, slave_address=0x81, host_target_address=0x20):
         self.host = None
         self.port = None
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.seq_number = 0xff
         self.slave_address = slave_address
+        self.host_target = Target(host_target_address)
         self.set_timeout(2.0)
         self.next_sequence_number = 0
-        self._debug = False
+        self._debug = True
 
     def _send_rmcp_msg(self, sdu, class_of_msg):
         rmcp = RmcpMsg(class_of_msg)
@@ -302,47 +309,78 @@ class Rmcp:
         self._send_asf_msg(ping)
         pong = self._receive_asf_msg(AsfPong)
 
-    def establish_session(self, session):
-        # just remember session parameters here
-
-        self.host = session._rmcp_host
-        self.port = session._rmcp_port
-
-        t = Target(0x20)
-
+    def _get_channel_auth_cap(self):
+        CHANNEL_NUMBER_FOR_THIS = 0xe
         # get channel auth cap
         req = create_request_by_name('GetChannelAuthenticationCapabilities')
-        req.target = t
-        req.channel.number = 0xe
-        req.privilege_level.requested = 4
+        req.target = self.host_target
+        req.channel.number = CHANNEL_NUMBER_FOR_THIS
+        req.privilege_level.requested = Session.PRIV_LEVEL_ADMINISTRATOR
         rsp = self.send_and_receive(req)
         check_completion_code(rsp.completion_code)
+        caps = ChannelAuthenticationCapabilities(rsp)
+        if self._debug:
+            print caps
+        return rsp
 
+    def _get_session_challenge(self, session):
         # get session challenge
         req = create_request_by_name('GetSessionChallenge')
-        req.target = t
+        req.target = self.host_target
         req.authentication.type = session.get_auth_type()
         if session._auth_username:
             req.user_name = session._auth_username
         rsp = self.send_and_receive(req)
         check_completion_code(rsp.completion_code)
+        return rsp
 
+    def _activate_session(self, session, challenge):
+        # activate session
+        req = create_request_by_name('ActivateSession')
+        req.target = self.host_target
+        req.authentication.type = session.get_auth_type()
+        req.privilege_level.maximum_requested = \
+                        Session.PRIV_LEVEL_ADMINISTRATOR
+        req.challenge_string = challenge
+        req.session_id = self._session.get_session_id()
+        req.initial_outbound_sequence_number = 1
+        rsp = self.send_and_receive(req)
+        check_completion_code(rsp.completion_code)
+        return rsp
+
+    def _set_session_privilege_level(self, level):
+        req = create_request_by_name('SetSessionPrivilegeLevel')
+        req.target = self.host_target
+        req.privilege_level.requested = level
+        rsp = self.send_and_receive(req)
+        check_completion_code(rsp.completion_code)
+        return rsp
+
+    def establish_session(self, session):
+        self.host = session._rmcp_host
+        self.port = session._rmcp_port
+
+        self.ping()
+
+        rsp = self._get_channel_auth_cap()
+
+        rsp = self._get_session_challenge(session)
         session_challenge = rsp.challenge_string
 
         # now set session
         self._session = session
-        # swap
-        session_id = struct.unpack("<I", struct.pack(">I", rsp.temporary_session_id))[0]
-        self._session.set_session_id(session_id)
+        self._session.set_session_id(rsp.temporary_session_id)
 
-        # activate session
-        req = create_request_by_name('ActivateSession')
-        req.target = t
-        req.authentication.type = session.get_auth_type()
-        req.privilege_level.maximum_requested = 4
-        req.challenge_string = session_challenge
+        rsp = self._activate_session(session, session_challenge)
+        self._session.set_session_id(rsp.session_id)
+
+        # set session privilege level
+        rsp = self._set_session_privilege_level(Session.PRIV_LEVEL_ADMINISTRATOR)
+
+    def close_session(self):
+        req = create_request_by_name('CloseSession')
+        req.target = self.host_target
         req.session_id = self._session.get_session_id()
-        req.initial_outbound_sequence_number = 1
         rsp = self.send_and_receive(req)
         check_completion_code(rsp.completion_code)
 

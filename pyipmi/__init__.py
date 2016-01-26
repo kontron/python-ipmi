@@ -27,6 +27,7 @@ import picmg
 import sdr
 import sel
 import sensor
+import messaging
 
 from pyipmi.errors import TimeoutError, CompletionCodeError
 from pyipmi.msgs.registry import create_request_by_name
@@ -43,25 +44,7 @@ def create_connection(interface):
     ipmi = Ipmi()
     ipmi.interface = interface
     ipmi.session = session
-    ipmi.requester = NullRequester()
     return ipmi
-
-class Requester(object):
-    '''The Requester class represents an IPMI device which initiates a
-    request/response message exchange.
-    '''
-
-    def __init__(self, ipmb_address):
-        self.ipmb_address = ipmb_address
-
-class NullRequester(object):
-    '''The NullRequester is used for interfaces which doesn't require a
-    valid requester.
-    '''
-
-    @property
-    def ipmb_address():
-        raise AssertionError('NullRequester does not provide an IPMB address')
 
 class Target(object):
     '''The Target class represents an IPMI target.'''
@@ -88,6 +71,11 @@ class Session(object):
     AUTH_TYPE_MD5         = 0x02
     AUTH_TYPE_PASSWORD    = 0x04
     AUTH_TYPE_OEM         = 0x05
+
+    PRIV_LEVEL_USER = 2
+    PRIV_LEVEL_OPERATOR = 3
+    PRIV_LEVEL_ADMINISTRATOR = 4
+    PRIV_LEVEL_OEM = 5
 
     def __init__(self):
         self.set_auth_type(self.AUTH_TYPE_NONE)
@@ -132,7 +120,7 @@ class Session(object):
 
     def close(self):
         if hasattr(self.interface, 'close_session'):
-            self.interface.close_session(self)
+            self.interface.close_session()
 
     def rmcp_ping(self):
         if hasattr(self.interface, 'rmcp_ping'):
@@ -141,7 +129,8 @@ class Session(object):
     interface = property(_get_interface, _set_interface)
 
 class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
-        sdr.Sdr, sensor.Sensor, event.Event, sel.Sel, lan.Lan):
+        sdr.Sdr, sensor.Sensor, event.Event, sel.Sel, lan.Lan,
+        messaging.Messaging):
 
     def __init__(self):
         for base in Ipmi.__bases__:
@@ -162,7 +151,6 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
 
     def send_message(self, req):
         req.target = self.target
-        req.requester = self.requester
 
         retry = 3
         while True:

@@ -254,7 +254,7 @@ class GetChannelAuthenticationCapabilitiesRsp(Message):
             Bitfield.Bit('straight', 1, 0),
             Bitfield.Bit('oem_proprietary', 1, 0),
             Bitfield.ReservedBit(1, 0),
-            Bitfield.Bit('type', 1, 0),
+            Bitfield.Bit('ipmi_2_0', 1, 0),
         ),
         Bitfield('status', 1,
             Bitfield.Bit('anonymous_login_enabled', 1, 0),
@@ -332,4 +332,47 @@ class ActivateSessionRsp(Message):
             Bitfield.Bit('maximum_allowed', 4, 0),
             Bitfield.ReservedBit(4, 0),
         ),
+    )
+
+
+@register_message_class
+class SetSessionPrivilegeLevelReq(Message):
+    __cmdid__ = constants.CMDID_SET_SESSION_PRIVILEGE_LEVEL
+    __netfn__ = constants.NETFN_APP
+    __fields__ = (
+        Bitfield('privilege_level', 1,
+            Bitfield.Bit('requested', 4, 0),
+            Bitfield.ReservedBit(4, 0),
+        ),
+    )
+
+
+@register_message_class
+class SetSessionPrivilegeLevelRsp(Message):
+    __cmdid__ = constants.CMDID_SET_SESSION_PRIVILEGE_LEVEL
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
+        Bitfield('privilege_level', 1,
+            Bitfield.Bit('new', 4, 0),
+            Bitfield.ReservedBit(4, 0),
+        ),
+    )
+
+
+@register_message_class
+class CloseSessionReq(Message):
+    __cmdid__ = constants.CMDID_CLOSE_SESSION
+    __netfn__ = constants.NETFN_APP
+    __fields__ = (
+        UnsignedInt('session_id', 4),
+    )
+
+
+@register_message_class
+class CloseSessionRsp(Message):
+    __cmdid__ = constants.CMDID_CLOSE_SESSION
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
     )
