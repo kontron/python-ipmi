@@ -356,6 +356,7 @@ class FruInventory(object):
         self.chassis_info_area = None
         self.board_info_area = None
         self.product_info_area = None
+        self.multirecord_area = None
 
         if data:
             self._from_data(data)
