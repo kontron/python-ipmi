@@ -14,6 +14,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+from pyipmi.msgs.constants import cc_err_desc
+
+
 class DecodingError(Exception):
     """Error on message decoding."""
     pass
@@ -31,11 +34,15 @@ class TimeoutError(Exception):
 
 class CompletionCodeError(Exception):
     """IPMI completion code not OK."""
-    def __init__(self, cc):
+    def __init__(self, cc, cmd_id=None):
         self.cc = cc
 
     def __str__(self):
-        return "%s cc=0x%02x" % (self.__class__.__name__, self.cc)
+        if self.cc in cc_err_desc.keys():
+            descr=cc_err_desc[self.cc]
+        else:
+            descr= 'unknown'
+        return "%s cc=0x%02x (%s)" % (self.__class__.__name__, self.cc, descr)
 
 
 class NotSupportedError(Exception):
