@@ -4,7 +4,7 @@ from array import array
 
 from nose.tools import eq_
 
-from pyipmi.msgs.messaging import *
+from pyipmi.msgs.device_messaging import *
 
 from pyipmi.errors import DecodingError, EncodingError
 from pyipmi.msgs import encode_message

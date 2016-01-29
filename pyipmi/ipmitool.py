@@ -449,6 +449,8 @@ def main():
             target_address = int(a, 0)
         elif o == '-b':
             target_routing = [(0x20,int(a))]
+        elif o == '-A':
+            authentication_type = a
         elif o == '-H':
             rmcp_host = a
         elif o == '-U':

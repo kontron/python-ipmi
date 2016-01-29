@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+
+from pyipmi.session import Session
 from pyipmi.msgs import create_request_by_name
 from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.utils import check_completion_code
@@ -33,27 +35,36 @@ class Messaging(object):
 
 class ChannelAuthenticationCapabilities(State):
 
+    _functions = {
+        'none': Session.AUTH_TYPE_NONE,
+        'md2': Session.AUTH_TYPE_MD2,
+        'md5': Session.AUTH_TYPE_MD5,
+        'straight': Session.AUTH_TYPE_PASSWORD,
+        'oem_proprietary': Session.AUTH_TYPE_OEM,
+    }
+
     def _from_response(self, rsp):
         self.channel= rsp.channel_number
-
         self.auth_types = []
-        functions = ('none', 'md2', 'md5', 'straight', 'oem_proprietary',
-        'type')
 
-        self.ipmi_2_0 = False
+
         self.ipmi_1_5 = False
+        self.ipmi_2_0 = False
 
         if rsp.support.ipmi_2_0:
             self.ipmi_2_0 = True
         else:
             self.ipmi_1_5 = True
 
-        for function in functions:
+        for function in self._functions.iterkeys():
             if hasattr(rsp.support, function):
                 if getattr(rsp.support, function):
                     self.auth_types.append(function)
 
         self.max_auth_type = self.auth_types[-1]
+
+    def get_max_auth_type(self):
+        return self._functions[self.max_auth_type]
 
     def __str__(self):
         s = 'Authentication Capabilities:\n'

@@ -29,6 +29,7 @@ import sel
 import sensor
 import messaging
 
+from pyipmi.session import Session
 from pyipmi.errors import TimeoutError, CompletionCodeError
 from pyipmi.msgs.registry import create_request_by_name
 from pyipmi.utils import check_completion_code
@@ -65,68 +66,6 @@ class Target(object):
 
         self.routing = [ self.Routing(*r) for r in rinfo ]
 
-class Session(object):
-    AUTH_TYPE_NONE        = 0x00
-    AUTH_TYPE_MD2         = 0x01
-    AUTH_TYPE_MD5         = 0x02
-    AUTH_TYPE_PASSWORD    = 0x04
-    AUTH_TYPE_OEM         = 0x05
-
-    PRIV_LEVEL_USER = 2
-    PRIV_LEVEL_OPERATOR = 3
-    PRIV_LEVEL_ADMINISTRATOR = 4
-    PRIV_LEVEL_OEM = 5
-
-    def __init__(self):
-        self.set_auth_type(self.AUTH_TYPE_NONE)
-        self.established = False
-        self._session_id = 0
-        self._auth_username = None
-        self._auth_password = None
-
-    def _get_interface(self):
-        try:
-            return self._interface
-        except AttributeError:
-            raise RuntimeError('No interface has been set')
-
-    def _set_interface(self, interface):
-        self._interface = interface
-
-    def set_session_type_rmcp(self, host, port=623):
-        self._rmcp_host = host
-        self._rmcp_port = port
-
-    def set_auth_type(self, auth_type):
-        self.auth_type = auth_type
-
-    def get_auth_type(self):
-        return self.auth_type
-
-    def set_auth_type_user(self, username, password):
-        self.set_auth_type(self.AUTH_TYPE_PASSWORD)
-        self._auth_username = username
-        self._auth_password = password
-
-    def set_session_id(self, session_id):
-        self._session_id = session_id
-
-    def get_session_id(self):
-        return self._session_id
-
-    def establish(self):
-        if hasattr(self.interface, 'establish_session'):
-            self.interface.establish_session(self)
-
-    def close(self):
-        if hasattr(self.interface, 'close_session'):
-            self.interface.close_session()
-
-    def rmcp_ping(self):
-        if hasattr(self.interface, 'rmcp_ping'):
-            self.interface.rmcp_ping()
-
-    interface = property(_get_interface, _set_interface)
 
 class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
         sdr.Sdr, sensor.Sensor, event.Event, sel.Sel, lan.Lan,

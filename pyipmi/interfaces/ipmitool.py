@@ -14,13 +14,15 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+
 import re
 from subprocess import Popen, PIPE
 from array import array
-from pyipmi import Session
+from pyipmi.session import Session
 from pyipmi.errors import TimeoutError
 from pyipmi.logger import log
 from pyipmi.msgs import encode_message, decode_message, create_message
+
 
 class Ipmitool(object):
     """This interface uses the ipmitool raw command to "emulate" a RMCP
@@ -134,9 +136,20 @@ class Ipmitool(object):
             raise RuntimeError('Session needs to be set')
 
         cmd = self.IPMITOOL_PATH
+
         cmd += (' -I %s' % self._interface_type)
         cmd += (' -H %s' % self._session._rmcp_host)
         cmd += (' -p %s' % self._session._rmcp_port)
+
+        if self._session.auth_type != Session.AUTH_TYPE_NONE:
+            if self._session._auth_username is not None:
+                cmd += (' -U "%s"' % self._session._auth_username)
+
+            if self._session._auth_password is not None:
+                cmd += (' -P "%s"' % self._session._auth_password)
+            else:
+                raise RuntimeError('Session type %d not supported' %
+                        self._session.auth_type)
 
         if hasattr(target, 'routing'):
             # we have to do bridging here
@@ -154,14 +167,6 @@ class Ipmitool(object):
         if target.ipmb_address:
             cmd += (' -t 0x%02x' % target.ipmb_address)
 
-        if self._session.auth_type == Session.AUTH_TYPE_NONE:
-            cmd += ' -P ""'
-        elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
-            cmd += (' -U "%s"' % self._session._auth_username)
-            cmd += (' -P "%s"' % self._session._auth_password)
-        else:
-            raise RuntimeError('Session type %d not supported' %
-                    self._session.auth_type)
 
         cmd += (' %s' % cmd_data)
         cmd += (' 2>&1')
