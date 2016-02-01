@@ -57,7 +57,7 @@ class Aardvark(object):
         # just remember session parameters here
         self._session = session
 
-    def close_session(self, session):
+    def close_session(self):
         self._dev.close()
 
     def is_ipmc_accessible(self, target):
@@ -105,13 +105,12 @@ class Aardvark(object):
 
     def _send_raw(self, header, raw_bytes):
 
-        cmd_data =  [ord(c) for c in raw_bytes]
-        tx_data = encode_ipmb_msg(header, cmd_data)
+        tx_data = encode_ipmb_msg(header, raw_bytes)
 
         i2c_addr = header.rs_sa >> 1
-        self._dev.i2c_master_write(i2c_addr, tx_data[1:].tostring())
+        self._dev.i2c_master_write(i2c_addr, tx_data[1:])
         log().debug('I2C TX to %02Xh [%s]', i2c_addr,
-                ' '.join(['%02x' % b for b in tx_data[1:]]))
+                ' '.join(['%02x' % ord(b) for b in tx_data[1:]]))
 
     def _receive_raw(self, header):
         start_time = time.time()
@@ -141,7 +140,7 @@ class Aardvark(object):
 
         return rx_data
 
-    def _send_and_receive(self, target, lun, netfn, cmdid, payload):
+    def _send_and_receive(self, target, lun, netfn, cmdid, raw_bytes):
         self._inc_sequence_number()
 
         # assemble IPMB header
@@ -157,7 +156,7 @@ class Aardvark(object):
         retries = 0
         while retries < self.max_retries:
             try:
-                self._send_raw(header, payload)
+                self._send_raw(header, raw_bytes)
                 rx_data = self._receive_raw(header)
                 break
             except TimeoutError:

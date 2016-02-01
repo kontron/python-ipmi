@@ -42,7 +42,9 @@ class IpmbHeader(object):
         return data
 
 def encode_ipmb_msg(header, data):
+    if type(data) == str:
+        data =  [ord(c) for c in data]
     msg = header.encode()
     msg.extend(data)
     msg.append(checksum(msg[3:]))
-    return msg
+    return msg.tostring()

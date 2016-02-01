@@ -21,7 +21,6 @@ RMCP_CLASS_IPMI = 0x07
 RMCP_CLASS_OEM = 0x08
 
 
-
 class RmcpMsg:
     RMCP_HEADER_FORMAT = '!BxBB'
     ASF_RMCP_V_1_0  = 6
@@ -287,17 +286,19 @@ class Rmcp:
         rmcp = RmcpMsg(class_of_msg)
         pdu = rmcp.pack(sdu, self.seq_number)
 
-        if self._debug:
-            print 'TX: %s' %(' '.join('%02x' % ord(b) for b in pdu))
+        log().debug('TX: %s' %(' '.join('%02x' % ord(b) for b in pdu)))
 
         self._sock.sendto(pdu, (self.host, self.port))
         if self.seq_number != 255:
             self.seq_number = (self.seq_number + 1) % 254
 
     def _receive(self):
-        (pdu, _) = self._sock.recvfrom(4096)
-        if self._debug:
-            print 'RX: %s' %(' '.join('%02x' % ord(b) for b in pdu))
+        try:
+            (pdu, _) = self._sock.recvfrom(4096)
+        except:
+            raise
+
+        log().debug('RX: %s' %(' '.join('%02x' % ord(b) for b in pdu)))
 
         rmcp = RmcpMsg()
         sdu = rmcp.unpack(pdu)
@@ -309,21 +310,25 @@ class Rmcp:
         self._sock.settimeout(timeout)
 
     def _send_ipmi_msg(self, data):
+        log().debug('TX: IPMI msg')
         ipmi = IpmiMsg(self._session)
         self._send_rmcp_msg(ipmi.pack(data), RMCP_CLASS_IPMI)
 
     def _receive_ipmi_msg(self):
         (_, class_of_msg, pdu) = self._receive()
+        log().debug('RX: IPMI msg')
         if class_of_msg != RMCP_CLASS_IPMI:
             raise DecodingError('invalid class field in ASF message')
         msg = IpmiMsg()
         return msg.unpack(pdu)
 
     def _send_asf_msg(self, msg):
+        log().debug('TX: ASF msg')
         self._send_rmcp_msg(msg.pack(), RMCP_CLASS_ASF)
 
     def _receive_asf_msg(self, cls):
         (_, class_of_msg, data) = self._receive()
+        log().debug('RX: ASF msg')
         if class_of_msg != RMCP_CLASS_ASF:
             raise DecodingError('invalid class field in ASF message')
         msg = cls()
@@ -392,7 +397,7 @@ class Rmcp:
 
         caps = self._get_channel_auth_cap()
 
-        session.auth_type = caps.get_max_auth_type
+        session.auth_type = caps.get_max_auth_type()
         rsp = self._get_session_challenge(session)
         session_challenge = rsp.challenge_string
         #print session
@@ -431,9 +436,7 @@ class Rmcp:
         header.rq_sa = self.slave_address
         header.cmd_id = cmdid
 
-        cmd_data =  [ord(c) for c in payload]
-        tx_data = encode_ipmb_msg(header, cmd_data)
-        self._send_ipmi_msg(tx_data.tostring())
+        self._send_ipmi_msg(encode_ipmb_msg(header, payload))
         data = self._receive_ipmi_msg()
         if self._debug:
             print 'RX IPMI: %s' %(' '.join('%02x' % ord(b) for b in data))
