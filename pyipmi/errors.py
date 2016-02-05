@@ -38,10 +38,9 @@ class CompletionCodeError(Exception):
         self.cc = cc
 
     def __str__(self):
+        descr = 'unknown'
         if self.cc in cc_err_desc.keys():
-            descr=cc_err_desc[self.cc]
-        else:
-            descr= 'unknown'
+            descr = cc_err_desc[self.cc]
         return "%s cc=0x%02x (%s)" % (self.__class__.__name__, self.cc, descr)
 
 
