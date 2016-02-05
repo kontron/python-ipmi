@@ -171,8 +171,8 @@ class GetMessageRsp(Message):
     __netfn__ = constants.NETFN_APP | 1
     __fields__ = (
         CompletionCode(),
-        Bitfield('channel_number', 1,
-            Bitfield.Bit('channel_number', 4, 0),
+        Bitfield('channel', 1,
+            Bitfield.Bit('number', 4, 0),
             Bitfield.Bit('privilege_level', 4, 0),
         ),
         RemainingBytes('data'),
