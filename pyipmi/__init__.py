@@ -114,20 +114,16 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
 
         self.is_ipmc_accessible()
 
-    def send_message(self, req):
+    def send_message(self, req, retry=3):
         req.target = self.target
 
-        retry = 3
-        while True:
-            retry -= 1
+        for islast in map(lambda x: x == retry-1, range(retry)):
             try:
                 rsp = self.interface.send_and_receive(req)
                 break
             except CompletionCodeError, e:
-                if e.cc == msgs.constants.CC_NODE_BUSY:
-                    retry -= 1
-                    continue
-
+                if islast or e.cc != msgs.constants.CC_NODE_BUSY:
+                    raise e
         return rsp
 
     def send_message_with_name(self, name, *args, **kwargs):
