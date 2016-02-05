@@ -62,9 +62,35 @@ class Target(object):
 
         The path is given as a list of tuples in the form (address,
         bridge_channel).
+
+        Example:  slave = 0x81, target = 0x72
+                  routing = [(0x20,0),(0x82,7)]
+
+
+                       +-------------------+             +--------+
+                       |       +-----------|             |        |
+                       | ShMC  |CM         |             |        |
+            channel=0  |       |           |  channel=7  |        |
+        81 ------------| 0x20  |0x82  0x20 |-------------| 0x72   |
+                       |       |           |             |        |
+                       |       +-----------|             |        |
+                       +-------------------+             +--------+
+
+
         """
 
         self.routing = [ self.Routing(*r) for r in rinfo ]
+
+    def __str__(self):
+        s = 'Target:\n'
+        s += '  ipmb: 0x%02x\n' % self.ipmb_address
+
+        if hasattr(self, 'routing'):
+            for r in self.routing:
+                s += ' r: 0x%02x 0x%x\n' % (r.address, r.bridge_channel)
+        return s
+
+
 
 
 class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
