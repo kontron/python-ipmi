@@ -20,9 +20,9 @@ import pyipmi.msgs.constants
 from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.msgs import create_request_by_name
 
-def check_completion_code(cc):
+def check_completion_code(cc, cmd_id=None):
     if cc != pyipmi.msgs.constants.CC_OK:
-        raise pyipmi.errors.CompletionCodeError(cc)
+        raise pyipmi.errors.CompletionCodeError(cc, cmd_id=cmd_id)
 
 def chunks(d, n):
     for i in xrange(0, len(d), n):
