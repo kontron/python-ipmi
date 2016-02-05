@@ -80,6 +80,8 @@ cc_err_desc = {
     CC_UNSPECIFIED_ERROR: 'Unspecified error',
 }
 
+
+
 # network functions
 NETFN_CHASSIS          = 0x00
 NETFN_BRIDGE           = 0x02
@@ -268,3 +270,22 @@ CMDID_HPM_ACTIVATE_FIRMWARE = 0x35
 CMDID_HPM_QUERY_SELFTEST_RESULTS = 0x36
 CMDID_HPM_QUERY_ROLLBACK_STATUS = 0x37
 CMDID_HPM_INITIATE_MANUAL_ROLLBACK = 0x38
+
+cc_err_cmd_specific_desc = {
+    CMDID_GET_SESSION_CHALLENGE: {
+        0x81: 'invalid user name',
+        0x82: 'null user name (User 1) not enabled',
+    },
+
+    CMDID_ACTIVATE_SESSION: {
+        0x81: 'No session slot available (BMC cannot accept any more'
+                ' sessions)',
+        0x82: 'No slot available for given user',
+        0x83: 'No slot available to support user due to maximum privilege'
+                ' capability',
+        0x84: 'session sequence number out-of-range',
+        0x85: 'invalid Session ID in request',
+        0x86: 'requested maximum privilege level exceeds user and/or channel'
+                ' privilege limit',
+    },
+}
