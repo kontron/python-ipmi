@@ -20,7 +20,8 @@ import array
 from pyipmi.msgs import create_message, encode_message, decode_message
 from pyipmi.errors import TimeoutError
 from pyipmi.logger import log
-from pyipmi.interfaces.ipmb import IpmbHeader, checksum, encode_ipmb_msg
+from pyipmi.interfaces.ipmb import IpmbHeader, checksum, encode_ipmb_msg, \
+        rx_filter
 
 try:
     import pyaardvark
@@ -78,30 +79,30 @@ class Aardvark(object):
     def _inc_sequence_number(self):
         self.next_sequence_number = (self.next_sequence_number + 1) % 64
 
-    def _rx_filter(self, header, rx_data):
-
-        log().debug('[%s]' % ' '.join(['%02x' % b for b in rx_data]))
-
-        checks = [
-            (checksum(rx_data[0:3]), 0, 'Header checksum failed'),
-            (checksum(rx_data[3:]), 0, 'payload checksum failed'),
-            (rx_data[0], header.rq_sa, 'slave address mismatch'),
-            (rx_data[1] & ~3, header.netfn << 2 | 4, 'NetFn mismatch'),
-            (rx_data[3], header.rs_sa, 'target address mismatch'),
-            (rx_data[1] & 3, header.rq_lun, 'request LUN mismatch'),
-            (rx_data[4] & 3, header.rs_lun & 3, 'responder LUN mismatch'),
-            (rx_data[4] >> 2, header.rq_seq, 'sequence number mismatch'),
-            (rx_data[5], header.cmd_id, 'command id mismatch'),
-        ]
-
-        match = True
-
-        for left, right, msg in checks:
-            if left != right:
-                log().debug('%s (%02Xh != %02Xh)' % (msg, left, right))
-                match = False
-
-        return match
+#    def _rx_filter(self, header, rx_data):
+#
+#        log().debug('[%s]' % ' '.join(['%02x' % b for b in rx_data]))
+#
+#        checks = [
+#            (checksum(rx_data[0:3]), 0, 'Header checksum failed'),
+#            (checksum(rx_data[3:]), 0, 'payload checksum failed'),
+#            (rx_data[0], header.rq_sa, 'slave address mismatch'),
+#            (rx_data[1] & ~3, header.netfn << 2 | 4, 'NetFn mismatch'),
+#            (rx_data[3], header.rs_sa, 'target address mismatch'),
+#            (rx_data[1] & 3, header.rq_lun, 'request LUN mismatch'),
+#            (rx_data[4] & 3, header.rs_lun & 3, 'responder LUN mismatch'),
+#            (rx_data[4] >> 2, header.rq_seq, 'sequence number mismatch'),
+#            (rx_data[5], header.cmd_id, 'command id mismatch'),
+#        ]
+#
+#        match = True
+#
+#        for left, right, msg in checks:
+#            if left != right:
+#                log().debug('%s (%02Xh != %02Xh)' % (msg, left, right))
+#                match = False
+#
+#        return match
 
     def _send_raw(self, header, raw_bytes):
 
@@ -136,7 +137,7 @@ class Aardvark(object):
             rx_data = array.array('B', rx_data)
             rq_sa = array.array('B', [i2c_addr << 1,])
 
-            rsp_received = self._rx_filter(header, rq_sa + rx_data)
+            rsp_received = rx_filter(header, rq_sa + rx_data)
 
         return rx_data
 

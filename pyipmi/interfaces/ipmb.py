@@ -48,3 +48,27 @@ def encode_ipmb_msg(header, data):
     msg.extend(data)
     msg.append(checksum(msg[3:]))
     return msg.tostring()
+
+def rx_filter(header, rx_data):
+    if type(rx_data) == str:
+        rx_data = array.array('B', rx_data)
+
+    checks = [
+        (checksum(rx_data[0:3]), 0, 'Header checksum failed'),
+        (checksum(rx_data[3:]), 0, 'payload checksum failed'),
+        (rx_data[0], header.rq_sa, 'slave address mismatch'),
+        (rx_data[1] & ~3, header.netfn << 2 | 4, 'NetFn mismatch'),
+        (rx_data[3], header.rs_sa, 'target address mismatch'),
+        (rx_data[1] & 3, header.rq_lun, 'request LUN mismatch'),
+        (rx_data[4] & 3, header.rs_lun & 3, 'responder LUN mismatch'),
+        (rx_data[4] >> 2, header.rq_seq, 'sequence number mismatch'),
+        (rx_data[5], header.cmd_id, 'command id mismatch'),
+    ]
+
+    match = True
+
+    for left, right, msg in checks:
+        if left != right:
+            match = False
+
+    return match
