@@ -180,6 +180,30 @@ class GetMessageRsp(Message):
 
 
 @register_message_class
+class SendMessageReq(Message):
+    __cmdid__ = constants.CMDID_SEND_MESSAGE
+    __netfn__ = constants.NETFN_APP
+    __fields__ = (
+        Bitfield('channel', 1,
+            Bitfield.Bit('number', 4, 0),
+            Bitfield.Bit('authenticated', 1, 0),
+            Bitfield.Bit('encrypted', 1, 0),
+            Bitfield.Bit('tracking', 2, 0),
+        ),
+    )
+
+
+@register_message_class
+class SendMessageRsp(Message):
+    __cmdid__ = constants.CMDID_SEND_MESSAGE
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
+        RemainingBytes('data'),
+    )
+
+
+@register_message_class
 class ReadEventMessageBufferReq(Message):
     __cmdid__ = constants.CMDID_READ_EVENT_MESSAGE_BUFFER
     __netfn__ = constants.NETFN_APP
