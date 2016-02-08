@@ -57,21 +57,19 @@ class TestIpmiMsg:
     def test_ipmimsg_pack_with_data(self):
         data = array.array('B', (1,2,3,4)).tostring()
         m = IpmiMsg()
-        m.auth_type = 0
-        m.sequence_number = 0
-        m.session_id = 0
         pdu = m.pack(data)
         eq_(pdu, '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x01\x02\x03\x04')
 
-#    def test_ipmimsg_pack_auth(self):
-#        s = Session()
-#        s.set_auth_type(1)
-#        m = IpmiMsg()
-#        m.auth_code = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
-#        pdu = m.pack(None)
-#        eq_(pdu,
-#        '\x04\x00\x00\x00\x00\x00\x00\x00\x00secret\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
-#
+    def test_ipmimsg_pack_with_session(self):
+        s = Session()
+        s.set_auth_type_user('admin', 'admin')
+        s.sequence_number= 0x14131211
+        s.sid = 0x18171615
+        m = IpmiMsg(session=s)
+        pdu = m.pack(None)
+        eq_(pdu,
+        '\x04\x11\x12\x13\x14\x15\x16\x17\x18admin\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+
     def test_ipmimsg_pack_auth_md5(self):
         s = Session()
         s.set_auth_type_user('admin', 'admin')
