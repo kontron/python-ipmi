@@ -47,7 +47,6 @@ class ChannelAuthenticationCapabilities(State):
         self.channel= rsp.channel_number
         self.auth_types = []
 
-
         self.ipmi_1_5 = False
         self.ipmi_2_0 = False
 
@@ -61,10 +60,11 @@ class ChannelAuthenticationCapabilities(State):
                 if getattr(rsp.support, function):
                     self.auth_types.append(function)
 
-        self.max_auth_type = self.auth_types[-1]
-
     def get_max_auth_type(self):
-        return self._functions[self.max_auth_type]
+        for auth_type in ('md5', 'md2', 'straight', 'oem_proprietary', 'none'):
+            if auth_type in self.auth_types:
+                return self._functions[auth_type]
+        return None
 
     def __str__(self):
         s = 'Authentication Capabilities:\n'
