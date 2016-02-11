@@ -70,6 +70,6 @@ class ChannelAuthenticationCapabilities(State):
         s = 'Authentication Capabilities:\n'
         s += '  IPMI v1.5: %s\n' % self.ipmi_1_5
         s += '  IPMI v2.0: %s\n' % self.ipmi_2_0
-        s += '  Auth. types: %s' % ' '.join(self.auth_types)
-        s += '\n'
+        s += '  Auth. types: %s\n' % ' '.join(self.auth_types)
+        s += '  Max Auth. type: %s\n' % self.get_max_auth_type()
         return s
