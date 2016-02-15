@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -15,6 +16,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 import time
+import ast
 
 import bmc
 import chassis
@@ -50,47 +52,63 @@ def create_connection(interface):
 class Target(object):
     '''The Target class represents an IPMI target.'''
     class Routing:
-        def __init__(self, address, bridge_channel):
-            self.address = address
-            self.bridge_channel = bridge_channel
+        def __init__(self, rq_sa, rs_sa, channel):
+            self.rq_sa = rq_sa
+            self.rs_sa = rs_sa
+            self.channel = channel
+
+        def __str__(self):
+            s = 'Routing: Rq: %s Rs: %s Ch: %s' \
+                    % (self.rq_sa, self.rs_sa, self.channel)
+            return s
 
     def __init__(self, ipmb_address):
         self.ipmb_address = ipmb_address
+        self.routing = None
 
-    def set_routing_information(self, rinfo):
+    def set_routing(self, rinfo):
         """Set the path over which a target is reachable.
 
         The path is given as a list of tuples in the form (address,
         bridge_channel).
 
-        Example:  slave = 0x81, target = 0x72
-                  routing = [(0x20,0),(0x82,7)]
+        Example:  access to an AMC in a uTCA chassis
+              slave = 0x81, target = 0x72
+              routing = [(None,0x20,0),(0x20,0x82,7),(0x20,None,None)]
 
 
-                       +-------------------+             +--------+
-                       |       +-----------|             |        |
-                       | ShMC  |CM         |             |        |
+                         uTCA - MCH                        AMC
+                       .-------------------.             .--------.
+                       |       .-----------|             |        |
+                       | ShMC  | CM        |             | MMC    |
             channel=0  |       |           |  channel=7  |        |
         81 ------------| 0x20  |0x82  0x20 |-------------| 0x72   |
                        |       |           |             |        |
-                       |       +-----------|             |        |
-                       +-------------------+             +--------+
+                       |       |           |             |        |
+                       |       `-----------|             |        |
+                       `-------------------´             `--------´
+         \              /   \     /      \                 /
+          `------------´     `---´        `---------------´
 
+        Example:
 
         """
+        if type(rinfo) == str:
+            rinfo = ast.literal_eval(rinfo)
 
         self.routing = [ self.Routing(*r) for r in rinfo ]
 
+#    def get_routing_information(self):
+#        if self.routing is not None:
+#            self.routing[0].rs_sa = self.target
+
+
     def __str__(self):
-        s = 'Target:\n'
-        s += '  ipmb: 0x%02x\n' % self.ipmb_address
-
-        if hasattr(self, 'routing'):
+        s = 'Target: IPMB: 0x%02x\n' % self.ipmb_address
+        if self.routing:
             for r in self.routing:
-                s += ' r: 0x%02x 0x%x\n' % (r.address, r.bridge_channel)
+                s += ' %s\n' % r
         return s
-
-
 
 
 class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
