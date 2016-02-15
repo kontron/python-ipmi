@@ -16,6 +16,9 @@
 
 import array
 
+from pyipmi.logger import log
+from pyipmi.msgs import create_request_by_name, encode_message
+
 def checksum(data):
     csum = 0
     for b in data:
@@ -48,6 +51,38 @@ def encode_ipmb_msg(header, data):
     msg.extend(data)
     msg.append(checksum(msg[3:]))
     return msg.tostring()
+
+def encode_send_message(payload, rq_sa, rs_sa, channel, seq, tracking=1):
+        req = create_request_by_name('SendMessage')
+        req.channel.number = channel
+        req.channel.tracking = tracking
+        header = IpmbHeader()
+        header.netfn = req.__netfn__
+        header.rs_lun = 0
+        header.rs_sa = rs_sa
+        header.rq_seq = seq
+        header.rq_lun = 0
+        header.rq_sa = rq_sa
+        header.cmd_id = req.__cmdid__
+        data = encode_message(req)
+        return encode_ipmb_msg(header, data + payload)
+
+def encode_bridged_message(routing, header, payload, seq):
+    log().debug('build bridged message')
+
+    if len(routing) < 2:
+        raise EncodingError('routing length error')
+
+    # change header requester addresses for bridging
+    header.rq_sa = routing[0].rq_sa
+    header.rs_sa = routing[0].rs_sa
+    tx_data = encode_ipmb_msg(header, payload)
+
+    for r in routing[1:]:
+        tx_data = encode_send_message(tx_data, rq_sa=r.rq_sa,
+                    rs_sa=r.rs_sa, channel=r.channel, seq=seq)
+
+    return tx_data
 
 def rx_filter(header, rx_data):
     if type(rx_data) == str:
