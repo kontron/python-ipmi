@@ -68,17 +68,15 @@ def encode_send_message(payload, rq_sa, rs_sa, channel, seq, tracking=1):
         return encode_ipmb_msg(header, data + payload)
 
 def encode_bridged_message(routing, header, payload, seq):
-    log().debug('build bridged message')
-
     if len(routing) < 2:
         raise EncodingError('routing length error')
 
     # change header requester addresses for bridging
-    header.rq_sa = routing[0].rq_sa
-    header.rs_sa = routing[0].rs_sa
+    header.rq_sa = routing[-1].rq_sa
+    header.rs_sa = routing[-1].rs_sa
     tx_data = encode_ipmb_msg(header, payload)
 
-    for r in routing[1:]:
+    for r in reversed(routing[:-1]):
         tx_data = encode_send_message(tx_data, rq_sa=r.rq_sa,
                     rs_sa=r.rs_sa, channel=r.channel, seq=seq)
 
