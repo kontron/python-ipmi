@@ -30,8 +30,8 @@ using the `ipmitool`_ as backend.
 
     connection = pyipmi.create_connection(interface)
 
-    connection.target = pyipmi.Target(0xb2)
-    connection.target.set_routing_information([(0x20,0)])
+    connection.target = pyipmi.Target(0x82)
+    connection.target.set_routing([(0x81,0x20,0),(0x20,0x82,7)])
 
     connection.session.set_session_type_rmcp('10.0.0.1', port=623)
     connection.session.set_auth_type_user('admin', 'admin')
@@ -43,7 +43,7 @@ ipmitool command:
 
 .. code:: shell
 
-    ipmitool -I lan -H 10.0.0.1 -p 623 -b 0 -t 0xb2 -U "admin" -P "admin" -l 0 raw 0x06 0x01
+    ipmitool -I lan -H 10.0.0.1 -p 623 -U "admin" -P "admin" -t 0x82 -b 0 -l 0 raw 0x06 0x01
 
 Compatibility
 -------------
