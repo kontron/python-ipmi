@@ -66,15 +66,22 @@ class Target(object):
         self.ipmb_address = ipmb_address
         self.routing = None
 
-    def set_routing(self, rinfo):
+    def set_routing_information(self, routing):
+        self.set_routing(routing)
+
+    def set_routing(self, routing):
         """Set the path over which a target is reachable.
 
         The path is given as a list of tuples in the form (address,
         bridge_channel).
 
-        Example:  access to an AMC in a uTCA chassis
+        Example #1: access to an ATCA blade in a chassis
+              slave = 0x81, target = 0x82
+              rotuing = [(0x81,0x20,0),(0x20,0x82,7)]
+
+        Example #2: access to an AMC in a uTCA chassis
               slave = 0x81, target = 0x72
-              routing = [(None,0x20,0),(0x20,0x82,7),(0x20,None,None)]
+              routing = [(0x81,0x20,0),(0x20,0x82,7),(0x20,0x72,None)]
 
 
                          uTCA - MCH                        AMC
@@ -90,18 +97,17 @@ class Target(object):
          \              /   \     /      \                 /
           `------------´     `---´        `---------------´
 
-        Example:
+        Example #3: access to an AMC in a ATCA AMC carrier
+
+        slave = 0x81, target = 0x72
+        routing = [(0x81,0x20,0),(0x20,0x8e,7),(0x20,0x80,None)]
 
         """
-        if type(rinfo) == str:
-            rinfo = ast.literal_eval(rinfo)
+        if type(routing) in  [unicode, str]:
+            routing = ast.literal_eval(routing)
 
-        self.routing = [ self.Routing(*r) for r in rinfo ]
-
-#    def get_routing_information(self):
-#        if self.routing is not None:
-#            self.routing[0].rs_sa = self.target
-
+        print routing
+        self.routing = [ self.Routing(*r) for r in routing ]
 
     def __str__(self):
         s = 'Target: IPMB: 0x%02x\n' % self.ipmb_address
