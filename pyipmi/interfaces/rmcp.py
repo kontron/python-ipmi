@@ -1,16 +1,18 @@
 import socket
 import struct
-import array
 import hashlib
+import random
+import threading
 
 from pyipmi import Target
 from pyipmi.session import Session
 from pyipmi.msgs import create_message, create_request_by_name, \
-        encode_message, decode_message, device_messaging
+        encode_message, decode_message, device_messaging, constants
 from pyipmi.messaging import ChannelAuthenticationCapabilities
-from pyipmi.errors import DecodingError, NotSupportedError
+from pyipmi.errors import DecodingError, NotSupportedError, CompletionCodeError
 from pyipmi.logger import log
-from pyipmi.interfaces.ipmb import IpmbHeader, checksum, encode_ipmb_msg
+from pyipmi.interfaces.ipmb import IpmbHeader, checksum, encode_ipmb_msg, \
+        encode_send_message, encode_bridged_message, rx_filter
 from pyipmi.utils import check_completion_code
 
 CLASS_NORMAL_MSG = 0x00
@@ -20,6 +22,18 @@ RMCP_CLASS_ASF = 0x06
 RMCP_CLASS_IPMI = 0x07
 RMCP_CLASS_OEM = 0x08
 
+def call_repeatedly(interval, func, *args):
+    stopped = threading.Event()
+
+    def loop():
+        while not stopped.wait(interval): # the first call is in `interval` secs
+            func(*args)
+
+    t = threading.Thread(target=loop)
+    t.daemon = True
+    t.start()
+
+    return stopped.set
 
 class RmcpMsg:
     RMCP_HEADER_FORMAT = '!BxBB'
@@ -196,6 +210,8 @@ class IpmiMsg():
 
         if self.session is not None:
             auth_type = self.session.auth_type
+            if self.session.activated:
+                self.session.increment_sequence_number()
         else:
             auth_type = Session.AUTH_TYPE_NONE
 
@@ -271,7 +287,8 @@ class Rmcp:
 
     _session = None
 
-    def __init__(self, slave_address=0x81, host_target_address=0x20):
+    def __init__(self, slave_address=0x81, host_target_address=0x20,
+            keep_alive_interval=5):
         self.host = None
         self.port = None
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -280,55 +297,47 @@ class Rmcp:
         self.host_target = Target(host_target_address)
         self.set_timeout(2.0)
         self.next_sequence_number = 0
-        self._debug = False
+        self.keep_alive_interval = keep_alive_interval
+        self._stop_keep_alive = None
 
     def _send_rmcp_msg(self, sdu, class_of_msg):
         rmcp = RmcpMsg(class_of_msg)
         pdu = rmcp.pack(sdu, self.seq_number)
-
-        log().debug('TX: %s' %(' '.join('%02x' % ord(b) for b in pdu)))
-
         self._sock.sendto(pdu, (self.host, self.port))
         if self.seq_number != 255:
             self.seq_number = (self.seq_number + 1) % 254
 
     def _receive(self):
-        try:
-            (pdu, _) = self._sock.recvfrom(4096)
-        except:
-            raise
-
-        log().debug('RX: %s' %(' '.join('%02x' % ord(b) for b in pdu)))
-
+        (pdu, _) = self._sock.recvfrom(4096)
         rmcp = RmcpMsg()
         sdu = rmcp.unpack(pdu)
-
-
         return (rmcp.seq_number, rmcp.class_of_msg, sdu)
 
     def set_timeout(self, timeout):
         self._sock.settimeout(timeout)
 
     def _send_ipmi_msg(self, data):
-        log().debug('TX: IPMI msg')
+        log().debug('IPMI TX: %s' %(' '.join('%02x' % ord(b) for b in data)))
         ipmi = IpmiMsg(self._session)
-        self._send_rmcp_msg(ipmi.pack(data), RMCP_CLASS_IPMI)
+        tx_data = ipmi.pack(data)
+        self._send_rmcp_msg(tx_data, RMCP_CLASS_IPMI)
 
     def _receive_ipmi_msg(self):
         (_, class_of_msg, pdu) = self._receive()
-        log().debug('RX: IPMI msg')
         if class_of_msg != RMCP_CLASS_IPMI:
             raise DecodingError('invalid class field in ASF message')
         msg = IpmiMsg()
-        return msg.unpack(pdu)
+        rx_data = msg.unpack(pdu)
+        log().debug('IPMI RX: %s' %(' '.join('%02x' % ord(b) for b in rx_data)))
+        return rx_data
 
     def _send_asf_msg(self, msg):
-        log().debug('TX: ASF msg')
+        log().debug('ASF TX: msg')
         self._send_rmcp_msg(msg.pack(), RMCP_CLASS_ASF)
 
     def _receive_asf_msg(self, cls):
         (_, class_of_msg, data) = self._receive()
-        log().debug('RX: ASF msg')
+        log().debug('ASF: msg')
         if class_of_msg != RMCP_CLASS_ASF:
             raise DecodingError('invalid class field in ASF message')
         msg = cls()
@@ -350,8 +359,6 @@ class Rmcp:
         rsp = self.send_and_receive(req)
         check_completion_code(rsp.completion_code)
         caps = ChannelAuthenticationCapabilities(rsp)
-        if self._debug:
-            print caps
         return caps
 
     def _get_session_challenge(self, session):
@@ -374,7 +381,7 @@ class Rmcp:
                         Session.PRIV_LEVEL_ADMINISTRATOR
         req.challenge_string = challenge
         req.session_id = self._session.sid
-        req.initial_outbound_sequence_number = 5
+        req.initial_outbound_sequence_number = random.randrange(1, 0xffffffff)
         rsp = self.send_and_receive(req)
         check_completion_code(rsp.completion_code)
         return rsp
@@ -387,39 +394,63 @@ class Rmcp:
         check_completion_code(rsp.completion_code)
         return rsp
 
+    def _get_device_id(self):
+        req = create_request_by_name('GetDeviceId')
+        req.target = self.host_target
+        rsp = self.send_and_receive(req)
+        check_completion_code(rsp.completion_code)
+
     def establish_session(self, session):
+        self._session = None
         self.host = session._rmcp_host
         self.port = session._rmcp_port
 
-        self._session = None
-
+        # 0 - Ping
         self.ping()
 
+        # 1 - Get Channel Authentication Capabilities
         caps = self._get_channel_auth_cap()
+        log().debug('%s' % caps)
 
+        # 2 - Get Session Challenge
+        log().debug('Get Session Challenge')
         session.auth_type = caps.get_max_auth_type()
         rsp = self._get_session_challenge(session)
         session_challenge = rsp.challenge_string
-        #print session
-
-        # now set session
+        session.sid = rsp.temporary_session_id
         self._session = session
-        self._session.sid = rsp.temporary_session_id
 
+        # 3 - Activate Session
+        log().debug('Activate Session')
         rsp = self._activate_session(session, session_challenge)
         self._session.sid = rsp.session_id
         self._session.sequence_number = rsp.initial_inbound_sequence_number
-        #print self._session
+        self._session.activated = True
 
-        # set session privilege level
-        rsp = self._set_session_privilege_level(Session.PRIV_LEVEL_ADMINISTRATOR)
+        log().debug('Set Session Privilege Level')
+        # 4 - Set Session Privilege Level
+        self._set_session_privilege_level(Session.PRIV_LEVEL_ADMINISTRATOR)
+
+        log().debug('Session opened')
+
+        self._stop_keep_alive = call_repeatedly( \
+                self.keep_alive_interval, self._get_device_id)
 
     def close_session(self):
+        if self._stop_keep_alive:
+            self._stop_keep_alive()
+
+        if self._session.activated is False:
+            log().debug('Session already cloased')
+            return
+
+        log().debug('Close Session %s' % self._session)
         req = create_request_by_name('CloseSession')
         req.target = self.host_target
         req.session_id = self._session.sid
         rsp = self.send_and_receive(req)
         check_completion_code(rsp.completion_code)
+        self._session.activated = False
 
     def _inc_sequence_number(self):
         self.next_sequence_number = (self.next_sequence_number + 1) % 64
@@ -436,23 +467,46 @@ class Rmcp:
         header.rq_sa = self.slave_address
         header.cmd_id = cmdid
 
-        self._send_ipmi_msg(encode_ipmb_msg(header, payload))
-        data = self._receive_ipmi_msg()
-        if self._debug:
-            print 'RX IPMI: %s' %(' '.join('%02x' % ord(b) for b in data))
+        # Bridge message
+        if target.routing:
+            header.rq_sa = target.routing[-1].rq_sa
+            header.rs_sa = target.routing[-1].rs_sa
+            tx_data = encode_bridged_message(target.routing, header,
+                                    payload, self.next_sequence_number)
+        else:
+            tx_data = encode_ipmb_msg(header, payload)
 
-        return data[6:-1]
+        self._send_ipmi_msg(tx_data)
+
+        received = False
+        while received == False:
+            rx_data = self._receive_ipmi_msg()
+
+            # check to strip send message
+            while ord(rx_data[5]) == constants.CMDID_SEND_MESSAGE:
+                rsp = create_message(constants.CMDID_SEND_MESSAGE,
+                        constants.NETFN_APP+1)
+                decode_message(rsp, rx_data[6:])
+                check_completion_code(rsp.completion_code, cmd_id=0x34)
+                rx_data = rx_data[7:-1]
+                if len(rx_data) < 6:
+                    break
+            else:
+                received = True
+                received = rx_filter(header, rx_data)
+
+        return rx_data[6:-1]
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
         return self._send_and_receive(target, lun, netfn, ord(raw_bytes[0]),
                 raw_bytes[1:])
 
-    def send_and_receive(self, msg):
-        rx_data = self._send_and_receive(msg.target, msg.lun, msg.netfn,
-                        msg.cmdid, encode_message(msg))
-        msg = create_message(msg.cmdid, msg.netfn + 1)
-        decode_message(msg, rx_data)
-        return msg
+    def send_and_receive(self, req):
+        rx_data = self._send_and_receive(req.target, req.lun, req.netfn,
+                        req.cmdid, encode_message(req))
+        rsp = create_message(req.cmdid, req.netfn + 1)
+        decode_message(rsp, rx_data)
+        return rsp
 
 if __name__ == '__main__':
     host = '10.0.114.12'
@@ -460,6 +514,5 @@ if __name__ == '__main__':
     session.set_auth_type_user('admin', 'admin')
 
     r = Rmcp(host)
-    r._debug = True
     r.ping()
     r.establish_session(session)
