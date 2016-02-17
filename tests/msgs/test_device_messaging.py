@@ -216,15 +216,15 @@ def test_getmessage_decode_no_data_rsp():
     m = GetMessageRsp()
     decode_message(m, '\x00\x21')
     eq_(m.completion_code, 0x00)
-    eq_(m.channel_number.channel_number, 1)
-    eq_(m.channel_number.privilege_level, 2)
+    eq_(m.channel.number, 1)
+    eq_(m.channel.privilege_level, 2)
 
 def test_getmessage_decode_with_data_rsp():
     m = GetMessageRsp()
     decode_message(m, '\x00\x21\xaa\xff\xff\xee')
     eq_(m.completion_code, 0x00)
-    eq_(m.channel_number.channel_number, 1)
-    eq_(m.channel_number.privilege_level, 2)
+    eq_(m.channel.number, 1)
+    eq_(m.channel.privilege_level, 2)
     eq_(m.data, array('B', '\xaa\xff\xff\xee'))
 
 def test_readeventmessagebuffer_decode_rsp():
