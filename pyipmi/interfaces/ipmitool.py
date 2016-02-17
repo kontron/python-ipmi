@@ -151,20 +151,22 @@ class Ipmitool(object):
                 raise RuntimeError('Session type %d not supported' %
                         self._session.auth_type)
 
-        if hasattr(target, 'routing'):
+        if target.routing:
             # we have to do bridging here
-            if len(target.routing) == 1:
+            if len(target.routing) == 2:
                 # ipmitool/shelfmanager does implicit bridging
-                cmd += (' -b %d' % target.routing[0].bridge_channel)
-            elif len(target.routing) == 2:
-                cmd += (' -B %d' % target.routing[0].bridge_channel)
-                cmd += (' -T 0x%02x' % target.routing[1].address)
-                cmd += (' -b %d' % target.routing[1].bridge_channel)
+                cmd += (' -t 0x%02x' % target.routing[1].rs_sa)
+                cmd += (' -b %d' % target.routing[0].channel)
+            elif len(target.routing) == 3:
+                cmd += (' -T 0x%02x' % target.routing[1].rs_sa)
+                cmd += (' -B %d' % target.routing[0].channel)
+                cmd += (' -t 0x%02x' % target.routing[2].rs_sa)
+                cmd += (' -b %d' % target.routing[1].channel)
             else:
                 raise RuntimeError('The impitool interface at most double '
                        'briding')
 
-        if target.ipmb_address:
+        elif target.ipmb_address:
             cmd += (' -t 0x%02x' % target.ipmb_address)
 
 
