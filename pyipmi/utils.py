@@ -22,7 +22,7 @@ from pyipmi.msgs import create_request_by_name
 
 def check_completion_code(cc, cmd_id=None):
     if cc != pyipmi.msgs.constants.CC_OK:
-        raise pyipmi.errors.CompletionCodeError(cc, cmd_id=cmd_id)
+        raise pyipmi.errors.CompletionCodeError(cc)
 
 def chunks(d, n):
     for i in xrange(0, len(d), n):
