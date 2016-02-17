@@ -423,7 +423,7 @@ def version():
 
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:o:b:')
+        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:o:b:p:r:')
     except getopt.GetoptError, err:
         print str(err)
         usage()
@@ -431,8 +431,9 @@ def main():
     verbose = False
     interface_name = 'aardvark'
     target_address = 0x20
-    target_routing = [(0x20,0)]
+    target_routing = None
     rmcp_host = None
+    rmcp_port = 623
     rmcp_user = ''
     rmcp_password = ''
     interface_options = list()
@@ -449,10 +450,14 @@ def main():
             target_address = int(a, 0)
         elif o == '-b':
             target_routing = [(0x20,int(a))]
+        elif o == '-r':
+            target_routing = a
         elif o == '-A':
             authentication_type = a
         elif o == '-H':
             rmcp_host = a
+        elif o == '-p':
+            rmcp_port = int(a,0)
         elif o == '-U':
             rmcp_user = a
         elif o == '-P':
@@ -525,10 +530,12 @@ def main():
 
     ipmi = pyipmi.create_connection(interface)
     ipmi.target = pyipmi.Target(target_address)
-    ipmi.target.set_routing_information(target_routing)
+
+    if target_routing is not None:
+        ipmi.target.set_routing(target_routing)
 
     if rmcp_host is not None:
-        ipmi.session.set_session_type_rmcp(rmcp_host)
+        ipmi.session.set_session_type_rmcp(rmcp_host, rmcp_port)
         ipmi.session.set_auth_type_user(rmcp_user, rmcp_password)
         ipmi.session.establish()
 
