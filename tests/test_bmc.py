@@ -38,3 +38,11 @@ def test_deviceid_object():
     eq_(d.product_id, 21828)
 
     eq_(d.aux, None)
+
+def test_deviceid_object_with_aux():
+    m = pyipmi.msgs.bmc.GetDeviceIdRsp()
+    decode_message(m,
+    '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x02\x03\x04')
+
+    d = DeviceId(m)
+    eq_(d.aux, [1,2,3,4])
