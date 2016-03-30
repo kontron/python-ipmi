@@ -63,17 +63,29 @@ class NullRequester(object):
     def ipmb_address():
         raise AssertionError('NullRequester does not provide an IPMB address')
 
+
 class Target(object):
+    def __init__(self, ipmb_address, routing=None):
+        """
+        `ipmb_address` is the IPMB target address
+        `routing` is the bridging information used to build send message
+        commands.
+        """
+        self.ipmb_address = ipmb_address
+        if routing:
+            self.set_routing(routing)
+
     '''The Target class represents an IPMI target.'''
     class Routing:
         def __init__(self, address, bridge_channel):
             self.address = address
             self.bridge_channel = bridge_channel
 
-    def __init__(self, ipmb_address):
-        self.ipmb_address = ipmb_address
 
     def set_routing_information(self, rinfo):
+        self.set_routing(self, rinfo)
+
+    def set_routing(self, rinfo):
         """Set the path over which a target is reachable.
 
         The path is given as a list of tuples in the form (address,
@@ -81,6 +93,7 @@ class Target(object):
         """
 
         self.routing = [ self.Routing(*r) for r in rinfo ]
+
 
 class Session(object):
     AUTH_TYPE_NONE        = 0x00
