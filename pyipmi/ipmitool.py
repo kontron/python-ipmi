@@ -556,8 +556,9 @@ def main():
             traceback.print_exc()
         sys.exit(1)
 
-    if rmcp_host is not None:
-        ipmi.session.close()
+    finally:
+        if rmcp_host is not None:
+            ipmi.session.close()
 
 COMMANDS = (
         Command('bmc info', cmd_bmc_info),
