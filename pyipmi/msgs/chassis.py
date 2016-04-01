@@ -99,6 +99,19 @@ class GetChassisStatusRsp(Message):
             Bitfield.Bit('cooling_fault_detected', 1),
             Bitfield.ReservedBit(4, 0),
         ),
+        Optional(
+            UnsignedInt('front_panel_button_capabilities', 1),
+#            Bitfield('front_panel_button_capabilites', 1,
+#                Bitfield.Bit('power_off_disabled', 1),
+#                Bitfield.Bit('reset_disabled', 1),
+#                Bitfield.Bit('diagnostic_interrupt_disabled', 1),
+#                Bitfield.Bit('standby_disabled', 1),
+#                Bitfield.Bit('power_off_disable_allowed', 1),
+#                Bitfield.Bit('reset_disable_allowed', 1),
+#                Bitfield.Bit('diagnostic_interrupt_disable_allowed', 1),
+#                Bitfield.Bit('standby_disable_allowed', 1),
+#            ),
+        ),
     )
 
 

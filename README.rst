@@ -1,7 +1,7 @@
 Pure Python IPMI Library
 ========================
 
-|BuildStatus| |PyPiVersion| |CodeClimate|
+|BuildStatus| |PyPiVersion| |Coveralls| |CodeClimate|
 
 Features
 --------
@@ -86,3 +86,5 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
                  :target: http://badge.fury.io/py/python-ipmi
 .. |CodeClimate| image:: https://codeclimate.com/github/kontron/python-ipmi/badges/gpa.svg
                  :target: http://codeclimate.com/github/kontron/python-ipmi
+.. |Coveralls|   image:: https://coveralls.io/repos/github/kontron/python-ipmi/badge.svg?branch=master
+                 :target: https://coveralls.io/github/kontron/python-ipmi?branch=master

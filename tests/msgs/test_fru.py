@@ -11,6 +11,13 @@ from pyipmi.msgs import encode_message
 from pyipmi.msgs import decode_message
 
 
+def test_fruinventoryareainfo_decode_valid_rsp():
+    m = pyipmi.msgs.fru.GetFruInventoryAreaInfoRsp()
+    decode_message(m, '\x00\x01\x02\x01')
+    eq_(m.completion_code, 0x00)
+    eq_(m.area_size, 0x0201)
+    eq_(m.area_info.access, 1)
+
 def test_writefrudatareq_decode_valid_req():
     m = pyipmi.msgs.fru.WriteFruDataReq()
     decode_message(m, '\x01\x02\x03\x04\x05')

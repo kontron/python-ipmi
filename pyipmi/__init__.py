@@ -50,6 +50,18 @@ def create_connection(interface):
     return ipmi
 
 class Target(object):
+    def __init__(self, ipmb_address, routing=None):
+        """
+        `ipmb_address` is the IPMB target address
+        `routing` is the bridging information used to build send message
+        commands.
+        """
+
+        self.routing = None
+        self.ipmb_address = ipmb_address
+        if routing:
+            self.set_routing(routing)
+
     '''The Target class represents an IPMI target.'''
     class Routing:
         def __init__(self, rq_sa, rs_sa, channel):
@@ -61,10 +73,6 @@ class Target(object):
             s = 'Routing: Rq: %s Rs: %s Ch: %s' \
                     % (self.rq_sa, self.rs_sa, self.channel)
             return s
-
-    def __init__(self, ipmb_address):
-        self.ipmb_address = ipmb_address
-        self.routing = None
 
     def set_routing_information(self, routing):
         self.set_routing(routing)
