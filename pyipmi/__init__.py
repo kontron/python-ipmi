@@ -85,7 +85,7 @@ class Target(object):
 
         Example #1: access to an ATCA blade in a chassis
               slave = 0x81, target = 0x82
-              rotuing = [(0x81,0x20,0),(0x20,0x82,7)]
+              routing = [(0x81,0x20,0),(0x20,0x82,None)]
 
         Example #2: access to an AMC in a uTCA chassis
               slave = 0x81, target = 0x72
