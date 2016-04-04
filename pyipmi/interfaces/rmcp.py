@@ -3,6 +3,8 @@ import struct
 import hashlib
 import random
 import threading
+import sys
+import Queue
 
 from pyipmi import Target
 from pyipmi.session import Session
@@ -12,8 +14,9 @@ from pyipmi.messaging import ChannelAuthenticationCapabilities
 from pyipmi.errors import DecodingError, NotSupportedError, CompletionCodeError
 from pyipmi.logger import log
 from pyipmi.interfaces.ipmb import IpmbHeader, checksum, encode_ipmb_msg, \
-        encode_send_message, encode_bridged_message, rx_filter
+        encode_bridged_message, decode_bridged_message, rx_filter
 from pyipmi.utils import check_completion_code
+
 
 CLASS_NORMAL_MSG = 0x00
 CLASS_ACK_MSG = 0x80
@@ -27,7 +30,10 @@ def call_repeatedly(interval, func, *args):
 
     def loop():
         while not stopped.wait(interval): # the first call is in `interval` secs
-            func(*args)
+            try:
+                func(*args)
+            except socket.timeout:
+                pass
 
     t = threading.Thread(target=loop)
     t.daemon = True
@@ -288,7 +294,7 @@ class Rmcp:
     _session = None
 
     def __init__(self, slave_address=0x81, host_target_address=0x20,
-            keep_alive_interval=5):
+            keep_alive_interval=1):
         self.host = None
         self.port = None
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -299,6 +305,7 @@ class Rmcp:
         self.next_sequence_number = 0
         self.keep_alive_interval = keep_alive_interval
         self._stop_keep_alive = None
+        self._q = Queue.Queue()
 
     def _send_rmcp_msg(self, sdu, class_of_msg):
         rmcp = RmcpMsg(class_of_msg)
@@ -433,8 +440,9 @@ class Rmcp:
 
         log().debug('Session opened')
 
-        self._stop_keep_alive = call_repeatedly( \
-                self.keep_alive_interval, self._get_device_id)
+        if self.keep_alive_interval:
+            self._stop_keep_alive = call_repeatedly( \
+                    self.keep_alive_interval, self._get_device_id)
 
     def close_session(self):
         if self._stop_keep_alive:
@@ -451,6 +459,8 @@ class Rmcp:
         rsp = self.send_and_receive(req)
         check_completion_code(rsp.completion_code)
         self._session.activated = False
+
+#        self._q.join()
 
     def _inc_sequence_number(self):
         self.next_sequence_number = (self.next_sequence_number + 1) % 64
@@ -469,8 +479,6 @@ class Rmcp:
 
         # Bridge message
         if target.routing:
-            header.rq_sa = target.routing[-1].rq_sa
-            header.rs_sa = target.routing[-1].rs_sa
             tx_data = encode_bridged_message(target.routing, header,
                                     payload, self.next_sequence_number)
         else:
@@ -480,20 +488,18 @@ class Rmcp:
 
         received = False
         while received == False:
-            rx_data = self._receive_ipmi_msg()
-
-            # check to strip send message
-            while ord(rx_data[5]) == constants.CMDID_SEND_MESSAGE:
-                rsp = create_message(constants.CMDID_SEND_MESSAGE,
-                        constants.NETFN_APP+1)
-                decode_message(rsp, rx_data[6:])
-                check_completion_code(rsp.completion_code, cmd_id=0x34)
-                rx_data = rx_data[7:-1]
-                if len(rx_data) < 6:
-                    break
+            if not self._q.empty():
+                rx_data = self._q.get()
             else:
-                received = True
-                received = rx_filter(header, rx_data)
+                rx_data = self._receive_ipmi_msg()
+
+            if rx_data[5] == constants.CMDID_SEND_MESSAGE:
+                rx_data = decode_bridged_message(rx_data)
+
+            received = rx_filter(header, rx_data)
+
+            if not received:
+                self._q.put(rx_data)
 
         return rx_data[6:-1]
 

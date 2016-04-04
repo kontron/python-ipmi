@@ -17,7 +17,9 @@
 import array
 
 from pyipmi.logger import log
-from pyipmi.msgs import create_request_by_name, encode_message, constants
+from pyipmi.msgs import create_message, create_request_by_name, \
+        encode_message, decode_message, constants
+from pyipmi.utils import check_completion_code
 
 def checksum(data):
     csum = 0
@@ -83,7 +85,7 @@ def encode_bridged_message(routing, header, payload, seq):
     return tx_data
 
 def decode_bridged_message(rx_data):
-    while ord(rx_data[5]) == constants.CMDID_SEND_MESSAGE:
+    while rx_data[5] == constants.CMDID_SEND_MESSAGE:
         rsp = create_message(constants.CMDID_SEND_MESSAGE, constants.NETFN_APP+1)
         decode_message(rsp, rx_data[6:])
         check_completion_code(rsp.completion_code,
