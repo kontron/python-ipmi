@@ -1,4 +1,3 @@
-from __future__ import print_function
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -14,6 +13,10 @@ from __future__ import print_function
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+from __future__ import print_function
+from builtins import range
+from builtins import object
 
 import os
 import codecs
@@ -36,7 +39,7 @@ PROPERTY_CURRENT_VERSION = 1
 PROPERTY_DESCRIPTION_STRING = 2
 PROPERTY_ROLLBACK_VERSION = 3
 PROPERTY_DEFERRED_VERSION = 4
-PROPERTY_OEM = range(192, 255)
+PROPERTY_OEM = list(range(192, 255))
 
 ACTION_BACKUP_COMPONENT = 0x00
 ACTION_PREPARE_COMPONENT = 0x01

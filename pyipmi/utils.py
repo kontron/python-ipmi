@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+from builtins import range
+
 import codecs
 import array
 import pyipmi.msgs.constants
@@ -25,7 +27,7 @@ def check_completion_code(cc):
         raise pyipmi.errors.CompletionCodeError(cc)
 
 def chunks(d, n):
-    for i in xrange(0, len(d), n):
+    for i in range(0, len(d), n):
         yield d[i:i+n]
 
 
@@ -37,12 +39,12 @@ class ByteBuffer(array.array):
         return array.array.__new__(*args)
 
     def push_unsigned_int(self, value, length):
-        for i in xrange(length):
+        for i in range(length):
             self.append((value >> (8*i) & 0xff))
 
     def pop_unsigned_int(self, length):
         value = 0
-        for i in xrange(length):
+        for i in range(length):
             try:
                 value |= self.pop(0) << (8*i)
             except IndexError:

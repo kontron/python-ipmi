@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -14,6 +13,9 @@ from __future__ import absolute_import
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+from __future__ import absolute_import
+from builtins import object
 
 import time
 
@@ -66,7 +68,7 @@ class NullRequester(object):
 
 class Target(object):
     '''The Target class represents an IPMI target.'''
-    class Routing:
+    class Routing(object):
         def __init__(self, address, bridge_channel):
             self.address = address
             self.bridge_channel = bridge_channel
@@ -169,7 +171,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
     def send_message_with_name(self, name, *args, **kwargs):
         req = create_request_by_name(name)
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             setattr(req, k, v)
 
         rsp = self.send_message(req)

@@ -1,3 +1,4 @@
+
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -13,6 +14,9 @@
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+from builtins import range
+from builtins import object
 
 import time
 
@@ -113,8 +117,8 @@ class SelInfo(State):
 
 class SelEntry(State):
     TYPE_SYSTEM_EVENT = 0x02
-    TYPE_OEM_TIMESTAMPED_RANGE = range(0xc0, 0xe0)
-    TYPE_OEM_NON_TIMESTAMPED_RANGE = range(0xe0, 0x100)
+    TYPE_OEM_TIMESTAMPED_RANGE = list(range(0xc0, 0xe0))
+    TYPE_OEM_NON_TIMESTAMPED_RANGE = list(range(0xe0, 0x100))
 
     def __str__(self):
         s = '[%s]' % (' '.join(['%02x' % b for b in self.data]))

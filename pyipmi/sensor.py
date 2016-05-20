@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 # cOPYRIGht (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -14,6 +13,9 @@ from __future__ import absolute_import
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+from __future__ import absolute_import
+from builtins import object
 
 import math
 from . import errors
@@ -194,7 +196,7 @@ class Sensor(object):
 
         thresholds = dict(unr=unr, ucr=ucr, unc=unc, lnc=lnc, lcr=lcr, lnr=lnr)
 
-        for k, v in thresholds.iteritems():
+        for k, v in thresholds.items():
             if v is not None:
                 setattr(req.set_mask, k, 1)
                 setattr(req.threshold, k, v)

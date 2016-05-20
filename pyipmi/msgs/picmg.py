@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -14,6 +13,9 @@ from __future__ import absolute_import
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+from __future__ import absolute_import
+from builtins import range
 
 from . import constants
 from . import register_message_class
@@ -85,7 +87,7 @@ LED_COLOR_ORANGE = 0x05
 LED_COLOR_WHITE = 0x06
 
 LED_FUNCTION_OFF = 0x00
-LED_FUNCTION_BLINKING_RANGE = range(0x01, 0xfa)
+LED_FUNCTION_BLINKING_RANGE = list(range(0x01, 0xfa))
 LED_FUNCTION_LAMP_TEST = 0xfb
 LED_FUNCTION_ON = 0xff
 

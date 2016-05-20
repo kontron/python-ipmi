@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
+from builtins import object
+
 import array
 
 from pyipmi.errors import DecodingError

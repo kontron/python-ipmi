@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -14,6 +13,11 @@ from __future__ import absolute_import
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+from __future__ import absolute_import
+from __future__ import division
+from past.utils import old_div
+from builtins import object
 
 import math
 from . import errors
@@ -253,7 +257,7 @@ class SdrFullSensorRecord(SdrCommon):
         if linearization is not L_LINEAR:
             raise NotImplementedError()
 
-        raw = ((float(value) * 10**(-1 * self.k2)) / self.m) - (self.b * 10**self.k1)
+        raw = (old_div((float(value) * 10**(-1 * self.k2)), self.m)) - (self.b * 10**self.k1)
 
         fmt = self.analog_data_format
         if (fmt == self.DATA_FMT_1S_COMPLEMENT):
@@ -279,11 +283,11 @@ class SdrFullSensorRecord(SdrCommon):
                 L_E:      math.exp,
                 L_EXP10:  lambda x: math.pow(10, x),
                 L_EXP2:   lambda x: math.pow(2, x),
-                L_1_X:    lambda x: 1.0 / x,
+                L_1_X:    lambda x: old_div(1.0, x),
                 L_SQR:    lambda x: math.pow(x, 2),
                 L_CUBE:   lambda x: math.pow(x, 3),
                 L_SQRT:   math.sqrt,
-                L_CUBERT: lambda x: math.pow(x, 1.0/3),
+                L_CUBERT: lambda x: math.pow(x, old_div(1.0,3)),
                 L_LINEAR: lambda x: x,
             }[self.linearization & 0x7f]
         except KeyError:

@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -14,6 +13,10 @@ from __future__ import absolute_import
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+from __future__ import absolute_import
+from builtins import range
+from builtins import object
 
 from array import array
 
@@ -56,13 +59,13 @@ class ByteArray(BaseField):
         if len(a) != self._length(obj):
             raise EncodingError('Array must be exaclty %d bytes long '
                     '(but is %d long)' % (self._length(obj), len(a)))
-        for i in xrange(self._length(obj)):
+        for i in range(self._length(obj)):
             data.push_unsigned_int(a[i], 1)
 
     def decode(self, obj, data):
         a = getattr(obj, self.name)
         bytes = []
-        for i in xrange(self._length(obj)):
+        for i in range(self._length(obj)):
             bytes.append(data.pop_unsigned_int(1))
         setattr(obj, self.name, array('B', bytes))
 
@@ -202,7 +205,7 @@ class RemainingBytes(BaseField):
 
 
 class Bitfield(BaseField):
-    class Bit:
+    class Bit(object):
         def __init__(self, name, width=1, default=None):
             self.name = name
             self._width = width
@@ -280,12 +283,12 @@ class Bitfield(BaseField):
     def encode(self, obj, data):
         wrapper = getattr(obj, self.name)
         value = wrapper._value
-        for i in xrange(self.length):
+        for i in range(self.length):
             data.push_unsigned_int((value >> (8*i)) & 0xff, 1)
 
     def decode(self, obj, data):
         value = 0
-        for i in xrange(self.length):
+        for i in range(self.length):
             try:
                 value |= data.pop_unsigned_int(1) << (8*i)
             except IndexError:
@@ -323,7 +326,7 @@ class Message(object):
         if args:
             self._decode(args[0])
         else:
-            for (name, value) in kwargs.iteritems():
+            for (name, value) in kwargs.items():
                 self._set_field(name, value)
 
     def _set_field(self, name, value):

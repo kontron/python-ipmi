@@ -17,6 +17,13 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import hex
+from builtins import str
+from builtins import map
+from builtins import range
+
 from collections import namedtuple
 import sys
 import getopt
@@ -318,8 +325,8 @@ def print_link_state(p, s):
             p.extension, s, intf_str, link_str))
 
 def cmd_picmg_get_portstate_all(ipmi, args):
-    for interface in xrange(3):
-        for channel in xrange(16):
+    for interface in range(3):
+        for channel in range(16):
            try:
                (p, s) = ipmi.get_port_state(channel, interface)
                print_link_state(p, s)
@@ -478,7 +485,7 @@ def main():
     pyipmi.logger.add_log_handler(handler)
     pyipmi.logger.set_log_level(logging.DEBUG)
 
-    for i in xrange(len(args)):
+    for i in range(len(args)):
         cmd = _get_command_function(' '.join(args[0:i+1]))
         if cmd is not None:
             args = args[i+1:]
@@ -555,7 +562,7 @@ COMMANDS = (
         Command('bmc info', cmd_bmc_info),
         Command('bmc reset cold', lambda i, a: i.cold_reset()),
         Command('bmc reset warm', lambda i, a: i.warm_reset()),
-        Command('sel list', lambda i, a: map(_print, i.sel_entries())),
+        Command('sel list', lambda i, a: list(map(_print, i.sel_entries()))),
         Command('sel clear', cmd_sel_clear),
         Command('sensor rearm', cmd_sensor_rearm),
         Command('sdr list', cmd_sdr_list),
