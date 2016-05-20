@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # cOPYRIGht (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -15,7 +16,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 import math
-import errors
+from . import errors
 import array
 import time
 from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
@@ -25,7 +26,7 @@ from pyipmi.msgs import constants
 
 from pyipmi.helper import get_sdr_data_helper, get_sdr_chunk_helper
 
-import sdr
+from . import sdr
 
 
 # THRESHOLD BASED STATES

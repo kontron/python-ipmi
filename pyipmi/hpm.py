@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -83,7 +84,7 @@ class Hpm(object):
                 property = self.get_component_property(component_id, p)
                 if property is not None:
                     properties.append(property)
-            except CompletionCodeError, e:
+            except CompletionCodeError as e:
                 if e.cc == CC_GET_COMP_PROP_INVALID_PROPERTIES_SELECTOR:
                     continue
         return properties
@@ -123,7 +124,7 @@ class Hpm(object):
             long running command. """
         try:
             self.initiate_upgrade_action(components_mask, action)
-        except CompletionCodeError, e:
+        except CompletionCodeError as e:
             if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
                 self.wait_for_long_duration_command(
                         constants.CMDID_HPM_INITIATE_UPGRADE_ACTION,
@@ -148,7 +149,7 @@ class Hpm(object):
         for chunk in chunks(binary, block_size):
             try:
                 self.upload_firmware_block(block_number, chunk)
-            except CompletionCodeError, e:
+            except CompletionCodeError as e:
                 if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
                     self.wait_for_long_duration_command(
                             constants.CMDID_HPM_UPLOAD_FIRMWARE_BLOCK,
@@ -169,7 +170,7 @@ class Hpm(object):
         try:
             rsp = self.finish_firmware_upload(component, length)
             check_completion_code(rsp.completion_code)
-        except CompletionCodeError, e:
+        except CompletionCodeError as e:
             if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
                 self.wait_for_long_duration_command(
                             constants.CMDID_HPM_FINISH_FIRMWARE_UPLOAD,
@@ -210,7 +211,7 @@ class Hpm(object):
             long running command. """
         try:
             self.activate_firmware(rollback_override)
-        except CompletionCodeError, e:
+        except CompletionCodeError as e:
             if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
                 self.wait_for_long_duration_command(
                             constants.CMDID_HPM_ACTIVATE_FIRMWARE,
@@ -233,7 +234,7 @@ class Hpm(object):
     def initiate_manual_rollback_and_wait(self, timeout=2, interval=0.1):
         try:
             self.initiate_manual_rollback()
-        except CompletionCodeError, e:
+        except CompletionCodeError as e:
             if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
                 self.wait_for_long_duration_command(
                             constants.CMDID_HPM_INITIATE_MANUAL_ROLLBACK,
@@ -263,12 +264,12 @@ class Hpm(object):
     def _do_upgrade_action_prepare(self, image):
         for action in image.actions:
             if type(action) == UpgradeActionRecordPrepare:
-                print "do ACTION_PREPARE_COMPONENT"
+                print("do ACTION_PREPARE_COMPONENT")
 
     def _do_upgrade_action_upload(self, image):
         for action in image.actions:
             if type(action) == UpgradeActionRecordUploadForUpgrade:
-                print "do ACTION_UPLOAD_FOR_UPGRADE"
+                print("do ACTION_UPLOAD_FOR_UPGRADE")
 
 
     def preparation_stage(self, image):
@@ -653,7 +654,7 @@ class UpgradeImage(object):
         try:
             file = open(filename, "r")
         except IOError:
-            print 'Error open file "%s"' % filename
+            print('Error open file "%s"' % filename)
 
         ################################
         # get file size

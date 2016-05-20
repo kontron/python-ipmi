@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -18,7 +19,7 @@ from functools import partial
 
 from pyipmi.msgs import create_request_by_name
 from pyipmi.errors import DecodingError, CompletionCodeError
-from utils import check_completion_code
+from .utils import check_completion_code
 from pyipmi.state import State
 
 from pyipmi.msgs.chassis import \

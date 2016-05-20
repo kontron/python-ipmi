@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+#from __future__ import absolute_import
+
 import array
 import time
 
@@ -21,7 +23,7 @@ from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
 from pyipmi.utils import check_completion_code, ByteBuffer
 from pyipmi.msgs import constants
 
-import sdr
+from . import sdr
 
 def get_sdr_chunk_helper(send_fn, req, reserv_fn, retry=5):
 
@@ -84,7 +86,7 @@ def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
 
         try:
             (next_id, data) = get_fn(reservation_id, record_id, offset, length)
-        except CompletionCodeError, e:
+        except CompletionCodeError as e:
             if e.cc == constants.CC_CANT_RET_NUM_REQ_BYTES:
                 # reduce max lenght
                 max_req_len -= 4
@@ -115,7 +117,7 @@ def _clear_repository(reserve_fn, clear_fn, ctrl, retry, reservation):
 
         try:
             in_progress = clear_fn(ctrl, reservation)
-        except CompletionCodeError, e:
+        except CompletionCodeError as e:
             if e.cc == constants.CC_RES_CANCELED:
                 time.sleep(0.2)
                 reservation = reserve_fn()

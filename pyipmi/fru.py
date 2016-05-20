@@ -60,7 +60,7 @@ class Fru(object):
             try:
                 rsp = self.send_message_with_name('ReadFruData',
                             fru_id=fru_id, offset=off, count=req_size)
-            except CompletionCodeError, e:
+            except CompletionCodeError as e:
                 if e.cc in (constants.CC_CANT_RET_NUM_REQ_BYTES,
                             constants.CC_REQ_DATA_FIELD_EXCEED,
                             constants.CC_PARAM_OUT_OF_RANGE):

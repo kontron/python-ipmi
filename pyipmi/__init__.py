@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -16,17 +17,17 @@
 
 import time
 
-import bmc
-import chassis
-import event
-import fru
+from . import bmc
+from . import chassis
+from . import event
+from . import fru
 import functools
-import hpm
-import lan
-import picmg
-import sdr
-import sel
-import sensor
+from . import hpm
+from . import lan
+from . import picmg
+from . import sdr
+from . import sel
+from . import sensor
 
 from pyipmi.errors import TimeoutError, CompletionCodeError
 from pyipmi.msgs.registry import create_request_by_name
@@ -158,7 +159,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
             try:
                 rsp = self.interface.send_and_receive(req)
                 break
-            except CompletionCodeError, e:
+            except CompletionCodeError as e:
                 if e.cc == msgs.constants.CC_NODE_BUSY:
                     retry -= 1
                     continue
