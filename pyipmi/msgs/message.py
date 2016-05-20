@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -16,7 +17,7 @@
 
 from array import array
 
-import constants
+from . import constants
 from pyipmi.utils import ByteBuffer
 from pyipmi.errors import CompletionCodeError, EncodingError, DecodingError, \
         DescriptionError
@@ -358,7 +359,7 @@ class Message(object):
         for field in self.__fields__:
             try:
                 field.decode(self, data)
-            except CompletionCodeError, e:
+            except CompletionCodeError as e:
                 # stop decoding on completion code != 0
                 cc = e.cc
                 break

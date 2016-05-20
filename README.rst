@@ -49,6 +49,7 @@ Compatibility
 -------------
 
 Currently only python 2.7 is supported.
+conversion to support python 2/3 in progress
 
 Contributing
 ------------

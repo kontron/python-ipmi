@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -33,13 +34,13 @@ from pyipmi.msgs.message import RemainingBytes
 from pyipmi.msgs.message import encode_message
 from pyipmi.msgs.message import decode_message
 
-import bmc
-import chassis
-import fru
-import hpm
-import picmg
-import sdr
-import sel
-import sensor
-import event
-import lan
+from . import bmc
+from . import chassis
+from . import fru
+from . import hpm
+from . import picmg
+from . import sdr
+from . import sel
+from . import sensor
+from . import event
+from . import lan
