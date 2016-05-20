@@ -83,8 +83,8 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 .. _ipmitool: http://sourceforge.net/projects/ipmitool/
 .. |BuildStatus| image:: https://travis-ci.org/Teslafly/python-ipmi.png?branch=master
                  :target: https://travis-ci.org/Teslafly/python-ipmi
-.. |PyPiVersion| image:: https://badge.fury.io/py/python-ipmi.svg
-                 :target: http://badge.fury.io/py/python-ipmi
+#.. |PyPiVersion| image:: https://badge.fury.io/py/python-ipmi.svg
+#                 :target: http://badge.fury.io/py/python-ipmi
 .. |CodeClimate| image:: https://codeclimate.com/github/Teslafly/python-ipmi/badges/gpa.svg
                  :target: http://codeclimate.com/github/Teslafly/python-ipmi
 .. |Coveralls|   image:: https://coveralls.io/repos/github/Teslafly/python-ipmi/badge.svg?branch=master
