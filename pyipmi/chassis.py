@@ -14,10 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-from functools import partial
-
 from __future__ import absolute_import
 from builtins import object
+
+from functools import partial
 
 from pyipmi.msgs import create_request_by_name
 from pyipmi.errors import DecodingError, CompletionCodeError

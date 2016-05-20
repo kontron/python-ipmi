@@ -16,8 +16,9 @@
 
 
 
-from __future__ import unicode_literals
-from future.utils import bytes_to_native_str
+#from __future__ import unicode_literals
+#from future.utils import bytes_to_native_str
+
 
 from builtins import chr
 from builtins import object
@@ -89,6 +90,13 @@ class Ipmitool(object):
 
         return accessible
 
+    #test data
+    # target = Target(0x20)
+    # self._interface._run_ipmitool = mock
+    # data = self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
+    #
+    # eq_(data, array('c', '\xcc'))
+
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
 
         cmd = self._build_ipmitool_cmd(target, lun, netfn, raw_bytes)
@@ -97,10 +105,13 @@ class Ipmitool(object):
         # check for errors
         match_completion_code = self.re_completion_code.match(output)
         match_timeout = self.re_timeout.match(output)
-        data = array('c')
+        data = []
+        #data =  array(bytes_to_native_str(b'c'))
+        #data = array('c')
         if match_completion_code:
             cc = int(match_completion_code.group(1), 16)
             data.append(chr(cc))
+            #data.fromstring(cc)
         elif match_timeout:
             raise TimeoutError()
         else:
@@ -108,6 +119,7 @@ class Ipmitool(object):
                 raise RuntimeError('ipmitool failed with rc=%d' % rc)
             # completion code
             data.append(chr(0))
+            #data.fromstring(0)
             output_lines = output.split('\n')
             # strip 'Close Session command failed' lines
             output_lines = [ l for l in output_lines
