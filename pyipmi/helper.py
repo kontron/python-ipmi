@@ -14,7 +14,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-#from __future__ import absolute_import
 
 import array
 import time
@@ -23,7 +22,7 @@ from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
 from pyipmi.utils import check_completion_code, ByteBuffer
 from pyipmi.msgs import constants
 
-from . import sdr
+#from . import sdr
 
 def get_sdr_chunk_helper(send_fn, req, reserv_fn, retry=5):
 
