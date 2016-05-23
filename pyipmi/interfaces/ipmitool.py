@@ -20,12 +20,12 @@
 #from future.utils import bytes_to_native_str
 
 
-from builtins import chr
-from builtins import object
+#from builtins import chr
+#from builtins import object
 
 import re
 from subprocess import Popen, PIPE
-from array import array
+# from array import array
 from pyipmi import Session
 from pyipmi.errors import TimeoutError
 from pyipmi.logger import log

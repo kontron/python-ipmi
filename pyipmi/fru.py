@@ -15,10 +15,10 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 from __future__ import division
-from builtins import chr
-from builtins import range
+#from builtins import chr
+#from builtins import range
 from past.utils import old_div
-from builtins import object
+#from builtins import object
 
 import array
 import codecs

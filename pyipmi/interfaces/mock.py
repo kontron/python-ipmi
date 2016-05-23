@@ -1,6 +1,6 @@
 
 
-from builtins import object
+# import object
 
 class Mock(object):
     """This interface uses the ipmitool raw command to "emulate" a RMCP
