@@ -104,7 +104,7 @@ def bcd_decode(input, errors='strict'):
     chars = list()
     try:
         for b in input:
-            b = ord(b)
+            #b = ord(b)
             chars.append(bcd_map[b>>4 & 0xf] + bcd_map[b & 0xf])
         return (''.join(chars), len(input) * 2)
     except IndexError:

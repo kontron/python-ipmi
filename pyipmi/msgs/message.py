@@ -199,7 +199,8 @@ class RemainingBytes(BaseField):
 
     def decode(self, obj, data):
         setattr(obj, self.name, array('B', data[:]))
-        del data[:]
+        #del data[:]
+        del data
 
     def create(self):
         return array('B')
@@ -368,6 +369,7 @@ class Message(object):
                 cc = e.cc
                 break
 
+        print(data.tostring())
         if (cc == None or cc == 0) and len(data) > 0:
             raise DecodingError('Data has extra bytes')
 

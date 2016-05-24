@@ -446,7 +446,7 @@ class ComponentPropertyCurrentVersion(ComponentProperty):
 class ComponentPropertyDescriptionString(ComponentProperty):
 
     def _from_rsp_data(self, data):
-        self.description =  array.array('B', data).tostring().replace('\0', '')
+        self.description = array.array('B', data).tostring().decode('raw_unicode_escape')  # .replace('\0', '')
 
 
 class ComponentPropertyRollbackVersion(ComponentProperty):
@@ -578,7 +578,7 @@ class UpgradeActionRecord(object):
         self.action_type = ord(data[0])
         if data:
             (self.action, self.components, self.checksum) \
-                = struct.unpack('BBB', data[0:3])
+                = struct.unpack('BBB', bytes(data[0:3], 'raw_unicode_escape'))
             self.length = 3
 
     @staticmethod
@@ -615,9 +615,10 @@ class UpgradeActionRecordUploadForUpgrade(UpgradeActionRecord):
     def __init__(self, data=None):
         UpgradeActionRecord.__init__(self, data)
         if data:
+            data = bytes(data, 'raw_unicode_escape')
             self.firmware_version = VersionField(data[3:3 +
             VersionField.VERSION_WITH_AUX_FIELD_LEN])
-            self.firmware_description_string = data[9:30]
+            self.firmware_description_string = data[9:30].decode('raw_unicode_escape')
             self.firmware_length = struct.unpack('<L', data[30:34])[0]
             self.firmware_image_data = data[34:(34 + self.firmware_length)]
             self.length += 31 + self.firmware_length
