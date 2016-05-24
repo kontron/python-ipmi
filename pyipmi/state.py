@@ -1,6 +1,6 @@
 
 
-#from builtins import object
+from builtins import object
 
 class DefaultProperties(object):
     def __init__(self):

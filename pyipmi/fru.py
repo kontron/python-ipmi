@@ -14,11 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-from __future__ import division
-#from builtins import chr
-#from builtins import range
-from past.utils import old_div
-#from builtins import object
+
+from builtins import chr
+from builtins import range
+from builtins import object
 
 import array
 import codecs
@@ -338,7 +337,7 @@ class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
             raise DecodingError('data too short')
         FruPicmgRecord._from_data(self,data)
         maximum_current_output = ord(data[10])|ord(data[11])<<8
-        self.maximum_current_output = float(old_div(maximum_current_output,10))
+        self.maximum_current_output = float(maximum_current_output/10)
 
 
 class InventoryMultiRecordArea(object):

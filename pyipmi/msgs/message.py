@@ -14,9 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+
 from __future__ import absolute_import
-#from builtins import range
-#from builtins import object
+from builtins import range
+from builtins import object
 
 from array import array
 
@@ -47,7 +48,7 @@ class ByteArray(BaseField):
     def __init__(self, name, length, default=None):
         BaseField.__init__(self, name, length)
         if default is not None:
-            self.default = array('B', default)
+            self.default = array('B', default.encode('raw_unicode_escape'))
         else:
             self.default = None
 
