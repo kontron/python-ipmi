@@ -24,6 +24,8 @@ except (OSError, subprocess.CalledProcessError, IOError) as e:
     except IOError:
         version = 'unknown'
 
+version = version.decode('utf-8')
+
 with open('README.rst') as f:
     readme = f.read()
 
