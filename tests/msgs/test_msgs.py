@@ -344,8 +344,8 @@ def test_readeventmessagebuffer_decode_rsp():
     decode_message(m, '\x00\x00\x01\x02\x03\x04\x05\x06\x07'\
             '\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f')
     eq_(m.completion_code, 0x00)
-    eq_(m.event_data, array('B', b'\x00\x01\x02\x03\x04\
-            \x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'))
+    eq_(m.event_data, array('B', b'\x00\x01\x02\x03\x04'\
+            b'\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'))
 
 def test_masterwriteread_encode_req_all_zero_read():
     m = pyipmi.msgs.bmc.MasterWriteReadReq()

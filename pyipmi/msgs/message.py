@@ -199,8 +199,7 @@ class RemainingBytes(BaseField):
 
     def decode(self, obj, data):
         setattr(obj, self.name, array('B', data[:]))
-        #del data[:]
-        del data
+        del data.array[:]
 
     def create(self):
         return array('B')
@@ -359,18 +358,22 @@ class Message(object):
         if not hasattr(self, '__fields__'):
             raise NotImplementedError('You have to overwrite this method')
 
+        print('data = ' + str(data.encode('raw_unicode_escape')))
         data = ByteBuffer(data)
         cc = None
+        #print(str(self.__fields__))
         for field in self.__fields__:
             try:
                 field.decode(self, data)
+                print(str(field) + 'pass')
+                print(data.array.tostring())
             except CompletionCodeError as e:
+                print('CompletionCodeError')
                 # stop decoding on completion code != 0
                 cc = e.cc
                 break
 
-        print(data.tostring())
-        if (cc == None or cc == 0) and len(data) > 0:
+        if (cc is None or cc == 0) and len(data) > 0:
             raise DecodingError('Data has extra bytes')
 
     def _is_request(self):
