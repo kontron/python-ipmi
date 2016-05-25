@@ -15,21 +15,23 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 from __future__ import absolute_import
-#from builtins import object
+from builtins import object
 
 import time
+import sys
 
 from . import bmc
 from . import chassis
 from . import event
 from . import fru
-import functools
+#import functools
 from . import hpm
 from . import lan
 from . import picmg
 from . import sdr
 from . import sel
 from . import sensor
+from . import msgs
 
 from pyipmi.errors import TimeoutError, CompletionCodeError
 from pyipmi.msgs.registry import create_request_by_name
@@ -63,7 +65,7 @@ class NullRequester(object):
     '''
 
     @property
-    def ipmb_address():
+    def ipmb_address(self):
         raise AssertionError('NullRequester does not provide an IPMB address')
 
 class Target(object):

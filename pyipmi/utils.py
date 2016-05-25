@@ -14,14 +14,31 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-#from builtins import range
-
+from builtins import range
+import sys
 import codecs
-#import array
 from array import array
 import pyipmi.msgs.constants
 from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.msgs import create_request_by_name
+
+def py3enc_unic_bytes_fix(dat):
+    # python 3 unicode fix
+    if isinstance(dat, str) and int(sys.version[0]) > 2:
+        dat = dat.encode('raw_unicode_escape')
+    return dat
+
+def py3dec_unic_bytes_fix(dat):
+    # python 3 unicode fix
+    if int(sys.version[0]) > 2:
+        return dat.decode('raw_unicode_escape')
+    return dat
+
+def bytes2(dat, enc):
+    # python 2-3 workaround
+    if int(sys.version[0]) > 2:
+       return bytes(dat, enc)
+    return dat
 
 def check_completion_code(cc):
     if cc != pyipmi.msgs.constants.CC_OK:
@@ -35,11 +52,8 @@ def chunks(d, n):
 class ByteBuffer:
     def __init__(self, data=None):
 
-        if data is not None and not isinstance(data, str):
-            self.array = array('B', data)
-
-        elif data is not None and isinstance(data, str):
-            self.array = array('B', data.encode('raw_unicode_escape'))
+        if data is not None:
+            self.array = array('B', py3enc_unic_bytes_fix(data))
 
         else:
             self.array = array('B')
@@ -104,7 +118,8 @@ def bcd_decode(input, errors='strict'):
     chars = list()
     try:
         for b in input:
-            #b = ord(b)
+            if int(sys.version[0]) == 2:
+                b = ord(b)
             chars.append(bcd_map[b>>4 & 0xf] + bcd_map[b & 0xf])
         return (''.join(chars), len(input) * 2)
     except IndexError:

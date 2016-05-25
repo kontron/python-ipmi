@@ -15,10 +15,11 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 from __future__ import print_function
-#from builtins import range
-#from builtins import object
+from builtins import range
+from builtins import object
 
 import os
+import sys
 import codecs
 import array
 import struct
@@ -30,6 +31,7 @@ from pyipmi.errors import CompletionCodeError, HpmError, TimeoutError
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import constants
 from pyipmi.utils import check_completion_code, bcd_search, chunks
+from pyipmi.utils import py3dec_unic_bytes_fix, bytes2 as bytes
 from pyipmi.state import State
 from pyipmi.fields import VersionField
 
@@ -446,7 +448,7 @@ class ComponentPropertyCurrentVersion(ComponentProperty):
 class ComponentPropertyDescriptionString(ComponentProperty):
 
     def _from_rsp_data(self, data):
-        self.description = array.array('B', data).tostring().decode('raw_unicode_escape')  # .replace('\0', '')
+        self.description = py3dec_unic_bytes_fix(array.array('B', data).tostring())
 
 
 class ComponentPropertyRollbackVersion(ComponentProperty):
@@ -618,7 +620,7 @@ class UpgradeActionRecordUploadForUpgrade(UpgradeActionRecord):
             data = bytes(data, 'raw_unicode_escape')
             self.firmware_version = VersionField(data[3:3 +
             VersionField.VERSION_WITH_AUX_FIELD_LEN])
-            self.firmware_description_string = data[9:30].decode('raw_unicode_escape')
+            self.firmware_description_string = py3dec_unic_bytes_fix(data[9:30])
             self.firmware_length = struct.unpack('<L', data[30:34])[0]
             self.firmware_image_data = data[34:(34 + self.firmware_length)]
             self.length += 31 + self.firmware_length

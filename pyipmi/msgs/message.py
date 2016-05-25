@@ -22,7 +22,7 @@ from builtins import object
 from array import array
 
 from . import constants
-from pyipmi.utils import ByteBuffer
+from pyipmi.utils import ByteBuffer,  py3enc_unic_bytes_fix
 from pyipmi.errors import CompletionCodeError, EncodingError, DecodingError, \
         DescriptionError
 
@@ -48,7 +48,8 @@ class ByteArray(BaseField):
     def __init__(self, name, length, default=None):
         BaseField.__init__(self, name, length)
         if default is not None:
-            self.default = array('B', default.encode('raw_unicode_escape'))
+            default = py3enc_unic_bytes_fix(default)
+            self.default = array('B', default)
         else:
             self.default = None
 
@@ -358,17 +359,12 @@ class Message(object):
         if not hasattr(self, '__fields__'):
             raise NotImplementedError('You have to overwrite this method')
 
-        print('data = ' + str(data.encode('raw_unicode_escape')))
         data = ByteBuffer(data)
         cc = None
-        #print(str(self.__fields__))
         for field in self.__fields__:
             try:
                 field.decode(self, data)
-                print(str(field) + 'pass')
-                print(data.array.tostring())
             except CompletionCodeError as e:
-                print('CompletionCodeError')
                 # stop decoding on completion code != 0
                 cc = e.cc
                 break
