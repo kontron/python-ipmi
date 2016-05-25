@@ -77,7 +77,7 @@ class ByteBuffer:
     def pop_string(self, length):
         s = self.array[0:length]
         del self.array[0:length]
-        return s.tostring().decode('raw_unicode_escape')
+        return py3dec_unic_bytes_fix(s.tostring())
 
     def pop_slice(self, length):
         if len(self.array) < length:
@@ -87,9 +87,8 @@ class ByteBuffer:
         self.__delslice__(0, length)
         return c
 
-
     def tostring(self):
-        return self.array.tostring().decode('raw_unicode_escape')
+        return py3dec_unic_bytes_fix(self.array.tostring())
 
     def append_array(self, a):
         self.array.extend(a)

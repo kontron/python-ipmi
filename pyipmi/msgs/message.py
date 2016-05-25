@@ -285,8 +285,12 @@ class Bitfield(BaseField):
     def encode(self, obj, data):
         wrapper = getattr(obj, self.name)
         value = wrapper._value
+        print('datatype' )
+        print(data)
+        print(data.array)
         for i in range(self.length):
             data.push_unsigned_int((value >> (8*i)) & 0xff, 1)
+        print(data.array)
 
     def decode(self, obj, data):
         value = 0
@@ -353,6 +357,8 @@ class Message(object):
         data = ByteBuffer()
         for field in self.__fields__:
             field.encode(self, data)
+            print(type(field))
+            print(data.tostring())
         return data.tostring()
 
     def _decode(self, data):
