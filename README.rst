@@ -1,7 +1,7 @@
 Pure Python IPMI Library
 ========================
 
-|BuildStatus| |PyPiVersion| |Coveralls| |CodeClimate|
+|BuildStatus|
 
 Features
 --------
@@ -48,8 +48,8 @@ ipmitool command:
 Compatibility
 -------------
 
-Currently only python 2.7 is supported.
-conversion to support python 2/3 in progress
+Currently python 2.7 is supported.
+Python 3.x support is in beta
 
 Contributing
 ------------
@@ -83,9 +83,3 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 .. _ipmitool: http://sourceforge.net/projects/ipmitool/
 .. |BuildStatus| image:: https://travis-ci.org/Teslafly/python-ipmi.png?branch=master
                  :target: https://travis-ci.org/Teslafly/python-ipmi
-#.. |PyPiVersion| image:: https://badge.fury.io/py/python-ipmi.svg
-#                 :target: http://badge.fury.io/py/python-ipmi
-.. |CodeClimate| image:: https://codeclimate.com/github/Teslafly/python-ipmi/badges/gpa.svg
-                 :target: http://codeclimate.com/github/Teslafly/python-ipmi
-.. |Coveralls|   image:: https://coveralls.io/repos/github/Teslafly/python-ipmi/badge.svg?branch=master
-                 :target: https://coveralls.io/github/Teslafly/python-ipmi?branch=master
