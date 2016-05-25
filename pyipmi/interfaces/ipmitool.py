@@ -52,9 +52,9 @@ class Ipmitool(object):
                     interface_type)
 
         self.re_completion_code = re.compile(
-                "Unable to send RAW command \(.*rsp=(0x[0-9a-f]+)\)")
+                b"Unable to send RAW command \(.*rsp=(0x[0-9a-f]+)\)")
         self.re_timeout = re.compile(
-                "Unable to send RAW command \(.*cmd=0x[0-9a-f]+\)")
+                b"Unable to send RAW command \(.*cmd=0x[0-9a-f]+\)")
 
     def establish_session(self, session):
         # just remember session parameters here
