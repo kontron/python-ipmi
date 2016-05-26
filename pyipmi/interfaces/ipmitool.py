@@ -30,6 +30,7 @@ from pyipmi import Session
 from pyipmi.errors import TimeoutError
 from pyipmi.logger import log
 from pyipmi.msgs import encode_message, decode_message, create_message
+from pyipmi.utils import py3enc_unic_bytes_fix
 
 class Ipmitool(object):
     """This interface uses the ipmitool raw command to "emulate" a RMCP
@@ -95,9 +96,11 @@ class Ipmitool(object):
         cmd = self._build_ipmitool_cmd(target, lun, netfn, raw_bytes)
         output, rc = self._run_ipmitool(cmd)
 
+        outputmatch = py3enc_unic_bytes_fix(output)
+
         # check for errors
-        match_completion_code = self.re_completion_code.match(output)
-        match_timeout = self.re_timeout.match(output)
+        match_completion_code = self.re_completion_code.match(outputmatch)
+        match_timeout = self.re_timeout.match(outputmatch)
         data = array('B')
         if match_completion_code:
             cc = int(match_completion_code.group(1), 16)
