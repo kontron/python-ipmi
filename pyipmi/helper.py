@@ -22,9 +22,9 @@ from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
 from pyipmi.utils import check_completion_code, ByteBuffer
 from pyipmi.msgs import constants
 
-#from . import sdr
+#from . import sdr #unused
 
-def get_sdr_chunk_helper(send_fn, req, reserv_fn, retry=5):
+def get_sdr_chunk_helper(send_fn, req, reserve_fn, retry=5):
 
     while True:
         retry -= 1

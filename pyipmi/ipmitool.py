@@ -527,7 +527,7 @@ def main():
     if aardvark_pullups:
         interface.enable_pullups(aardvark_pullups)
     if aardvark_target_power:
-        interface.enable_target_power(target_power)
+        interface.enable_target_power(aardvark_target_power)
 
     ipmi = pyipmi.create_connection(interface)
     ipmi.target = pyipmi.Target(target_address)

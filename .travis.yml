@@ -1,7 +1,7 @@
 sudo: false
 language: python
 python:
-  #- '2.6'
+  - '2.6'
   - '2.7'
   - '3.4'
   - '3.5'
@@ -10,11 +10,13 @@ install:
   - pip install coverage
   - pip install nose
   - pip install future
+
 script:
   - python setup.py install
   - nosetests --with-coverage
 after_success:
   - coveralls
+
 #deploy:
 #  provider: pypi
 #  user: mwalle
@@ -23,3 +25,6 @@ after_success:
 #  on:
 #    tags: true
 
+addons:
+    code_climate:
+        repo_token: e222d9962f9c42ab6471e670dc351b91aade3d53ec6cf82e789dca6ec3b8a786
