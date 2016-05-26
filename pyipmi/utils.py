@@ -22,11 +22,13 @@ import pyipmi.msgs.constants
 from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.msgs import create_request_by_name
 
+
 def py3enc_unic_bytes_fix(dat):
     # python 3 unicode fix
     if isinstance(dat, str) and int(sys.version[0]) > 2:
         dat = dat.encode('raw_unicode_escape')
     return dat
+
 
 def py3dec_unic_bytes_fix(dat):
     # python 3 unicode fix
@@ -34,15 +36,18 @@ def py3dec_unic_bytes_fix(dat):
         return dat.decode('raw_unicode_escape')
     return dat
 
+
 def bytes2(dat, enc):
     # python 2-3 workaround
     if int(sys.version[0]) > 2:
        return bytes(dat, enc)
     return dat
 
+
 def check_completion_code(cc):
     if cc != pyipmi.msgs.constants.CC_OK:
         raise pyipmi.errors.CompletionCodeError(cc)
+
 
 def chunks(d, n):
     for i in range(0, len(d), n):

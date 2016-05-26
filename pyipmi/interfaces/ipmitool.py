@@ -15,13 +15,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 
-
-#from __future__ import unicode_literals
-#from future.utils import bytes_to_native_str
-
-
-#from builtins import chr
-#from builtins import object
+from builtins import chr
+from builtins import object
 
 import re
 from subprocess import Popen, PIPE

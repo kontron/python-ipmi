@@ -386,222 +386,6 @@ class SdrCommon(object):
 
         return cls(data, next_id)
 
-#
-# ###
-# # SDR type 0x01
-# ##################################################
-# class SdrFullSensorRecord(SdrCommon):
-#     DATA_FMT_UNSIGNED = 0
-#     DATA_FMT_1S_COMPLEMENT = 1
-#     DATA_FMT_2S_COMPLEMENT = 2
-#     DATA_FMT_NONE = 3
-#
-#     def convert_sensor_raw_to_value(self, raw):
-#         fmt = self.analog_data_format
-#         if (fmt == self.DATA_FMT_1S_COMPLEMENT):
-#             if raw & 0x80:
-#                 raw = -((raw & 0x7f) ^ 0x7f)
-#         elif (fmt == self.DATA_FMT_2S_COMPLEMENT):
-#             if raw & 0x80:
-#                 raw = -((raw & 0x7f) ^ 0x7f) - 1
-#         raw = float(raw)
-#
-#         return self.l((self.m * raw + (self.b * 10**self.k1)) * 10**self.k2)
-#
-#     def convert_sensor_value_to_raw(self, value):
-#         linearization = self.linearization & 0x7f
-#
-#         if linearization is not L_LINEAR:
-#             raise NotImplementedError()
-#
-#         raw = (old_div((float(value) * 10**(-1 * self.k2)), self.m)) - (self.b * 10**self.k1)
-#
-#         fmt = self.analog_data_format
-#         if (fmt == self.DATA_FMT_1S_COMPLEMENT):
-#             if value < 0:
-#                 raise NotImplementedError()
-#         elif (fmt == self.DATA_FMT_2S_COMPLEMENT):
-#             if value < 0:
-#                 raise NotImplementedError()
-#
-#         raw = int(round(raw))
-#         if raw > 0xff:
-#             raise ValueError()
-#
-#         return raw
-#
-#     @property
-#     def l(self):
-#         try:
-#             return {
-#                 L_LN:     math.log,
-#                 L_LOG:    lambda x: math.log(x, 10),
-#                 L_LOG2:   lambda x: math.log(x, 2),
-#                 L_E:      math.exp,
-#                 L_EXP10:  lambda x: math.pow(10, x),
-#                 L_EXP2:   lambda x: math.pow(2, x),
-#                 L_1_X:    lambda x: old_div(1.0, x),
-#                 L_SQR:    lambda x: math.pow(x, 2),
-#                 L_CUBE:   lambda x: math.pow(x, 3),
-#                 L_SQRT:   math.sqrt,
-#                 L_CUBERT: lambda x: math.pow(x, old_div(1.0,3)),
-#                 L_LINEAR: lambda x: x,
-#             }[self.linearization & 0x7f]
-#         except KeyError:
-#             raise errors.DecodingError('unknown linearization %d' %
-#                     (self.linearization & 0x7f))
-#
-#     def _convert_complement(self, value, size):
-#         if (value & (1 << (size-1))):
-#             value = -(1<<size) + value
-#         return value
-#
-#     def _from_data(self, data):
-#         buffer = ByteBuffer(data[5:])
-#         # record key bytes
-#         self._common_record_key(buffer.pop_slice(3))
-#         # record body bytes
-#         self._entity(buffer.pop_slice(2))
-#
-#         # byte 11
-#         initialization = buffer.pop_unsigned_int(1)
-#         self.initialization = []
-#         if initialization & 0x40:
-#             self.initialization.append('scanning')
-#         if initialization & 0x20:
-#             self.initialization.append('events')
-#         if initialization & 0x10:
-#             self.initialization.append('thresholds')
-#         if initialization & 0x08:
-#             self.initialization.append('hysteresis')
-#         if initialization & 0x04:
-#             self.initialization.append('type')
-#         if initialization & 0x02:
-#             self.initialization.append('default_event_generation')
-#         if initialization & 0x01:
-#             self.initialization.append('default_scanning')
-#
-#         # byte 12 - sensor capabilities
-#         capabilities = buffer.pop_unsigned_int(1)
-#         self.capabilities = []
-#         # ignore sensor
-#         if capabilities & 0x80:
-#             self.capabilities.append('ignore_sensor')
-#         # sensor auto re-arm support
-#         if capabilities & 0x40:
-#             self.capabilities.append('auto_rearm')
-#         # sensor hysteresis support
-#         HYSTERESIS_MASK = 0x30
-#         HYSTERESIS_IS_NOT_SUPPORTED = 0x00
-#         HYSTERESIS_IS_READABLE = 0x10
-#         HYSTERESIS_IS_READ_AND_SETTABLE = 0x20
-#         HYSTERESIS_IS_FIXED = 0x30
-#         if capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_NOT_SUPPORTED:
-#             self.capabilities.append('hysteresis_not_supported')
-#         elif capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_READABLE:
-#             self.capabilities.append('hysteresis_readable')
-#         elif capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_READ_AND_SETTABLE:
-#             self.capabilities.append('hysteresis_read_and_setable')
-#         elif capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_FIXED:
-#             self.capabilities.append('hysteresis_fixed')
-#         # sensor threshold support
-#         THRESHOLD_MASK = 0x30
-#         THRESHOLD_IS_NOT_SUPPORTED = 0x00
-#         THRESHOLD_IS_READABLE = 0x10
-#         THRESHOLD_IS_READ_AND_SETTABLE = 0x20
-#         THRESHOLD_IS_FIXED = 0x30
-#         if capabilities & THRESHOLD_MASK == THRESHOLD_IS_NOT_SUPPORTED:
-#             self.capabilities.append('threshold_not_supported')
-#         elif capabilities & THRESHOLD_MASK == THRESHOLD_IS_READABLE:
-#             self.capabilities.append('threshold_readable')
-#         elif capabilities & THRESHOLD_MASK == THRESHOLD_IS_READ_AND_SETTABLE:
-#             self.capabilities.append('threshold_read_and_setable')
-#         elif capabilities & THRESHOLD_MASK == THRESHOLD_IS_FIXED:
-#             self.capabilities.append('threshold_fixed')
-#         # sensor event message control support
-#         if (capabilities & 0x03) is 0:
-#             pass
-#         if (capabilities & 0x03) is 1:
-#             pass
-#         if (capabilities & 0x03) is 2:
-#             pass
-#         if (capabilities & 0x03) is 3:
-#             pass
-#
-#         self.sensor_type_code = buffer.pop_unsigned_int(1)
-#         self.event_reading_type_code = buffer.pop_unsigned_int(1)
-#         self.assertion_mask = buffer.pop_unsigned_int(2)
-#         self.deassertion_mask = buffer.pop_unsigned_int(2)
-#         self.discrete_reading_mask = buffer.pop_unsigned_int(2)
-#         # byte 21, 22, 23
-#         units_1 = buffer.pop_unsigned_int(1)
-#         units_2 = buffer.pop_unsigned_int(1)
-#         units_3 = buffer.pop_unsigned_int(1)
-#         self.analog_data_format = (units_1 >> 6) & 0x3
-#         self.rate_unit = (units_1 >> 3) >> 0x7
-#         self.modifier_unit = (units_1 >> 1) & 0x2
-#         self.percentage = units_1 & 0x1
-#         # byte 24
-#         self.linearization = buffer.pop_unsigned_int(1) & 0x7f
-#         # byte 25, 26
-#         m = buffer.pop_unsigned_int(1)
-#         m_tol = buffer.pop_unsigned_int(1)
-#         self.m = (m & 0xff) | ((m_tol & 0xc0) << 2)
-#         self.tolerance = (m_tol & 0x3f)
-#
-#         # byte 27, 28, 29
-#         b = buffer.pop_unsigned_int(1)
-#         b_acc = buffer.pop_unsigned_int(1)
-#         acc_accexp = buffer.pop_unsigned_int(1)
-#         self.b = (b & 0xff) | ((b_acc & 0xc0) << 2)
-#         self.b = self._convert_complement(self.b, 10)
-#         self.accuracy = (b_acc & 0x3f) | ((acc_accexp & 0xf0) << 4)
-#         self.accuracy_exp = (acc_accexp & 0x0c) >> 2
-#         # byte 30
-#         rexp_bexp = buffer.pop_unsigned_int(1)
-#         self.k2 = (rexp_bexp & 0xf0) >> 4
-#         # convert 2s complement
-#         #if self.k2 & 0x8: # 4bit
-#         #    self.k2 = -0x10 + self.k2
-#         self.k2 = self._convert_complement(self.k2, 4)
-#
-#         self.k1 = rexp_bexp & 0x0f
-#         # convert 2s complement
-#         #if self.k1 & 0x8:
-#         #    self.k1 = -0x10 + self.k1
-#         self.k1 = self._convert_complement(self.k1, 4)
-#
-#         # byte 31
-#         analog_characteristics = buffer.pop_unsigned_int(1)
-#         self.analog_characteristic = []
-#         if analog_characteristics & 0x01:
-#             self.analog_characteristic.append('nominal_reading')
-#         if analog_characteristics & 0x02:
-#             self.analog_characteristic.append('normal_max')
-#         if analog_characteristics & 0x04:
-#             self.analog_characteristic.append('normal_min')
-#
-#         self.nominal_reading = buffer.pop_unsigned_int(1)
-#         self.normal_maximum = buffer.pop_unsigned_int(1)
-#         self.normal_minimum = buffer.pop_unsigned_int(1)
-#         self.sensor_maximum_reading = buffer.pop_unsigned_int(1)
-#         self.sensor_minimum_reading = buffer.pop_unsigned_int(1)
-#         self.threshold = {}
-#         self.threshold['unr'] = buffer.pop_unsigned_int(1)
-#         self.threshold['ucr'] = buffer.pop_unsigned_int(1)
-#         self.threshold['unc'] = buffer.pop_unsigned_int(1)
-#         self.threshold['lnr'] = buffer.pop_unsigned_int(1)
-#         self.threshold['lcr'] = buffer.pop_unsigned_int(1)
-#         self.threshold['lnc'] = buffer.pop_unsigned_int(1)
-#         self.hysteresis = {}
-#         self.hysteresis['positive_going'] = buffer.pop_unsigned_int(1)
-#         self.hysteresis['negative_going'] = buffer.pop_unsigned_int(1)
-#         self.reserved = buffer.pop_unsigned_int(2)
-#         self.oem = buffer.pop_unsigned_int(1)
-#         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-#         self.device_id_string = buffer.tostring()
-
-
 ###
 # SDR type 0x01
 ##################################################
@@ -859,39 +643,6 @@ class SdrFullSensorRecord(SdrCommon):
         self.device_id_string = buffer.to_string()
 
 
-
-# ###
-# # SDR type 0x02
-# ##################################################
-# class SdrCompactSensorRecord(SdrCommon):
-#     def _from_data(self, data):
-#         buffer = ByteBuffer(data[5:])
-#
-#         # record key bytes
-#         self._common_record_key(buffer.pop_slice(3))
-#
-#         # record body bytes
-#         self._entity(buffer.pop_slice(2))
-#
-#         self.sensor_initialization = buffer.pop_unsigned_int(1)
-#         self.capabilities = buffer.pop_unsigned_int(1)
-#         self.sensor_type_code = buffer.pop_unsigned_int(1)
-#         self.event_reading_type_code = buffer.pop_unsigned_int(1)
-#         self.assertion_mask = buffer.pop_unsigned_int(2)
-#         self.deassertion_mask = buffer.pop_unsigned_int(2)
-#         self.discrete_reading_mask = buffer.pop_unsigned_int(2)
-#         self.units_1 = buffer.pop_unsigned_int(1)
-#         self.units_2 = buffer.pop_unsigned_int(1)
-#         self.units_3 = buffer.pop_unsigned_int(1)
-#         self.record_sharing = buffer.pop_unsigned_int(2)
-#         self.positive_going_hysteresis = buffer.pop_unsigned_int(1)
-#         self.negative_going_hysteresis = buffer.pop_unsigned_int(1)
-#         self.reserved = buffer.pop_unsigned_int(3)
-#         self.oem = buffer.pop_unsigned_int(1)
-#         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-#         self.device_id_string = buffer.tostring()
-
-
 ###
 # SDR type 0x02
 ##################################################
@@ -930,28 +681,6 @@ class SdrCompactSensorRecord(SdrCommon):
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
         self.device_id_string = buffer.to_string()
 
-
-# ###
-# # SDR type 0x03
-# ##################################################
-# class SdrEventOnlySensorRecord(SdrCommon):
-#     def _from_data(self, data):
-#         buffer = ByteBuffer(data[5:])
-#
-#         # record key bytes
-#         self._common_record_key(buffer.pop_slice(3))
-#
-#         # record body bytes
-#         self._entity(buffer.pop_slice(2))
-#
-#         self.sensor_type = buffer.pop_unsigned_int(1)
-#         self.event_reading_type_code = buffer.pop_unsigned_int(1)
-#         self.record_sharing = buffer.pop_unsigned_int(2)
-#         self.reserved = buffer.pop_unsigned_int(1)
-#         self.oem = buffer.pop_unsigned_int(1)
-#         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-#         self.device_id_string = buffer.tostring()
-
 ###
 # SDR type 0x03
 ##################################################
@@ -979,24 +708,6 @@ class SdrEventOnlySensorRecord(SdrCommon):
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
         self.device_id_string = buffer.to_string()
 
-
-# ###
-# # SDR type 0x11
-# ##################################################
-# class SdrFruDeviceLocator(SdrCommon):
-#     def _from_data(self, data):
-#         buffer = ByteBuffer(data[5:])
-#         self.device_access_address = buffer.pop_unsigned_int(1) >> 1
-#         self.fru_device_id = buffer.pop_unsigned_int(1)
-#         self.logical_physical = buffer.pop_unsigned_int(1)
-#         self.channel_number = buffer.pop_unsigned_int(1)
-#         self.reserved = buffer.pop_unsigned_int(1)
-#         self.device_type = buffer.pop_unsigned_int(1)
-#         self.device_type_modifier= buffer.pop_unsigned_int(1)
-#         self._entity(buffer.pop_slice(2))
-#         self.oem = buffer.pop_unsigned_int(1)
-#         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-#         self.device_id_string = buffer.tostring()
 
 ###
 # SDR type 0x11
@@ -1027,23 +738,6 @@ class SdrFruDeviceLocator(SdrCommon):
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
         self.device_id_string = buffer.to_string()
-
-# ###
-# # SDR type 0x12
-# ##################################################
-# class SdrManagementContollerDeviceLocator(SdrCommon):
-#     def _from_data(self, data):
-#         buffer = ByteBuffer(data[5:])
-#         self.device_slave_address = buffer.pop_unsigned_int(1) >> 1
-#         self.channel_number = buffer.pop_unsigned_int(1) & 0xf
-#         self.power_state_notification = buffer.pop_unsigned_int(1)
-#         self.global_initialization = 0
-#         self.device_capabilities = buffer.pop_unsigned_int(1)
-#         self.reserved = buffer.pop_unsigned_int(3)
-#         self._entity(buffer.pop_slice(2))
-#         self.oem = buffer.pop_unsigned_int(1)
-#         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-#         self.device_id_string = buffer.tostring()
 
 ###
 # SDR type 0x12
