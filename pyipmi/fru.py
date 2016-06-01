@@ -25,7 +25,7 @@ import datetime
 
 from pyipmi.errors import DecodingError, CompletionCodeError
 from pyipmi.msgs import constants
-from pyipmi.utils import check_completion_code, bcd_search, chunks
+from pyipmi.utils import bcd_search, chunks
 
 codecs.register(bcd_search)
 
@@ -45,8 +45,8 @@ class Fru(object):
             offset += len(chunk)
 
     def read_fru_data(self, offset=None, count=None, fru_id=0):
-        off = 0
-        area_size = 0
+        #off = 0
+        #area_size = 0
         req_size = 32
         data = array.array('B')
 
@@ -83,6 +83,7 @@ class Fru(object):
 
     def get_fru_inventory(self, fru_id=0):
         return FruInventory(self.read_fru_data(fru_id=fru_id))
+
 
 class FruDataField(object):
     TYPE_BINARY = 0
@@ -155,7 +156,7 @@ class CommonInfoArea(FruData):
         self.format_version = data[0] & 0x0f
         if self.format_version != 1:
             raise DecodingError('unsupported format version (%d)' %
-                    self.format_version)
+                                self.format_version)
         self.length = data[1] * 8
         if sum(data[:self.length]) % 256 != 0:
             raise DecodingError('checksum failed')
@@ -253,7 +254,7 @@ class FruDataMultiRecord(FruData):
 
     def __str__(self):
         return '%02x: %s' % (self.record_type_id,
-                ' '.join('%02x' % b for b in self.raw))
+                             ' '.join('%02x' % b for b in self.raw))
 
     def _from_data(self, data):
         if len(data) < 5:
@@ -317,7 +318,7 @@ class FruPicmgRecord(FruDataMultiRecord):
     def create_from_record_id(data):
         picmg_record = FruPicmgRecord(data)
         if picmg_record.picmg_record_type_id ==\
-            FruPicmgRecord.PICMG_RECORD_ID_MTCA_POWER_MODULE_CAPABILITY:
+                FruPicmgRecord.PICMG_RECORD_ID_MTCA_POWER_MODULE_CAPABILITY:
             return FruPicmgPowerModuleCapabilityRecord(data)
         else:
             return FruPicmgRecord(data)
@@ -326,7 +327,7 @@ class FruPicmgRecord(FruDataMultiRecord):
         if len(data) < 10:
             raise DecodingError('data too short')
         FruDataMultiRecord._from_data(self, data)
-        self.manufacturer_id = ord(data[5])|ord(data[6])<<8|ord(data[7])<<16
+        self.manufacturer_id = ord(data[5]) | ord(data[6]) << 8 | ord(data[7]) << 16
         self.picmg_record_type_id = ord(data[8])
         self.format_version = ord(data[9])
 
@@ -335,8 +336,8 @@ class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
     def _from_data(self, data):
         if len(data) < 12:
             raise DecodingError('data too short')
-        FruPicmgRecord._from_data(self,data)
-        maximum_current_output = ord(data[10])|ord(data[11])<<8
+        FruPicmgRecord._from_data(self, data)
+        maximum_current_output = ord(data[10]) | ord(data[11]) << 8
         self.maximum_current_output = float(maximum_current_output/10)
 
 

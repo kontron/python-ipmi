@@ -17,10 +17,10 @@
 from __future__ import absolute_import
 from builtins import object
 
-from functools import partial
+# from functools import partial
 
 from pyipmi.msgs import create_request_by_name
-from pyipmi.errors import DecodingError, CompletionCodeError
+# from pyipmi.errors import DecodingError, CompletionCodeError
 from .utils import check_completion_code
 from pyipmi.state import State
 
@@ -28,6 +28,7 @@ from pyipmi.msgs.chassis import \
         CONTROL_POWER_DOWN, CONTROL_POWER_UP, CONTROL_POWER_CYCLE, \
         CONTROL_HARD_RESET, CONTROL_DIAGNOSTIC_INTERRUPT, \
         CONTROL_SOFT_SHUTDOWN
+
 
 class Chassis(object):
     def get_chassis_status(self):

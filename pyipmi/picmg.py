@@ -17,7 +17,7 @@
 #from builtins import object
 
 import array
-from pyipmi.errors import DecodingError, CompletionCodeError
+from pyipmi.errors import DecodingError, EncodingError, CompletionCodeError
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import picmg
 from pyipmi.utils import check_completion_code
@@ -306,20 +306,20 @@ class LinkDescriptor(State):
 class PowerLevel(State):
 
     def _from_response(self, rsp):
-        self.dynamic_power_configuration = res.properties.dynamic_power_configuration
-        self.power_level = res.properties.power_level
-        self.delay_to_stable = res.delay_to_stable_power
-        self.power_mulitplier = res.power_multiplier
-        self.power_levels = res.power_draw
+        self.dynamic_power_configuration = rsp.properties.dynamic_power_configuration
+        self.power_level = rsp.properties.power_level
+        self.delay_to_stable = rsp.delay_to_stable_power
+        self.power_mulitplier = rsp.power_multiplier
+        self.power_levels = rsp.power_draw
 
 
 class FanSpeedProperties(State):
 
-    def _from_response(self, res):
-        self.minimum_speed_level = res.minimum_speed_level
-        self.maximum_speed_level = res.maximum_speed_level
-        self.normal_operation_level = res.normal_operation_level
-        self.local_control_supported = res.properties.local_control_supported
+    def _from_response(self, rsp):
+        self.minimum_speed_level = rsp.minimum_speed_level
+        self.maximum_speed_level = rsp.maximum_speed_level
+        self.normal_operation_level = rsp.normal_operation_level
+        self.local_control_supported = rsp.properties.local_control_supported
 
 
 class LedState(State):
@@ -455,13 +455,13 @@ class GlobalStatus(State):
     ]
 
     def _from_response(self, rsp):
-        self.role = res.global_status.role
+        self.role = rsp.global_status.role
         self.management_power_good =\
-                bool(res.global_status.management_power_good)
+                bool(rsp.global_status.management_power_good)
         self.payload_power_good =\
-                bool(res.global_status.payload_power_good)
+                bool(rsp.global_status.payload_power_good)
         self.unidentified_fault =\
-                bool(res.global_status.unidentified_fault)
+                bool(rsp.global_status.unidentified_fault)
 
 
 class PowerChannelStatus(State):

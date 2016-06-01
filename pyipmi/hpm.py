@@ -64,6 +64,7 @@ CC_QUERY_SELFTEST_NO_RESULTS_AVAILABLE = 0xD5
 CC_ABORT_UPGRADE_CANNOT_ABORT = 0x80
 CC_ABORT_UPGRADE_CANNOT_RESUME_OPERATION = 0x81
 
+
 class Hpm(object):
 
     def _get_component_count(self, components):
@@ -82,8 +83,8 @@ class Hpm(object):
     def get_component_properties(self, component_id):
         properties = []
         for p in (PROPERTY_GENERAL_PROPERTIES, PROPERTY_CURRENT_VERSION,
-                PROPERTY_DESCRIPTION_STRING, PROPERTY_ROLLBACK_VERSION,
-                PROPERTY_DEFERRED_VERSION):
+                  PROPERTY_DESCRIPTION_STRING, PROPERTY_ROLLBACK_VERSION,
+                  PROPERTY_DEFERRED_VERSION):
             try:
                 property = self.get_component_property(component_id, p)
                 if property is not None:
@@ -164,11 +165,11 @@ class Hpm(object):
             block_number &= 0xff
 
     def finish_firmware_upload(self, component, length):
-        self.send_message_with_name('FinishFirmwareUpload',
+        return self.send_message_with_name('FinishFirmwareUpload',
                 component_id=component, image_length=length)
 
     def finish_upload_and_wait(self, component, length,
-            timeout=2, interval=0.1):
+                               timeout=2, interval=0.1):
         """ Finish the firmware upload process and wait for
             long running command. """
         try:
@@ -201,16 +202,15 @@ class Hpm(object):
             except TimeoutError:
                 time.sleep(interval)
 
-
     def activate_firmware(self, rollback_override=None):
         req = create_request_by_name('ActivateFirmware')
-        if rollback_override != None:
+        if rollback_override is None:
             req.rollback_override_policy = rollback_override
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
     def activate_firmware_and_wait(self, rollback_override=None,
-            timeout=2, interval=1):
+                                   timeout=2, interval=1):
         """ Activate the new uploaded firmware and wait for
             long running command. """
         try:
@@ -275,7 +275,6 @@ class Hpm(object):
             if type(action) == UpgradeActionRecordUploadForUpgrade:
                 print("do ACTION_UPLOAD_FOR_UPGRADE")
 
-
     def preparation_stage(self, image):
         ####################################################
         # match device ID, manfuacturer ID, etc.
@@ -302,6 +301,7 @@ class Hpm(object):
 
         ####################################################
         # Match IPM Controller capabilities with Upgrade Image capabilities
+        support = False
         for imageComponent in header.components:
             if imageComponent in targetCap.components:
                 support = True
@@ -378,8 +378,8 @@ class TargetUpgradeCapabilities(State):
         str.append(" Components: %s" % self.components)
         return "\n".join(str)
 
-
 codecs.register(bcd_search)
+
 
 class ComponentProperty(object):
     def __init__(self, data=None):
@@ -477,7 +477,7 @@ class SelfTestResult(State):
 
         result2 = rsp.selftest_result_2
 
-        if self.status  != self.CORRUPTED_OR_INACCESSIBLE_DATA_OR_DEVICES:
+        if self.status != self.CORRUPTED_OR_INACCESSIBLE_DATA_OR_DEVICES:
             self.fail_sel = (result2 & 0x80) >> 7
             self.fail_sdrr = (result2 & 0x40) >> 6
             self.fail_bmc_fru = (result2 & 0x20) >> 5
@@ -500,6 +500,7 @@ class RollbackStatus(object):
 
 
 image_header = collections.namedtuple('image_header', ['field_name', 'format', 'start', 'len'])
+
 
 class UpgradeImageHeaderRecord(object):
     FORMAT  = [
@@ -537,7 +538,7 @@ class UpgradeImageHeaderRecord(object):
             if data[20] & (1 << i):
                 self.components.append(i)
         self.earliest_compatible_revision = VersionField(data[24:24 +
-        VersionField.VERSION_FIELD_LEN])
+                VersionField.VERSION_FIELD_LEN])
         self.firmware_revision = VersionField(data[26:26 + VersionField.VERSION_WITH_AUX_FIELD_LEN])
 
         if self.oem_data_length:
