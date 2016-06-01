@@ -42,9 +42,9 @@ class CompletionCodeError(Exception):
 
     def find_cc_desc(self, error_cc):
         for cc in cc_err_desc:
-            if error_cc is cc[0]:
+            if error_cc == cc[0]:
                 return cc[1]
-            return "Unknown error description"
+        return "Unknown error description"
 
 
 class NotSupportedError(Exception):
