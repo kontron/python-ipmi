@@ -355,7 +355,7 @@ class LedState(State):
 
     def __init__(self, rsp=None, fru_id=None, led_id=None, color=None,
             function=None):
-        State.__init__(self, rsp)
+        super(self.__class__, self).__init__(rsp)
         if fru_id is not None:
             self.fru_id = fru_id
         if led_id is not None:

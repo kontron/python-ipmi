@@ -254,9 +254,9 @@ class SdrFullSensorRecord(SdrCommon):
     DATA_FMT_NONE = 3
 
     def __init__(self, data, next_id=None):
-        SdrCommon.__init__(self, data, next_id)
+        super(self.__class__, self).__init__(data, next_id)
         if data:
-            self.from_data(data)
+            self._from_data(data)
 
     def __str__(self):
         s = '["%-16s"] [%s:%s] [%s]' \
@@ -479,7 +479,7 @@ class SdrFullSensorRecord(SdrCommon):
 ##################################################
 class SdrCompactSensorRecord(SdrCommon):
     def __init__(self, data, next_id=None):
-        SdrCommon.__init__(self, data, next_id)
+        super(self.__class__, self).__init__(data, next_id)
         if data:
             self._from_data(data)
 
@@ -520,7 +520,7 @@ class SdrCompactSensorRecord(SdrCommon):
 ##################################################
 class SdrEventOnlySensorRecord(SdrCommon):
     def __init__(self, data, next_id=None):
-        SdrCommon.__init__(self, data, next_id)
+        super(self.__class__, self).__init__(data, next_id)
         if data:
             self._from_data(data)
 
@@ -550,7 +550,7 @@ class SdrEventOnlySensorRecord(SdrCommon):
 ##################################################
 class SdrFruDeviceLocator(SdrCommon):
     def __init__(self, data, next_id=None):
-        SdrCommon.__init__(self, data, next_id)
+        super(self.__class__, self).__init__(data, next_id)
         if data:
             self._from_data(data)
 
@@ -578,7 +578,7 @@ class SdrFruDeviceLocator(SdrCommon):
 ##################################################
 class SdrManagementContollerDeviceLocator(SdrCommon):
     def __init__(self, data, next_id=None):
-        SdrCommon.__init__(self, data, next_id)
+        super(self.__class__, self).__init__(data, next_id)
         if data:
             self._from_data(data)
 

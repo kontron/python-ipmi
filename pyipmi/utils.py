@@ -95,6 +95,9 @@ class ByteBuffer:
     def tostring(self):
         return py3dec_unic_bytes_fix(self.array.tostring())
 
+    def extend(self, data):
+        self.array.extend(data)
+
     def append_array(self, a):
         self.array.extend(a)
 
