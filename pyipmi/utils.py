@@ -20,7 +20,7 @@ import codecs
 from array import array
 import pyipmi.msgs.constants
 from pyipmi.errors import DecodingError, CompletionCodeError
-from pyipmi.msgs import create_request_by_name
+#from pyipmi.msgs import create_request_by_name
 
 
 def py3enc_unic_bytes_fix(dat):
@@ -46,7 +46,7 @@ def bytes2(dat, enc):
 
 def check_completion_code(cc):
     if cc != pyipmi.msgs.constants.CC_OK:
-        raise pyipmi.errors.CompletionCodeError(cc)
+        raise CompletionCodeError(cc)
 
 
 def chunks(d, n):
@@ -73,7 +73,7 @@ class ByteBuffer:
             try:
                 value |= self.array.pop(0) << (8*i)
             except IndexError:
-                raise pyipmi.errors.DecodingError('Data too short for message')
+                raise DecodingError('Data too short for message')
         return value
 
     def push_string(self, value):
@@ -86,7 +86,7 @@ class ByteBuffer:
 
     def pop_slice(self, length):
         if len(self.array) < length:
-            raise pyipmi.errors.DecodingError('Data too short for message')
+            raise DecodingError('Data too short for message')
 
         c = ByteBuffer(self.array[0:length])
         self.__delslice__(0, length)
@@ -127,10 +127,11 @@ def bcd_decode(input, errors='strict'):
         for b in input:
             if int(sys.version[0]) == 2:
                 b = ord(b)
-            chars.append(bcd_map[b>>4 & 0xf] + bcd_map[b & 0xf])
+            chars.append(bcd_map[b >> 4 & 0xf] + bcd_map[b & 0xf])
         return (''.join(chars), len(input) * 2)
     except IndexError:
         raise ValueError()
+
 
 def bcd_search(name):
     if name != 'bcd+':
