@@ -204,7 +204,7 @@ class Hpm(object):
 
     def activate_firmware(self, rollback_override=None):
         req = create_request_by_name('ActivateFirmware')
-        if rollback_override is None:
+        if rollback_override is not None:
             req.rollback_override_policy = rollback_override
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)

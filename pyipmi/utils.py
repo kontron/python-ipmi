@@ -19,8 +19,8 @@ import sys
 import codecs
 from array import array
 import pyipmi.msgs.constants
-from pyipmi.errors import DecodingError, CompletionCodeError
-from pyipmi.msgs import create_request_by_name
+#from pyipmi.errors import DecodingError, CompletionCodeError
+#from pyipmi.msgs import create_request_by_name
 
 
 def py3enc_unic_bytes_fix(dat):
@@ -127,10 +127,11 @@ def bcd_decode(input, errors='strict'):
         for b in input:
             if int(sys.version[0]) == 2:
                 b = ord(b)
-            chars.append(bcd_map[b>>4 & 0xf] + bcd_map[b & 0xf])
+            chars.append(bcd_map[b >> 4 & 0xf] + bcd_map[b & 0xf])
         return (''.join(chars), len(input) * 2)
     except IndexError:
         raise ValueError()
+
 
 def bcd_search(name):
     if name != 'bcd+':
