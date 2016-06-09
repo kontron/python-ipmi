@@ -29,6 +29,7 @@ from pyipmi.utils import bcd_search, chunks
 
 codecs.register(bcd_search)
 
+
 class Fru(object):
     def __init__(self):
         self.write_length = 16
@@ -40,8 +41,14 @@ class Fru(object):
 
     def write_fru_data(self, data, offset=0, fru_id=0):
         for chunk in chunks(data, self.write_length):
-            self.send_message_with_name('WriteFruData',
+            write_rsp = self.send_message_with_name('WriteFruData',
                             fru_id=fru_id, offset=offset, data=chunk)
+
+            # check if device wrote the same number of bytes sent
+            if write_rsp.count_written != len(chunk):
+                raise Exception('sent {:} bytes but device wrote {:} bytes'
+                                .format(len(chunk), write_rsp.count_written))
+
             offset += len(chunk)
 
     def read_fru_data(self, offset=None, count=None, fru_id=0):
@@ -102,6 +109,7 @@ class FruDataField(object):
             return self.value.replace('\x00', '')
 
     def _from_data(self, data, offset=0, force_lang_english=False):
+        self.offset = offset
         self.field_type = data[offset] >> 6 & 0x3
         self.length = data[offset] & 0x3f
 

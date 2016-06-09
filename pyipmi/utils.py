@@ -40,7 +40,7 @@ def py3dec_unic_bytes_fix(dat):
 def bytes2(dat, enc):
     # python 2-3 workaround
     if int(sys.version[0]) > 2:
-       return bytes(dat, enc)
+        return bytes(dat, enc)
     return dat
 
 

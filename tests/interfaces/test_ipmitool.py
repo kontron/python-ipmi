@@ -95,3 +95,19 @@ class TestIpmitool:
         target = Target(0x20)
         self._interface._run_ipmitool = mock
         self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
+
+
+    def test_send_and_receive_raw_serial(self):
+        interface = Ipmitool(interface_type='serial-terminal')
+        self.session.set_session_type_serial('/dev/tty2', 115200)
+        interface.establish_session(self.session)
+
+        mock = MagicMock()
+        mock.return_value = (b'', 0)
+        interface._run_ipmitool = mock
+
+        target = Target(0x20)
+        data = interface.send_and_receive_raw(target, 0, 0x6, '\x01')
+
+        mock.assert_called_once_with('ipmitool -I serial-terminal -D /dev/tty2:115200 -t 0x20 -l 0 raw 0x06 0x01')
+
