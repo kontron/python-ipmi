@@ -58,4 +58,8 @@ setup(name = name,
             ]
         },
         test_suite = 'tests',
+        install_requires=[
+            'markdown',
+            'future',
+        ],
 )
