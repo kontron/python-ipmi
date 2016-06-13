@@ -21,11 +21,11 @@ from builtins import object
 import re
 from subprocess import Popen, PIPE
 from array import array
-from pyipmi import Session
-from pyipmi.errors import TimeoutError
-from pyipmi.logger import log
-from pyipmi.msgs import encode_message, decode_message, create_message
-from pyipmi.utils import py3dec_unic_bytes_fix
+from .. import Session
+from ..errors import TimeoutError
+from ..logger import log
+from ..msgs import encode_message, decode_message, create_message
+from ..utils import py3dec_unic_bytes_fix
 
 class Ipmitool(object):
     """This interface uses the ipmitool raw command to "emulate" a RMCP

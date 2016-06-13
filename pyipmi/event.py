@@ -16,10 +16,10 @@
 
 from builtins import object
 
-from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
-from pyipmi.utils import check_completion_code, ByteBuffer
-from pyipmi.msgs import create_request_by_name
-from pyipmi.msgs import constants
+#from .errors import DecodingError, CompletionCodeError, RetryError
+from .utils import check_completion_code, ByteBuffer
+from .msgs import create_request_by_name
+#from .msgs import constants
 
 EVENT_ASSERTION = 0
 EVENT_DEASSERTION = 1

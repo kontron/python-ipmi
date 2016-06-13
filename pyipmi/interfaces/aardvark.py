@@ -19,10 +19,10 @@ from builtins import object
 import time
 import array
 
-from pyipmi.msgs import create_message, encode_message, decode_message
-from pyipmi.errors import TimeoutError
-from pyipmi.logger import log
-from pyipmi.interfaces.ipmb import IpmbHeader, checksum
+from ..msgs import create_message, encode_message, decode_message
+from ..errors import TimeoutError
+from ..logger import log
+from ..interfaces.ipmb import IpmbHeader, checksum
 
 try:
     import pyaardvark

@@ -33,9 +33,9 @@ from . import sel
 from . import sensor
 from . import msgs
 
-from pyipmi.errors import TimeoutError, CompletionCodeError
-from pyipmi.msgs.registry import create_request_by_name
-from pyipmi.utils import check_completion_code
+from .errors import TimeoutError, CompletionCodeError
+from .msgs.registry import create_request_by_name
+from .utils import check_completion_code
 
 try:
     from version import __version__

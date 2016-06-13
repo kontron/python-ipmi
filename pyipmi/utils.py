@@ -18,9 +18,9 @@ from builtins import range
 import sys
 import codecs
 from array import array
-import pyipmi.msgs.constants
-from pyipmi.errors import DecodingError, CompletionCodeError
-#from pyipmi.msgs import create_request_by_name
+from .msgs import constants
+from .errors import DecodingError, CompletionCodeError
+#from .msgs import create_request_by_name
 
 
 def py3enc_unic_bytes_fix(dat):
@@ -45,7 +45,7 @@ def bytes2(dat, enc):
 
 
 def check_completion_code(cc):
-    if cc != pyipmi.msgs.constants.CC_OK:
+    if cc != constants.CC_OK:
         raise CompletionCodeError(cc)
 
 

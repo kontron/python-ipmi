@@ -5,7 +5,7 @@
 
 import array
 
-from pyipmi.errors import DecodingError
+from .errors import DecodingError
 
 class VersionField(object):
     """This class represent the Version fields defines by IPMI.

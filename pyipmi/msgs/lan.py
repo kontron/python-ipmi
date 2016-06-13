@@ -30,7 +30,7 @@ from . import Conditional
 from . import Optional
 from . import RemainingBytes
 
-from pyipmi.utils import ByteBuffer
+#from pyipmi.utils import ByteBuffer
 
 @register_message_class
 class SetLanConfigurationParametersReq(Message):

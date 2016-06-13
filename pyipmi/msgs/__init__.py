@@ -15,24 +15,24 @@ from __future__ import absolute_import
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-from pyipmi.msgs.registry import register_message_class
-from pyipmi.msgs.registry import create_request_by_name
-from pyipmi.msgs.registry import create_response_by_name
-from pyipmi.msgs.registry import create_message
+from .registry import register_message_class
+from .registry import create_request_by_name
+from .registry import create_response_by_name
+from .registry import create_message
 
-from pyipmi.msgs.message import Message
-from pyipmi.msgs.message import ByteArray
-from pyipmi.msgs.message import VariableByteArray
-from pyipmi.msgs.message import UnsignedInt
-from pyipmi.msgs.message import UnsignedIntMask
-from pyipmi.msgs.message import Timestamp
-from pyipmi.msgs.message import Bitfield
-from pyipmi.msgs.message import CompletionCode
-from pyipmi.msgs.message import Conditional
-from pyipmi.msgs.message import Optional
-from pyipmi.msgs.message import RemainingBytes
-from pyipmi.msgs.message import encode_message
-from pyipmi.msgs.message import decode_message
+from .message import Message
+from .message import ByteArray
+from .message import VariableByteArray
+from .message import UnsignedInt
+from .message import UnsignedIntMask
+from .message import Timestamp
+from .message import Bitfield
+from .message import CompletionCode
+from .message import Conditional
+from .message import Optional
+from .message import RemainingBytes
+from .message import encode_message
+from .message import decode_message
 
 from . import bmc
 from . import chassis

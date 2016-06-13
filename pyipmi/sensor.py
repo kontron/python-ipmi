@@ -23,11 +23,11 @@ from __future__ import absolute_import
 # import array
 # import time
 # from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
-from pyipmi.utils import check_completion_code # ByteBuffer
-from pyipmi.msgs import create_request_by_name
-# from pyipmi.msgs import constants
+from .utils import check_completion_code # ByteBuffer
+from .msgs import create_request_by_name
+# from .msgs import constants
 
-from pyipmi.helper import get_sdr_data_helper, get_sdr_chunk_helper
+from .helper import get_sdr_data_helper, get_sdr_chunk_helper
 
 from . import sdr
 

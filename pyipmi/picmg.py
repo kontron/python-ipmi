@@ -14,16 +14,16 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-#from builtins import object
+# from builtins import object
 
 import array
-from pyipmi.errors import DecodingError, EncodingError, CompletionCodeError
-from pyipmi.msgs import create_request_by_name
-from pyipmi.msgs import picmg
-from pyipmi.utils import check_completion_code
-from pyipmi.state import State
+from .errors import DecodingError, EncodingError, CompletionCodeError
+from .msgs import create_request_by_name
+from .msgs import picmg
+from .utils import check_completion_code
+from .state import State
 
-from pyipmi.msgs.picmg import \
+from .msgs.picmg import \
         FRU_CONTROL_COLD_RESET, FRU_CONTROL_WARM_RESET, \
         FRU_CONTROL_GRACEFUL_REBOOT, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT, \
         FRU_ACTIVATION_FRU_ACTIVATE, FRU_ACTIVATION_FRU_DEACTIVATE
@@ -194,7 +194,6 @@ class Picmg(object):
 
 class LinkDescriptor(State):
     # TODO dont duplicate exports, import them instead
-    from pyipmi.msgs import picmg
     INTERFACE_BASE = picmg.LINK_INTERFACE_BASE
     INTERFACE_FABRIC = picmg.LINK_INTERFACE_FABRIC
     INTERFACE_UPDATE_CHANNEL = picmg.LINK_INTERFACE_UPDATE_CHANNEL

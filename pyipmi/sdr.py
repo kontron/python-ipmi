@@ -23,14 +23,14 @@ from . import errors
 import array
 import time
 
-from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
-from pyipmi.utils import check_completion_code, ByteBuffer
-from pyipmi.msgs import create_request_by_name
-from pyipmi.msgs import constants
+from .errors import DecodingError, CompletionCodeError, RetryError
+from .utils import check_completion_code, ByteBuffer
+from .msgs import create_request_by_name
+#from .msgs import constants
 
-from pyipmi.helper import get_sdr_data_helper, clear_repository_helper
-from pyipmi.helper import get_sdr_chunk_helper
-from pyipmi.state import State
+from .helper import get_sdr_data_helper, clear_repository_helper
+from .helper import get_sdr_chunk_helper
+from .state import State
 
 SDR_TYPE_FULL_SENSOR_RECORD = 0x01
 SDR_TYPE_COMPACT_SENSOR_RECORD = 0x02

@@ -23,9 +23,9 @@ import array
 import codecs
 import datetime
 
-from pyipmi.errors import DecodingError, CompletionCodeError
-from pyipmi.msgs import constants
-from pyipmi.utils import bcd_search, chunks
+from .errors import DecodingError, CompletionCodeError
+from .msgs import constants
+from .utils import bcd_search, chunks
 
 codecs.register(bcd_search)
 

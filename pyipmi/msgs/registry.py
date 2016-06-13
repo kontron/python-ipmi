@@ -17,7 +17,7 @@
 #from builtins import object
 
 from functools import partial
-from pyipmi.errors import DescriptionError
+from ..errors import DescriptionError
 
 class MessageRegistry(object):
     def __init__(self):

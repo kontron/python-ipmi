@@ -20,14 +20,14 @@
 
 import time
 
-from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
-from pyipmi.utils import check_completion_code, ByteBuffer
-from pyipmi.msgs import create_request_by_name
-from pyipmi.msgs import constants
-from pyipmi.event import EVENT_ASSERTION, EVENT_DEASSERTION
+from .errors import DecodingError, CompletionCodeError, RetryError
+from .utils import check_completion_code, ByteBuffer
+from .msgs import create_request_by_name
+from .msgs import constants
+from .event import EVENT_ASSERTION, EVENT_DEASSERTION
 
-from pyipmi.helper import clear_repository_helper
-from pyipmi.state import State
+from .helper import clear_repository_helper
+from .state import State
 
 
 class Sel(object):

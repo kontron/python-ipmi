@@ -16,11 +16,11 @@
 
 from builtins import object
 
-from pyipmi.msgs import create_request_by_name
-#from pyipmi.errors import DecodingError, CompletionCodeError
-from pyipmi.utils import check_completion_code
-from pyipmi.state import State
-from pyipmi.fields import VersionField
+from .msgs import create_request_by_name
+#from .errors import DecodingError, CompletionCodeError
+from .utils import check_completion_code
+from .state import State
+from .fields import VersionField
 
 
 class Bmc(object):

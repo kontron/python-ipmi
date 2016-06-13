@@ -22,8 +22,8 @@ from builtins import object
 from array import array
 
 from . import constants
-from pyipmi.utils import ByteBuffer,  py3enc_unic_bytes_fix
-from pyipmi.errors import CompletionCodeError, EncodingError, DecodingError, \
+from ..utils import ByteBuffer,  py3enc_unic_bytes_fix
+from ..errors import CompletionCodeError, EncodingError, DecodingError, \
         DescriptionError
 
 class BaseField(object):

@@ -26,13 +26,13 @@ import collections
 import hashlib
 import time
 
-from pyipmi.errors import CompletionCodeError, HpmError, TimeoutError
-from pyipmi.msgs import create_request_by_name
-from pyipmi.msgs import constants
-from pyipmi.utils import check_completion_code, bcd_search, chunks
-from pyipmi.utils import py3dec_unic_bytes_fix, bytes2 as bytes #overwrites system bytes
-from pyipmi.state import State
-from pyipmi.fields import VersionField
+from .errors import CompletionCodeError, HpmError, TimeoutError
+from .msgs import create_request_by_name
+from .msgs import constants
+from .utils import check_completion_code, bcd_search, chunks
+from .utils import py3dec_unic_bytes_fix, bytes2 as bytes #overwrites system bytes
+from .state import State
+from .fields import VersionField
 
 
 PROPERTY_GENERAL_PROPERTIES = 0
