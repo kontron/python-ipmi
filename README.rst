@@ -1,7 +1,7 @@
 Pure Python IPMI Library
 ========================
 
-|BuildStatus|
+|BuildStatus| |PyPiVersion| |Coveralls| |CodeClimate|
 
 Features
 --------
@@ -20,7 +20,7 @@ Example
 Below is an example that shows how to setup the interface and the connection
 using the `ipmitool`_ as backend with both network and serial interfaces.
 
-Example with lan type interface:
+Example with lan interface:
 
 .. code:: python
 
@@ -76,7 +76,7 @@ ipmitool command:
 Compatibility
 -------------
 
-Currently python 2.7 is supported.
+Python 2.7 is currently  supported.
 Python 3.x support is in beta
 
 Contributing
@@ -109,5 +109,11 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 .. _Total Phase: http://www.totalphase.com
 .. _ipmitool: http://sourceforge.net/projects/ipmitool/
-.. |BuildStatus| image:: https://travis-ci.org/Teslafly/python-ipmi.png?branch=master
-                 :target: https://travis-ci.org/Teslafly/python-ipmi
+.. |BuildStatus| image:: https://travis-ci.org/kontron/python-ipmi.png?branch=master
+                 :target: https://travis-ci.org/kontron/python-ipmi
+.. |PyPiVersion| image:: https://badge.fury.io/py/python-ipmi.svg
+                 :target: http://badge.fury.io/py/python-ipmi
+.. |CodeClimate| image:: https://codeclimate.com/github/kontron/python-ipmi/badges/gpa.svg
+                 :target: http://codeclimate.com/github/kontron/python-ipmi
+.. |Coveralls|   image:: https://coveralls.io/repos/github/kontron/python-ipmi/badge.svg?branch=master
+                 :target: https://coveralls.io/github/kontron/python-ipmi?branch=master

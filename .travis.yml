@@ -16,15 +16,11 @@ script:
   - nosetests --with-coverage
 after_success:
   - coveralls
+deploy:
+  provider: pypi
+  user: mwalle
+  password:
+    secure: ES9znx3LnSVqPVpQJmcR9Xtk5qvLeyjzSmD7on0fRjR3yvhnycd2Tlc+vGEYow27nqleAVkspUsom/FMiWjccJFhk5yuTql6vYnKiXGcmFtMPPtOv+hR0CHXH5hqniSKjqRVJyRlMyDEN+vzv0Wucg+Cb3pKUyly2+Zp9M9sphY=
+  on:
+    tags: true
 
-#deploy:
-#  provider: pypi
-#  user: mwalle
-#  password:
-#    secure: ES9znx3LnSVqPVpQJmcR9Xtk5qvLeyjzSmD7on0fRjR3yvhnycd2Tlc+vGEYow27nqleAVkspUsom/FMiWjccJFhk5yuTql6vYnKiXGcmFtMPPtOv+hR0CHXH5hqniSKjqRVJyRlMyDEN+vzv0Wucg+Cb3pKUyly2+Zp9M9sphY=
-#  on:
-#    tags: true
-
-addons:
-    code_climate:
-        repo_token: e222d9962f9c42ab6471e670dc351b91aade3d53ec6cf82e789dca6ec3b8a786
