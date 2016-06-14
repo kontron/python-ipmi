@@ -19,7 +19,7 @@ except (OSError, subprocess.CalledProcessError, IOError) as e:
     try:
         with open(version_py, 'r') as f:
             d = dict()
-            exec(f, d)
+            exec(f.read(), d)
             version = d['__version__']
     except IOError:
         version = 'unknown'
