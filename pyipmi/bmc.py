@@ -14,11 +14,14 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-from pyipmi.msgs import create_request_by_name
-from pyipmi.errors import DecodingError, CompletionCodeError
-from pyipmi.utils import check_completion_code
-from pyipmi.state import State
-from pyipmi.fields import VersionField
+from builtins import object
+
+from .msgs import create_request_by_name
+#from .errors import DecodingError, CompletionCodeError
+from .utils import check_completion_code
+from .state import State
+from .fields import VersionField
+
 
 class Bmc(object):
     def get_device_id(self):
@@ -114,13 +117,13 @@ class Watchdog(State):
 class DeviceId(State):
 
     def __str__(self):
-        s = 'Device ID: %d' % self.device_id
-        s+= ' revision: %d' % self.revision
-        s+= ' available: %d' % self.available
-        s+= ' fw version: %s' % (self.fw_revision)
-        s+= ' ipmi: %s' % self.ipmi_version
-        s+= ' manufacturer: %d' % self.manufacturer_id
-        s+= ' product: %d' % self.product_id
+        s  = 'Device ID: %d' % self.device_id
+        s += ' revision: %d' % self.revision
+        s += ' available: %d' % self.available
+        s += ' fw version: %s' % (self.fw_revision)
+        s += ' ipmi: %s' % self.ipmi_version
+        s += ' manufacturer: %d' % self.manufacturer_id
+        s += ' product: %d' % self.product_id
         return s
 
     def supports_function(self, name):
@@ -148,8 +151,14 @@ class DeviceId(State):
         self.product_id = rsp.product_id
 
         self.supported_functions = []
-        functions = ('sensor', 'sdr_repository', 'sel', 'fru_inventory',
-            'ipmb_event_receiver', 'ipmb_event_generator', 'bridge', 'chassis')
+        functions = ('sensor',
+                     'sdr_repository',
+                     'sel',
+                     'fru_inventory',
+                     'ipmb_event_receiver',
+                     'ipmb_event_generator',
+                     'bridge',
+                     'chassis')
 
         for function in functions:
             if hasattr(rsp.additional_support, function):

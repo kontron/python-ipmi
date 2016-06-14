@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+from .msgs.constants import cc_err_desc
+
 class DecodingError(Exception):
     """Error on message decoding."""
     pass
@@ -33,9 +35,16 @@ class CompletionCodeError(Exception):
     """IPMI completion code not OK."""
     def __init__(self, cc):
         self.cc = cc
+        self.cc_desc = self.find_cc_desc(cc)
 
     def __str__(self):
-        return "%s cc=0x%02x" % (self.__class__.__name__, self.cc)
+        return "%s cc=0x%02x desc=%s" % (self.__class__.__name__, self.cc, self.cc_desc)
+
+    def find_cc_desc(self, error_cc):
+        for cc in cc_err_desc:
+            if error_cc == cc[0]:
+                return cc[1]
+        return "Unknown error description"
 
 
 class NotSupportedError(Exception):

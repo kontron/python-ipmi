@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -16,7 +17,7 @@
 
 import array
 
-import constants
+from . import constants
 from . import register_message_class
 from . import Message
 from . import ByteArray
@@ -29,7 +30,7 @@ from . import Conditional
 from . import Optional
 from . import RemainingBytes
 
-from pyipmi.utils import ByteBuffer
+#from pyipmi.utils import ByteBuffer
 
 @register_message_class
 class SetLanConfigurationParametersReq(Message):

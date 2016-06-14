@@ -18,14 +18,16 @@ Example
 -------
 
 Below is an example that shows how to setup the interface and the connection
-using the `ipmitool`_ as backend.
+using the `ipmitool`_ as backend with both network and serial interfaces.
+
+Example with lan interface:
 
 .. code:: python
 
     import pyipmi
     import pyipmi.interfaces
 
-    # Supported interface_types for ipmitool are: lan and lanplus
+    # Supported interface_types for ipmitool are: 'lan' , 'lanplus', and 'serial-terminal'
     interface = pyipmi.interfaces.create_interface('ipmitool', interface_type='lan')
 
     connection = pyipmi.create_connection(interface)
@@ -45,10 +47,37 @@ ipmitool command:
 
     ipmitool -I lan -H 10.0.0.1 -p 623 -b 0 -t 0xb2 -U "admin" -P "admin" -l 0 raw 0x06 0x01
 
+
+Example with serial interface:
+
+.. code:: python
+
+    import pyipmi
+    import pyipmi.interfaces
+
+    interface = pyipmi.interfaces.create_interface('ipmitool', interface_type='serial-terminal')
+
+    connection = pyipmi.create_connection(interface)
+
+    connection.target = pyipmi.Target(0xb2)
+
+    # set_session_type_serial(port, baudrate)
+    connection.session.set_session_type_serial('/dev/tty2', 115200)
+    connection.session.establish()
+
+    connection.get_device_id()
+
+ipmitool command:
+
+.. code:: shell
+
+    ipmitool -I serial-terminal -D /dev/tty2:115200 -t 0xb2 -l 0 raw 0x06 0x01
+
 Compatibility
 -------------
 
-Currently only python 2.7 is supported.
+Python 2.7 is currently  supported.
+Python 3.x support is in beta
 
 Contributing
 ------------

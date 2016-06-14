@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -14,7 +15,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-import constants
+from . import constants
 from . import register_message_class
 from . import Message
 from . import UnsignedInt
@@ -25,7 +26,7 @@ from . import CompletionCode
 from . import Conditional
 from . import Optional
 from . import RemainingBytes
-from picmg import PicmgIdentifier
+from .picmg import PicmgIdentifier
 
 @register_message_class
 class GetTargetUpgradeCapabilitiesReq(Message):

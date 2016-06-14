@@ -14,9 +14,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-from pyipmi.msgs import create_request_by_name
-from pyipmi.errors import DecodingError, CompletionCodeError
-from pyipmi.utils import check_completion_code, ByteBuffer
+# from builtins import object
+
+from .msgs import create_request_by_name
+# from .errors import DecodingError, CompletionCodeError
+from .utils import check_completion_code, ByteBuffer
 
 LAN_PARAMETER_SET_IN_PROGRESS = 0
 LAN_PARAMETER_AUTHENTICATION_TYPE_SUPPORT = 1

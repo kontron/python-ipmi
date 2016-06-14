@@ -14,23 +14,28 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+from __future__ import absolute_import
+from builtins import object
+
 import time
+import sys
 
-import bmc
-import chassis
-import event
-import fru
-import functools
-import hpm
-import lan
-import picmg
-import sdr
-import sel
-import sensor
+from . import bmc
+from . import chassis
+from . import event
+from . import fru
+#import functools
+from . import hpm
+from . import lan
+from . import picmg
+from . import sdr
+from . import sel
+from . import sensor
+from . import msgs
 
-from pyipmi.errors import TimeoutError, CompletionCodeError
-from pyipmi.msgs.registry import create_request_by_name
-from pyipmi.utils import check_completion_code
+from .errors import TimeoutError, CompletionCodeError
+from .msgs.registry import create_request_by_name
+from .utils import check_completion_code
 
 try:
     from version import __version__
@@ -60,7 +65,7 @@ class NullRequester(object):
     '''
 
     @property
-    def ipmb_address():
+    def ipmb_address(self):
         raise AssertionError('NullRequester does not provide an IPMB address')
 
 
@@ -76,7 +81,7 @@ class Target(object):
             self.set_routing(routing)
 
     '''The Target class represents an IPMI target.'''
-    class Routing:
+    class Routing(object):
         def __init__(self, address, bridge_channel):
             self.address = address
             self.bridge_channel = bridge_channel
@@ -118,6 +123,10 @@ class Session(object):
     def set_session_type_rmcp(self, host, port=623):
         self._rmcp_host = host
         self._rmcp_port = port
+
+    def set_session_type_serial(self, port, baudrate):
+        self._serial_port = port
+        self._serial_baudrate = baudrate
 
     def set_auth_type(self, auth_type):
         self.auth_type = auth_type
@@ -171,7 +180,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
             try:
                 rsp = self.interface.send_and_receive(req)
                 break
-            except CompletionCodeError, e:
+            except CompletionCodeError as e:
                 if e.cc == msgs.constants.CC_NODE_BUSY:
                     retry -= 1
                     continue
@@ -181,7 +190,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
     def send_message_with_name(self, name, *args, **kwargs):
         req = create_request_by_name(name)
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             setattr(req, k, v)
 
         rsp = self.send_message(req)

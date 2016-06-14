@@ -14,13 +14,15 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+from builtins import object
+
 import time
 import array
 
-from pyipmi.msgs import create_message, encode_message, decode_message
-from pyipmi.errors import TimeoutError
-from pyipmi.logger import log
-from pyipmi.interfaces.ipmb import IpmbHeader, checksum
+from ..msgs import create_message, encode_message, decode_message
+from ..errors import TimeoutError
+from ..logger import log
+from ..interfaces.ipmb import IpmbHeader, checksum
 
 try:
     import pyaardvark

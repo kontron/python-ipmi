@@ -32,6 +32,6 @@ def test_getselentry_encode_valid_rsp():
     m = pyipmi.msgs.sel.GetSelEntryRsp()
     m.completion_code = 0
     m.next_record_id = 0x0102
-    m.record_data = array('B', '\x01\x02\x03\x04')
+    m.record_data = array('B', b'\x01\x02\x03\x04')
     data = encode_message(m)
     eq_(data, '\x00\x02\x01\x01\x02\x03\x04')

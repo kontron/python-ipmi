@@ -39,7 +39,7 @@ def test_getdeviceid_decode_valid_res():
     eq_(m.additional_support.chassis, 0)
     eq_(m.manufacturer_id, 15000)
     eq_(m.product_id, 5310)
-    eq_(m.auxiliary, array('B', '\x04\x00\x02\x00'))
+    eq_(m.auxiliary, array('B', b'\x04\x00\x02\x00'))
 
 def test_getdeviceid_decode_valid_res_wo_aux():
     m = pyipmi.msgs.bmc.GetDeviceIdRsp()
@@ -337,15 +337,15 @@ def test_getmessage_decode_with_data_rsp():
         eq_(m.completion_code, 0x00)
         eq_(m.channel_number.channel_number, 1)
         eq_(m.channel_number.privilege_level, 2)
-        eq_(m.data, array('B', '\xaa\xff\xff\xee'))
+        eq_(m.data, array('B', b'\xaa\xff\xff\xee'))
 
 def test_readeventmessagebuffer_decode_rsp():
     m = pyipmi.msgs.bmc.ReadEventMessageBufferRsp()
     decode_message(m, '\x00\x00\x01\x02\x03\x04\x05\x06\x07'\
             '\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f')
     eq_(m.completion_code, 0x00)
-    eq_(m.event_data, array('B', '\x00\x01\x02\x03\x04'\
-            '\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'))
+    eq_(m.event_data, array('B', b'\x00\x01\x02\x03\x04'\
+            b'\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'))
 
 def test_masterwriteread_encode_req_all_zero_read():
     m = pyipmi.msgs.bmc.MasterWriteReadReq()
@@ -382,7 +382,7 @@ def test_masterwriteread_decode_rsp():
     m = pyipmi.msgs.bmc.MasterWriteReadRsp()
     decode_message(m, '\x00\x11\x22\x33\x44')
     eq_(m.completion_code, 0x00)
-    eq_(m.data, array('B', '\x11\x22\x33\x44'))
+    eq_(m.data, array('B', b'\x11\x22\x33\x44'))
 
 def test_seteventreceiver_encode_lun0_req():
     m = pyipmi.msgs.event.SetEventReceiverReq()
