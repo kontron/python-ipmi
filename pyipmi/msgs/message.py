@@ -115,7 +115,6 @@ class String(BaseField):
     def encode(self, obj, data):
         value = getattr(obj, self.name)
         data.push_string(value)
-        data.from_string(value)
 
     def decode(self, obj, data):
         value = data.pop_string(self.length)
@@ -196,7 +195,7 @@ class RemainingBytes(BaseField):
 
     def encode(self, obj, data):
         a = getattr(obj, self.name)
-        data.push_string(a)
+        data.extend(a)
 
     def decode(self, obj, data):
         setattr(obj, self.name, array('B', data[:]))
@@ -347,6 +346,7 @@ class Message(object):
             setattr(self, field.name, field.create())
 
     def _encode(self):
+        '''Encode the message and return a bytestring.'''
         if not hasattr(self, '__fields__'):
             return ''
 
