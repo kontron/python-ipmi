@@ -25,7 +25,7 @@ from .. import Session
 from ..errors import TimeoutError
 from ..logger import log
 from ..msgs import encode_message, decode_message, create_message
-from ..utils import py3dec_unic_bytes_fix
+from ..utils import py3dec_unic_bytes_fix, ByteBuffer
 
 class Ipmitool(object):
     """This interface uses the ipmitool raw command to "emulate" a RMCP
@@ -128,19 +128,19 @@ class Ipmitool(object):
                 for x in output.split(' '):
                     data.append(int(x, 16))
 
-        return data
+        return data.tostring()
 
     def send_and_receive(self, req):
         log().debug('IPMI Request [%s]', req)
 
-        req_data = (chr(req.cmdid))
-        req_data += encode_message(req)
+        req_data = ByteBuffer((req.cmdid,))
+        req_data.push_string(encode_message(req))
 
         rsp_data = self.send_and_receive_raw(req.target, req.lun, req.netfn,
-                req_data)
+                req_data.tostring())
 
         rsp = create_message(req.cmdid, req.netfn + 1)
-        decode_message(rsp, rsp_data.tostring())
+        decode_message(rsp, rsp_data)
         log().debug('IPMI Response [%s])', rsp)
 
         return rsp
