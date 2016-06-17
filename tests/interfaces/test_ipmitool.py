@@ -64,8 +64,7 @@ class TestIpmitool:
         target = Target(0x20)
         data = self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
 
-        eq_(data, array('B',
-           b'\x00\x10\x80\x01\x02\x51\xbd\x98\x3a\x00\xa8\x06\x00\x03\x00\x00'))
+        eq_(data, '\x00\x10\x80\x01\x02\x51\xbd\x98\x3a\x00\xa8\x06\x00\x03\x00\x00')
 
     def test_send_and_receive_raw_completion_code_timeout(self):
         mock = MagicMock()
@@ -75,7 +74,7 @@ class TestIpmitool:
         self._interface._run_ipmitool = mock
         data = self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
 
-        eq_(data, array('B', b'\xc3'))
+        eq_(data, '\xc3')
 
     def test_send_and_receive_raw_completion_code_not_ok(self):
         mock = MagicMock()
@@ -85,7 +84,7 @@ class TestIpmitool:
         self._interface._run_ipmitool = mock
         data = self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
 
-        eq_(data, array('B', b'\xcc'))
+        eq_(data, '\xcc')
 
     @raises(TimeoutError)
     def test_send_and_receive_raw_timeout_without_response(self):
