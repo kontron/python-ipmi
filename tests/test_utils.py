@@ -5,6 +5,11 @@ from nose.tools import eq_, raises
 
 from pyipmi.utils import *
 
+def test_bytebuffer():
+    b = ByteBuffer()
+    b.push_unsigned_int(0xf8, 1)
+    eq_(b.tostring(), '\xf8')
+
 def test_bytebuffer_push_unsigned_int():
     b = ByteBuffer((1, 0))
     b.push_unsigned_int(255, 1)
@@ -44,6 +49,10 @@ def test_bytebuffer_push_string():
     eq_(b[2], 0x32)
     eq_(b[3], 0x33)
     eq_(b.tostring(), '0123')
+
+    b = ByteBuffer()
+    b.push_string('\x00\xb4')
+    eq_(b.tostring(), '\x00\xb4')
 
 def test_bytebuffer_pop_string():
     b = ByteBuffer('\x30\x31\x32\x33')

@@ -374,7 +374,8 @@ def test_masterwriteread_encode_req_for_read():
     m.bus_id.channel = 0
     m.bus_id.slave_address = 0
     m.read_count = 0
-    m.data = '\x01\x23\x45'
+#    m.data = '\x01\x23\x45'
+    m.data = [1, 0x23, 0x45]
     data = encode_message(m)
     eq_(data,'\x00\x00\x00\x01\x23\x45')
 
