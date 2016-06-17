@@ -51,11 +51,11 @@ def test_bytebuffer_push_string():
     eq_(b.tostring(), '0123')
 
     b = ByteBuffer()
-    b.push_string('\x00\xb4')
+    b.push_string( b'\x00\xb4')
     eq_(b.tostring(), '\x00\xb4')
 
 def test_bytebuffer_pop_string():
-    b = ByteBuffer('\x30\x31\x32\x33')
+    b = ByteBuffer( b'\x30\x31\x32\x33')
     eq_(b.pop_string(2), '01')
     eq_(b.tostring(), '23')
 
