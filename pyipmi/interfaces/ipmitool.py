@@ -74,12 +74,8 @@ class Ipmitool(object):
             cmd += (' -P "%s"' % self._session._auth_password)
         cmd += (' session info all')
 
-        log().debug('Running ipmitool "%s"', cmd)
-        child = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-        child.communicate()
-
-        log().debug('rc = %s' % child.returncode)
-        if child.returncode:
+        output, rc = self._run_ipmitool(cmd)
+        if rc:
             raise TimeoutError()
 
     def is_ipmc_accessible(self, target):
@@ -145,18 +141,13 @@ class Ipmitool(object):
 
         return rsp
 
-    def _build_ipmitool_cmd(self, target, lun, netfn, raw_bytes):
-        cmd_data = '-l %d raw 0x%02x ' % (lun, netfn)
+    def _build_ipmitool_raw_data(self, lun, netfn, raw_bytes):
+        cmd_data = ' -l %d raw 0x%02x ' % (lun, netfn)
         cmd_data += ' '.join(['0x%02x' % ord(d) for d in raw_bytes])
+        return cmd_data
 
-        if not hasattr(self, '_session'):
-            raise RuntimeError('Session needs to be set')
-
-        cmd = self.IPMITOOL_PATH
-        cmd += (' -I %s' % self._interface_type)
-        cmd += (' -H %s' % self._session._rmcp_host)
-        cmd += (' -p %s' % self._session._rmcp_port)
-
+    def _build_ipmitool_target(self, target):
+        cmd = ''
         if hasattr(target, 'routing'):
             # we have to do bridging here
             if len(target.routing) == 1:
@@ -173,6 +164,18 @@ class Ipmitool(object):
         if target.ipmb_address:
             cmd += (' -t 0x%02x' % target.ipmb_address)
 
+        return cmd
+
+    def _build_ipmitool_cmd(self, target, lun, netfn, raw_bytes):
+        if not hasattr(self, '_session'):
+            raise RuntimeError('Session needs to be set')
+
+        cmd = self.IPMITOOL_PATH
+        cmd += (' -I %s' % self._interface_type)
+        cmd += (' -H %s' % self._session._rmcp_host)
+        cmd += (' -p %s' % self._session._rmcp_port)
+
+
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += ' -P ""'
         elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
@@ -182,15 +185,13 @@ class Ipmitool(object):
             raise RuntimeError('Session type %d not supported' %
                     self._session.auth_type)
 
-        cmd += (' %s' % cmd_data)
+        cmd += self._build_ipmitool_target(target)
+        cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)
         cmd += (' 2>&1')
 
         return cmd
 
     def _build_serial_ipmitool_cmd(self, target, lun, netfn, raw_bytes):
-        cmd_data = '-l %d raw 0x%02x ' % (lun, netfn)
-        cmd_data += ' '.join(['0x%02x' % ord(d) for d in raw_bytes])
-
         if not hasattr(self, '_session'):
             raise RuntimeError('Session needs to be set')
 
@@ -202,23 +203,8 @@ class Ipmitool(object):
                 baud=self._session._serial_baudrate
             )
 
-        if hasattr(target, 'routing'):
-            # we have to do bridging here
-            if len(target.routing) == 1:
-                # ipmitool/shelfmanager does implicit bridging
-                cmd += (' -b %d' % target.routing[0].bridge_channel)
-            elif len(target.routing) == 2:
-                cmd += (' -B %d' % target.routing[0].bridge_channel)
-                cmd += (' -T 0x%02x' % target.routing[1].address)
-                cmd += (' -b %d' % target.routing[1].bridge_channel)
-            else:
-                raise RuntimeError('The impitool interface at most double '
-                       'briding')
-
-        if target.ipmb_address:
-            cmd += (' -t 0x%02x' % target.ipmb_address)
-
-        cmd += (' %s' % cmd_data)
+        cmd += self._build_ipmitool_target(target)
+        cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)
         #cmd += (' 2>&1')
 
         return cmd
