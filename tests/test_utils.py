@@ -1,14 +1,22 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
+import array
 from nose.tools import eq_, raises
 
 from pyipmi.utils import *
 
-def test_bytebuffer():
-    b = ByteBuffer()
-    b.push_unsigned_int(0xf8, 1)
-    eq_(b.tostring(), '\xf8')
+def test_bytebuffer_init_from_list():
+    b = ByteBuffer([0xf8])
+    eq_(b.array, array('B', [0xf8]))
+
+def test_bytebuffer_init_from_tuple():
+    b = ByteBuffer((0xf8,))
+    eq_(b.array, array('B', [0xf8]))
+
+def test_bytebuffer_initi_fromstring():
+    b = ByteBuffer(b'\xf8')
+    eq_(b.array, array('B', [0xf8]))
 
 def test_bytebuffer_push_unsigned_int():
     b = ByteBuffer((1, 0))
@@ -28,13 +36,13 @@ def test_bytebuffer_pop_unsigned_int():
     eq_(b.pop_unsigned_int(1), 1)
 
     b = ByteBuffer((0, 1, 0, 0))
-    eq_(b.pop_unsigned_int(2), 256)
+    eq_(b.pop_unsigned_int(2), 0x100)
 
     b = ByteBuffer((0, 0, 1, 0))
-    eq_(b.pop_unsigned_int(3), 65536)
+    eq_(b.pop_unsigned_int(3), 0x10000)
 
     b = ByteBuffer((0, 0, 0, 1))
-    eq_(b.pop_unsigned_int(4), 16777216)
+    eq_(b.pop_unsigned_int(4), 0x1000000)
 
 @raises(DecodingError)
 def test_bytebuffer_pop_unsigned_int_error():
@@ -64,27 +72,27 @@ def test_bytebuffer_tostring():
     eq_(b.tostring(), '0123')
 
 def test_bytebuffer_pop_slice():
-    b = ByteBuffer('\x30\x31\x32\x33')
+    b = ByteBuffer(b'\x30\x31\x32\x33')
     c = b.pop_slice(1)
     eq_(b.tostring(), '123')
     eq_(c.tostring(), '0')
 
-    b = ByteBuffer('\x30\x31\x32\x33')
+    b = ByteBuffer(b'\x30\x31\x32\x33')
     c = b.pop_slice(2)
     eq_(b.tostring(), '23')
     eq_(c.tostring(), '01')
 
-    b = ByteBuffer('\x30\x31\x32\x33')
+    b = ByteBuffer(b'\x30\x31\x32\x33')
     c = b.pop_slice(3)
     eq_(b.tostring(), '3')
     eq_(c.tostring(), '012')
 
-    b = ByteBuffer('\x30\x31\x32\x33')
+    b = ByteBuffer(b'\x30\x31\x32\x33')
     c = b.pop_slice(4)
     eq_(b.tostring(), '')
     eq_(c.tostring(), '0123')
 
 @raises(DecodingError)
 def test_bytebuffer_pop_slice_error():
-    b = ByteBuffer('\x30\x31\x32\x33')
+    b = ByteBuffer(b'\x30\x31\x32\x33')
     c = b.pop_slice(5)

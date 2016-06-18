@@ -59,7 +59,6 @@ class ByteBuffer:
 
         if data is not None:
             self.array = array('B', py3enc_unic_bytes_fix(data))
-
         else:
             self.array = array('B')
 
