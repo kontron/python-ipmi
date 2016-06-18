@@ -96,3 +96,11 @@ def test_bytebuffer_pop_slice():
 def test_bytebuffer_pop_slice_error():
     b = ByteBuffer(b'\x30\x31\x32\x33')
     c = b.pop_slice(5)
+
+def test_chunks():
+    d = [0,1,2,3,4,5,6,7,8,9]
+    r = list()
+    for c in chunks(d, 2):
+       r.extend(c)
+       eq_(len(c), 2)
+    eq_(r,  [0,1,2,3,4,5,6,7,8,9])
