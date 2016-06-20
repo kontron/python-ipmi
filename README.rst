@@ -33,7 +33,7 @@ Example with lan interface:
     connection = pyipmi.create_connection(interface)
 
     connection.target = pyipmi.Target(0xb2)
-    connection.target.set_routing_information([(0x20,0)])
+    connection.target.set_routing([(0x20,0)])
 
     connection.session.set_session_type_rmcp('10.0.0.1', port=623)
     connection.session.set_auth_type_user('admin', 'admin')

@@ -88,7 +88,7 @@ class Target(object):
 
 
     def set_routing_information(self, rinfo):
-        self.set_routing(self, rinfo)
+        self.set_routing(rinfo)
 
     def set_routing(self, rinfo):
         """Set the path over which a target is reachable.

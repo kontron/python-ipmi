@@ -531,7 +531,7 @@ def main():
 
     ipmi = pyipmi.create_connection(interface)
     ipmi.target = pyipmi.Target(target_address)
-    ipmi.target.set_routing_information(target_routing)
+    ipmi.target.set_routing(target_routing)
 
     if rmcp_host is not None:
         ipmi.session.set_session_type_rmcp(rmcp_host)
