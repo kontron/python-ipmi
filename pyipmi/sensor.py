@@ -14,18 +14,22 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-import math
-import errors
-import array
-import time
-from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
-from pyipmi.utils import check_completion_code, ByteBuffer
-from pyipmi.msgs import create_request_by_name
-from pyipmi.msgs import constants
+from __future__ import absolute_import
 
-from pyipmi.helper import get_sdr_data_helper, get_sdr_chunk_helper
+# from builtins import object
 
-import sdr
+# import math
+# from . import errors
+# import array
+# import time
+# from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
+from .utils import check_completion_code # ByteBuffer
+from .msgs import create_request_by_name
+# from .msgs import constants
+
+from .helper import get_sdr_data_helper, get_sdr_chunk_helper
+
+from . import sdr
 
 
 # THRESHOLD BASED STATES
@@ -151,7 +155,7 @@ class Sensor(object):
         """Rearm sensor events for the given sensor number.
         """
         self.send_message_with_name('RearmSensorEvents',
-                sensor_number=sensor_number)
+                                    sensor_number=sensor_number)
 
     def get_sensor_reading(self, sensor_number, lun=0):
         """Returns the sensor reading at the assertion states for the given
@@ -162,7 +166,8 @@ class Sensor(object):
         Returns a tuple with `raw reading`and `assertion states`.
         """
         rsp = self.send_message_with_name('GetSensorReading',
-                sensor_number=sensor_number, lun=lun)
+                                          sensor_number=sensor_number,
+                                          lun=lun)
 
         reading = rsp.sensor_reading
         if rsp.config.initial_update_in_progress:
@@ -193,7 +198,7 @@ class Sensor(object):
 
         thresholds = dict(unr=unr, ucr=ucr, unc=unc, lnc=lnc, lcr=lcr, lnr=lnr)
 
-        for k, v in thresholds.iteritems():
+        for k, v in thresholds.items():
             if v is not None:
                 setattr(req.set_mask, k, 1)
                 setattr(req.threshold, k, v)
@@ -203,7 +208,8 @@ class Sensor(object):
 
     def get_sensor_thresholds(self, sensor_number, lun=0):
         rsp = self.send_message_with_name('GetSensorThresholds',
-                sensor_number=sensor_number, lun=lun)
+                                          sensor_number=sensor_number,
+                                          lun=lun)
 
         thresholds = {}
         threshold_list = ('unr', 'ucr', 'unc', 'lnc', 'lcr', 'lnr')

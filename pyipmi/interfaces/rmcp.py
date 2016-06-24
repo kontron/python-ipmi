@@ -4,7 +4,7 @@ import hashlib
 import random
 import threading
 import sys
-import Queue
+import queue
 
 from pyipmi import Target
 from pyipmi.session import Session

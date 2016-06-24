@@ -14,10 +14,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
-from pyipmi.utils import check_completion_code, ByteBuffer
-from pyipmi.msgs import create_request_by_name
-from pyipmi.msgs import constants
+from builtins import object
+
+#from .errors import DecodingError, CompletionCodeError, RetryError
+from .utils import check_completion_code, ByteBuffer
+from .msgs import create_request_by_name
+#from .msgs import constants
 
 EVENT_ASSERTION = 0
 EVENT_DEASSERTION = 1

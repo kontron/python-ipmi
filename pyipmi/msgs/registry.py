@@ -14,8 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+#from builtins import object
+
 from functools import partial
-from pyipmi.errors import DescriptionError
+from ..errors import DescriptionError
 
 class MessageRegistry(object):
     def __init__(self):

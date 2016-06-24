@@ -14,18 +14,21 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+from builtins import object
+
 import array
 
-from pyipmi.logger import log
-from pyipmi.msgs import create_message, create_request_by_name, \
+from ..logger import log
+from ..msgs import create_message, create_request_by_name, \
         encode_message, decode_message, constants
-from pyipmi.utils import check_completion_code
+from ..utils import check_completion_code
 
 def checksum(data):
     csum = 0
     for b in data:
         csum += b
     return -csum % 256
+
 
 class IpmbHeader(object):
     def __init__(self):
@@ -48,7 +51,7 @@ class IpmbHeader(object):
 
 def encode_ipmb_msg(header, data):
     if type(data) == str:
-        data =  [ord(c) for c in data]
+        data = [ord(c) for c in data]
     msg = header.encode()
     msg.extend(data)
     msg.append(checksum(msg[3:]))

@@ -37,7 +37,7 @@ class TestAsfMsg:
     def test_asfmsg(self):
         m = AsfMsg()
         pdu = m.pack()
-        eq_(pdu, '\x00\x00\x11\xbe\x00\x00\x00\x00')
+        eq_(pdu, b'\x00\x00\x11\xbe\x00\x00\x00\x00')
 
 
 class TestIpmiMsg:

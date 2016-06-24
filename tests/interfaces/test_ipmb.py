@@ -36,14 +36,14 @@ def test_encode_ipmb_msg():
     header.cmd_id = 1
 
     eq_(encode_ipmb_msg(header, [0xaa,0xbb,0xcc]),
-            '\x72\x18\x76\x20\x08\x01\xaa\xbb\xcc\xa6')
+            b'\x72\x18\x76\x20\x08\x01\xaa\xbb\xcc\xa6')
 
     eq_(encode_ipmb_msg(header, '\xaa\xbb\xcc'),
-            '\x72\x18\x76\x20\x08\x01\xaa\xbb\xcc\xa6')
+            b'\x72\x18\x76\x20\x08\x01\xaa\xbb\xcc\xa6')
 
 def test_encode_send_message():
     data = encode_send_message('\xaa\xbb', 0x12, 0x20, 7, 0x22)
-    eq_(data, '\x20\x18\xc8\x12\x88\x34\x47\xaa\xbb\x86')
+    eq_(data, b'\x20\x18\xc8\x12\x88\x34\x47\xaa\xbb\x86')
 
 def test_encode_bridge_message():
     payload = '\xaa\xbb'
@@ -57,4 +57,4 @@ def test_encode_bridge_message():
     header.cmd_id = 0xaa
     tx_data = encode_bridged_message(t.routing, header, payload, 0x22)
     eq_(tx_data,
-        '\x20\x18\xc8\x81\x88\x34\x47\x72\x18\x76\x20\x44\xaa\xaa\xbb\x8d\x7c')
+        b'\x20\x18\xc8\x81\x88\x34\x47\x72\x18\x76\x20\x44\xaa\xaa\xbb\x8d\x7c')

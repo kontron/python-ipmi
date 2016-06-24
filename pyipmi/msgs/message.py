@@ -14,11 +14,16 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+
+from __future__ import absolute_import
+from builtins import range
+from builtins import object
+
 from array import array
 
-import constants
-from pyipmi.utils import ByteBuffer
-from pyipmi.errors import CompletionCodeError, EncodingError, DecodingError, \
+from . import constants
+from ..utils import ByteBuffer,  py3enc_unic_bytes_fix
+from ..errors import CompletionCodeError, EncodingError, DecodingError, \
         DescriptionError
 
 class BaseField(object):
@@ -43,6 +48,7 @@ class ByteArray(BaseField):
     def __init__(self, name, length, default=None):
         BaseField.__init__(self, name, length)
         if default is not None:
+            default = py3enc_unic_bytes_fix(default)
             self.default = array('B', default)
         else:
             self.default = None
@@ -55,13 +61,13 @@ class ByteArray(BaseField):
         if len(a) != self._length(obj):
             raise EncodingError('Array must be exaclty %d bytes long '
                     '(but is %d long)' % (self._length(obj), len(a)))
-        for i in xrange(self._length(obj)):
+        for i in range(self._length(obj)):
             data.push_unsigned_int(a[i], 1)
 
     def decode(self, obj, data):
         a = getattr(obj, self.name)
         bytes = []
-        for i in xrange(self._length(obj)):
+        for i in range(self._length(obj)):
             bytes.append(data.pop_unsigned_int(1))
         setattr(obj, self.name, array('B', bytes))
 
@@ -108,7 +114,7 @@ class UnsignedInt(BaseField):
 class String(BaseField):
     def encode(self, obj, data):
         value = getattr(obj, self.name)
-        data.fromstring(value)
+        data.push_string(value)
         # fill with 0
         data.push_unsigned_int(0, self.length - len(value))
 
@@ -191,18 +197,18 @@ class RemainingBytes(BaseField):
 
     def encode(self, obj, data):
         a = getattr(obj, self.name)
-        data.push_string(a)
+        data.extend(a)
 
     def decode(self, obj, data):
         setattr(obj, self.name, array('B', data[:]))
-        del data[:]
+        del data.array[:]
 
     def create(self):
         return array('B')
 
 
 class Bitfield(BaseField):
-    class Bit:
+    class Bit(object):
         def __init__(self, name, width=1, default=None):
             self.name = name
             self._width = width
@@ -280,12 +286,12 @@ class Bitfield(BaseField):
     def encode(self, obj, data):
         wrapper = getattr(obj, self.name)
         value = wrapper._value
-        for i in xrange(self.length):
+        for i in range(self.length):
             data.push_unsigned_int((value >> (8*i)) & 0xff, 1)
 
     def decode(self, obj, data):
         value = 0
-        for i in xrange(self.length):
+        for i in range(self.length):
             try:
                 value |= data.pop_unsigned_int(1) << (8*i)
             except IndexError:
@@ -323,7 +329,7 @@ class Message(object):
         if args:
             self._decode(args[0])
         else:
-            for (name, value) in kwargs.iteritems():
+            for (name, value) in kwargs.items():
                 self._set_field(name, value)
 
     def _set_field(self, name, value):
@@ -342,6 +348,7 @@ class Message(object):
             setattr(self, field.name, field.create())
 
     def _encode(self):
+        '''Encode the message and return a bytestring.'''
         if not hasattr(self, '__fields__'):
             return ''
 
@@ -359,12 +366,12 @@ class Message(object):
         for field in self.__fields__:
             try:
                 field.decode(self, data)
-            except CompletionCodeError, e:
+            except CompletionCodeError as e:
                 # stop decoding on completion code != 0
                 cc = e.cc
                 break
 
-        if (cc == None or cc == 0) and len(data) > 0:
+        if (cc is None or cc == 0) and len(data) > 0:
             raise DecodingError('Data has extra bytes')
 
     def _is_request(self):

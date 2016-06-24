@@ -14,7 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-import constants
+from __future__ import absolute_import
+from builtins import range
+
+from . import constants
 from . import register_message_class
 from . import Message
 from . import UnsignedInt
@@ -84,7 +87,7 @@ LED_COLOR_ORANGE = 0x05
 LED_COLOR_WHITE = 0x06
 
 LED_FUNCTION_OFF = 0x00
-LED_FUNCTION_BLINKING_RANGE = range(0x01, 0xfa)
+LED_FUNCTION_BLINKING_RANGE = list(range(0x01, 0xfa))
 LED_FUNCTION_LAMP_TEST = 0xfb
 LED_FUNCTION_ON = 0xff
 
@@ -94,7 +97,7 @@ LED_STATE_LAMP_TEST = 2
 
 class PicmgIdentifier(UnsignedInt):
     def __init__(self, name='picmg_identifier'):
-        UnsignedInt.__init__(self, name, 1, PICMG_IDENTIFIER)
+        super(self.__class__, self).__init__(name, 1, PICMG_IDENTIFIER)
 
 
 @register_message_class

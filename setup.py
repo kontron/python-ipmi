@@ -19,10 +19,12 @@ except (OSError, subprocess.CalledProcessError, IOError) as e:
     try:
         with open(version_py, 'r') as f:
             d = dict()
-            exec(f, d)
+            exec(f.read(), d)
             version = d['__version__']
     except IOError:
         version = 'unknown'
+
+version = version.decode('utf-8')
 
 with open('README.rst') as f:
     readme = f.read()
@@ -46,6 +48,8 @@ setup(name = name,
             'Operating System :: OS Independent',
             'Programming Language :: Python :: 2',
             'Programming Language :: Python :: 2.7',
+            'Programming Language :: Python :: 3',
+            'Programming Language :: Python :: 3.5',
             'Topic :: Software Development :: Libraries :: Python Modules',
         ],
         entry_points = {
@@ -54,4 +58,8 @@ setup(name = name,
             ]
         },
         test_suite = 'tests',
+        install_requires=[
+            'markdown',
+            'future',
+        ],
 )

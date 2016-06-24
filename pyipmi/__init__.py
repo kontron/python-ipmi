@@ -15,26 +15,30 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+from __future__ import absolute_import
+from builtins import object
+
 import time
+import sys
 import ast
 
-import bmc
-import chassis
-import event
-import fru
-import functools
-import hpm
-import lan
-import picmg
-import sdr
-import sel
-import sensor
-import messaging
+from . import bmc
+from . import chassis
+from . import event
+from . import fru
+#import functools
+from . import hpm
+from . import lan
+from . import picmg
+from . import sdr
+from . import sel
+from . import sensor
+from . import messaging
 
-from pyipmi.session import Session
-from pyipmi.errors import TimeoutError, CompletionCodeError
-from pyipmi.msgs.registry import create_request_by_name
-from pyipmi.utils import check_completion_code
+from .session import Session
+from .errors import TimeoutError, CompletionCodeError
+from .msgs.registry import create_request_by_name
+from .utils import check_completion_code
 
 try:
     from version import __version__
@@ -48,6 +52,26 @@ def create_connection(interface):
     ipmi.interface = interface
     ipmi.session = session
     return ipmi
+
+
+class Requester(object):
+    '''The Requester class represents an IPMI device which initiates a
+    request/response message exchange.
+    '''
+
+    def __init__(self, ipmb_address):
+        self.ipmb_address = ipmb_address
+
+
+class NullRequester(object):
+    '''The NullRequester is used for interfaces which doesn't require a
+    valid requester.
+    '''
+
+    @property
+    def ipmb_address(self):
+        raise AssertionError('NullRequester does not provide an IPMB address')
+
 
 class Target(object):
     def __init__(self, ipmb_address, routing=None):
@@ -111,7 +135,7 @@ class Target(object):
         routing = [(0x81,0x20,0),(0x20,0x8e,7),(0x20,0x80,None)]
 
         """
-        if type(routing) in  [unicode, str]:
+        if type(routing) is  str:
             routing = ast.literal_eval(routing)
 
         self.routing = [ self.Routing(*r) for r in routing ]
@@ -152,7 +176,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
             try:
                 rsp = self.interface.send_and_receive(req)
                 break
-            except CompletionCodeError, e:
+            except CompletionCodeError as e:
                 if islast or e.cc != msgs.constants.CC_NODE_BUSY:
                     raise e
         return rsp
@@ -160,7 +184,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
     def send_message_with_name(self, name, *args, **kwargs):
         req = create_request_by_name(name)
 
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             setattr(req, k, v)
 
         rsp = self.send_message(req)

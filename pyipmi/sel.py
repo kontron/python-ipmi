@@ -1,3 +1,4 @@
+
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -14,16 +15,19 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
+#from builtins import range
+#from builtins import object
+
 import time
 
-from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
-from pyipmi.utils import check_completion_code, ByteBuffer
-from pyipmi.msgs import create_request_by_name
-from pyipmi.msgs import constants
-from pyipmi.event import EVENT_ASSERTION, EVENT_DEASSERTION
+from .errors import DecodingError, CompletionCodeError, RetryError
+from .utils import check_completion_code, ByteBuffer
+from .msgs import create_request_by_name
+from .msgs import constants
+from .event import EVENT_ASSERTION, EVENT_DEASSERTION
 
-from pyipmi.helper import clear_repository_helper
-from pyipmi.state import State
+from .helper import clear_repository_helper
+from .state import State
 
 
 class Sel(object):
@@ -113,8 +117,8 @@ class SelInfo(State):
 
 class SelEntry(State):
     TYPE_SYSTEM_EVENT = 0x02
-    TYPE_OEM_TIMESTAMPED_RANGE = range(0xc0, 0xe0)
-    TYPE_OEM_NON_TIMESTAMPED_RANGE = range(0xe0, 0x100)
+    TYPE_OEM_TIMESTAMPED_RANGE = list(range(0xc0, 0xe0))
+    TYPE_OEM_NON_TIMESTAMPED_RANGE = list(range(0xe0, 0x100))
 
     def __str__(self):
         s = '[%s]' % (' '.join(['%02x' % b for b in self.data]))

@@ -4,7 +4,7 @@ from array import array
 
 from nose.tools import eq_, raises
 
-import pyipmi.msgs.bmc
+from pyipmi.msgs.bmc import *
 
 from pyipmi.errors import DecodingError, EncodingError
 from pyipmi.msgs import encode_message
@@ -12,12 +12,12 @@ from pyipmi.msgs import decode_message
 
 
 def test_getdeviceid_decode_rsp_with_cc():
-    m = pyipmi.msgs.bmc.GetDeviceIdRsp()
+    m = GetDeviceIdRsp()
     decode_message(m, '\xc0')
     eq_(m.completion_code, 0xc0)
 
 def test_getdeviceid_decode_valid_res():
-    m = pyipmi.msgs.bmc.GetDeviceIdRsp()
+    m = GetDeviceIdRsp()
     decode_message(m, '\x00\x0c\x89\x00\x00\x02\x3d\x98'
             '\x3a\x00\xbe\x14\x04\x00\x02\x00')
     eq_(m.completion_code, 0)
@@ -38,10 +38,10 @@ def test_getdeviceid_decode_valid_res():
     eq_(m.additional_support.chassis, 0)
     eq_(m.manufacturer_id, 15000)
     eq_(m.product_id, 5310)
-    eq_(m.auxiliary, array('B', '\x04\x00\x02\x00'))
+    eq_(m.auxiliary, array('B', [0x04, 0x00, 0x02, 0x00]))
 
 def test_getdeviceid_decode_valid_res_wo_aux():
-    m = pyipmi.msgs.bmc.GetDeviceIdRsp()
+    m = GetDeviceIdRsp()
     decode_message(m, '\x00\x0c\x89\x00\x00\x02\x3d\x98'
             '\x3a\x00\xbe\x14')
     eq_(m.completion_code, 0)
@@ -64,21 +64,21 @@ def test_getdeviceid_decode_valid_res_wo_aux():
     eq_(m.product_id, 5310)
 
 def test_getselftestresults_decode_test_passed_rsp():
-    m = pyipmi.msgs.bmc.GetSelftestResultsRsp()
+    m = GetSelftestResultsRsp()
     decode_message(m, '\x00\x55\x00')
     eq_(m.completion_code, 0x00)
     eq_(m.result, 0x55)
     eq_(int(m.status), 0x00)
 
 def test_getselftestresults_decode_test_fail_not_implemented_rsp():
-    m = pyipmi.msgs.bmc.GetSelftestResultsRsp()
+    m = GetSelftestResultsRsp()
     decode_message(m, '\x00\x56\x00')
     eq_(m.completion_code, 0x00)
     eq_(m.result, 0x56)
     eq_(int(m.status), 0x00)
 
 def test_getselftestresults_decode_test_fail_corrupted_sel_rsp():
-    m = pyipmi.msgs.bmc.GetSelftestResultsRsp()
+    m = GetSelftestResultsRsp()
     decode_message(m, '\x00\x57\x80')
     eq_(m.completion_code, 0x00)
     eq_(m.result, 0x57)
@@ -93,7 +93,7 @@ def test_getselftestresults_decode_test_fail_corrupted_sel_rsp():
     eq_(m.status.controller_firmware_corrupted, 0)
 
 def test_getselftestresults_decode_test_fail_corrupted_sdr_rsp():
-    m = pyipmi.msgs.bmc.GetSelftestResultsRsp()
+    m = GetSelftestResultsRsp()
     decode_message(m, '\x00\x57\x40')
     eq_(m.completion_code, 0x00)
     eq_(m.result, 0x57)
@@ -108,7 +108,7 @@ def test_getselftestresults_decode_test_fail_corrupted_sdr_rsp():
     eq_(m.status.controller_firmware_corrupted, 0)
 
 def test_getselftestresults_decode_test_fail_corrupted_sdr_rsp():
-    m = pyipmi.msgs.bmc.GetSelftestResultsRsp()
+    m = GetSelftestResultsRsp()
     decode_message(m, '\x00\x57\x20')
     eq_(m.completion_code, 0x00)
     eq_(m.result, 0x57)

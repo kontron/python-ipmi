@@ -54,6 +54,10 @@ class Session(object):
         self._rmcp_host = host
         self._rmcp_port = port
 
+    def set_session_type_serial(self, port, baudrate):
+        self._serial_port = port
+        self._serial_baudrate = baudrate
+
     def set_auth_type_user(self, username, password):
         self.auth_type = self.AUTH_TYPE_PASSWORD
         self._auth_username = username

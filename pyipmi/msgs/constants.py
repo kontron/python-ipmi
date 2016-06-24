@@ -41,45 +41,45 @@ CC_NOT_SUPPORTED_PRESENT_STATE = 0xd5
 CC_ILLEGAL_COMMAND_DISABLED = 0xd6
 CC_UNSPECIFIED_ERROR = 0xff
 
-cc_err_desc = {
-    CC_OK: 'Command Completed Normally',
-    CC_NODE_BUSY: 'Node Busy',
-    CC_INV_CMD: 'Invalid Command',
-    CC_INV_CMD_FOR_LUN: 'Command invalid for given LUN',
-    CC_TIMEOUT: 'Timeout while processing command',
-    CC_OUT_OF_SPACE: 'Out of space',
-    CC_RES_CANCELED: 'Reservation Canceled or Invalid Reservation ID',
-    CC_REQ_DATA_TRUNC: 'Request data truncated',
-    CC_REQ_DATA_INV_LENGTH: 'Request data length invalid',
-    CC_REQ_DATA_FIELD_EXCEED: 'Request data field length limit exceeded',
-    CC_PARAM_OUT_OF_RANGE: 'Parameter out of range',
-    CC_CANT_RET_NUM_REQ_BYTES:
-       'Cannot return number of requested data bytes',
-    CC_REQ_DATA_NOT_PRESENT: 'Requested data not present',
-    CC_INV_DATA_FIELD_IN_REQ: 'Invalid data field in Request',
-    CC_ILL_SENSOR_OR_RECORD:
-       'Command illegal for specified sensor or record',
-    CC_RESP_COULD_NOT_BE_PRV: 'Command response could not be provided',
-    CC_CANT_RESP_DUPLI_REQ: 'Cannot execute duplicated request',
-    CC_CANT_RESP_SDRR_UPDATE:
-       'Command response could not be provided. SDRR in update mode',
-    CC_CANT_RESP_FIRM_UPDATE:
-       'Command response could not be provided. Device in firmware '
-       'update mode',
-    CC_CANT_RESP_BMC_INIT:
-       'Command response could not be provided. BMC initialization or '
-       'initialization agent in progress',
-    CC_DESTINATION_UNAVAILABLE: 'Destination unavailable',
-    CC_INSUFFICIENT_PRIVILEGES:
-       'Cannot execute command due to insufficient privilege level',
-    CC_NOT_SUPPORTED_PRESENT_STATE:
-       'Cannot execute command. Not supported in present state',
-    CC_ILLEGAL_COMMAND_DISABLED:
-       'Cannot execute command. Command sub-function has been disabled '
-       'or is unavailable',
-    CC_UNSPECIFIED_ERROR: 'Unspecified error',
-}
 
+cc_err_desc = (
+    (CC_OK, 'Command Completed Normally'),
+    (CC_NODE_BUSY, 'Node Busy'),
+    (CC_INV_CMD, 'Invalid Command'),
+    (CC_INV_CMD_FOR_LUN, 'Command invalid for given LUN'),
+    (CC_TIMEOUT, 'Timeout while processing command'),
+    (CC_OUT_OF_SPACE, 'Out of space'),
+    (CC_RES_CANCELED, 'Reservation Canceled or Invalid Reservation ID'),
+    (CC_REQ_DATA_TRUNC, 'Request data truncated'),
+    (CC_REQ_DATA_INV_LENGTH, 'Request data length invalid'),
+    (CC_REQ_DATA_FIELD_EXCEED, 'Request data field length limit exceeded'),
+    (CC_PARAM_OUT_OF_RANGE, 'Parameter out of range'),
+    (CC_CANT_RET_NUM_REQ_BYTES,
+        'Cannot return number of requested data bytes'),
+    (CC_REQ_DATA_NOT_PRESENT, 'Requested data not present'),
+    (CC_INV_DATA_FIELD_IN_REQ, 'Invalid data field in Request'),
+    (CC_ILL_SENSOR_OR_RECORD,
+        'Command illegal for specified sensor or record'),
+    (CC_RESP_COULD_NOT_BE_PRV, 'Command response could not be provided'),
+    (CC_CANT_RESP_DUPLI_REQ, 'Cannot execute duplicated request'),
+    (CC_CANT_RESP_SDRR_UPDATE,
+        'Command response could not be provided. SDRR in update mode'),
+    (CC_CANT_RESP_FIRM_UPDATE,
+        'Command response could not be provided. Device in firmware '
+        'update mode'),
+    (CC_CANT_RESP_BMC_INIT,
+        'Command response could not be provided. BMC initialization or '
+        'initialization agent in progress'),
+    (CC_DESTINATION_UNAVAILABLE, 'Destination unavailable'),
+    (CC_INSUFFICIENT_PRIVILEGES,
+        'Cannot execute command due to insufficient privilege level'),
+    (CC_NOT_SUPPORTED_PRESENT_STATE,
+        'Cannot execute command. Not supported in present state'),
+    (CC_ILLEGAL_COMMAND_DISABLED,
+        'Cannot execute command. Command sub-function has been disabled '
+        'or is unavailable'),
+    (CC_UNSPECIFIED_ERROR, 'Unspecified error'),
+)
 
 
 # network functions

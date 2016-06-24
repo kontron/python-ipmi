@@ -225,15 +225,15 @@ def test_getmessage_decode_with_data_rsp():
     eq_(m.completion_code, 0x00)
     eq_(m.channel.number, 1)
     eq_(m.channel.privilege_level, 2)
-    eq_(m.data, array('B', '\xaa\xff\xff\xee'))
+    eq_(m.data, array('B', [0xaa, 0xff, 0xff, 0xee]))
 
 def test_readeventmessagebuffer_decode_rsp():
     m = ReadEventMessageBufferRsp()
     decode_message(m, '\x00\x00\x01\x02\x03\x04\x05\x06\x07'\
             '\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f')
     eq_(m.completion_code, 0x00)
-    eq_(m.event_data, array('B', '\x00\x01\x02\x03\x04'\
-            '\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'))
+    eq_(m.event_data, array('B', b'\x00\x01\x02\x03\x04'\
+            b'\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'))
 
 def test_masterwriteread_encode_req_all_zero_read():
     m = MasterWriteReadReq()
@@ -262,7 +262,8 @@ def test_masterwriteread_encode_req_for_read():
     m.bus_id.channel = 0
     m.bus_id.slave_address = 0
     m.read_count = 0
-    m.data = '\x01\x23\x45'
+#    m.data = '\x01\x23\x45'
+    m.data = [1, 0x23, 0x45]
     data = encode_message(m)
     eq_(data,'\x00\x00\x00\x01\x23\x45')
 
@@ -270,7 +271,7 @@ def test_masterwriteread_decode_rsp():
     m = MasterWriteReadRsp()
     decode_message(m, '\x00\x11\x22\x33\x44')
     eq_(m.completion_code, 0x00)
-    eq_(m.data, array('B', '\x11\x22\x33\x44'))
+    eq_(m.data, array('B', b'\x11\x22\x33\x44'))
 
 def test_get_channel_authentication_capabilities_req():
     m = GetChannelAuthenticationCapabilitiesReq()

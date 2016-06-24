@@ -14,14 +14,16 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-import array
-from pyipmi.errors import DecodingError, CompletionCodeError
-from pyipmi.msgs import create_request_by_name
-from pyipmi.msgs import picmg
-from pyipmi.utils import check_completion_code
-from pyipmi.state import State
+# from builtins import object
 
-from pyipmi.msgs.picmg import \
+import array
+from .errors import DecodingError, EncodingError, CompletionCodeError
+from .msgs import create_request_by_name
+from .msgs import picmg
+from .utils import check_completion_code
+from .state import State
+
+from .msgs.picmg import \
         FRU_CONTROL_COLD_RESET, FRU_CONTROL_WARM_RESET, \
         FRU_CONTROL_GRACEFUL_REBOOT, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT, \
         FRU_ACTIVATION_FRU_ACTIVATE, FRU_ACTIVATION_FRU_DEACTIVATE
@@ -192,7 +194,6 @@ class Picmg(object):
 
 class LinkDescriptor(State):
     # TODO dont duplicate exports, import them instead
-    from pyipmi.msgs import picmg
     INTERFACE_BASE = picmg.LINK_INTERFACE_BASE
     INTERFACE_FABRIC = picmg.LINK_INTERFACE_FABRIC
     INTERFACE_UPDATE_CHANNEL = picmg.LINK_INTERFACE_UPDATE_CHANNEL
@@ -304,20 +305,20 @@ class LinkDescriptor(State):
 class PowerLevel(State):
 
     def _from_response(self, rsp):
-        self.dynamic_power_configuration = res.properties.dynamic_power_configuration
-        self.power_level = res.properties.power_level
-        self.delay_to_stable = res.delay_to_stable_power
-        self.power_mulitplier = res.power_multiplier
-        self.power_levels = res.power_draw
+        self.dynamic_power_configuration = rsp.properties.dynamic_power_configuration
+        self.power_level = rsp.properties.power_level
+        self.delay_to_stable = rsp.delay_to_stable_power
+        self.power_mulitplier = rsp.power_multiplier
+        self.power_levels = rsp.power_draw
 
 
 class FanSpeedProperties(State):
 
-    def _from_response(self, res):
-        self.minimum_speed_level = res.minimum_speed_level
-        self.maximum_speed_level = res.maximum_speed_level
-        self.normal_operation_level = res.normal_operation_level
-        self.local_control_supported = res.properties.local_control_supported
+    def _from_response(self, rsp):
+        self.minimum_speed_level = rsp.minimum_speed_level
+        self.maximum_speed_level = rsp.maximum_speed_level
+        self.normal_operation_level = rsp.normal_operation_level
+        self.local_control_supported = rsp.properties.local_control_supported
 
 
 class LedState(State):
@@ -353,7 +354,7 @@ class LedState(State):
 
     def __init__(self, rsp=None, fru_id=None, led_id=None, color=None,
             function=None):
-        State.__init__(self, rsp)
+        super(self.__class__, self).__init__(rsp)
         if fru_id is not None:
             self.fru_id = fru_id
         if led_id is not None:
@@ -453,13 +454,13 @@ class GlobalStatus(State):
     ]
 
     def _from_response(self, rsp):
-        self.role = res.global_status.role
+        self.role = rsp.global_status.role
         self.management_power_good =\
-                bool(res.global_status.management_power_good)
+                bool(rsp.global_status.management_power_good)
         self.payload_power_good =\
-                bool(res.global_status.payload_power_good)
+                bool(rsp.global_status.payload_power_good)
         self.unidentified_fault =\
-                bool(res.global_status.unidentified_fault)
+                bool(rsp.global_status.unidentified_fault)
 
 
 class PowerChannelStatus(State):
