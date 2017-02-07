@@ -14,6 +14,25 @@ Requirements
 You need an either the `ipmitool`_ for accessing RCMP interface or a
 `Total Phase`_ Aardvark for communication over the IPMB interface.
 
+Installation
+------------
+
+Using ``pip``
+'''''''''''''
+
+The recommended installation method is using
+`pip <http://pip-installer.org>`__::
+
+    pip install python-ipmi
+
+Manual installation
+'''''''''''''''''''
+
+Download the source distribution package for the library. Extract the the package to
+a temporary location and install:
+
+	python setup.py install
+
 Example
 -------
 
