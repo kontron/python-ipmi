@@ -31,7 +31,7 @@ Manual installation
 Download the source distribution package for the library. Extract the the package to
 a temporary location and install::
 
-	python setup.py install
+    python setup.py install
 
 Example
 -------
