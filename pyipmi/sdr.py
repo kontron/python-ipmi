@@ -40,6 +40,7 @@ SDR_TYPE_FRU_DEVICE_LOCATOR_RECORD = 0x11
 SDR_TYPE_MANAGEMENT_CONTROLLER_DEVICE_LOCATOR_RECORD = 0x12
 SDR_TYPE_MANAGEMENT_CONTROLLER_CONFIRMATION_RECORD = 0x13
 SDR_TYPE_BMC_MESSAGE_CHANNEL_INFO_RECORD = 0x14
+SDR_TYPE_OEM_SENSOR_RECORD = 0xC0
 
 GET_INITIALIZATION_AGENT_STATUS = 0
 RUN_INITIALIZATION_AGENT = 1
@@ -237,6 +238,8 @@ class SdrCommon(object):
                         SdrFruDeviceLocator,
                 SDR_TYPE_MANAGEMENT_CONTROLLER_DEVICE_LOCATOR_RECORD:
                         SdrManagementContollerDeviceLocator,
+                SDR_TYPE_OEM_SENSOR_RECORD:
+                        SdrOEMSensorRecord,
             }[sdr_type]
         except KeyError:
             raise DecodingError('Unsupported SDR type(0x%02x)' % sdr_type)
@@ -598,3 +601,22 @@ class SdrManagementContollerDeviceLocator(SdrCommon):
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
         self.device_id_string = buffer.tostring()
+
+###
+# SDR type 0xC0
+##################################################
+class SdrOEMSensorRecord(SdrCommon):
+    def __init__(self, data, next_id=None):
+        super(self.__class__, self).__init__(data, next_id)
+        if data:
+            self._from_data(data)
+
+    def __str__(self):
+        return 'Not supported yet.'
+
+    def _from_data(self, data):
+        buffer = ByteBuffer(data[5:])
+
+        # record key bytes
+        self._common_record_key(buffer.pop_slice(3))
+
