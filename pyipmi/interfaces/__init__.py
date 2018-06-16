@@ -31,4 +31,3 @@ def create_interface(interface, *args, **kwargs):
             return intf
 
     raise RuntimeError('unknown interface with name %s' % interface)
-

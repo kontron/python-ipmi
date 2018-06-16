@@ -33,7 +33,7 @@ from . import sel
 from . import sensor
 from . import msgs
 
-from .errors import TimeoutError, CompletionCodeError
+from .errors import TimeoutError, CompletionCodeError, RetryError
 from .msgs.registry import create_request_by_name
 from .utils import check_completion_code
 
@@ -170,20 +170,21 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
 
         self.is_ipmc_accessible()
 
-    def send_message(self, req):
+    def send_message(self, req, retry=3):
         req.target = self.target
         req.requester = self.requester
+        rsp = None
 
-        retry = 3
-        while True:
+        while retry > 0:
             retry -= 1
             try:
                 rsp = self.interface.send_and_receive(req)
                 break
             except CompletionCodeError as e:
                 if e.cc == msgs.constants.CC_NODE_BUSY:
-                    retry -= 1
                     continue
+        else:
+            raise RetryError()
 
         return rsp
 
