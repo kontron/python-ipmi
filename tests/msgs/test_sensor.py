@@ -216,7 +216,7 @@ def test_getsensoreventenable_decode_byte34_rsp():
     eq_(m.byte3, 0xaa)
     eq_(m.byte4, 0xbb)
 
-def test_getsensoreventenable_decode_byte34_rsp():
+def test_getsensoreventenable_decode_byte3456_rsp():
     m = pyipmi.msgs.sensor.GetSensorEventEnableRsp()
     decode_message(m, '\x00\xc0\xaa\xbb\xcc\xdd')
     eq_(m.completion_code, 0x00)

@@ -21,7 +21,7 @@ def test_getselentry_decode_invalid_rsp():
     m = pyipmi.msgs.sel.GetSelEntryRsp()
     decode_message(m, '\x00\x01')
 
-def test_getselentry_encode_valid_rsp():
+def test_getselentry_decode_valid_rsp():
     m = pyipmi.msgs.sel.GetSelEntryRsp()
     decode_message(m, '\x00\x02\x01\x01\x02\x03\x04')
     eq_(m.completion_code, 0x00)

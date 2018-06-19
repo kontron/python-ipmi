@@ -108,7 +108,7 @@ def test_getselftestresults_decode_test_fail_corrupted_sdr_rsp():
     eq_(m.status.controller_bootblock_corrupted, 0)
     eq_(m.status.controller_firmware_corrupted, 0)
 
-def test_getselftestresults_decode_test_fail_corrupted_sdr_rsp():
+def test_getselftestresults_decode_test_fail_corrupted_bmc_rsp():
     m = pyipmi.msgs.bmc.GetSelftestResultsRsp()
     decode_message(m, '\x00\x57\x20')
     eq_(m.completion_code, 0x00)
@@ -367,7 +367,7 @@ def test_masterwriteread_encode_req_for_read():
     data = encode_message(m)
     eq_(data,'\x45\x74\x05')
 
-def test_masterwriteread_encode_req_for_read():
+def test_masterwriteread_encode_req_for_write():
     m = pyipmi.msgs.bmc.MasterWriteReadReq()
     m.bus_id.type = 0
     m.bus_id.id = 0
