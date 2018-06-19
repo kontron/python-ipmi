@@ -27,7 +27,7 @@ class TestIpmitool:
         self._interface._run_ipmitool = mock
 
         target = Target(0x20)
-        data = self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
+        self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
 
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 -U "admin" -P "secret" -t 0x20 -l 0 raw 0x06 0x01 2>&1')
 

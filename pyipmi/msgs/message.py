@@ -333,7 +333,6 @@ class Message(object):
     def _set_field(self, name, value):
         raise NotImplementedError()
         # TODO walk along the properties..
-        setattr(self, name, value)
 
     def _create_fields(self):
         for field in self.__fields__:

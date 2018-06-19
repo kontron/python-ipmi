@@ -24,7 +24,6 @@ from . import UnsignedIntMask
 from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
-from . import Conditional
 from . import RemainingBytes
 from . import VariableByteArray
 

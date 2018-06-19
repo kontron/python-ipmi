@@ -82,7 +82,7 @@ class Picmg(object):
         check_completion_code(rsp.completion_code)
 
     def _set_fru_activation(self, fru_id, control):
-        rsp = self.send_message_with_name('SetFruActivation', fru_id=fru_id,
+        self.send_message_with_name('SetFruActivation', fru_id=fru_id,
                     control=control)
 
     def set_fru_activation(self, fru_id):

@@ -23,10 +23,8 @@ from . import UnsignedInt
 from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
-from . import Conditional
 from . import Optional
 from . import RemainingBytes
-from . import VariableByteArray
 
 @register_message_class
 class GetSdrRepositoryInfoReq(Message):

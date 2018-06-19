@@ -6,7 +6,6 @@ from nose.tools import eq_, raises
 
 import pyipmi.msgs.sensor
 
-from pyipmi.errors import DecodingError, EncodingError
 from pyipmi.msgs import encode_message
 from pyipmi.msgs import decode_message
 

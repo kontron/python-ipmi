@@ -5,9 +5,7 @@ from pyipmi.picmg import LedState
 
 import pyipmi.msgs.picmg
 
-from pyipmi.errors import DecodingError, EncodingError
 from pyipmi.msgs import encode_message
-from pyipmi.msgs import decode_message
 
 
 def test_to_request():

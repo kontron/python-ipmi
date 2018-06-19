@@ -3,7 +3,6 @@
 
 from array import array
 
-import nose
 from nose.tools import eq_, ok_, raises
 
 from pyipmi.interfaces.ipmb import IpmbHeader

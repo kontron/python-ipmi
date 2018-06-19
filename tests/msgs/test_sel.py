@@ -26,7 +26,7 @@ def test_getselentry_decode_valid_rsp():
     decode_message(m, '\x00\x02\x01\x01\x02\x03\x04')
     eq_(m.completion_code, 0x00)
     eq_(m.next_record_id, 0x0102)
-    eq_(m.record_data, '\x01\x02\x03\x04')
+    eq_(m.record_data, array('B', [1,2,3,4]))
 
 def test_getselentry_encode_valid_rsp():
     m = pyipmi.msgs.sel.GetSelEntryRsp()
