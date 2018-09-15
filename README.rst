@@ -1,6 +1,10 @@
 Pure Python IPMI Library
 ========================
 
+.. image:: https://api.codacy.com/project/badge/Grade/bdda77c6596b4e9b8508d95805ba34c5
+   :alt: Codacy Badge
+   :target: https://app.codacy.com/app/hthiery/python-ipmi?utm_source=github.com&utm_medium=referral&utm_content=kontron/python-ipmi&utm_campaign=Badge_Grade_Dashboard
+
 |BuildStatus| |PyPiVersion| |Coveralls| |CodeClimate|
 
 Features
