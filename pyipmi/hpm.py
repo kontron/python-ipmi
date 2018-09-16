@@ -258,26 +258,26 @@ class Hpm(object):
     def get_upgrade_version_from_file(filename):
         image = UpgradeImage(filename)
         for action in image.actions:
-            if type(action) == UpgradeActionRecordUploadForUpgrade:
+            if isinstance(action, UpgradeActionRecordUploadForUpgrade):
                 return action.firmware_version
         return None
 
     @staticmethod
     def _do_upgrade_action_backup(image):
         for action in image.actions:
-            if type(action) == UpgradeActionRecordBackup:
+            if isinstance(action, UpgradeActionRecordBackup):
                 pass
 
     @staticmethod
     def _do_upgrade_action_prepare(image):
         for action in image.actions:
-            if type(action) == UpgradeActionRecordPrepare:
+            if isinstance(action, UpgradeActionRecordPrepare):
                 print("do ACTION_PREPARE_COMPONENT")
 
     @staticmethod
     def _do_upgrade_action_upload(image):
         for action in image.actions:
-            if type(action) == UpgradeActionRecordUploadForUpgrade:
+            if isinstance(action, UpgradeActionRecordUploadForUpgrade):
                 print("do ACTION_UPLOAD_FOR_UPGRADE")
 
     def preparation_stage(self, image):
@@ -319,7 +319,7 @@ class Hpm(object):
             if action.components & (1 << component) == 0:
                 continue
             self.initiate_upgrade_action_and_wait(1 << component, action.action_type)
-            if type(action) == UpgradeActionRecordUploadForUpgrade:
+            if isinstance(action, UpgradeActionRecordUploadForUpgrade):
                 self.upload_binary(action.firmware_image_data)
                 self.finish_upload_and_wait(component, action.firmware_length)
 
