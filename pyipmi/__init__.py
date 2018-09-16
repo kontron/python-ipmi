@@ -15,16 +15,13 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 from __future__ import absolute_import
-from builtins import object
 
 import time
-import sys
 
 from . import bmc
 from . import chassis
 from . import event
 from . import fru
-#import functools
 from . import hpm
 from . import lan
 from . import picmg

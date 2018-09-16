@@ -14,8 +14,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-from builtins import object
-
 from .utils import check_completion_code
 from .msgs import create_request_by_name
 
