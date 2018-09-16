@@ -14,9 +14,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-# from builtins import object
-
-import array
 from .errors import DecodingError, EncodingError, CompletionCodeError
 from .msgs import create_request_by_name
 from .msgs import picmg

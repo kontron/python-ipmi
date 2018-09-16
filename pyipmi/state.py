@@ -1,7 +1,3 @@
-
-
-from builtins import object
-
 class DefaultProperties(object):
     def __init__(self):
         if hasattr(self, '__properties__'):
