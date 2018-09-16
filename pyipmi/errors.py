@@ -40,7 +40,8 @@ class CompletionCodeError(Exception):
     def __str__(self):
         return "%s cc=0x%02x desc=%s" % (self.__class__.__name__, self.cc, self.cc_desc)
 
-    def find_cc_desc(self, error_cc):
+    @staticmethod
+    def find_cc_desc(error_cc):
         for cc in cc_err_desc:
             if error_cc == cc[0]:
                 return cc[1]

@@ -131,14 +131,15 @@ class SelEntry(State):
         str.append('  Event Data: 0x%s' % self.event_data.encode('hex'))
         return "\n".join(str)
 
-    def type_to_string(self, type):
+    @staticmethod
+    def type_to_string(entry_type):
         s = None
-        if type == SelEntry.TYPE_SYSTEM_EVENT:
+        if entry_type == SelEntry.TYPE_SYSTEM_EVENT:
             s = 'System Event'
-        elif type in SelEntry.TYPE_OEM_TIMESTAMPED_RANGE:
-            s = 'OEM timestamped (0x%02x)' % type
-        elif type in SelEntry.TYPE_OEM_NON_TIMESTAMPED_RANGE:
-            s = 'OEM non-timestamped (0x%02x)' % type
+        elif entry_type in SelEntry.TYPE_OEM_TIMESTAMPED_RANGE:
+            s = 'OEM timestamped (0x%02x)' % entry_type
+        elif entry_type in SelEntry.TYPE_OEM_NON_TIMESTAMPED_RANGE:
+            s = 'OEM non-timestamped (0x%02x)' % entry_type
         return s
 
     def _from_response(self, data):

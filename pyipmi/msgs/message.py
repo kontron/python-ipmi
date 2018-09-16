@@ -183,7 +183,8 @@ class Optional(object):
         if getattr(obj, self._field.name) is not None:
             self._field.encode(obj, data)
 
-    def create(self):
+    @staticmethod
+    def create():
         return None
 
 
