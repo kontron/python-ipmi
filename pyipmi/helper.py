@@ -14,11 +14,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-
-import array
 import time
 
-from .errors import DecodingError, CompletionCodeError, RetryError
+from .errors import CompletionCodeError, RetryError
 from .utils import check_completion_code, ByteBuffer
 from .msgs import constants
 

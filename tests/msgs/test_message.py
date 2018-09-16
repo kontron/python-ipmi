@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
-from nose.tools import eq_, raises
+from nose.tools import eq_
 
 from array import array
 from pyipmi.utils import ByteBuffer

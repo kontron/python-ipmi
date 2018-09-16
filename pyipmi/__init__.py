@@ -70,6 +70,8 @@ class NullRequester(object):
 
 
 class Target(object):
+    '''The Target class represents an IPMI target.'''
+
     def __init__(self, ipmb_address, routing=None):
         """
         `ipmb_address` is the IPMB target address
@@ -80,7 +82,6 @@ class Target(object):
         if routing:
             self.set_routing(routing)
 
-    '''The Target class represents an IPMI target.'''
     class Routing(object):
         def __init__(self, address, bridge_channel):
             self.address = address

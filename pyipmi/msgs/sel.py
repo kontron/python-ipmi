@@ -20,11 +20,9 @@ from . import register_message_class
 from . import Message
 from . import ByteArray
 from . import UnsignedInt
-from . import UnsignedIntMask
 from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
-from . import Conditional
 from . import RemainingBytes
 
 @register_message_class

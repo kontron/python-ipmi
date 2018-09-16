@@ -2,12 +2,12 @@
 
 from array import array
 
-from nose.tools import eq_, raises
+from nose.tools import eq_
 
 import pyipmi.msgs.bmc
 import pyipmi.msgs.event
 
-from pyipmi.errors import DecodingError, EncodingError
+from pyipmi.errors import EncodingError
 from pyipmi.msgs import encode_message
 from pyipmi.msgs import decode_message
 

@@ -326,7 +326,7 @@ class Hpm(object):
         start_time = time.time()
         while time.time() < start_time + timeout:
             try:
-                status = self.get_upgrade_status()
+                self.get_upgrade_status()
                 self.get_device_id()
             except TimeoutError:
                 time.sleep(interval)

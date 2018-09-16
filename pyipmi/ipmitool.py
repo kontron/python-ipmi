@@ -87,7 +87,7 @@ def cmd_sensor_rearm(ipmi, args):
     if len(args) < 1:
         return
     number = int(args[0], 0)
-    rsp = ipmi.rearm_sensor_events(number)
+    ipmi.rearm_sensor_events(number)
 
 def sdr_show(ipmi, s):
     if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:

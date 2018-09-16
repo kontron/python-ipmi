@@ -20,13 +20,10 @@ from builtins import object
 
 import math
 from . import errors
-import array
-import time
 
-from .errors import DecodingError, CompletionCodeError, RetryError
+from .errors import DecodingError
 from .utils import check_completion_code, ByteBuffer
 from .msgs import create_request_by_name
-#from .msgs import constants
 
 from .helper import get_sdr_data_helper, clear_repository_helper
 from .helper import get_sdr_chunk_helper

@@ -74,7 +74,7 @@ class Aardvark(object):
         raw_data = []
 
         self._send_raw(header, raw_data)
-        rx_data = self._receive_raw(header)
+        self._receive_raw(header)
         return True
 
     def _inc_sequence_number(self):

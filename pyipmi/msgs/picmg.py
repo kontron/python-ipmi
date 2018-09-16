@@ -22,7 +22,6 @@ from . import register_message_class
 from . import Message
 from . import UnsignedInt
 from . import UnsignedIntMask
-from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import Conditional
