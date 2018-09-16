@@ -65,7 +65,8 @@ CC_ABORT_UPGRADE_CANNOT_RESUME_OPERATION = 0x81
 
 class Hpm(object):
 
-    def _get_component_count(self, components):
+    @staticmethod
+    def _get_component_count(components):
         """Return the number of components"""
         return bin(components).count('1')
 
@@ -140,7 +141,8 @@ class Hpm(object):
         self.send_message_with_name('UploadFirmwareBlock', number=block_number,
                 data=data)
 
-    def _determine_max_block_size(self):
+    @staticmethod
+    def _determine_max_block_size():
         #tbd
         return 22
 
@@ -248,28 +250,32 @@ class Hpm(object):
             # controller is in reset and flashed new firmware
             pass
 
-    def open_upgrade_image(self, filename):
-        image = UpgradeImage(filename)
-        return image
+    @staticmethod
+    def open_upgrade_image(filename):
+        return UpgradeImage(filename)
 
-    def get_upgrade_version_from_file(self, filename):
+    @staticmethod
+    def get_upgrade_version_from_file(filename):
         image = UpgradeImage(filename)
         for action in image.actions:
             if type(action) == UpgradeActionRecordUploadForUpgrade:
                 return action.firmware_version
         return None
 
-    def _do_upgrade_action_backup(self, image):
+    @staticmethod
+    def _do_upgrade_action_backup(image):
         for action in image.actions:
             if type(action) == UpgradeActionRecordBackup:
                 pass
 
-    def _do_upgrade_action_prepare(self, image):
+    @staticmethod
+    def _do_upgrade_action_prepare(image):
         for action in image.actions:
             if type(action) == UpgradeActionRecordPrepare:
                 print("do ACTION_PREPARE_COMPONENT")
 
-    def _do_upgrade_action_upload(self, image):
+    @staticmethod
+    def _do_upgrade_action_upload(image):
         for action in image.actions:
             if type(action) == UpgradeActionRecordUploadForUpgrade:
                 print("do ACTION_UPLOAD_FOR_UPGRADE")

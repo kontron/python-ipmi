@@ -318,6 +318,7 @@ class SdrFullSensorRecord(SdrCommon):
             raise errors.DecodingError('unknown linearization %d' %
                                        (self.linearization & 0x7f))
 
+    @staticmethod
     def _convert_complement(self, value, size):
         if (value & (1 << (size-1))):
             value = -(1<<size) + value

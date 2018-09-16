@@ -137,12 +137,14 @@ class Ipmitool(object):
 
         return rsp
 
-    def _build_ipmitool_raw_data(self, lun, netfn, raw_bytes):
+    @staticmethod
+    def _build_ipmitool_raw_data(lun, netfn, raw_bytes):
         cmd_data = ' -l %d raw 0x%02x ' % (lun, netfn)
         cmd_data += ' '.join(['0x%02x' % ord(d) for d in raw_bytes])
         return cmd_data
 
-    def _build_ipmitool_target(self, target):
+    @staticmethod
+    def _build_ipmitool_target(target):
         cmd = ''
         if hasattr(target, 'routing'):
             # we have to do bridging here
@@ -205,7 +207,8 @@ class Ipmitool(object):
 
         return cmd
 
-    def _run_ipmitool(self, cmd):
+    @staticmethod
+    def _run_ipmitool(cmd):
         """Legacy call of ipmitool (will be removed in future).
         """
 
@@ -218,4 +221,3 @@ class Ipmitool(object):
                 output)
 
         return output, child.returncode
-

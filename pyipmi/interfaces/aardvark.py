@@ -78,14 +78,16 @@ class Aardvark(object):
     def _inc_sequence_number(self):
         self.next_sequence_number = (self.next_sequence_number + 1) % 64
 
-    def _encode_ipmb_msg_req(self, header, cmd_data):
+    @staticmethod
+    def _encode_ipmb_msg_req(header, cmd_data):
         data = header.encode()
         data.extend(cmd_data)
         data.append(checksum(data[2:]))
 
         return data
 
-    def _rx_filter(self, header, rx_data):
+    @staticmethod
+    def _rx_filter(header, rx_data):
 
         log().debug('[%s]' % ' '.join(['%02x' % b for b in rx_data]))
 
