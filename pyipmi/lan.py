@@ -17,8 +17,7 @@
 # from builtins import object
 
 from .msgs import create_request_by_name
-# from .errors import DecodingError, CompletionCodeError
-from .utils import check_completion_code, ByteBuffer
+from .utils import check_completion_code
 
 LAN_PARAMETER_SET_IN_PROGRESS = 0
 LAN_PARAMETER_AUTHENTICATION_TYPE_SUPPORT = 1

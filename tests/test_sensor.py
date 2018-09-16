@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
-from nose.tools import eq_, raises
-from mock import MagicMock, call
+from nose.tools import eq_
+from mock import MagicMock
 
 from pyipmi.sensor import *
 from pyipmi import interfaces, create_connection

@@ -18,7 +18,6 @@ from __future__ import absolute_import
 from . import constants
 from . import register_message_class
 from . import Message
-from . import ByteArray
 from . import UnsignedInt
 from . import Timestamp
 from . import Bitfield

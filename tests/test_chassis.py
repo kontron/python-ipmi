@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
-from nose.tools import eq_, ok_, raises
+from nose.tools import eq_, ok_
 
 from pyipmi.chassis import *
 import pyipmi.msgs.chassis
-from pyipmi.msgs import encode_message
 from pyipmi.msgs import decode_message
 
 def test_chassisstatus_object():

@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -14,6 +13,7 @@ from __future__ import absolute_import
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+from __future__ import absolute_import
 
 from . import constants
 from . import register_message_class

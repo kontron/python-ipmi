@@ -16,10 +16,8 @@
 
 from builtins import object
 
-#from .errors import DecodingError, CompletionCodeError, RetryError
-from .utils import check_completion_code, ByteBuffer
+from .utils import check_completion_code
 from .msgs import create_request_by_name
-#from .msgs import constants
 
 EVENT_ASSERTION = 0
 EVENT_DEASSERTION = 1
