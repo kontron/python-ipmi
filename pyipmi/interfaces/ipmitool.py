@@ -20,7 +20,7 @@ from subprocess import Popen, PIPE
 from array import array
 
 from .. import Session
-from ..errors import TimeoutError
+from ..errors import IpmiTimeoutError
 from ..logger import log
 from ..msgs import encode_message, decode_message, create_message
 from ..utils import py3dec_unic_bytes_fix, ByteBuffer
@@ -75,13 +75,13 @@ class Ipmitool(object):
 
         output, rc = self._run_ipmitool(cmd)
         if rc:
-            raise TimeoutError()
+            raise IpmiTimeoutError()
 
     def is_ipmc_accessible(self, target):
         try:
             self.rmcp_ping()
             accessible = True
-        except TimeoutError:
+        except IpmiTimeoutError:
             accessible = False
 
         return accessible
@@ -106,7 +106,7 @@ class Ipmitool(object):
             cc = int(match_completion_code.group(1), 16)
             data.append(cc)
         elif match_timeout:
-            raise TimeoutError()
+            raise IpmiTimeoutError()
         else:
             if rc != 0:
                 raise RuntimeError('ipmitool failed with rc=%d' % rc)

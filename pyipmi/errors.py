@@ -27,7 +27,7 @@ class EncodingError(Exception):
     pass
 
 
-class TimeoutError(Exception):
+class IpmiTimeoutError(Exception):
     """Timeout occurred."""
     pass
 

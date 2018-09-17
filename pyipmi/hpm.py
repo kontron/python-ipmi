@@ -24,7 +24,7 @@ import collections
 import hashlib
 import time
 
-from .errors import CompletionCodeError, HpmError, TimeoutError
+from .errors import CompletionCodeError, HpmError, IpmiTimeoutError
 from .msgs import create_request_by_name
 from .msgs import constants
 from .utils import check_completion_code, bcd_search, chunks
@@ -86,9 +86,9 @@ class Hpm(object):
                   PROPERTY_DESCRIPTION_STRING, PROPERTY_ROLLBACK_VERSION,
                   PROPERTY_DEFERRED_VERSION):
             try:
-                property = self.get_component_property(component_id, p)
-                if property is not None:
-                    properties.append(property)
+                prop = self.get_component_property(component_id, p)
+                if prop is not None:
+                    properties.append(prop)
             except CompletionCodeError as e:
                 if e.cc == CC_GET_COMP_PROP_INVALID_PROPERTIES_SELECTOR:
                     continue
@@ -97,10 +97,10 @@ class Hpm(object):
     def find_component_id_by_descriptor(self, descriptor):
         caps = self.get_target_upgrade_capabilities()
         for component_id in caps.components:
-            property = self.get_component_property(component_id,
-                                                   PROPERTY_DESCRIPTION_STRING)
-            if property is not None:
-                if property.description == descriptor:
+            prop = self.get_component_property(component_id,
+                                               PROPERTY_DESCRIPTION_STRING)
+            if prop is not None:
+                if prop.description == descriptor:
                     return component_id
         return None
 
@@ -203,7 +203,7 @@ class Hpm(object):
                     time.sleep(interval)
                 else:
                     return
-            except TimeoutError:
+            except IpmiTimeoutError:
                 time.sleep(interval)
 
     def activate_firmware(self, rollback_override=None):
@@ -226,7 +226,7 @@ class Hpm(object):
                             timeout, interval)
             else:
                 raise HpmError('activate_firmware CC=0x%02x' % e.cc)
-        except TimeoutError:
+        except IpmiTimeoutError:
             # controller is in reset and flashed new firmware
             pass
 
@@ -249,7 +249,7 @@ class Hpm(object):
                             60, interval)
             else:
                 raise HpmError('activate_firmware CC=0x%02x' % e.cc)
-        except TimeoutError:
+        except IpmiTimeoutError:
             # controller is in reset and flashed new firmware
             pass
 
@@ -337,7 +337,7 @@ class Hpm(object):
             try:
                 self.get_upgrade_status()
                 self.get_device_id()
-            except TimeoutError:
+            except IpmiTimeoutError:
                 time.sleep(interval)
         time.sleep(5)
 
@@ -382,11 +382,11 @@ class TargetUpgradeCapabilities(State):
                 self.components.append(i)
 
     def __str__(self):
-        str = []
-        str.append("Target Upgrade Capabilities")
-        str.append(" HPM.1 version: %s" % self.version)
-        str.append(" Components: %s" % self.components)
-        return "\n".join(str)
+        string = []
+        string.append("Target Upgrade Capabilities")
+        string.append(" HPM.1 version: %s" % self.version)
+        string.append(" Components: %s" % self.components)
+        return "\n".join(string)
 
 
 codecs.register(bcd_search)
