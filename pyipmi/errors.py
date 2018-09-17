@@ -14,7 +14,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-from .msgs.constants import cc_err_desc
+from .msgs.constants import COMPLETION_CODE_DESCR
 
 
 class DecodingError(Exception):
@@ -44,7 +44,7 @@ class CompletionCodeError(Exception):
 
     @staticmethod
     def find_cc_desc(error_cc):
-        for cc in cc_err_desc:
+        for cc in COMPLETION_CODE_DESCR:
             if error_cc == cc[0]:
                 return cc[1]
         return "Unknown error description"

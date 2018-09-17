@@ -231,13 +231,16 @@ class Hpm(object):
             pass
 
     def query_selftest_results(self):
-        return SelfTestResult(self.send_message_with_name('QuerySelftestResults'))
+        return SelfTestResult(
+            self.send_message_with_name('QuerySelftestResults'))
 
     def query_rollback_status(self):
-        return RollbackStatus(self.send_message_with_name('QueryRollbackStatus'))
+        return RollbackStatus(
+            self.send_message_with_name('QueryRollbackStatus'))
 
     def initiate_manual_rollback(self):
-        return RollbackStatus(self.send_message_with_name('InitiateManualRollback'))
+        return RollbackStatus(
+            self.send_message_with_name('InitiateManualRollback'))
 
     def initiate_manual_rollback_and_wait(self, timeout=2, interval=0.1):
         try:
@@ -342,8 +345,10 @@ class Hpm(object):
         time.sleep(5)
 
     def activation_stage(self, image, component):
-        self.activate_firmware_and_wait(image.header.inaccessibility_timeout, 1)
-        self.wait_until_new_firmware_comes_up(image.header.inaccessibility_timeout, 1)
+        self.activate_firmware_and_wait(
+            image.header.inaccessibility_timeout, 1)
+        self.wait_until_new_firmware_comes_up(
+            image.header.inaccessibility_timeout, 1)
         self._activation_state_do_self_testing()
 
     def install_component_from_image(self, image, component):
@@ -458,7 +463,8 @@ class ComponentPropertyCurrentVersion(ComponentProperty):
 class ComponentPropertyDescriptionString(ComponentProperty):
 
     def _from_rsp_data(self, data):
-        self.description = py3dec_unic_bytes_fix(array.array('B', data).tostring())
+        self.description = py3dec_unic_bytes_fix(
+            array.array('B', data).tostring())
         self.description = self.description.replace('\0', '')
 
 
@@ -633,8 +639,10 @@ class UpgradeActionRecordUploadForUpgrade(UpgradeActionRecord):
         if data:
             data = bytes(data, 'raw_unicode_escape')
             self.firmware_version = \
-                VersionField(data[3:3 + VersionField.VERSION_WITH_AUX_FIELD_LEN])
-            self.firmware_description_string = py3dec_unic_bytes_fix(data[9:30])
+                VersionField(
+                    data[3:3 + VersionField.VERSION_WITH_AUX_FIELD_LEN])
+            self.firmware_description_string \
+                = py3dec_unic_bytes_fix(data[9:30])
             self.firmware_length = struct.unpack('<L', data[30:34])[0]
             self.firmware_image_data = data[34:(34 + self.firmware_length)]
             self.length += 31 + self.firmware_length
@@ -667,7 +675,8 @@ class UpgradeImage(object):
 
     def _check_md5_sum(self, filedata):
         summer = hashlib.md5()
-        self.checksum_actual = summer.update(filedata[:-HPM_IMAGE_CHECKSUM_SIZE])
+        self.checksum_actual \
+            = summer.update(filedata[:-HPM_IMAGE_CHECKSUM_SIZE])
         self.checksum_expected = filedata[-HPM_IMAGE_CHECKSUM_SIZE:]
 
     def _from_file(self, filename):
@@ -703,8 +712,5 @@ class UpgradeImage(object):
         ################################
         # Image checksum
         self.checksum = ImageChecksumRecord(file_data[off:file_size])
-
-        #if self.checksum.data != self.checksum_actual:
-        #    raise HpmError("hpm file checksum error")
 
         file.close()

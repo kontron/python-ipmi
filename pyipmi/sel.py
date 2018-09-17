@@ -120,10 +120,10 @@ class SelEntry(State):
     TYPE_OEM_NON_TIMESTAMPED_RANGE = list(range(0xe0, 0x100))
 
     def __str__(self):
-        s = '[%s]' % (' '.join(['%02x' % b for b in self.data]))
+        raw = '[%s]' % (' '.join(['%02x' % b for b in self.data]))
         string = []
         string.append('SEL Record ID 0x%04x' % self.record_id)
-        string.append('  Raw: %s' % s)
+        string.append('  Raw: %s' % raw)
         string.append('  Type: %d' % self.type)
         string.append('  Timestamp: %d' % self.timestamp)
         string.append('  Generator: %d' % self.generator_id)
@@ -137,14 +137,14 @@ class SelEntry(State):
 
     @staticmethod
     def type_to_string(entry_type):
-        s = None
+        string = None
         if entry_type == SelEntry.TYPE_SYSTEM_EVENT:
-            s = 'System Event'
+            string = 'System Event'
         elif entry_type in SelEntry.TYPE_OEM_TIMESTAMPED_RANGE:
-            s = 'OEM timestamped (0x%02x)' % entry_type
+            string = 'OEM timestamped (0x%02x)' % entry_type
         elif entry_type in SelEntry.TYPE_OEM_NON_TIMESTAMPED_RANGE:
-            s = 'OEM non-timestamped (0x%02x)' % entry_type
-        return s
+            string = 'OEM non-timestamped (0x%02x)' % entry_type
+        return string
 
     def _from_response(self, data):
         if len(data) != 16:

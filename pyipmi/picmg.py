@@ -235,14 +235,14 @@ class LinkDescriptor(State):
     STATE_ENABLE = picmg.LINK_STATE_ENABLE
 
     __properties__ = [
-            # (propery, description)
-            ('channel', ''),
-            ('interface', ''),
-            ('link_flags', ''),
-            ('type', ''),
-            ('sig_class', ''),
-            ('extension', ''),
-            ('grouping_id', ''),
+        # (propery, description)
+        ('channel', ''),
+        ('interface', ''),
+        ('link_flags', ''),
+        ('type', ''),
+        ('sig_class', ''),
+        ('extension', ''),
+        ('grouping_id', ''),
     ]
 
     INTERFACE_DESCR_STRING = [
@@ -253,55 +253,55 @@ class LinkDescriptor(State):
     ]
 
     def get_interface_string(self, interf):
-        for d in self.INTERFACE_DESCR_STRING:
-            if d[0] == interf:
-                return d[1]
+        for desc in self.INTERFACE_DESCR_STRING:
+            if desc[0] == interf:
+                return desc[1]
         return 'unknown'
 
     LINK_TYPE_DESCR_STRING = [
         # Type, Extension, class, 'STRING'
         (TYPE_BASE,
-            TYPE_EXT_BASE0,
-            SIGNALING_CLASS_BASIC,
-            '10/100/1000 BASE-T'),
+         TYPE_EXT_BASE0,
+         SIGNALING_CLASS_BASIC,
+         '10/100/1000 BASE-T'),
         (TYPE_BASE,
-            TYPE_EXT_BASE1,
-            SIGNALING_CLASS_BASIC,
-            '10/100 BASE-T ShMC Cross-connect'),
+         TYPE_EXT_BASE1,
+         SIGNALING_CLASS_BASIC,
+         '10/100 BASE-T ShMC Cross-connect'),
         (TYPE_ETHERNET_FABRIC,
-            TYPE_EXT_ETHERNET_FIX1000_BX,
-            SIGNALING_CLASS_BASIC,
-            'Fixed 1000BASE-BX'),
+         TYPE_EXT_ETHERNET_FIX1000_BX,
+         SIGNALING_CLASS_BASIC,
+         'Fixed 1000BASE-BX'),
         (TYPE_ETHERNET_FABRIC,
-            TYPE_EXT_ETHERNET_FIX10G_BX4,
-            SIGNALING_CLASS_BASIC,
-            'Fixed 10GBASE-BX4 (XAUI)'),
+         TYPE_EXT_ETHERNET_FIX10G_BX4,
+         SIGNALING_CLASS_BASIC,
+         'Fixed 10GBASE-BX4 (XAUI)'),
         (TYPE_ETHERNET_FABRIC,
-            TYPE_EXT_ETHERNET_FCPI,
-            SIGNALING_CLASS_BASIC,
-            'FC-PI'),
+         TYPE_EXT_ETHERNET_FCPI,
+         SIGNALING_CLASS_BASIC,
+         'FC-PI'),
         (TYPE_ETHERNET_FABRIC,
-            TYPE_EXT_ETHERNET_FIX1000_KX,
-            SIGNALING_CLASS_BASIC,
-            'Fixed 1000BASE-KX'),
+         TYPE_EXT_ETHERNET_FIX1000_KX,
+         SIGNALING_CLASS_BASIC,
+         'Fixed 1000BASE-KX'),
         (TYPE_ETHERNET_FABRIC,
-            TYPE_EXT_ETHERNET_FIX10G_KX4,
-            SIGNALING_CLASS_BASIC,
-            'Fixed 10GBASE-KX4'),
+         TYPE_EXT_ETHERNET_FIX10G_KX4,
+         SIGNALING_CLASS_BASIC,
+         'Fixed 10GBASE-KX4'),
         (TYPE_ETHERNET_FABRIC,
-            TYPE_EXT_ETHERNET_FIX10G_KR,
-            SIGNALING_CLASS_10_3125_GBD,
-            'Fixed 10GBASE-KR'),
+         TYPE_EXT_ETHERNET_FIX10G_KR,
+         SIGNALING_CLASS_10_3125_GBD,
+         'Fixed 10GBASE-KR'),
         (TYPE_ETHERNET_FABRIC,
-            TYPE_EXT_ETHERNET_FIX40G_KR4,
-            SIGNALING_CLASS_10_3125_GBD,
-            'Fixed 40GBASE-KR4'),
+         TYPE_EXT_ETHERNET_FIX40G_KR4,
+         SIGNALING_CLASS_10_3125_GBD,
+         'Fixed 40GBASE-KR4'),
     ]
 
-    def get_link_type_string(self, type, ext, cls=0):
-        for d in self.LINK_TYPE_DESCR_STRING:
-            if d[0] == type and d[1] == ext and d[2] == cls:
-                return d[3]
+    def get_link_type_string(self, link_type, ext, cls=0):
+        for desc in self.LINK_TYPE_DESCR_STRING:
+            if desc[0] == link_type and desc[1] == ext and desc[2] == cls:
+                return desc[3]
         return 'unknown'
 
 
@@ -339,21 +339,21 @@ class LedState(State):
     FUNCTION_LAMP_TEST = 4
 
     __properties__ = [
-            # (propery, description)
-            ('fru_id', ''),
-            ('led_id', ''),
-            ('local_state_available', ''),
-            ('override_enabled', ''),
-            ('lamp_test_enabled', ''),
-            ('local_function', ''),
-            ('local_off_duration', ''),
-            ('local_on_duration', ''),
-            ('local_color', ''),
-            ('override_function', ''),
-            ('override_off_duration', ''),
-            ('override_on_duration', ''),
-            ('override_color', ''),
-            ('lamp_test_duration', ''),
+        # (propery, description)
+        ('fru_id', ''),
+        ('led_id', ''),
+        ('local_state_available', ''),
+        ('override_enabled', ''),
+        ('lamp_test_enabled', ''),
+        ('local_function', ''),
+        ('local_off_duration', ''),
+        ('local_on_duration', ''),
+        ('local_color', ''),
+        ('override_function', ''),
+        ('override_off_duration', ''),
+        ('override_on_duration', ''),
+        ('override_color', ''),
+        ('lamp_test_duration', ''),
     ]
 
     def __init__(self, rsp=None, fru_id=None, led_id=None, color=None,
@@ -369,21 +369,21 @@ class LedState(State):
             self.override_function = function
 
     def __str__(self):
-        s = '[flags '
-        s += self.local_state_available and ' LOCAL_STATE' or ''
-        s += self.override_enabled and ' OVR_EN' or ''
-        s += self.lamp_test_enabled and ' LAMP_TEST_EN' or ''
+        string = '[flags '
+        string += self.local_state_available and ' LOCAL_STATE' or ''
+        string += self.override_enabled and ' OVR_EN' or ''
+        string += self.lamp_test_enabled and ' LAMP_TEST_EN' or ''
         if not self.local_state_available and not self.override_enabled \
                 and not self.lamp_test_enabled:
-            s += ' NONE'
+            string += ' NONE'
         if self.local_state_available:
-            s += ' local_function %s local_color %s' % (
-                    self.local_function, self.local_color)
+            string += ' local_function %s local_color %s' % (
+                self.local_function, self.local_color)
         if self.override_enabled:
-            s += ' override_function %s override_color %s' % (
-                    self.override_function, self.override_color)
-        s += ']'
-        return s
+            string += ' override_function %s override_color %s' % (
+                self.override_function, self.override_color)
+        string += ']'
+        return string
 
     def _from_response(self, res):
         self.local_state_available = bool(res.led_states.local_avail)
@@ -450,11 +450,11 @@ class LedState(State):
 
 class GlobalStatus(State):
     __properties__ = [
-            # (propery, description)
-            ('role', ''),
-            ('management_power_good', ''),
-            ('payload_power_good', ''),
-            ('unidentified_fault', ''),
+        # (propery, description)
+        ('role', ''),
+        ('management_power_good', ''),
+        ('payload_power_good', ''),
+        ('unidentified_fault', ''),
     ]
 
     def _from_response(self, rsp):
@@ -469,14 +469,14 @@ class GlobalStatus(State):
 
 class PowerChannelStatus(State):
     __properties__ = [
-            # (propery, description)
-            ('present', ''),
-            ('management_power', ''),
-            ('management_power_overcurrent', ''),
-            ('enable', ''),
-            ('payload_power', ''),
-            ('payload_power_overcurrent', ''),
-            ('pwr_on', ''),
+        # (propery, description)
+        ('present', ''),
+        ('management_power', ''),
+        ('management_power_overcurrent', ''),
+        ('enable', ''),
+        ('payload_power', ''),
+        ('payload_power_overcurrent', ''),
+        ('pwr_on', ''),
     ]
 
     def _from_response(self, rsp):

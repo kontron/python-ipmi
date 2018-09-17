@@ -285,7 +285,8 @@ class SdrFullSensorRecord(SdrCommon):
         if linearization is not L_LINEAR:
             raise NotImplementedError()
 
-        raw = ((float(value) * 10**(-1 * self.k2)) / self.m) - (self.b * 10**self.k1)
+        raw = ((float(value) * 10**(-1 * self.k2))
+               / self.m) - (self.b * 10**self.k1)
 
         fmt = self.analog_data_format
         if (fmt == self.DATA_FMT_1S_COMPLEMENT):

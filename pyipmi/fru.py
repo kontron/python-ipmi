@@ -67,10 +67,10 @@ class Fru(object):
             try:
                 rsp = self.send_message_with_name('ReadFruData', fru_id=fru_id,
                                                   offset=off, count=req_size)
-            except CompletionCodeError as e:
-                if e.cc in (constants.CC_CANT_RET_NUM_REQ_BYTES,
-                            constants.CC_REQ_DATA_FIELD_EXCEED,
-                            constants.CC_PARAM_OUT_OF_RANGE):
+            except CompletionCodeError as ex:
+                if ex.cc in (constants.CC_CANT_RET_NUM_REQ_BYTES,
+                             constants.CC_REQ_DATA_FIELD_EXCEED,
+                             constants.CC_PARAM_OUT_OF_RANGE):
                     req_size -= 2
                     if req_size <= 0:
                         raise
@@ -325,8 +325,8 @@ class FruPicmgRecord(FruDataMultiRecord):
         if picmg_record.picmg_record_type_id ==\
                 FruPicmgRecord.PICMG_RECORD_ID_MTCA_POWER_MODULE_CAPABILITY:
             return FruPicmgPowerModuleCapabilityRecord(data)
-        else:
-            return FruPicmgRecord(data)
+
+        return FruPicmgRecord(data)
 
     def _from_data(self, data):
         if len(data) < 10:
@@ -379,16 +379,16 @@ class FruInventory(object):
 
         if self.common_header.chassis_info_area_offset:
             self.chassis_info_area = InventoryChassisInfoArea(
-                    data[self.common_header.chassis_info_area_offset:])
+                data[self.common_header.chassis_info_area_offset:])
 
         if self.common_header.board_info_area_offset:
             self.board_info_area = InventoryBoardInfoArea(
-                    data[self.common_header.board_info_area_offset:])
+                data[self.common_header.board_info_area_offset:])
 
         if self.common_header.product_info_area_offset:
             self.product_info_area = InventoryProductInfoArea(
-                    data[self.common_header.product_info_area_offset:])
+                data[self.common_header.product_info_area_offset:])
 
         if self.common_header.multirecord_area_offset:
             self.multirecord_area = InventoryMultiRecordArea(
-                    data[self.common_header.multirecord_area_offset:])
+                data[self.common_header.multirecord_area_offset:])

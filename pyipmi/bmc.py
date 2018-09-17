@@ -86,17 +86,17 @@ class Watchdog(State):
     TIMEOUT_ACTION_POWER_CYCLE = 3
 
     __properties__ = [
-            # (propery, description)
-            ('timer_use', ''),
-            ('dont_stop', ''),
-            ('is_running', ''),
-            ('dont_log', ''),
-            ('pre_timeout_interrupt', ''),
-            ('timeout_action', ''),
-            ('pre_timeout_interval', ''),
-            ('timer_use_expiration_flags', ''),
-            ('initial_countdown', ''),
-            ('present_countdown', ''),
+        # (propery, description)
+        ('timer_use', ''),
+        ('dont_stop', ''),
+        ('is_running', ''),
+        ('dont_log', ''),
+        ('pre_timeout_interrupt', ''),
+        ('timeout_action', ''),
+        ('pre_timeout_interval', ''),
+        ('timer_use_expiration_flags', ''),
+        ('initial_countdown', ''),
+        ('present_countdown', ''),
     ]
 
     def _from_response(self, rsp):
@@ -139,10 +139,10 @@ class DeviceId(State):
         self.available = bool(rsp.firmware_revision.device_available)
 
         self.fw_revision = VersionField(
-                (rsp.firmware_revision.major, rsp.firmware_revision.minor))
+            (rsp.firmware_revision.major, rsp.firmware_revision.minor))
 
         self.ipmi_version = VersionField(
-                (rsp.ipmi_version & 0xf, (rsp.ipmi_version >> 4) & 0xf))
+            (rsp.ipmi_version & 0xf, (rsp.ipmi_version >> 4) & 0xf))
 
         self.manufacturer_id = rsp.manufacturer_id
         self.product_id = rsp.product_id

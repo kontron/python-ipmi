@@ -47,9 +47,9 @@ def check_completion_code(cc):
         raise CompletionCodeError(cc)
 
 
-def chunks(d, n):
-    for i in range(0, len(d), n):
-        yield d[i:i+n]
+def chunks(data, count):
+    for i in range(0, len(data), count):
+        yield data[i:i+count]
 
 
 class ByteBuffer:
@@ -77,9 +77,9 @@ class ByteBuffer:
         self.array.fromstring(value)
 
     def pop_string(self, length):
-        s = self.array[0:length]
+        string = self.array[0:length]
         del self.array[0:length]
-        return py3dec_unic_bytes_fix(s.tostring())
+        return py3dec_unic_bytes_fix(string.tostring())
 
     def pop_slice(self, length):
         if len(self.array) < length:
@@ -111,20 +111,20 @@ class ByteBuffer:
         return self.array[idx]
 
 
-bcd_map = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '-', '.']
+BCD_MAP = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '-', '.']
 
 
 def bcd_encode(input, errors='strict'):
     raise NotImplementedError()
 
 
-def bcd_decode(encoded_input, errors='strict'):
+def bcd_decode(encoded_input):
     chars = list()
     try:
-        for b in encoded_input:
+        for data in encoded_input:
             if int(sys.version[0]) == 2:
-                b = ord(b)
-            chars.append(bcd_map[b >> 4 & 0xf] + bcd_map[b & 0xf])
+                data = ord(data)
+            chars.append(BCD_MAP[data >> 4 & 0xf] + BCD_MAP[data & 0xf])
         return (''.join(chars), len(encoded_input) * 2)
     except IndexError:
         raise ValueError()
