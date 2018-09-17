@@ -235,7 +235,7 @@ class SdrCommon(object):
                 SDR_TYPE_FRU_DEVICE_LOCATOR_RECORD:
                     SdrFruDeviceLocator,
                 SDR_TYPE_MANAGEMENT_CONTROLLER_DEVICE_LOCATOR_RECORD:
-                    SdrManagementContollerDeviceLocator,
+                    SdrManagementControllerDeviceLocator,
                 SDR_TYPE_OEM_SENSOR_RECORD:
                     SdrOEMSensorRecord,
             }[sdr_type]
@@ -255,7 +255,7 @@ class SdrFullSensorRecord(SdrCommon):
     DATA_FMT_NONE = 3
 
     def __init__(self, data, next_id=None):
-        super(self.__class__, self).__init__(data, next_id)
+        super(SdrFullSensorRecord, self).__init__(data, next_id)
         if data:
             self._from_data(data)
 
@@ -478,7 +478,7 @@ class SdrFullSensorRecord(SdrCommon):
 ##################################################
 class SdrCompactSensorRecord(SdrCommon):
     def __init__(self, data, next_id=None):
-        super(self.__class__, self).__init__(data, next_id)
+        super(SdrCompactSensorRecord, self).__init__(data, next_id)
         if data:
             self._from_data(data)
 
@@ -521,7 +521,7 @@ class SdrCompactSensorRecord(SdrCommon):
 ##################################################
 class SdrEventOnlySensorRecord(SdrCommon):
     def __init__(self, data, next_id=None):
-        super(self.__class__, self).__init__(data, next_id)
+        super(SdrEventOnlySensorRecord, self).__init__(data, next_id)
         if data:
             self._from_data(data)
 
@@ -551,7 +551,7 @@ class SdrEventOnlySensorRecord(SdrCommon):
 ##################################################
 class SdrFruDeviceLocator(SdrCommon):
     def __init__(self, data, next_id=None):
-        super(self.__class__, self).__init__(data, next_id)
+        super(SdrFruDeviceLocator, self).__init__(data, next_id)
         if data:
             self._from_data(data)
 
@@ -579,9 +579,10 @@ class SdrFruDeviceLocator(SdrCommon):
 ###
 # SDR type 0x12
 ##################################################
-class SdrManagementContollerDeviceLocator(SdrCommon):
+class SdrManagementControllerDeviceLocator(SdrCommon):
     def __init__(self, data, next_id=None):
-        super(self.__class__, self).__init__(data, next_id)
+        super(SdrManagementControllerDeviceLocator, self).__init__(
+                data, next_id)
         if data:
             self._from_data(data)
 
@@ -610,7 +611,7 @@ class SdrManagementContollerDeviceLocator(SdrCommon):
 ##################################################
 class SdrOEMSensorRecord(SdrCommon):
     def __init__(self, data, next_id=None):
-        super(self.__class__, self).__init__(data, next_id)
+        super(SdrOEMSensorRecord, self).__init__(data, next_id)
         if data:
             self._from_data(data)
 

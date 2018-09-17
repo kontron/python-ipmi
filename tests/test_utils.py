@@ -95,7 +95,7 @@ def test_bytebuffer_pop_slice():
 @raises(DecodingError)
 def test_bytebuffer_pop_slice_error():
     b = ByteBuffer(b'\x30\x31\x32\x33')
-    c = b.pop_slice(5)
+    b.pop_slice(5)
 
 def test_chunks():
     d = [0,1,2,3,4,5,6,7,8,9]

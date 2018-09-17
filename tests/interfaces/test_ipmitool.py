@@ -1,15 +1,13 @@
 #!/usr/bin/env python
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
-from array import array
-
-import nose
 from mock import MagicMock
 from nose.tools import eq_, raises
 
 from pyipmi.errors import IpmiTimeoutError
 from pyipmi.interfaces import Ipmitool
 from pyipmi import Session, Target
+
 
 class TestIpmitool:
 
@@ -40,7 +38,7 @@ class TestIpmitool:
         interface._run_ipmitool = mock
 
         target = Target(0x20)
-        data = interface.send_and_receive_raw(target, 0, 0x6, '\x01')
+        interface.send_and_receive_raw(target, 0, 0x6, '\x01')
 
         mock.assert_called_once_with('ipmitool -I lanplus -H 10.0.1.1 -p 623 -U "admin" -P "secret" -t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
@@ -52,7 +50,7 @@ class TestIpmitool:
         self._interface._session.set_auth_type(Session.AUTH_TYPE_NONE)
 
         target = Target(0x20)
-        data = self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
+        self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
 
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 -P "" -t 0x20 -l 0 raw 0x06 0x01 2>&1')
 

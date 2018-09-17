@@ -106,4 +106,4 @@ def test_sdrfrudevicelocator():
 @raises(DecodingError)
 def test_sdrmanagementcontollerdevicelocator():
     data = (0, 0, 0, 0, 0)
-    sdr = SdrManagementContollerDeviceLocator(data)
+    sdr = SdrManagementControllerDeviceLocator(data)

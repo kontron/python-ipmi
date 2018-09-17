@@ -43,8 +43,7 @@ def _get_command_function(name):
     for cmd in COMMANDS:
         if cmd.name == name:
             return cmd.fn
-    else:
-        return None
+    return None
 
 
 def cmd_bmc_info(ipmi, args):
