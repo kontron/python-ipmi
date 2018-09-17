@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 # completion codes
 CC_OK = 0x00
@@ -81,15 +81,15 @@ cc_err_desc = (
 )
 
 # network functions
-NETFN_CHASSIS          = 0x00
-NETFN_BRIDGE           = 0x02
-NETFN_SENSOR_EVENT     = 0x04
-NETFN_APP              = 0x06
-NETFN_FIRMWARE         = 0x08
-NETFN_STORAGE          = 0x0a
-NETFN_TRANSPORT        = 0x0c
-NETFN_GROUP_EXTENSION  = 0x2c
-NETFN_OEM              = 0x2e
+NETFN_CHASSIS = 0x00
+NETFN_BRIDGE = 0x02
+NETFN_SENSOR_EVENT = 0x04
+NETFN_APP = 0x06
+NETFN_FIRMWARE = 0x08
+NETFN_STORAGE = 0x0a
+NETFN_TRANSPORT = 0x0c
+NETFN_GROUP_EXTENSION = 0x2c
+NETFN_OEM = 0x2e
 
 # IPM device 'global'
 CMDID_GET_DEVICE_ID = 0x01

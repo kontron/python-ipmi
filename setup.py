@@ -29,37 +29,37 @@ version = version.decode('utf-8')
 with open('README.rst') as f:
     readme = f.read()
 
-setup(name = name,
-        version = version,
-        description = 'Pure python IPMI library',
-        long_description = readme,
-        url='https://github.com/kontron/python-ipmi',
-        download_url = 'https://github.com/kontron/python-ipmi/tarball/' + version,
-        author = 'Michael Walle, Heiko Thiery',
-        author_email = 'michael.walle@kontron.com, heiko.thiery@kontron.com',
-        packages = find_packages(exclude="test"),
-        license = 'LGPLv2+',
-        platforms = ["any"],
-        classifiers = [
-            'Development Status :: 3 - Alpha',
-            'Environment :: Console',
-            'License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)',
-            'Natural Language :: English',
-            'Operating System :: OS Independent',
-            'Programming Language :: Python :: 2',
-            'Programming Language :: Python :: 2.7',
-            'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.5',
-            'Topic :: Software Development :: Libraries :: Python Modules',
-        ],
-        entry_points = {
-            'console_scripts': [
-                'ipmitool.py = pyipmi.ipmitool:main',
-            ]
-        },
-        test_suite = 'tests',
-        install_requires=[
-            'markdown',
-            'future',
-        ],
+setup(name=name,
+      version=version,
+      description='Pure python IPMI library',
+      long_description=readme,
+      url='https://github.com/kontron/python-ipmi',
+      download_url='https://github.com/kontron/python-ipmi/tarball/' + version,
+      author='Michael Walle, Heiko Thiery',
+      author_email='michael.walle@kontron.com, heiko.thiery@kontron.com',
+      packages=find_packages(exclude="test"),
+      license='LGPLv2+',
+      platforms=["any"],
+      classifiers=[
+          'Development Status :: 3 - Alpha',
+          'Environment :: Console',
+          'License :: OSI Approved :: GNU Lesser General Public License v2 or later (LGPLv2+)',
+          'Natural Language :: English',
+          'Operating System :: OS Independent',
+          'Programming Language :: Python :: 2',
+          'Programming Language :: Python :: 2.7',
+          'Programming Language :: Python :: 3',
+          'Programming Language :: Python :: 3.5',
+          'Topic :: Software Development :: Libraries :: Python Modules',
+      ],
+      entry_points={
+          'console_scripts': [
+              'ipmitool.py = pyipmi.ipmitool:main',
+          ]
+      },
+      test_suite='tests',
+      install_requires=[
+          'markdown',
+          'future',
+      ],
 )
