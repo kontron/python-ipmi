@@ -13,7 +13,7 @@ from __future__ import absolute_import
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from . import constants
 from . import register_message_class
@@ -24,6 +24,7 @@ from . import CompletionCode
 from . import Optional
 from . import RemainingBytes
 from .picmg import PicmgIdentifier
+
 
 @register_message_class
 class GetTargetUpgradeCapabilitiesReq(Message):
@@ -43,21 +44,19 @@ class GetTargetUpgradeCapabilitiesRsp(Message):
             PicmgIdentifier(),
             UnsignedInt('hpm_1_version', 1),
             Bitfield('capabilities', 1,
-                Bitfield.Bit('firmware_upgrade_undesirable', 1),
-                Bitfield.Bit('automatic_rollback_overriden', 1),
-                Bitfield.Bit('ipmc_degraded_during_upgrade', 1),
-                Bitfield.Bit('deferred_activation', 1),
-                Bitfield.Bit('services_affected_by_upgrade', 1),
-                Bitfield.Bit('manual_rollback', 1),
-                Bitfield.Bit('automatic_rollback', 1),
-                Bitfield.Bit('selftest', 1),
-            ),
+                     Bitfield.Bit('firmware_upgrade_undesirable', 1),
+                     Bitfield.Bit('automatic_rollback_overriden', 1),
+                     Bitfield.Bit('ipmc_degraded_during_upgrade', 1),
+                     Bitfield.Bit('deferred_activation', 1),
+                     Bitfield.Bit('services_affected_by_upgrade', 1),
+                     Bitfield.Bit('manual_rollback', 1),
+                     Bitfield.Bit('automatic_rollback', 1),
+                     Bitfield.Bit('selftest', 1),),
             Bitfield('timeout', 4,
-                Bitfield.Bit('upgrade', 8),
-                Bitfield.Bit('selftest', 8),
-                Bitfield.Bit('rollback', 8),
-                Bitfield.Bit('inaccessibility', 8),
-            ),
+                     Bitfield.Bit('upgrade', 8),
+                     Bitfield.Bit('selftest', 8),
+                     Bitfield.Bit('rollback', 8),
+                     Bitfield.Bit('inaccessibility', 8),),
             UnsignedInt('component_present', 1),
     )
 

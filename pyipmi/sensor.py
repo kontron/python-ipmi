@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from __future__ import absolute_import
 
@@ -97,7 +97,7 @@ SENSOR_TYPE_OEM_KONTRON_RESET = 0xcf
 class Sensor(object):
     def reserve_device_sdr_repository(self):
         rsp = self.send_message_with_name('ReserveDeviceSdrRepository')
-        return  rsp.reservation_id
+        return rsp.reservation_id
 
     def _get_device_sdr_chunk(self, reservation_id, record_id, offset, length):
         req = create_request_by_name('GetDeviceSdr')
@@ -106,8 +106,8 @@ class Sensor(object):
         req.offset = offset
         req.bytes_to_read = length
 
-        rsp = get_sdr_chunk_helper(self.send_message, req, \
-                self.reserve_device_sdr_repository)
+        rsp = get_sdr_chunk_helper(self.send_message, req,
+                                   self.reserve_device_sdr_repository)
 
         return (rsp.next_record_id, rsp.record_data)
 
@@ -119,8 +119,10 @@ class Sensor(object):
         `reservation_id=None` can be set. if None the reservation ID will
         be determined.
         """
-        (next_id, record_data) = get_sdr_data_helper(self.reserve_device_sdr_repository,
-                self._get_device_sdr_chunk, record_id, reservation_id)
+        (next_id, record_data) = \
+            get_sdr_data_helper(self.reserve_device_sdr_repository,
+                                self._get_device_sdr_chunk,
+                                record_id, reservation_id)
 
         return sdr.SdrCommon.from_data(record_data, next_id)
 
@@ -172,8 +174,9 @@ class Sensor(object):
                 states |= (rsp.states2 << 8)
         return (reading, states)
 
-    def set_sensor_thresholds(self, sensor_number, lun=0, unr=None, ucr=None,
-                unc=None, lnc=None, lcr=None, lnr=None):
+    def set_sensor_thresholds(self, sensor_number, lun=0,
+                              unr=None, ucr=None, unc=None,
+                              lnc=None, lcr=None, lnr=None):
         """Set the sensor thresholds that are not 'None'
 
         `sensor_number`
@@ -190,10 +193,10 @@ class Sensor(object):
 
         thresholds = dict(unr=unr, ucr=ucr, unc=unc, lnc=lnc, lcr=lcr, lnr=lnr)
 
-        for k, v in thresholds.items():
-            if v is not None:
-                setattr(req.set_mask, k, 1)
-                setattr(req.threshold, k, v)
+        for key, value in thresholds.items():
+            if value is not None:
+                setattr(req.set_mask, key, 1)
+                setattr(req.threshold, key, value)
 
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
@@ -205,8 +208,8 @@ class Sensor(object):
 
         thresholds = {}
         threshold_list = ('unr', 'ucr', 'unc', 'lnc', 'lcr', 'lnr')
-        for t in threshold_list:
-            if hasattr(rsp.readable_mask, t):
-                if getattr(rsp.readable_mask, t):
-                    thresholds[t] = getattr(rsp.threshold, t)
+        for threshold in threshold_list:
+            if hasattr(rsp.readable_mask, threshold):
+                if getattr(rsp.readable_mask, threshold):
+                    thresholds[threshold] = getattr(rsp.threshold, threshold)
         return thresholds

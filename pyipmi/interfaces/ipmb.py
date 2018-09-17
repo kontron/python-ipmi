@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 import array
 
@@ -41,4 +41,3 @@ class IpmbHeader(object):
         data.append(self.rq_seq << 2 | self.rq_lun)
         data.append(self.cmd_id)
         return data
-

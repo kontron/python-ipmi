@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from __future__ import absolute_import
 
@@ -92,6 +92,7 @@ LED_FUNCTION_ON = 0xff
 LED_STATE_LOCAL_CONTROL = 0
 LED_STATE_OVERRIDE = 1
 LED_STATE_LAMP_TEST = 2
+
 
 class PicmgIdentifier(UnsignedInt):
     def __init__(self, name='picmg_identifier'):
@@ -215,12 +216,11 @@ class GetFruControlCapabilitiesRsp(Message):
             CompletionCode(),
             PicmgIdentifier(),
             Bitfield('capabilities', 1,
-                Bitfield.ReservedBit(1),
-                Bitfield.Bit('warm_reset', 1),
-                Bitfield.Bit('graceful_reboot', 1),
-                Bitfield.Bit('diagnostic_interrupt', 1),
-                Bitfield.ReservedBit(4),
-            ),
+                     Bitfield.ReservedBit(1),
+                     Bitfield.Bit('warm_reset', 1),
+                     Bitfield.Bit('graceful_reboot', 1),
+                     Bitfield.Bit('diagnostic_interrupt', 1),
+                     Bitfield.ReservedBit(4),),
     )
 
 
@@ -232,15 +232,13 @@ class SetFruActivationPolicyReq(Message):
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
             Bitfield('mask', 1,
-                Bitfield.Bit('activation_locked', 1, default=0),
-                Bitfield.Bit('deactivation_locked', 1, default=0),
-                Bitfield.ReservedBit(6),
-            ),
+                     Bitfield.Bit('activation_locked', 1, default=0),
+                     Bitfield.Bit('deactivation_locked', 1, default=0),
+                     Bitfield.ReservedBit(6),),
             Bitfield('set', 1,
-                Bitfield.Bit('activation_locked', 1, default=0),
-                Bitfield.Bit('deactivation_locked', 1, default=0),
-                Bitfield.ReservedBit(6),
-            ),
+                     Bitfield.Bit('activation_locked', 1, default=0),
+                     Bitfield.Bit('deactivation_locked', 1, default=0),
+                     Bitfield.ReservedBit(6),),
     )
 
 
@@ -272,10 +270,9 @@ class GetFruActivationPolicyRsp(Message):
             CompletionCode(),
             PicmgIdentifier(),
             Bitfield('policy', 1,
-                Bitfield.Bit('activation_locked', 1, default=0),
-                Bitfield.Bit('deactivation_locked', 1, default=0),
-                Bitfield.ReservedBit(6),
-            ),
+                     Bitfield.Bit('activation_locked', 1, default=0),
+                     Bitfield.Bit('deactivation_locked', 1, default=0),
+                     Bitfield.ReservedBit(6),),
     )
 
 
@@ -339,12 +336,11 @@ class GetFruLedPropertiesRsp(Message):
             CompletionCode(),
             PicmgIdentifier(),
             Bitfield('general_status_led_properties', 1,
-                Bitfield.Bit('blue_led', 1),
-                Bitfield.Bit('led1', 1),
-                Bitfield.Bit('led2', 1),
-                Bitfield.Bit('led3', 1),
-                Bitfield.ReservedBit(4),
-            ),
+                     Bitfield.Bit('blue_led', 1),
+                     Bitfield.Bit('led1', 1),
+                     Bitfield.Bit('led2', 1),
+                     Bitfield.Bit('led3', 1),
+                     Bitfield.ReservedBit(4),),
             UnsignedInt('application_specific_led_count', 1),
     )
 
@@ -368,15 +364,14 @@ class GetFruLedColorCapabilitiesRsp(Message):
             CompletionCode(),
             PicmgIdentifier(),
             Bitfield('color_capabilities', 1,
-                Bitfield.ReservedBit(1),
-                Bitfield.Bit('blue', 1),
-                Bitfield.Bit('red', 1),
-                Bitfield.Bit('green', 1),
-                Bitfield.Bit('amber', 1),
-                Bitfield.Bit('orange', 1),
-                Bitfield.Bit('white', 1),
-                Bitfield.ReservedBit(1)
-            ),
+                     Bitfield.ReservedBit(1),
+                     Bitfield.Bit('blue', 1),
+                     Bitfield.Bit('red', 1),
+                     Bitfield.Bit('green', 1),
+                     Bitfield.Bit('amber', 1),
+                     Bitfield.Bit('orange', 1),
+                     Bitfield.Bit('white', 1),
+                     Bitfield.ReservedBit(1)),
             UnsignedIntMask('local_def_color', 1, 0x0f),
             UnsignedIntMask('override_def_color', 1, 0x0f),
     )
@@ -401,14 +396,14 @@ class GetPowerLevelRsp(Message):
             CompletionCode(),
             PicmgIdentifier(),
             Bitfield('properties', 1,
-                Bitfield.Bit('power_level', 5, 0),
-                Bitfield.ReservedBit(2, 0),
-                Bitfield.Bit('dynamic_power_configuration', 1, 0),
-            ),
+                     Bitfield.Bit('power_level', 5, 0),
+                     Bitfield.ReservedBit(2, 0),
+                     Bitfield.Bit('dynamic_power_configuration', 1, 0),),
             UnsignedInt('delay_to_stable_power', 1),
             UnsignedInt('power_multiplier', 1),
             RemainingBytes('power_draw'),
     )
+
 
 @register_message_class
 class GetFanSpeedPropertiesReq(Message):
@@ -418,6 +413,7 @@ class GetFanSpeedPropertiesReq(Message):
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
     )
+
 
 @register_message_class
 class GetFanSpeedPropertiesRsp(Message):
@@ -430,10 +426,10 @@ class GetFanSpeedPropertiesRsp(Message):
             UnsignedInt('maximum_speed_level', 1),
             UnsignedInt('normal_operation_level', 1),
             Bitfield('properties', 1,
-                Bitfield.ReservedBit(7, 0),
-                Bitfield.Bit('local_control_supported', 1),
-            ),
+                     Bitfield.ReservedBit(7, 0),
+                     Bitfield.Bit('local_control_supported', 1),),
     )
+
 
 @register_message_class
 class SetFanLevelReq(Message):
@@ -446,6 +442,7 @@ class SetFanLevelReq(Message):
             UnsignedInt('extra_byte', 1),
     )
 
+
 @register_message_class
 class SetFanLevelRsp(Message):
     __cmdid__ = constants.CMDID_SET_FAN_LEVEL
@@ -455,6 +452,7 @@ class SetFanLevelRsp(Message):
             PicmgIdentifier(),
     )
 
+
 @register_message_class
 class GetFanLevelReq(Message):
     __cmdid__ = constants.CMDID_GET_FAN_LEVEL
@@ -463,6 +461,7 @@ class GetFanLevelReq(Message):
             PicmgIdentifier(),
             UnsignedInt('fru_id', 1),
     )
+
 
 @register_message_class
 class GetFanLevelRsp(Message):
@@ -530,22 +529,21 @@ class GetFruLedStateRsp(Message):
             CompletionCode(),
             PicmgIdentifier(),
             Bitfield('led_states', 1,
-                Bitfield.Bit('local_avail', 1),
-                Bitfield.Bit('override_en', 1),
-                Bitfield.Bit('lamp_test_en', 1),
-                Bitfield.ReservedBit(5)
-            ),
+                     Bitfield.Bit('local_avail', 1),
+                     Bitfield.Bit('override_en', 1),
+                     Bitfield.Bit('lamp_test_en', 1),
+                     Bitfield.ReservedBit(5)),
             UnsignedInt('local_function', 1),
             UnsignedInt('local_on_duration', 1),
             UnsignedIntMask('local_color', 1, 0x0f),
             Conditional(_cond_override,
-                UnsignedInt('override_function', 1)),
+                        UnsignedInt('override_function', 1)),
             Conditional(_cond_override,
-                UnsignedInt('override_on_duration', 1)),
+                        UnsignedInt('override_on_duration', 1)),
             Conditional(_cond_override,
-                UnsignedIntMask('override_color', 1, 0x0f)),
+                        UnsignedIntMask('override_color', 1, 0x0f)),
             Conditional(_cond_lamp_test,
-                UnsignedIntMask('lamp_test_duration', 1, 0x7f)),
+                        UnsignedIntMask('lamp_test_duration', 1, 0x7f)),
     )
 
 
@@ -556,17 +554,16 @@ class SetPortStateReq(Message):
     __fields__ = (
             PicmgIdentifier(),
             Bitfield('link_info', 4,
-                Bitfield.Bit('channel', 6),
-                Bitfield.Bit('interface', 2),
-                Bitfield.Bit('port_0', 1),
-                Bitfield.Bit('port_1', 1),
-                Bitfield.Bit('port_2', 1),
-                Bitfield.Bit('port_3', 1),
-                Bitfield.Bit('type', 4),
-                Bitfield.Bit('sig_class', 4, 0),
-                Bitfield.Bit('type_extension', 4),
-                Bitfield.Bit('grouping_id', 8, 0),
-            ),
+                     Bitfield.Bit('channel', 6),
+                     Bitfield.Bit('interface', 2),
+                     Bitfield.Bit('port_0', 1),
+                     Bitfield.Bit('port_1', 1),
+                     Bitfield.Bit('port_2', 1),
+                     Bitfield.Bit('port_3', 1),
+                     Bitfield.Bit('type', 4),
+                     Bitfield.Bit('sig_class', 4, 0),
+                     Bitfield.Bit('type_extension', 4),
+                     Bitfield.Bit('grouping_id', 8, 0),),
             UnsignedInt('state', 1),
     )
 
@@ -588,9 +585,8 @@ class GetPortStateReq(Message):
     __fields__ = (
             PicmgIdentifier(),
             Bitfield('channel', 1,
-                Bitfield.Bit('number', 6),
-                Bitfield.Bit('interface', 2),
-            ),
+                     Bitfield.Bit('number', 6),
+                     Bitfield.Bit('interface', 2),),
     )
 
 
@@ -612,13 +608,11 @@ class SetSignalingClassReq(Message):
     __fields__ = (
             PicmgIdentifier(),
             Bitfield('channel_info', 1,
-                Bitfield.Bit('channel_number', 6, 0),
-                Bitfield.Bit('interface', 2, 0),
-            ),
+                     Bitfield.Bit('channel_number', 6, 0),
+                     Bitfield.Bit('interface', 2, 0),),
             Bitfield('channel_signaling', 1,
-                Bitfield.Bit('class_capability', 4, 0),
-                Bitfield.ReservedBit(4)
-            ),
+                     Bitfield.Bit('class_capability', 4, 0),
+                     Bitfield.ReservedBit(4)),
     )
 
 
@@ -639,9 +633,8 @@ class GetSignalingClassReq(Message):
     __fields__ = (
             PicmgIdentifier(),
             Bitfield('channel_info', 1,
-                Bitfield.Bit('channel_number', 6, 0),
-                Bitfield.Bit('interface', 2, 0),
-            ),
+                     Bitfield.Bit('channel_number', 6, 0),
+                     Bitfield.Bit('interface', 2, 0),),
     )
 
 
@@ -653,13 +646,11 @@ class GetSignalingClassRsp(Message):
             CompletionCode(),
             PicmgIdentifier(),
             Bitfield('channel_info', 1,
-                Bitfield.Bit('channel_number', 6, 0),
-                Bitfield.Bit('interface', 2, 0),
-            ),
+                     Bitfield.Bit('channel_number', 6, 0),
+                     Bitfield.Bit('interface', 2, 0),),
             Bitfield('channel_signaling', 1,
-                Bitfield.Bit('class_capability', 4, 0),
-                Bitfield.ReservedBit(4)
-            ),
+                     Bitfield.Bit('class_capability', 4, 0),
+                     Bitfield.ReservedBit(4)),
     )
 
 
@@ -670,10 +661,9 @@ class GetLocationInformationReq(Message):
     __fields__ = (
             PicmgIdentifier(),
             Bitfield('info', 1,
-                Bitfield.Bit('carrier_number', 5, 0),
-                Bitfield.ReservedBit(1),
-                Bitfield.Bit('mcs', 2, 0),
-            ),
+                     Bitfield.Bit('carrier_number', 5, 0),
+                     Bitfield.ReservedBit(1),
+                     Bitfield.Bit('mcs', 2, 0),),
             UnsignedInt('site_number', 1),
             UnsignedInt('site_type', 1),
     )
@@ -689,11 +679,10 @@ class GetLocationInformationRsp(Message):
             UnsignedInt('slot_number', 1),
             UnsignedInt('tier_number', 1),
             Bitfield('info', 1,
-                Bitfield.ReservedBit(5),
-                Bitfield.Bit('carrier_orientation', 1, 0),
-                Bitfield.Bit('tier_number', 1, 0),
-                Bitfield.Bit('slot_number', 1, 0),
-            ),
+                     Bitfield.ReservedBit(5),
+                     Bitfield.Bit('carrier_orientation', 1, 0),
+                     Bitfield.Bit('tier_number', 1, 0),
+                     Bitfield.Bit('slot_number', 1, 0),),
             UnsignedInt('origin_x', 2),
             UnsignedInt('origin_y', 2),
     )
@@ -719,12 +708,11 @@ class GetPowerChannelStatusRsp(Message):
             PicmgIdentifier(),
             UnsignedInt('max_power_channel_number', 1),
             Bitfield('global_status', 1,
-                Bitfield.Bit('role', 1, 0),
-                Bitfield.Bit('management_power_good', 1, 0),
-                Bitfield.Bit('payload_power_good', 1, 0),
-                Bitfield.Bit('unidentified_fault', 1, 0),
-                Bitfield.ReservedBit(4),
-            ),
+                     Bitfield.Bit('role', 1, 0),
+                     Bitfield.Bit('management_power_good', 1, 0),
+                     Bitfield.Bit('payload_power_good', 1, 0),
+                     Bitfield.Bit('unidentified_fault', 1, 0),
+                     Bitfield.ReservedBit(4),),
             RemainingBytes('data'),
     )
 
@@ -747,13 +735,12 @@ class GetTelcoAlarmCapabilityRsp(Message):
             CompletionCode(),
             PicmgIdentifier(),
             Bitfield('alarm_capabilities', 1,
-                Bitfield.Bit('critical_alarm', 1, 0),
-                Bitfield.Bit('major_alarm', 1, 0),
-                Bitfield.Bit('minor_alarm', 1, 0),
-                Bitfield.Bit('power_alarm', 1, 0),
-                Bitfield.Bit('test_alarm', 1, 0),
-                Bitfield.Bit('autonomous_alarm_cutoff', 1, 0),
-                Bitfield.Bit('autonomous_minor_reset', 1, 0),
-                Bitfield.Bit('autonomous_majorreset', 1, 0),
-            ),
+                     Bitfield.Bit('critical_alarm', 1, 0),
+                     Bitfield.Bit('major_alarm', 1, 0),
+                     Bitfield.Bit('minor_alarm', 1, 0),
+                     Bitfield.Bit('power_alarm', 1, 0),
+                     Bitfield.Bit('test_alarm', 1, 0),
+                     Bitfield.Bit('autonomous_alarm_cutoff', 1, 0),
+                     Bitfield.Bit('autonomous_minor_reset', 1, 0),
+                     Bitfield.Bit('autonomous_majorreset', 1, 0),),
     )

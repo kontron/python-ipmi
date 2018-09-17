@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 import time
 import array
@@ -32,12 +32,12 @@ class Aardvark(object):
     NAME = 'aardvark'
 
     def __init__(self, slave_address=0x20, port=0, serial_number=None,
-            enable_i2c_pullups=True):
+                 enable_i2c_pullups=True):
         if pyaardvark is None:
             raise RuntimeError('No pyaardvark module found. You can not '
-                    'use this interface.')
+                               'use this interface.')
         self.slave_address = slave_address
-        self.timeout = 0.25 # 250 ms
+        self.timeout = 0.25
         self.max_retries = 3
         self.next_sequence_number = 0
 
@@ -114,13 +114,13 @@ class Aardvark(object):
 
     def _send_raw(self, header, raw_bytes):
 
-        cmd_data =  [ord(c) for c in raw_bytes]
+        cmd_data = [ord(c) for c in raw_bytes]
         tx_data = self._encode_ipmb_msg_req(header, cmd_data)
 
         i2c_addr = header.rs_sa >> 1
         self._dev.i2c_master_write(i2c_addr, tx_data.tostring())
         log().debug('I2C TX to %02Xh [%s]', i2c_addr,
-                ' '.join(['%02x' % b for b in tx_data]))
+                    ' '.join(['%02x' % b for b in tx_data]))
 
     def _receive_raw(self, header):
         start_time = time.time()
@@ -141,10 +141,10 @@ class Aardvark(object):
 
             (i2c_addr, rx_data) = self._dev.i2c_slave_read()
             log().debug('I2C RX from %02Xh [%s]', i2c_addr << 1,
-                    ' '.join(['%02x' % ord(c) for c in rx_data]))
+                        ' '.join(['%02x' % ord(c) for c in rx_data]))
 
             rx_data = array.array('B', rx_data)
-            rq_sa = array.array('B', [i2c_addr << 1,])
+            rq_sa = array.array('B', [i2c_addr << 1, ])
 
             rsp_received = self._rx_filter(header, rq_sa + rx_data)
 
@@ -182,7 +182,7 @@ class Aardvark(object):
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
         return self._send_and_receive(target, lun, netfn, ord(raw_bytes[0]),
-                raw_bytes[1:])
+                                      raw_bytes[1:])
 
     def send_and_receive(self, msg):
         """Sends an IPMI request message and waits for its response.
@@ -193,7 +193,7 @@ class Aardvark(object):
         log().debug('IPMI Request [%s]', msg)
 
         rx_data = self._send_and_receive(msg.target, msg.lun, msg.netfn,
-                msg.cmdid, encode_message(msg))
+                                         msg.cmdid, encode_message(msg))
         msg = create_message(msg.cmdid, msg.netfn + 1)
         decode_message(msg, rx_data)
 

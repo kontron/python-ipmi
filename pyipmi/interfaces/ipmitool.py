@@ -12,16 +12,19 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 import re
+
 from subprocess import Popen, PIPE
 from array import array
+
 from .. import Session
 from ..errors import TimeoutError
 from ..logger import log
 from ..msgs import encode_message, decode_message, create_message
 from ..utils import py3dec_unic_bytes_fix, ByteBuffer
+
 
 class Ipmitool(object):
     """This interface uses the ipmitool raw command to "emulate" a RMCP
@@ -41,7 +44,7 @@ class Ipmitool(object):
             self._interface_type = interface_type
         else:
             raise RuntimeError('interface type %s not supported' %
-                    interface_type)
+                               interface_type)
 
         self.re_completion_code = re.compile(
                 b"Unable to send RAW command \(.*rsp=(0x[0-9a-f]+)\)")
@@ -87,7 +90,8 @@ class Ipmitool(object):
         if self._interface_type in ['lan', 'lanplus']:
             cmd = self._build_ipmitool_cmd(target, lun, netfn, raw_bytes)
         elif self._interface_type in ['serial-terminal']:
-            cmd = self._build_serial_ipmitool_cmd(target, lun, netfn, raw_bytes)
+            cmd = self._build_serial_ipmitool_cmd(
+                        target, lun, netfn, raw_bytes)
         else:
             raise RuntimeError('interface type %s not supported' %
                                self._interface_type)
@@ -113,9 +117,9 @@ class Ipmitool(object):
 
             output_lines = output.split('\n')
             # strip 'Close Session command failed' lines
-            output_lines = [ l for l in output_lines
-                    if not l.startswith('Close Session command failed') ]
-            output = ''.join(output_lines).replace('\r','').strip()
+            output_lines = [l for l in output_lines
+                           if not l.startswith('Close Session command failed')]
+            output = ''.join(output_lines).replace('\r', '').strip()
             if len(output):
                 for x in output.split(' '):
                     data.append(int(x, 16))
@@ -129,7 +133,7 @@ class Ipmitool(object):
         req_data.push_string(encode_message(req))
 
         rsp_data = self.send_and_receive_raw(req.target, req.lun, req.netfn,
-                req_data.tostring())
+                                             req_data.tostring())
 
         rsp = create_message(req.cmdid, req.netfn + 1)
         decode_message(rsp, rsp_data)
@@ -157,7 +161,7 @@ class Ipmitool(object):
                 cmd += (' -b %d' % target.routing[1].bridge_channel)
             else:
                 raise RuntimeError('The impitool interface at most double '
-                       'briding')
+                                   'briding')
 
         if target.ipmb_address:
             cmd += (' -t 0x%02x' % target.ipmb_address)
@@ -173,7 +177,6 @@ class Ipmitool(object):
         cmd += (' -H %s' % self._session._rmcp_host)
         cmd += (' -p %s' % self._session._rmcp_port)
 
-
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += ' -P ""'
         elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
@@ -181,7 +184,7 @@ class Ipmitool(object):
             cmd += (' -P "%s"' % self._session._auth_password)
         else:
             raise RuntimeError('Session type %d not supported' %
-                    self._session.auth_type)
+                               self._session.auth_type)
 
         cmd += self._build_ipmitool_target(target)
         cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)
@@ -203,7 +206,6 @@ class Ipmitool(object):
 
         cmd += self._build_ipmitool_target(target)
         cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)
-        #cmd += (' 2>&1')
 
         return cmd
 
@@ -217,7 +219,8 @@ class Ipmitool(object):
         child = Popen(cmd, shell=True, stdout=PIPE)
         output = child.communicate()[0]
 
-        log().debug('return with rc=%d, output was:\n%s', child.returncode,
-                output)
+        log().debug('return with rc=%d, output was:\n%s',
+                    child.returncode,
+                    output)
 
         return output, child.returncode

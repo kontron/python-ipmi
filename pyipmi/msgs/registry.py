@@ -12,11 +12,12 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 
 from functools import partial
 from ..errors import DescriptionError
+
 
 class MessageRegistry(object):
     def __init__(self):
@@ -31,7 +32,7 @@ class MessageRegistry(object):
         for attr in ('__cmdid__', '__netfn__', '__default_lun__'):
             if not hasattr(cls, attr):
                 raise DescriptionError('Class has to have attribute "%s"' %
-                        attr)
+                                       attr)
         # (3) netfn lsb has to be 0 for Req and 1 for Rsp
         if cls.__name__.endswith('Req') and cls.__netfn__ & 1 != 0:
             raise DescriptionError('LSB of NetFN of a Request must be 0')
@@ -42,11 +43,12 @@ class MessageRegistry(object):
         # (4) must not be registered before
         if cls.__name__ in self.registry:
             raise DescriptionError('Message %s already registered' %
-                    cls.__name__)
+                                   cls.__name__)
         msg_id = (cls.__cmdid__, cls.__netfn__)
         if msg_id in self.registry:
-            raise DescriptionError('Message (%d,%d) already registered (%s)' %
-                    (msg_id[0], msg_id[1], self.registry[msg_id]))
+            raise DescriptionError('Message (%d,%d) already registered (%s)'
+                                   % (msg_id[0], msg_id[1],
+                                      self.registry[msg_id]))
 
         # register name
         self.registry[cls.__name__] = cls
@@ -65,11 +67,12 @@ class MessageRegistry(object):
     def create_response_by_name(self, name, *args, **kwargs):
         return self.registry[name + "Rsp"](*args, **kwargs)
 
+
 DEFAULT_REGISTRY = MessageRegistry()
 register_message_class = partial(MessageRegistry.register_class,
-        DEFAULT_REGISTRY)
+                                 DEFAULT_REGISTRY)
 create_message = partial(MessageRegistry.create, DEFAULT_REGISTRY)
 create_request_by_name = partial(MessageRegistry.create_request_by_name,
-        DEFAULT_REGISTRY)
+                                 DEFAULT_REGISTRY)
 create_response_by_name = partial(MessageRegistry.create_response_by_name,
-        DEFAULT_REGISTRY)
+                                  DEFAULT_REGISTRY)

@@ -13,7 +13,7 @@ from __future__ import absolute_import
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from . import constants
 from . import register_message_class
@@ -22,7 +22,6 @@ from . import UnsignedInt
 from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
-from . import Conditional
 from . import Optional
 from . import RemainingBytes
 
@@ -41,13 +40,12 @@ class GetDeviceSdrInfoRsp(Message):
             CompletionCode(),
             UnsignedInt('number_of_sensors', 1),
             Bitfield('flags', 1,
-                Bitfield.Bit('lun0_has_sensors', 1),
-                Bitfield.Bit('lun1_has_sensors', 1),
-                Bitfield.Bit('lun2_has_sensors', 1),
-                Bitfield.Bit('lun3_has_sensors', 1),
-                Bitfield.ReservedBit(3, 0),
-                Bitfield.Bit('dynamic_population', 1)
-            ),
+                     Bitfield.Bit('lun0_has_sensors', 1),
+                     Bitfield.Bit('lun1_has_sensors', 1),
+                     Bitfield.Bit('lun2_has_sensors', 1),
+                     Bitfield.Bit('lun3_has_sensors', 1),
+                     Bitfield.ReservedBit(3, 0),
+                     Bitfield.Bit('dynamic_population', 1)),
             Optional(
                 Timestamp('sensor_population_change')
             ),
@@ -109,22 +107,20 @@ class GetSensorThresholdsRsp(Message):
     __fields__ = (
         CompletionCode(),
         Bitfield('readable_mask', 1,
-                Bitfield.Bit('lnc', 1, default=0),
-                Bitfield.Bit('lcr', 1, default=0),
-                Bitfield.Bit('lnr', 1, default=0),
-                Bitfield.Bit('unc', 1, default=0),
-                Bitfield.Bit('ucr', 1, default=0),
-                Bitfield.Bit('unr', 1, default=0),
-                Bitfield.ReservedBit(2, 0),
-            ),
+                 Bitfield.Bit('lnc', 1, default=0),
+                 Bitfield.Bit('lcr', 1, default=0),
+                 Bitfield.Bit('lnr', 1, default=0),
+                 Bitfield.Bit('unc', 1, default=0),
+                 Bitfield.Bit('ucr', 1, default=0),
+                 Bitfield.Bit('unr', 1, default=0),
+                 Bitfield.ReservedBit(2, 0),),
         Bitfield('threshold', 6,
-                Bitfield.Bit('lnc', 8, default=0),
-                Bitfield.Bit('lcr', 8, default=0),
-                Bitfield.Bit('lnr', 8, default=0),
-                Bitfield.Bit('unc', 8, default=0),
-                Bitfield.Bit('ucr', 8, default=0),
-                Bitfield.Bit('unr', 8, default=0),
-            ),
+                 Bitfield.Bit('lnc', 8, default=0),
+                 Bitfield.Bit('lcr', 8, default=0),
+                 Bitfield.Bit('lnr', 8, default=0),
+                 Bitfield.Bit('unc', 8, default=0),
+                 Bitfield.Bit('ucr', 8, default=0),
+                 Bitfield.Bit('unr', 8, default=0),),
     )
 
 
@@ -177,22 +173,20 @@ class SetSensorThresholdsReq(Message):
     __fields__ = (
         UnsignedInt('sensor_number', 1),
         Bitfield('set_mask', 1,
-                Bitfield.Bit('lnc', 1, default=0),
-                Bitfield.Bit('lcr', 1, default=0),
-                Bitfield.Bit('lnr', 1, default=0),
-                Bitfield.Bit('unc', 1, default=0),
-                Bitfield.Bit('ucr', 1, default=0),
-                Bitfield.Bit('unr', 1, default=0),
-                Bitfield.ReservedBit(2, 0),
-            ),
+                 Bitfield.Bit('lnc', 1, default=0),
+                 Bitfield.Bit('lcr', 1, default=0),
+                 Bitfield.Bit('lnr', 1, default=0),
+                 Bitfield.Bit('unc', 1, default=0),
+                 Bitfield.Bit('ucr', 1, default=0),
+                 Bitfield.Bit('unr', 1, default=0),
+                 Bitfield.ReservedBit(2, 0),),
         Bitfield('threshold', 6,
-                Bitfield.Bit('lnc', 8, default=0),
-                Bitfield.Bit('lcr', 8, default=0),
-                Bitfield.Bit('lnr', 8, default=0),
-                Bitfield.Bit('unc', 8, default=0),
-                Bitfield.Bit('ucr', 8, default=0),
-                Bitfield.Bit('unr', 8, default=0),
-            ),
+                 Bitfield.Bit('lnc', 8, default=0),
+                 Bitfield.Bit('lcr', 8, default=0),
+                 Bitfield.Bit('lnr', 8, default=0),
+                 Bitfield.Bit('unc', 8, default=0),
+                 Bitfield.Bit('ucr', 8, default=0),
+                 Bitfield.Bit('unr', 8, default=0),),
     )
 
 
@@ -212,16 +206,16 @@ class SetSensorEventEnableReq(Message):
     __fields__ = (
             UnsignedInt('sensor_number', 1),
             Bitfield('enable', 1,
-                Bitfield.ReservedBit(4, 0),
-                Bitfield.Bit('config', 2, 0),
-                Bitfield.Bit('sensor_scanning', 1, 0),
-                Bitfield.Bit('event_message', 1, 0),
-            ),
+                     Bitfield.ReservedBit(4, 0),
+                     Bitfield.Bit('config', 2, 0),
+                     Bitfield.Bit('sensor_scanning', 1, 0),
+                     Bitfield.Bit('event_message', 1, 0),),
             Optional(UnsignedInt('byte3', 1)),
             Optional(UnsignedInt('byte4', 1)),
             Optional(UnsignedInt('byte5', 1)),
             Optional(UnsignedInt('byte6', 1)),
     )
+
 
 @register_message_class
 class SetSensorEventEnableRsp(Message):
@@ -248,10 +242,9 @@ class GetSensorEventEnableRsp(Message):
     __fields__ = (
             CompletionCode(),
             Bitfield('enabled', 1,
-                Bitfield.ReservedBit(6, 0),
-                Bitfield.Bit('sensor_scanning', 1, 0),
-                Bitfield.Bit('event_message', 1, 0),
-            ),
+                     Bitfield.ReservedBit(6, 0),
+                     Bitfield.Bit('sensor_scanning', 1, 0),
+                     Bitfield.Bit('event_message', 1, 0),),
             Optional(UnsignedInt('byte3', 1)),
             Optional(UnsignedInt('byte4', 1)),
             Optional(UnsignedInt('byte5', 1)),
@@ -266,9 +259,8 @@ class RearmSensorEventsReq(Message):
     __fields__ = (
         UnsignedInt('sensor_number', 1),
         Bitfield('re_arm', 1,
-                Bitfield.ReservedBit(7, 0),
-                Bitfield.Bit('all_event_status', 1, 0),
-            ),
+                 Bitfield.ReservedBit(7, 0),
+                 Bitfield.Bit('all_event_status', 1, 0),),
         UnsignedInt('re_arm_assertion_event', 2, 0),
         UnsignedInt('re_arm_deassertion_event', 2, 0),
     )
@@ -300,14 +292,10 @@ class GetSensorReadingRsp(Message):
             CompletionCode(),
             UnsignedInt('sensor_reading', 1),
             Bitfield('config', 1,
-                Bitfield.ReservedBit(5, 0),
-                Bitfield.Bit('initial_update_in_progress', 1, 0),
-                Bitfield.Bit('sensor_scanning_disabled', 1, 0),
-                Bitfield.Bit('event_message_disabled', 1, 0),
-            ),
-            #Alias('update_in_progress', 'stats.update_in_progress'),
-            #Alias('scanning_disabled', 'stats.scanning_disabled'),
-            #Alias('event_disabled', 'stats.event_disabled'),
+                     Bitfield.ReservedBit(5, 0),
+                     Bitfield.Bit('initial_update_in_progress', 1, 0),
+                     Bitfield.Bit('sensor_scanning_disabled', 1, 0),
+                     Bitfield.Bit('event_message_disabled', 1, 0),),
             Optional(UnsignedInt('states1', 1)),
             Optional(UnsignedInt('states2', 1)),
     )

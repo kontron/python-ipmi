@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from __future__ import absolute_import
 
@@ -39,6 +39,7 @@ try:
 except ImportError:
     __version__ = 'dev'
 
+
 def create_connection(interface):
     session = Session()
     session.interface = interface
@@ -48,6 +49,7 @@ def create_connection(interface):
     ipmi.requester = NullRequester()
     return ipmi
 
+
 class Requester(object):
     '''The Requester class represents an IPMI device which initiates a
     request/response message exchange.
@@ -55,6 +57,7 @@ class Requester(object):
 
     def __init__(self, ipmb_address):
         self.ipmb_address = ipmb_address
+
 
 class NullRequester(object):
     '''The NullRequester is used for interfaces which doesn't require a
@@ -84,7 +87,6 @@ class Target(object):
             self.address = address
             self.bridge_channel = bridge_channel
 
-
     def set_routing_information(self, rinfo):
         self.set_routing(rinfo)
 
@@ -95,15 +97,15 @@ class Target(object):
         bridge_channel).
         """
 
-        self.routing = [ self.Routing(*r) for r in rinfo ]
+        self.routing = [self.Routing(*r) for r in rinfo]
 
 
 class Session(object):
-    AUTH_TYPE_NONE        = 0x00
-    AUTH_TYPE_MD2         = 0x01
-    AUTH_TYPE_MD5         = 0x02
-    AUTH_TYPE_PASSWORD    = 0x04
-    AUTH_TYPE_OEM         = 0x05
+    AUTH_TYPE_NONE = 0x00
+    AUTH_TYPE_MD2 = 0x01
+    AUTH_TYPE_MD5 = 0x02
+    AUTH_TYPE_PASSWORD = 0x04
+    AUTH_TYPE_OEM = 0x05
 
     def __init__(self):
         self.set_auth_type(self.AUTH_TYPE_NONE)
@@ -148,8 +150,9 @@ class Session(object):
 
     interface = property(_get_interface, _set_interface)
 
+
 class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
-        sdr.Sdr, sensor.Sensor, event.Event, sel.Sel, lan.Lan):
+           sdr.Sdr, sensor.Sensor, event.Event, sel.Sel, lan.Lan):
 
     def __init__(self):
         for base in Ipmi.__bases__:
@@ -198,7 +201,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
 
     def raw_command(self, lun, netfn, raw_bytes):
         return self.interface.send_and_receive_raw(self.target, lun, netfn,
-                raw_bytes)
+                                                   raw_bytes)
 
     def _get_interface(self):
         try:

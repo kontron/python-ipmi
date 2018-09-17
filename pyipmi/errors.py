@@ -12,9 +12,10 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from .msgs.constants import cc_err_desc
+
 
 class DecodingError(Exception):
     """Error on message decoding."""
@@ -38,7 +39,8 @@ class CompletionCodeError(Exception):
         self.cc_desc = self.find_cc_desc(cc)
 
     def __str__(self):
-        return "%s cc=0x%02x desc=%s" % (self.__class__.__name__, self.cc, self.cc_desc)
+        return "%s cc=0x%02x desc=%s" \
+            % (self.__class__.__name__, self.cc, self.cc_desc)
 
     @staticmethod
     def find_cc_desc(error_cc):

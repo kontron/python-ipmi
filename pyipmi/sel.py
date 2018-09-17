@@ -13,9 +13,9 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-from .errors import DecodingError, CompletionCodeError, RetryError
+from .errors import DecodingError
 from .utils import check_completion_code, ByteBuffer
 from .msgs import create_request_by_name
 from .msgs import constants
@@ -36,15 +36,17 @@ class Sel(object):
 
     def _clear_sel(self, cmd, reservation):
         rsp = self.send_message_with_name('ClearSel',
-                reservation_id=reservation, cmd=cmd)
+                                          reservation_id=reservation,
+                                          cmd=cmd)
         return rsp.status.erase_in_progress
 
     def clear_sel(self, retry=5):
         clear_repository_helper(self.get_sel_reservation_id,
-                self._clear_sel, retry)
+                                self._clear_sel, retry)
 
     def sel_entries(self):
         """Generator which returns all SEL entries."""
+        ENTIRE_RECORD = 0xff
         rsp = self.send_message_with_name('GetSelInfo')
         if rsp.entries == 0:
             return
@@ -55,7 +57,7 @@ class Sel(object):
             req.reservation_id = reservation_id
             req.record_id = next_record_id
             req.offset = 0
-            self.max_req_len = 0xff # read entire record
+            self.max_req_len = ENTIRE_RECORD
 
             record_data = ByteBuffer()
             while True:
@@ -66,7 +68,7 @@ class Sel(object):
 
                 rsp = self.send_message(req)
                 if rsp.completion_code == constants.CC_CANT_RET_NUM_REQ_BYTES:
-                    if self.max_req_len  == 0xff:
+                    if self.max_req_len == 0xff:
                         self.max_req_len = 16
                     else:
                         self.max_req_len -= 1
@@ -90,6 +92,7 @@ class Sel(object):
         '''Returns all SEL entries as a list.'''
         return list(self.sel_entries())
 
+
 class SelInfo(State):
 
     def _from_response(self, rsp):
@@ -100,15 +103,16 @@ class SelInfo(State):
         self.most_recent_erase = rsp.most_recent_erase
         self.operation_support = []
         if rsp.operation_support.get_sel_allocation_info:
-           self.operation_support.append('get_sel_allocation_info')
+            self.operation_support.append('get_sel_allocation_info')
         if rsp.operation_support.reserve_sel:
-           self.operation_support.append('reserve_sel:')
+            self.operation_support.append('reserve_sel:')
         if rsp.operation_support.partial_add_sel_entry:
-           self.operation_support.append('partial_add_sel_entry')
+            self.operation_support.append('partial_add_sel_entry')
         if rsp.operation_support.delete_sel:
-           self.operation_support.append('delete_sel')
+            self.operation_support.append('delete_sel')
         if rsp.operation_support.overflow_flag:
-           self.operation_support.append('overflow_flag')
+            self.operation_support.append('overflow_flag')
+
 
 class SelEntry(State):
     TYPE_SYSTEM_EVENT = 0x02
@@ -117,19 +121,19 @@ class SelEntry(State):
 
     def __str__(self):
         s = '[%s]' % (' '.join(['%02x' % b for b in self.data]))
-        str = []
-        str.append('SEL Record ID 0x%04x' % self.record_id)
-        str.append('  Raw: %s' % s)
-        str.append('  Type: %d' % self.type)
-        str.append('  Timestamp: %d' % self.timestamp)
-        str.append('  Generator: %d' % self.generator_id)
-        str.append('  EvM rev: %d' % self.evm_rev)
-        str.append('  Sensor Type: 0x%02x' % self.sensor_type)
-        str.append('  Sensor Number: %d' % self.sensor_number)
-        str.append('  Event Direction: %d' % self.event_direction)
-        str.append('  Event Type: 0x%02x' % self.event_type)
-        str.append('  Event Data: 0x%s' % self.event_data.encode('hex'))
-        return "\n".join(str)
+        string = []
+        string.append('SEL Record ID 0x%04x' % self.record_id)
+        string.append('  Raw: %s' % s)
+        string.append('  Type: %d' % self.type)
+        string.append('  Timestamp: %d' % self.timestamp)
+        string.append('  Generator: %d' % self.generator_id)
+        string.append('  EvM rev: %d' % self.evm_rev)
+        string.append('  Sensor Type: 0x%02x' % self.sensor_type)
+        string.append('  Sensor Number: %d' % self.sensor_number)
+        string.append('  Event Direction: %d' % self.event_direction)
+        string.append('  Event Type: 0x%02x' % self.event_type)
+        string.append('  Event Data: 0x%s' % self.event_data.encode('hex'))
+        return "\n".join(string)
 
     @staticmethod
     def type_to_string(entry_type):

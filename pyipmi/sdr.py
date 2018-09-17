@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from __future__ import absolute_import
 from __future__ import division
@@ -78,7 +78,7 @@ class Sdr(object):
         req.offset = offset
         req.bytes_to_read = length
 
-        rsp = get_sdr_chunk_helper(self.send_message, req, \
+        rsp = get_sdr_chunk_helper(self.send_message, req,
                                    self.reserve_device_sdr_repository)
 
         return (rsp.next_record_id, rsp.record_data)
@@ -108,8 +108,8 @@ class Sdr(object):
         """
         return list(self.sdr_repository_entries())
 
-    def partial_add_sdr(self,
-                reservation_id, record_id, offset, progress, data):
+    def partial_add_sdr(self, reservation_id, record_id,
+                        offset, progress, data):
 
         req = create_request_by_name('PartialAddSdr')
         req.reservation_id = reservation_id
@@ -128,17 +128,19 @@ class Sdr(object):
 
         reservation_id = self.reserve_device_sdr_repository()
         rsp = self.send_message_with_name('DeleteSdr',
-                reservation_id=reservation_id, record_id=record_id)
+                                          reservation_id=reservation_id,
+                                          record_id=record_id)
         return rsp.record_id
 
     def _clear_sdr_repository(self, cmd, reservation_id):
         rsp = self.send_message_with_name('ClearSdrRepository',
-                reservation_id=reservation_id, cmd=cmd)
+                                          reservation_id=reservation_id,
+                                          cmd=cmd)
         return rsp.status.erase_in_progress
 
     def clear_sdr_repository(self, retry=5):
         clear_repository_helper(self.reserve_sdr_repository,
-                self._clear_sdr_repository, retry)
+                                self._clear_sdr_repository, retry)
 
     def _run_initialization_agent(self, cmd):
         rsp = self.send_message_with_name('RunInitializationAgent', cmd=cmd)
@@ -225,17 +227,17 @@ class SdrCommon(object):
         try:
             cls = {
                 SDR_TYPE_FULL_SENSOR_RECORD:
-                        SdrFullSensorRecord,
+                    SdrFullSensorRecord,
                 SDR_TYPE_COMPACT_SENSOR_RECORD:
-                        SdrCompactSensorRecord,
+                    SdrCompactSensorRecord,
                 SDR_TYPE_EVENT_ONLY_SENSOR_RECORD:
-                        SdrEventOnlySensorRecord,
+                    SdrEventOnlySensorRecord,
                 SDR_TYPE_FRU_DEVICE_LOCATOR_RECORD:
-                        SdrFruDeviceLocator,
+                    SdrFruDeviceLocator,
                 SDR_TYPE_MANAGEMENT_CONTROLLER_DEVICE_LOCATOR_RECORD:
-                        SdrManagementContollerDeviceLocator,
+                    SdrManagementContollerDeviceLocator,
                 SDR_TYPE_OEM_SENSOR_RECORD:
-                        SdrOEMSensorRecord,
+                    SdrOEMSensorRecord,
             }[sdr_type]
         except KeyError:
             raise DecodingError('Unsupported SDR type(0x%02x)' % sdr_type)
@@ -259,8 +261,10 @@ class SdrFullSensorRecord(SdrCommon):
 
     def __str__(self):
         s = '["%-16s"] [%s:%s] [%s]' \
-                % (self.device_id_string, self.entity_id,
-                self.entity_instance, ' '.join(['%02x' % b for b in self.data]))
+                % (self.device_id_string,
+                   self.entity_id,
+                   self.entity_instance,
+                   ' '.join(['%02x' % b for b in self.data]))
         return s
 
     def convert_sensor_raw_to_value(self, raw):
@@ -301,16 +305,16 @@ class SdrFullSensorRecord(SdrCommon):
     def l(self):
         try:
             return {
-                L_LN:     math.log,
-                L_LOG:    lambda x: math.log(x, 10),
-                L_LOG2:   lambda x: math.log(x, 2),
-                L_E:      math.exp,
-                L_EXP10:  lambda x: math.pow(10, x),
-                L_EXP2:   lambda x: math.pow(2, x),
-                L_1_X:    lambda x: 1.0 / x,
-                L_SQR:    lambda x: math.pow(x, 2),
-                L_CUBE:   lambda x: math.pow(x, 3),
-                L_SQRT:   math.sqrt,
+                L_LN: math.log,
+                L_LOG: lambda x: math.log(x, 10),
+                L_LOG2: lambda x: math.log(x, 2),
+                L_E: math.exp,
+                L_EXP10: lambda x: math.pow(10, x),
+                L_EXP2: lambda x: math.pow(2, x),
+                L_1_X: lambda x: 1.0 / x,
+                L_SQR: lambda x: math.pow(x, 2),
+                L_CUBE: lambda x: math.pow(x, 3),
+                L_SQRT: math.sqrt,
                 L_CUBERT: lambda x: math.pow(x, 1.0/3),
                 L_LINEAR: lambda x: x,
             }[self.linearization & 0x7f]
@@ -321,7 +325,7 @@ class SdrFullSensorRecord(SdrCommon):
     @staticmethod
     def _convert_complement(self, value, size):
         if (value & (1 << (size-1))):
-            value = -(1<<size) + value
+            value = -(1 << size) + value
         return value
 
     def _from_data(self, data):
@@ -414,7 +418,6 @@ class SdrFullSensorRecord(SdrCommon):
         # byte 25, 26
         m = buffer.pop_unsigned_int(1)
         m_tol = buffer.pop_unsigned_int(1)
-        #self.m = (m & 0xff) | (((m_tol & 0xc0) << 2) | ~0x3ff)
         self.m = (m & 0xff) | ((m_tol & 0xc0) << 2)
         # NAC: Bug fix.  Upstream did not properly account for
         # 'M' being a twos complement value.
@@ -433,14 +436,10 @@ class SdrFullSensorRecord(SdrCommon):
         rexp_bexp = buffer.pop_unsigned_int(1)
         self.k2 = (rexp_bexp & 0xf0) >> 4
         # convert 2s complement
-        #if self.k2 & 0x8: # 4bit
-        #    self.k2 = -0x10 + self.k2
         self.k2 = self._convert_complement(self.k2, 4)
 
         self.k1 = rexp_bexp & 0x0f
         # convert 2s complement
-        #if self.k1 & 0x8:
-        #    self.k1 = -0x10 + self.k1
         self.k1 = self._convert_complement(self.k1, 4)
 
         # byte 31
@@ -484,7 +483,9 @@ class SdrCompactSensorRecord(SdrCommon):
             self._from_data(data)
 
     def __str__(self):
-        s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
+        s = '["%-16s"] [%s]' \
+            % (self.device_id_string,
+               ' '.join(['%02x' % b for b in self.data]))
         return s
 
     def _from_data(self, data):
@@ -555,7 +556,9 @@ class SdrFruDeviceLocator(SdrCommon):
             self._from_data(data)
 
     def __str__(self):
-        s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
+        s = '["%-16s"] [%s]' \
+            % (self.device_id_string,
+               ' '.join(['%02x' % b for b in self.data]))
         return s
 
     def _from_data(self, data):
@@ -566,7 +569,7 @@ class SdrFruDeviceLocator(SdrCommon):
         self.channel_number = buffer.pop_unsigned_int(1)
         self.reserved = buffer.pop_unsigned_int(1)
         self.device_type = buffer.pop_unsigned_int(1)
-        self.device_type_modifier= buffer.pop_unsigned_int(1)
+        self.device_type_modifier = buffer.pop_unsigned_int(1)
         self._entity(buffer.pop_slice(2))
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
@@ -583,7 +586,9 @@ class SdrManagementContollerDeviceLocator(SdrCommon):
             self._from_data(data)
 
     def __str__(self):
-        s = '["%-16s"] [%s]' % (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
+        s = '["%-16s"] [%s]' \
+            % (self.device_id_string,
+               ' '.join(['%02x' % b for b in self.data]))
         return s
 
     def _from_data(self, data):
@@ -598,6 +603,7 @@ class SdrManagementContollerDeviceLocator(SdrCommon):
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
         self.device_id_string = buffer.tostring()
+
 
 ###
 # SDR type 0xC0
@@ -616,4 +622,3 @@ class SdrOEMSensorRecord(SdrCommon):
 
         # record key bytes
         self._common_record_key(buffer.pop_slice(3))
-

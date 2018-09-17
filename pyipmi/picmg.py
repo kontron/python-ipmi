@@ -12,9 +12,9 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-from .errors import DecodingError, EncodingError, CompletionCodeError
+from .errors import DecodingError, EncodingError
 from .msgs import create_request_by_name
 from .msgs import picmg
 from .utils import check_completion_code
@@ -25,13 +25,14 @@ from .msgs.picmg import \
         FRU_CONTROL_GRACEFUL_REBOOT, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT, \
         FRU_ACTIVATION_FRU_ACTIVATE, FRU_ACTIVATION_FRU_DEACTIVATE
 
+
 class Picmg(object):
     def get_picmg_properties(self):
         return self.send_message_with_name('GetPicmgProperties')
 
     def fru_control(self, fru_id, option):
         rsp = self.send_message_with_name('FruControl', fru_id=fru_id,
-                option=option)
+                                          option=option)
         return rsp.rsp_data
 
     def fru_control_cold_reset(self, fru_id=0):
@@ -47,18 +48,20 @@ class Picmg(object):
         return self.fru_control(fru_id, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT)
 
     def get_power_level(self, fru_id, power_type):
-        rsp = self.send_message_with_name('GetPowerLevel', fru_id=fru_id,
-                power_type=power_type)
+        rsp = self.send_message_with_name('GetPowerLevel',
+                                          fru_id=fru_id,
+                                          power_type=power_type)
         return PowerLevel(rsp)
 
     def get_fan_speed_properties(self, fru_id):
         rsp = self.send_message_with_name('GetFanSpeedProperties',
-                fru_id=fru_id)
+                                          fru_id=fru_id)
         return FanSpeedProperties(rsp)
 
     def set_fan_level(self, fru_id, fan_level):
-        rsp = self.send_message_with_name('SetFanLevel',
-                fru_id=fru_id, fan_level=fan_level)
+        self.send_message_with_name('SetFanLevel',
+                                    fru_id=fru_id,
+                                    fan_level=fan_level)
 
     def get_fan_level(self, fru_id):
         rsp = self.send_message_with_name('GetFanLevel', fru_id=fru_id)
@@ -68,8 +71,9 @@ class Picmg(object):
         return (rsp.override_fan_level, local_control_fan_level)
 
     def get_led_state(self, fru_id, led_id):
-        rsp = self.send_message_with_name('GetFruLedState', fru_id=fru_id,
-                    led_id=led_id)
+        rsp = self.send_message_with_name('GetFruLedState',
+                                          fru_id=fru_id,
+                                          led_id=led_id)
         return LedState(rsp)
 
     def set_led_state(self, led):
@@ -79,15 +83,15 @@ class Picmg(object):
         check_completion_code(rsp.completion_code)
 
     def _set_fru_activation(self, fru_id, control):
-        self.send_message_with_name('SetFruActivation', fru_id=fru_id,
-                    control=control)
+        self.send_message_with_name('SetFruActivation',
+                                    fru_id=fru_id,
+                                    control=control)
 
     def set_fru_activation(self, fru_id):
         self._set_fru_activation(fru_id, FRU_ACTIVATION_FRU_ACTIVATE)
 
     def set_fru_deactivation(self, fru_id):
         self._set_fru_activation(fru_id, FRU_ACTIVATION_FRU_DEACTIVATE)
-
 
     ACTIVATION_LOCK_SET = 0
     ACTIVATION_LOCK_CLEAR = 1
@@ -152,11 +156,11 @@ class Picmg(object):
         if len(rsp.data) > 4:
             link = LinkDescriptor()
             link.channel = rsp.data[0] & 0x3F
-            link.interface = rsp.data[0]>>6 & 0x3
-            link.link_flags = rsp.data[1]&0xf
-            link.type = rsp.data[1]>>4&0xf
-            link.sig_class = rsp.data[2] &0xf
-            link.extension = rsp.data[2]>>4&0xf
+            link.interface = rsp.data[0] >> 6 & 0x3
+            link.link_flags = rsp.data[1] & 0xf
+            link.type = rsp.data[1] >> 4 & 0xf
+            link.sig_class = rsp.data[2] & 0xf
+            link.extension = rsp.data[2] >> 4 & 0xf
             link.grouping_id = rsp.data[3]
             state = rsp.data[4]
 
@@ -164,12 +168,14 @@ class Picmg(object):
 
     def get_pm_global_status(self):
         rsp = self.send_message_with_name('GetPowerChannelStatus',
-                starting_power_channel_number=1, power_channel_count=1)
+                                          starting_power_channel_number=1,
+                                          power_channel_count=1)
         return GlobalStatus(rsp)
 
-    def get_power_channel_status(self, starting_number):
+    def get_power_channel_status(self, start):
         rsp = self.send_message_with_name('GetPowerChannelStatus',
-                starting_power_channel_number=starting_number, power_channel_count=1)
+                                          starting_power_channel_number=start,
+                                          power_channel_count=1)
         return PowerChannelStatus(rsp)
 
     def set_signaling_class(self, interface, channel, signaling_class):
@@ -241,9 +247,9 @@ class LinkDescriptor(State):
 
     INTERFACE_DESCR_STRING = [
         # Interface, 'STRING'
-        ( INTERFACE_BASE, 'Base' ),
-        ( INTERFACE_FABRIC, 'Fabric' ),
-        ( INTERFACE_UPDATE_CHANNEL, 'Update Channel' ),
+        (INTERFACE_BASE, 'Base'),
+        (INTERFACE_FABRIC, 'Fabric'),
+        (INTERFACE_UPDATE_CHANNEL, 'Update Channel'),
     ]
 
     def get_interface_string(self, interf):
@@ -254,39 +260,39 @@ class LinkDescriptor(State):
 
     LINK_TYPE_DESCR_STRING = [
         # Type, Extension, class, 'STRING'
-        ( TYPE_BASE,
+        (TYPE_BASE,
             TYPE_EXT_BASE0,
             SIGNALING_CLASS_BASIC,
             '10/100/1000 BASE-T'),
-        ( TYPE_BASE,
+        (TYPE_BASE,
             TYPE_EXT_BASE1,
             SIGNALING_CLASS_BASIC,
             '10/100 BASE-T ShMC Cross-connect'),
-        ( TYPE_ETHERNET_FABRIC,
+        (TYPE_ETHERNET_FABRIC,
             TYPE_EXT_ETHERNET_FIX1000_BX,
             SIGNALING_CLASS_BASIC,
             'Fixed 1000BASE-BX'),
-        ( TYPE_ETHERNET_FABRIC,
+        (TYPE_ETHERNET_FABRIC,
             TYPE_EXT_ETHERNET_FIX10G_BX4,
             SIGNALING_CLASS_BASIC,
             'Fixed 10GBASE-BX4 (XAUI)'),
-        ( TYPE_ETHERNET_FABRIC,
+        (TYPE_ETHERNET_FABRIC,
             TYPE_EXT_ETHERNET_FCPI,
             SIGNALING_CLASS_BASIC,
             'FC-PI'),
-        ( TYPE_ETHERNET_FABRIC,
+        (TYPE_ETHERNET_FABRIC,
             TYPE_EXT_ETHERNET_FIX1000_KX,
             SIGNALING_CLASS_BASIC,
             'Fixed 1000BASE-KX'),
-        ( TYPE_ETHERNET_FABRIC,
+        (TYPE_ETHERNET_FABRIC,
             TYPE_EXT_ETHERNET_FIX10G_KX4,
             SIGNALING_CLASS_BASIC,
             'Fixed 10GBASE-KX4'),
-        ( TYPE_ETHERNET_FABRIC,
+        (TYPE_ETHERNET_FABRIC,
             TYPE_EXT_ETHERNET_FIX10G_KR,
             SIGNALING_CLASS_10_3125_GBD,
             'Fixed 10GBASE-KR'),
-        ( TYPE_ETHERNET_FABRIC,
+        (TYPE_ETHERNET_FABRIC,
             TYPE_EXT_ETHERNET_FIX40G_KR4,
             SIGNALING_CLASS_10_3125_GBD,
             'Fixed 40GBASE-KR4'),
@@ -302,7 +308,8 @@ class LinkDescriptor(State):
 class PowerLevel(State):
 
     def _from_response(self, rsp):
-        self.dynamic_power_configuration = rsp.properties.dynamic_power_configuration
+        self.dynamic_power_configuration = \
+                rsp.properties.dynamic_power_configuration
         self.power_level = rsp.properties.power_level
         self.delay_to_stable = rsp.delay_to_stable_power
         self.power_mulitplier = rsp.power_multiplier
@@ -350,7 +357,7 @@ class LedState(State):
     ]
 
     def __init__(self, rsp=None, fru_id=None, led_id=None, color=None,
-            function=None):
+                 function=None):
         super(self.__class__, self).__init__(rsp)
         if fru_id is not None:
             self.fru_id = fru_id
@@ -452,12 +459,12 @@ class GlobalStatus(State):
 
     def _from_response(self, rsp):
         self.role = rsp.global_status.role
-        self.management_power_good =\
-                bool(rsp.global_status.management_power_good)
-        self.payload_power_good =\
-                bool(rsp.global_status.payload_power_good)
-        self.unidentified_fault =\
-                bool(rsp.global_status.unidentified_fault)
+        self.management_power_good = \
+            bool(rsp.global_status.management_power_good)
+        self.payload_power_good = \
+            bool(rsp.global_status.payload_power_good)
+        self.unidentified_fault = \
+            bool(rsp.global_status.unidentified_fault)
 
 
 class PowerChannelStatus(State):
