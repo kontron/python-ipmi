@@ -19,9 +19,9 @@ from .aardvark import Aardvark
 from .mock import Mock
 
 INTERFACES = [
-        Ipmitool,
-        Aardvark,
-        Mock,
+    Ipmitool,
+    Aardvark,
+    Mock,
 ]
 
 

@@ -134,11 +134,11 @@ class Sensor(object):
         record_id = 0
 
         while True:
-            s = self.get_device_sdr(record_id, reservation_id)
-            yield s
-            if s.next_id == 0xffff:
+            record = self.get_device_sdr(record_id, reservation_id)
+            yield record
+            if record.next_id == 0xffff:
                 break
-            record_id = s.next_id
+            record_id = record.next_id
 
     def get_device_sdr_list(self, reservation_id=None):
         """Returns the complete SDR list.

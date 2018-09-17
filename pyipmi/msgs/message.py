@@ -251,7 +251,7 @@ class Bitfield(BaseField):
                 bit_value = getattr(self, bit.name)
                 if bit_value is None:
                     bit_value = bit.default
-                if bit_value == None:
+                if bit_value is None:
                     raise EncodingError('Bitfield "%s" not set.' % bit.name)
 
                 value |= (bit_value & (2**bit._width - 1)) << bit.offset

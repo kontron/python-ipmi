@@ -30,6 +30,7 @@ class IpmbHeader(object):
         self.rs_lun = None
         self.rq_sa = None
         self.rq_lun = None
+        self.rq_seq = None
         self.netfn = None
         self.cmd_id = None
 
