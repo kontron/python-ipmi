@@ -30,7 +30,7 @@ from . import sel
 from . import sensor
 from . import msgs
 
-from .errors import TimeoutError, CompletionCodeError, RetryError
+from .errors import IpmiTimeoutError, CompletionCodeError, RetryError
 from .msgs.registry import create_request_by_name
 from .utils import check_completion_code
 
@@ -166,7 +166,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
         while time.time() < start_time + (timeout):
             try:
                 self.is_ipmc_accessible()
-            except TimeoutError:
+            except IpmiTimeoutError:
                 time.sleep(interval)
 
         self.is_ipmc_accessible()

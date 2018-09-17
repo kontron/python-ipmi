@@ -18,7 +18,7 @@ import time
 import array
 
 from ..msgs import create_message, encode_message, decode_message
-from ..errors import TimeoutError
+from ..errors import IpmiTimeoutError
 from ..logger import log
 from ..interfaces.ipmb import IpmbHeader, checksum
 
@@ -130,7 +130,7 @@ class Aardvark(object):
             timeout = self.timeout - (time.time() - start_time)
 
             if timeout <= 0 or poll_returned_no_data:
-                raise TimeoutError()
+                raise IpmiTimeoutError()
 
             ret = self._dev.poll(int(timeout * 1000))
 
@@ -169,14 +169,14 @@ class Aardvark(object):
                 self._send_raw(header, payload)
                 rx_data = self._receive_raw(header)
                 break
-            except TimeoutError:
+            except IpmiTimeoutError:
                 log().warning('I2C transaction timed out'),
                 pass
 
             retries += 1
 
         else:
-            raise TimeoutError()
+            raise IpmiTimeoutError()
 
         return rx_data.tostring()[5:-1]
 

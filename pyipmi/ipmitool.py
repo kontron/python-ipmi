@@ -48,7 +48,7 @@ def _get_command_function(name):
 
 
 def cmd_bmc_info(ipmi, args):
-    id = ipmi.get_device_id()
+    device_id = ipmi.get_device_id()
     print('''
 Device ID:          %(device_id)s
 Device Revision:    %(revision)s
@@ -59,7 +59,7 @@ Product ID:         %(product_id)d (0x%(product_id)04x)
 Device Available:   %(available)d
 Provides SDRs:      %(provides_sdrs)d
 Additional Device Support:
-'''[1:-1] % id.__dict__)
+'''[1:-1] % device_id.__dict__)
 
     functions = (
             ('SENSOR', 'Sensor Device'),
@@ -568,7 +568,7 @@ def main():
         if verbose:
             traceback.print_exc()
         sys.exit(1)
-    except pyipmi.errors.TimeoutError as e:
+    except pyipmi.errors.IpmiTimeoutError as e:
         print('Command timed out')
         if verbose:
             traceback.print_exc()

@@ -7,7 +7,7 @@ import nose
 from mock import MagicMock
 from nose.tools import eq_, raises
 
-from pyipmi.errors import TimeoutError
+from pyipmi.errors import IpmiTimeoutError
 from pyipmi.interfaces import Ipmitool
 from pyipmi import Session, Target
 
@@ -86,7 +86,7 @@ class TestIpmitool:
 
         eq_(data, b'\xcc')
 
-    @raises(TimeoutError)
+    @raises(IpmiTimeoutError)
     def test_send_and_receive_raw_timeout_without_response(self):
         mock = MagicMock()
         mock.return_value = (b'Unable to send RAW command (channel=0x0 netfn=0x6 lun=0x0 cmd=0x1)\n', 1)
