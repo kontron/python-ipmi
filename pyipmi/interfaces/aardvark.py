@@ -171,7 +171,6 @@ class Aardvark(object):
                 break
             except IpmiTimeoutError:
                 log().warning('I2C transaction timed out'),
-                pass
 
             retries += 1
 
