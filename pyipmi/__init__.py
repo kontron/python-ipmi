@@ -107,6 +107,15 @@ class Session(object):
     AUTH_TYPE_PASSWORD = 0x04
     AUTH_TYPE_OEM = 0x05
 
+    _interface = None
+    _auth_type = None
+    _auth_username = None
+    _auth_password = None
+    _rmcp_host = None
+    _rmcp_port = None
+    _serial_port = None
+    _serial_baudrate = None
+
     def __init__(self):
         self.set_auth_type(self.AUTH_TYPE_NONE)
         self.established = False
@@ -124,12 +133,40 @@ class Session(object):
         self._rmcp_host = host
         self._rmcp_port = port
 
+    @property
+    def rmcp_host(self):
+        return self._rmcp_host
+
+    @property
+    def rmcp_port(self):
+        return self._rmcp_port
+
     def set_session_type_serial(self, port, baudrate):
         self._serial_port = port
         self._serial_baudrate = baudrate
 
+    @property
+    def serial_port(self):
+        return self._serial_port
+
+    @property
+    def serial_baudrate(self):
+        return self._serial_baudrate
+
     def set_auth_type(self, auth_type):
-        self.auth_type = auth_type
+        self._auth_type = auth_type
+
+    @property
+    def auth_type(self):
+        return self._auth_type
+
+    @property
+    def auth_username(self):
+        return self._auth_username
+
+    @property
+    def auth_password(self):
+        return self._auth_password
 
     def set_auth_type_user(self, username, password):
         self.set_auth_type(self.AUTH_TYPE_PASSWORD)

@@ -64,13 +64,13 @@ class Ipmitool(object):
         # for now this uses impitool..
         cmd = self.IPMITOOL_PATH
         cmd += (' -I %s' % self._interface_type)
-        cmd += (' -H %s' % self._session._rmcp_host)
-        cmd += (' -p %s' % self._session._rmcp_port)
+        cmd += (' -H %s' % self._session.rmcp_host)
+        cmd += (' -p %s' % self._session.rmcp_port)
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += (' -A NONE')
         elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
-            cmd += (' -U "%s"' % self._session._auth_username)
-            cmd += (' -P "%s"' % self._session._auth_password)
+            cmd += (' -U "%s"' % self._session.auth_username)
+            cmd += (' -P "%s"' % self._session.auth_password)
         cmd += (' session info all')
 
         output, rc = self._run_ipmitool(cmd)
@@ -175,14 +175,14 @@ class Ipmitool(object):
 
         cmd = self.IPMITOOL_PATH
         cmd += (' -I %s' % self._interface_type)
-        cmd += (' -H %s' % self._session._rmcp_host)
-        cmd += (' -p %s' % self._session._rmcp_port)
+        cmd += (' -H %s' % self._session.rmcp_host)
+        cmd += (' -p %s' % self._session.rmcp_port)
 
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += ' -P ""'
         elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
-            cmd += (' -U "%s"' % self._session._auth_username)
-            cmd += (' -P "%s"' % self._session._auth_password)
+            cmd += (' -U "%s"' % self._session.auth_username)
+            cmd += (' -P "%s"' % self._session.auth_password)
         else:
             raise RuntimeError('Session type %d not supported' %
                                self._session.auth_type)
@@ -201,8 +201,8 @@ class Ipmitool(object):
             .format(
                 path=self.IPMITOOL_PATH,
                 interface=self._interface_type,
-                port=self._session._serial_port,
-                baud=self._session._serial_baudrate
+                port=self._session.serial_port,
+                baud=self._session.serial_baudrate
             )
 
         cmd += self._build_ipmitool_target(target)
