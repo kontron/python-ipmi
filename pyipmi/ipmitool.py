@@ -71,12 +71,12 @@ Additional Device Support:
             ('CHASSIS', 'Chassis Device')
     )
     for n, s in functions:
-        if id.supports_function(n):
+        if device_id.supports_function(n):
             print('  %s' % s)
 
-    if id.aux is not None:
-        print('Aux Firmware Rev Info:  [%02x %02x %02x %02x]' % (
-                id.aux[0], id.aux[1], id.aux[2], id.aux[3]))
+    if device_id.aux is not None:
+        print('Aux Firmware Rev Info:  [{:s}]'.format(
+            ' '.join('%02x' % d for d in device_id.aux )))
 
 
 def cmd_sel_clear(ipmi, args):
