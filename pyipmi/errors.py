@@ -12,9 +12,9 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-from pyipmi.msgs.constants import cc_err_desc
+from .msgs.constants import COMPLETION_CODE_DESCR
 
 
 class DecodingError(Exception):
@@ -27,7 +27,7 @@ class EncodingError(Exception):
     pass
 
 
-class TimeoutError(Exception):
+class IpmiTimeoutError(Exception):
     """Timeout occurred."""
     pass
 
@@ -36,12 +36,18 @@ class CompletionCodeError(Exception):
     """IPMI completion code not OK."""
     def __init__(self, cc, cmd_id=None):
         self.cc = cc
+        self.cc_desc = self.find_cc_desc(cc)
 
     def __str__(self):
-        descr = 'unknown'
-        if self.cc in cc_err_desc.keys():
-            descr = cc_err_desc[self.cc]
-        return "%s cc=0x%02x (%s)" % (self.__class__.__name__, self.cc, descr)
+        return "%s cc=0x%02x desc=%s" \
+            % (self.__class__.__name__, self.cc, self.cc_desc)
+
+    @staticmethod
+    def find_cc_desc(error_cc):
+        for cc in COMPLETION_CODE_DESCR:
+            if error_cc == cc[0]:
+                return cc[1]
+        return "Unknown error description"
 
 
 class NotSupportedError(Exception):

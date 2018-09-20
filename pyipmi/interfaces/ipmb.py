@@ -12,14 +12,14 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 import array
 
-from pyipmi.logger import log
-from pyipmi.msgs import create_message, create_request_by_name, \
+from ..logger import log
+from ..msgs import create_message, create_request_by_name, \
         encode_message, decode_message, constants
-from pyipmi.utils import check_completion_code
+from ..utils import check_completion_code
 
 def checksum(data):
     csum = 0
@@ -27,12 +27,14 @@ def checksum(data):
         csum += b
     return -csum % 256
 
+
 class IpmbHeader(object):
     def __init__(self):
         self.rs_sa = None
         self.rs_lun = None
         self.rq_sa = None
         self.rq_lun = None
+        self.rq_seq = None
         self.netfn = None
         self.cmd_id = None
 
@@ -46,6 +48,7 @@ class IpmbHeader(object):
         data.append(self.cmd_id)
         return data
 
+
 def encode_ipmb_msg(header, data):
     if type(data) == str:
         data =  [ord(c) for c in data]
@@ -53,6 +56,7 @@ def encode_ipmb_msg(header, data):
     msg.extend(data)
     msg.append(checksum(msg[3:]))
     return msg.tostring()
+
 
 def encode_send_message(payload, rq_sa, rs_sa, channel, seq, tracking=1):
         req = create_request_by_name('SendMessage')

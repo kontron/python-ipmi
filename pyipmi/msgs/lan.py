@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -12,24 +13,18 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-import array
-
-import constants
+from . import constants
 from . import register_message_class
 from . import Message
 from . import ByteArray
 from . import UnsignedInt
-from . import UnsignedIntMask
-from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
-from . import Conditional
 from . import Optional
 from . import RemainingBytes
 
-from pyipmi.utils import ByteBuffer
 
 @register_message_class
 class SetLanConfigurationParametersReq(Message):
@@ -37,9 +32,8 @@ class SetLanConfigurationParametersReq(Message):
     __netfn__ = constants.NETFN_TRANSPORT
     __fields__ = (
             Bitfield('command', 1,
-                Bitfield.Bit('channel_number', 4, 0),
-                Bitfield.ReservedBit(4, 0),
-            ),
+                     Bitfield.Bit('channel_number', 4, 0),
+                     Bitfield.ReservedBit(4, 0),),
             UnsignedInt('parameter_selector', 1),
             RemainingBytes('data'),
     )
@@ -61,10 +55,9 @@ class GetLanConfigurationParametersReq(Message):
     __netfn__ = constants.NETFN_TRANSPORT
     __fields__ = (
             Bitfield('command', 1,
-                Bitfield.Bit('channel_number', 4),
-                Bitfield.ReservedBit(3, 0),
-                Bitfield.Bit('get_parameter_revision_only', 1, 0),
-            ),
+                     Bitfield.Bit('channel_number', 4),
+                     Bitfield.ReservedBit(3, 0),
+                     Bitfield.Bit('get_parameter_revision_only', 1, 0),),
             UnsignedInt('parameter_selector', 1, 0),
             UnsignedInt('set_selector', 1, 0),
             UnsignedInt('block_selector', 1, 0),
@@ -80,4 +73,3 @@ class GetLanConfigurationParametersRsp(Message):
             UnsignedInt('parameter_revision', 1, 0),
             RemainingBytes('data'),
     )
-

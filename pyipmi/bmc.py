@@ -12,13 +12,13 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-from pyipmi.msgs import create_request_by_name
-from pyipmi.errors import DecodingError, CompletionCodeError
-from pyipmi.utils import check_completion_code
-from pyipmi.state import State
-from pyipmi.fields import VersionField
+from .msgs import create_request_by_name
+from .utils import check_completion_code
+from .state import State
+from .fields import VersionField
+
 
 class Bmc(object):
     def get_device_id(self):
@@ -30,10 +30,11 @@ class Bmc(object):
     def warm_reset(self):
         self.send_message_with_name('WarmReset')
 
-    def i2c_write_read(self, type, id, channel, address, count, data=None):
+    def i2c_write_read(self, bus_type, bus_id, channel, address, count,
+                       data=None):
         req = create_request_by_name('MasterWriteRead')
-        req.bus_id.type = type
-        req.bus_id.id = id
+        req.bus_id.type = bus_type
+        req.bus_id.id = bus_id
         req.bus_id.channel = channel
         req.bus_id.slave_address = address
         req.read_count = count
@@ -43,11 +44,12 @@ class Bmc(object):
         check_completion_code(rsp.completion_code)
         return rsp.data
 
-    def i2c_write(self, type, id, channel, address, data):
-        self.i2c_write_read(type, id, channel, address, 0, data)
+    def i2c_write(self, bus_type, bus_id, channel, address, data):
+        self.i2c_write_read(bus_type, bus_id, channel, address, 0, data)
 
-    def i2c_read(self, type, id, channel, address, count):
-        return self.i2c_write_read(type, id, channel, address, count, None)
+    def i2c_read(self, bus_type, bus_id, channel, address, count):
+        return self.i2c_write_read(bus_type, bus_id, channel,
+                                   address, count, None)
 
     def set_watchdog_timer(self, config):
         req = create_request_by_name('SetWatchdogTimer')
@@ -55,10 +57,8 @@ class Bmc(object):
         req.timer_use.dont_stop = config.dont_stop and 1 or 0
         req.timer_use.dont_log = config.dont_log and 1 or 0
 
-        req.timer_actions.pre_timeout_interrupt = \
-                config.pre_timeout_interrupt
-        req.timer_actions.timeout_action = \
-                config.timeout_action
+        req.timer_actions.pre_timeout_interrupt = config.pre_timeout_interrupt
+        req.timer_actions.timeout_action = config.timeout_action
 
         req.pre_timeout_interval = config.pre_timeout_interval
         req.timer_use_expiration_flags = config.timer_use_expiration_flags
@@ -86,17 +86,17 @@ class Watchdog(State):
     TIMEOUT_ACTION_POWER_CYCLE = 3
 
     __properties__ = [
-            # (propery, description)
-            ('timer_use', ''),
-            ('dont_stop', ''),
-            ('is_running', ''),
-            ('dont_log', ''),
-            ('pre_timeout_interrupt', ''),
-            ('timeout_action', ''),
-            ('pre_timeout_interval', ''),
-            ('timer_use_expiration_flags', ''),
-            ('initial_countdown', ''),
-            ('present_countdown', ''),
+        # (propery, description)
+        ('timer_use', ''),
+        ('dont_stop', ''),
+        ('is_running', ''),
+        ('dont_log', ''),
+        ('pre_timeout_interrupt', ''),
+        ('timeout_action', ''),
+        ('pre_timeout_interval', ''),
+        ('timer_use_expiration_flags', ''),
+        ('initial_countdown', ''),
+        ('present_countdown', ''),
     ]
 
     def _from_response(self, rsp):
@@ -114,14 +114,14 @@ class Watchdog(State):
 class DeviceId(State):
 
     def __str__(self):
-        s = 'Device ID: %d' % self.device_id
-        s+= ' revision: %d' % self.revision
-        s+= ' available: %d' % self.available
-        s+= ' fw version: %s' % (self.fw_revision)
-        s+= ' ipmi: %s' % self.ipmi_version
-        s+= ' manufacturer: %d' % self.manufacturer_id
-        s+= ' product: %d' % self.product_id
-        return s
+        string = 'Device ID: %d' % self.device_id
+        string += ' revision: %d' % self.revision
+        string += ' available: %d' % self.available
+        string += ' fw version: %s' % (self.fw_revision)
+        string += ' ipmi: %s' % self.ipmi_version
+        string += ' manufacturer: %d' % self.manufacturer_id
+        string += ' product: %d' % self.product_id
+        return string
 
     def supports_function(self, name):
         """Returns if a function is supported.
@@ -139,17 +139,23 @@ class DeviceId(State):
         self.available = bool(rsp.firmware_revision.device_available)
 
         self.fw_revision = VersionField(
-                (rsp.firmware_revision.major, rsp.firmware_revision.minor))
+            (rsp.firmware_revision.major, rsp.firmware_revision.minor))
 
         self.ipmi_version = VersionField(
-                (rsp.ipmi_version & 0xf, (rsp.ipmi_version >> 4) & 0xf))
+            (rsp.ipmi_version & 0xf, (rsp.ipmi_version >> 4) & 0xf))
 
         self.manufacturer_id = rsp.manufacturer_id
         self.product_id = rsp.product_id
 
         self.supported_functions = []
-        functions = ('sensor', 'sdr_repository', 'sel', 'fru_inventory',
-            'ipmb_event_receiver', 'ipmb_event_generator', 'bridge', 'chassis')
+        functions = ('sensor',
+                     'sdr_repository',
+                     'sel',
+                     'fru_inventory',
+                     'ipmb_event_receiver',
+                     'ipmb_event_generator',
+                     'bridge',
+                     'chassis')
 
         for function in functions:
             if hasattr(rsp.additional_support, function):

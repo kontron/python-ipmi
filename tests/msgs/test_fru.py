@@ -23,13 +23,13 @@ def test_writefrudatareq_decode_valid_req():
     decode_message(m, '\x01\x02\x03\x04\x05')
     eq_(m.fru_id, 1)
     eq_(m.offset, 0x302)
-    eq_(m.data, array('B', '\x04\x05'))
+    eq_(m.data, array('B', b'\x04\x05'))
 
 def test_writefrudatareq_encode_valid_req():
     m = pyipmi.msgs.fru.WriteFruDataReq()
     m.fru_id = 1
     m.offset = 0x302
-    m.data = array('B', '\x04\x05')
+    m.data = array('B', b'\x04\x05')
     data = encode_message(m)
     eq_(data, '\x01\x02\x03\x04\x05')
 
@@ -83,7 +83,7 @@ def test_readfrudatarsp_decode_valid_rsp():
     decode_message(m, '\x00\x05\x01\x02\x03\x04\x05')
     eq_(m.completion_code, 0)
     eq_(m.count, 5)
-    eq_(m.data, array('B', '\x01\x02\x03\x04\x05'))
+    eq_(m.data, array('B', b'\x01\x02\x03\x04\x05'))
 
 def test_readfrudatarsp_decode_rsp_with_cc():
     m = pyipmi.msgs.fru.ReadFruDataRsp()
@@ -99,7 +99,7 @@ def test_readfrudatarsp_encode_valid_rsp():
     m = pyipmi.msgs.fru.ReadFruDataRsp()
     m.completion_code = 0
     m.count = 5
-    m.data = array('B', '\x01\x02\x03\x04\x05')
+    m.data = array('B', b'\x01\x02\x03\x04\x05')
     data = encode_message(m)
     eq_(data, '\x00\x05\x01\x02\x03\x04\x05')
 
@@ -108,5 +108,5 @@ def test_readfrudatarsp_encode_invalid_rsp():
     m = pyipmi.msgs.fru.ReadFruDataRsp()
     m.completion_code = 0
     m.count = 1
-    m.data = array('B', '\x01\x02')
+    m.data = array('B', b'\x01\x02')
     encode_message(m)

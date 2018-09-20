@@ -1,14 +1,11 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
-import nose
 import array
 
-from mock import MagicMock
-from nose.tools import eq_, raises
+from nose.tools import eq_
 
-from pyipmi import Session
-from pyipmi.errors import TimeoutError
+from pyipmi.session import Session
 from pyipmi.interfaces.rmcp import RmcpMsg, AsfMsg, IpmiMsg
 
 

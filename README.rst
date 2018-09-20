@@ -1,7 +1,7 @@
 Pure Python IPMI Library
 ========================
 
-|BuildStatus| |PyPiVersion| |Coveralls| |CodeClimate|
+|BuildStatus| |PyPiVersion| |Coveralls| |CodeClimate| |Codacy|
 
 Features
 --------
@@ -14,24 +14,50 @@ Requirements
 You need an either the `ipmitool`_ for accessing RCMP interface or a
 `Total Phase`_ Aardvark for communication over the IPMB interface.
 
+Installation
+------------
+
+Using ``pip``
+'''''''''''''
+
+The recommended installation method is using
+`pip <http://pip-installer.org>`__::
+
+    pip install python-ipmi
+
+Manual installation
+'''''''''''''''''''
+
+Download the source distribution package for the library. Extract the the package to
+a temporary location and install::
+
+    python setup.py install
+
 Example
 -------
 
 Below is an example that shows how to setup the interface and the connection
-using the `ipmitool`_ as backend.
+using the `ipmitool`_ as backend with both network and serial interfaces.
+
+Example with lan interface:
 
 .. code:: python
 
     import pyipmi
     import pyipmi.interfaces
 
-    # Supported interface_types for ipmitool are: lan and lanplus
+    # Supported interface_types for ipmitool are: 'lan' , 'lanplus', and 'serial-terminal'
     interface = pyipmi.interfaces.create_interface('ipmitool', interface_type='lan')
 
     connection = pyipmi.create_connection(interface)
 
+<<<<<<< HEAD
     connection.target = pyipmi.Target(0x82)
     connection.target.set_routing([(0x81,0x20,0),(0x20,0x82,7)])
+=======
+    connection.target = pyipmi.Target(0xb2)
+    connection.target.set_routing([(0x20,0)])
+>>>>>>> master
 
     connection.session.set_session_type_rmcp('10.0.0.1', port=623)
     connection.session.set_auth_type_user('admin', 'admin')
@@ -45,10 +71,37 @@ ipmitool command:
 
     ipmitool -I lan -H 10.0.0.1 -p 623 -U "admin" -P "admin" -t 0x82 -b 0 -l 0 raw 0x06 0x01
 
+
+Example with serial interface:
+
+.. code:: python
+
+    import pyipmi
+    import pyipmi.interfaces
+
+    interface = pyipmi.interfaces.create_interface('ipmitool', interface_type='serial-terminal')
+
+    connection = pyipmi.create_connection(interface)
+
+    connection.target = pyipmi.Target(0xb2)
+
+    # set_session_type_serial(port, baudrate)
+    connection.session.set_session_type_serial('/dev/tty2', 115200)
+    connection.session.establish()
+
+    connection.get_device_id()
+
+ipmitool command:
+
+.. code:: shell
+
+    ipmitool -I serial-terminal -D /dev/tty2:115200 -t 0xb2 -l 0 raw 0x06 0x01
+
 Compatibility
 -------------
 
-Currently only python 2.7 is supported.
+Python 2.7 is currently  supported.
+Python 3.x support is in beta
 
 Contributing
 ------------
@@ -88,3 +141,6 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
                  :target: http://codeclimate.com/github/kontron/python-ipmi
 .. |Coveralls|   image:: https://coveralls.io/repos/github/kontron/python-ipmi/badge.svg?branch=master
                  :target: https://coveralls.io/github/kontron/python-ipmi?branch=master
+.. |Codacy|      image:: https://api.codacy.com/project/badge/Grade/bdda77c6596b4e9b8508d95805ba34c5
+                 :alt: Codacy Badge
+                 :target: https://app.codacy.com/app/hthiery/python-ipmi?utm_source=github.com&utm_medium=referral&utm_content=kontron/python-ipmi&utm_campaign=Badge_Grade_Dashboard

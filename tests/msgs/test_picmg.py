@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-from array import array
-
-from nose.tools import eq_, raises
+from nose.tools import eq_
 
 import pyipmi.msgs.bmc
 import pyipmi.msgs.sel
@@ -10,7 +8,6 @@ import pyipmi.msgs.event
 import pyipmi.msgs.hpm
 import pyipmi.msgs.sensor
 
-from pyipmi.errors import DecodingError, EncodingError
 from pyipmi.msgs import encode_message
 from pyipmi.msgs import decode_message
 

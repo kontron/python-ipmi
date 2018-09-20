@@ -12,20 +12,16 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-import math
-import errors
-import array
-import time
-from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
-from pyipmi.utils import check_completion_code, ByteBuffer
-from pyipmi.msgs import create_request_by_name
-from pyipmi.msgs import constants
+from __future__ import absolute_import
 
-from pyipmi.helper import get_sdr_data_helper, get_sdr_chunk_helper
+from .utils import check_completion_code
+from .msgs import create_request_by_name
 
-import sdr
+from .helper import get_sdr_data_helper, get_sdr_chunk_helper
+
+from . import sdr
 
 
 # THRESHOLD BASED STATES
@@ -101,7 +97,7 @@ SENSOR_TYPE_OEM_KONTRON_RESET = 0xcf
 class Sensor(object):
     def reserve_device_sdr_repository(self):
         rsp = self.send_message_with_name('ReserveDeviceSdrRepository')
-        return  rsp.reservation_id
+        return rsp.reservation_id
 
     def _get_device_sdr_chunk(self, reservation_id, record_id, offset, length):
         req = create_request_by_name('GetDeviceSdr')
@@ -110,8 +106,8 @@ class Sensor(object):
         req.offset = offset
         req.bytes_to_read = length
 
-        rsp = get_sdr_chunk_helper(self.send_message, req, \
-                self.reserve_device_sdr_repository)
+        rsp = get_sdr_chunk_helper(self.send_message, req,
+                                   self.reserve_device_sdr_repository)
 
         return (rsp.next_record_id, rsp.record_data)
 
@@ -123,8 +119,10 @@ class Sensor(object):
         `reservation_id=None` can be set. if None the reservation ID will
         be determined.
         """
-        (next_id, record_data) = get_sdr_data_helper(self.reserve_device_sdr_repository,
-                self._get_device_sdr_chunk, record_id, reservation_id)
+        (next_id, record_data) = \
+            get_sdr_data_helper(self.reserve_device_sdr_repository,
+                                self._get_device_sdr_chunk,
+                                record_id, reservation_id)
 
         return sdr.SdrCommon.from_data(record_data, next_id)
 
@@ -136,11 +134,11 @@ class Sensor(object):
         record_id = 0
 
         while True:
-            s = self.get_device_sdr(record_id, reservation_id)
-            yield s
-            if s.next_id == 0xffff:
+            record = self.get_device_sdr(record_id, reservation_id)
+            yield record
+            if record.next_id == 0xffff:
                 break
-            record_id = s.next_id
+            record_id = record.next_id
 
     def get_device_sdr_list(self, reservation_id=None):
         """Returns the complete SDR list.
@@ -151,7 +149,7 @@ class Sensor(object):
         """Rearm sensor events for the given sensor number.
         """
         self.send_message_with_name('RearmSensorEvents',
-                sensor_number=sensor_number)
+                                    sensor_number=sensor_number)
 
     def get_sensor_reading(self, sensor_number, lun=0):
         """Returns the sensor reading at the assertion states for the given
@@ -162,7 +160,8 @@ class Sensor(object):
         Returns a tuple with `raw reading`and `assertion states`.
         """
         rsp = self.send_message_with_name('GetSensorReading',
-                sensor_number=sensor_number, lun=lun)
+                                          sensor_number=sensor_number,
+                                          lun=lun)
 
         reading = rsp.sensor_reading
         if rsp.config.initial_update_in_progress:
@@ -175,8 +174,9 @@ class Sensor(object):
                 states |= (rsp.states2 << 8)
         return (reading, states)
 
-    def set_sensor_thresholds(self, sensor_number, lun=0, unr=None, ucr=None,
-                unc=None, lnc=None, lcr=None, lnr=None):
+    def set_sensor_thresholds(self, sensor_number, lun=0,
+                              unr=None, ucr=None, unc=None,
+                              lnc=None, lcr=None, lnr=None):
         """Set the sensor thresholds that are not 'None'
 
         `sensor_number`
@@ -193,22 +193,23 @@ class Sensor(object):
 
         thresholds = dict(unr=unr, ucr=ucr, unc=unc, lnc=lnc, lcr=lcr, lnr=lnr)
 
-        for k, v in thresholds.iteritems():
-            if v is not None:
-                setattr(req.set_mask, k, 1)
-                setattr(req.threshold, k, v)
+        for key, value in thresholds.items():
+            if value is not None:
+                setattr(req.set_mask, key, 1)
+                setattr(req.threshold, key, value)
 
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
     def get_sensor_thresholds(self, sensor_number, lun=0):
         rsp = self.send_message_with_name('GetSensorThresholds',
-                sensor_number=sensor_number, lun=lun)
+                                          sensor_number=sensor_number,
+                                          lun=lun)
 
         thresholds = {}
         threshold_list = ('unr', 'ucr', 'unc', 'lnc', 'lcr', 'lnr')
-        for t in threshold_list:
-            if hasattr(rsp.readable_mask, t):
-                if getattr(rsp.readable_mask, t):
-                    thresholds[t] = getattr(rsp.threshold, t)
+        for threshold in threshold_list:
+            if hasattr(rsp.readable_mask, threshold):
+                if getattr(rsp.readable_mask, threshold):
+                    thresholds[threshold] = getattr(rsp.threshold, threshold)
         return thresholds

@@ -3,19 +3,18 @@ import struct
 import hashlib
 import random
 import threading
-import sys
 import Queue
 
-from pyipmi import Target
-from pyipmi.session import Session
-from pyipmi.msgs import create_message, create_request_by_name, \
-        encode_message, decode_message, device_messaging, constants
-from pyipmi.messaging import ChannelAuthenticationCapabilities
-from pyipmi.errors import DecodingError, NotSupportedError, CompletionCodeError
-from pyipmi.logger import log
-from pyipmi.interfaces.ipmb import IpmbHeader, checksum, encode_ipmb_msg, \
+from .. import Target
+from ..session import Session
+from ..msgs import create_message, create_request_by_name, \
+        encode_message, decode_message, constants
+from ..messaging import ChannelAuthenticationCapabilities
+from ..errors import DecodingError, NotSupportedError, CompletionCodeError
+from ..logger import log
+from ..interfaces.ipmb import IpmbHeader, checksum, encode_ipmb_msg, \
         encode_bridged_message, decode_bridged_message, rx_filter
-from pyipmi.utils import check_completion_code
+from ..utils import check_completion_code
 
 
 CLASS_NORMAL_MSG = 0x00

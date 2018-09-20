@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 
-from array import array
-
 from nose.tools import eq_
 
 import pyipmi.msgs.chassis
 
-from pyipmi.errors import DecodingError, EncodingError
 from pyipmi.msgs import encode_message, decode_message
 
 def test_getchassisstatus_encode_valid_req():

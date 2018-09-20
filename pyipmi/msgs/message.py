@@ -12,14 +12,18 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
+
+
+from __future__ import absolute_import
 
 from array import array
 
-import constants
-from pyipmi.utils import ByteBuffer
-from pyipmi.errors import CompletionCodeError, EncodingError, DecodingError, \
+from . import constants
+from ..utils import ByteBuffer,  py3enc_unic_bytes_fix
+from ..errors import CompletionCodeError, EncodingError, DecodingError, \
         DescriptionError
+
 
 class BaseField(object):
     def __init__(self, name, length, default=None):
@@ -31,7 +35,7 @@ class BaseField(object):
         raise NotImplementedError()
 
     def encode(self, obj, data):
-        if getattr(obj, self.name) == None:
+        if getattr(obj, self.name) is None:
             raise EncodingError('Field "%s" not set.' % self.name)
         raise NotImplementedError()
 
@@ -43,6 +47,7 @@ class ByteArray(BaseField):
     def __init__(self, name, length, default=None):
         BaseField.__init__(self, name, length)
         if default is not None:
+            default = py3enc_unic_bytes_fix(default)
             self.default = array('B', default)
         else:
             self.default = None
@@ -54,14 +59,13 @@ class ByteArray(BaseField):
         a = getattr(obj, self.name)
         if len(a) != self._length(obj):
             raise EncodingError('Array must be exaclty %d bytes long '
-                    '(but is %d long)' % (self._length(obj), len(a)))
-        for i in xrange(self._length(obj)):
+                                '(but is %d long)' % (self._length(obj), len(a)))
+        for i in range(self._length(obj)):
             data.push_unsigned_int(a[i], 1)
 
     def decode(self, obj, data):
-        a = getattr(obj, self.name)
         bytes = []
-        for i in xrange(self._length(obj)):
+        for i in range(self._length(obj)):
             bytes.append(data.pop_unsigned_int(1))
         setattr(obj, self.name, array('B', bytes))
 
@@ -108,9 +112,7 @@ class UnsignedInt(BaseField):
 class String(BaseField):
     def encode(self, obj, data):
         value = getattr(obj, self.name)
-        data.fromstring(value)
-        # fill with 0
-        data.push_unsigned_int(0, self.length - len(value))
+        data.push_string(value)
 
     def decode(self, obj, data):
         value = data.pop_string(self.length)
@@ -173,7 +175,7 @@ class Optional(object):
 
     def decode(self, obj, data):
         if len(data) > 0:
-            self._field.decode(obj,data)
+            self._field.decode(obj, data)
         else:
             setattr(obj, self._field.name, None)
 
@@ -181,7 +183,8 @@ class Optional(object):
         if getattr(obj, self._field.name) is not None:
             self._field.encode(obj, data)
 
-    def create(self):
+    @staticmethod
+    def create():
         return None
 
 
@@ -191,31 +194,31 @@ class RemainingBytes(BaseField):
 
     def encode(self, obj, data):
         a = getattr(obj, self.name)
-        data.push_string(a)
+        data.extend(a)
 
     def decode(self, obj, data):
         setattr(obj, self.name, array('B', data[:]))
-        del data[:]
+        del data.array[:]
 
     def create(self):
         return array('B')
 
 
 class Bitfield(BaseField):
-    class Bit:
+    class Bit(object):
         def __init__(self, name, width=1, default=None):
             self.name = name
             self._width = width
             self.default = default
 
-
     class ReservedBit(Bit):
         counter = 0
+
         def __init__(self, width, default=0):
             Bitfield.Bit.__init__(self, 'reserved_bit_%d' %
-                    Bitfield.reserved_bit_counter, width, default)
+                                  Bitfield.reserved_bit_counter,
+                                  width, default)
             Bitfield.reserved_bit_counter += 1
-
 
     class BitWrapper(object):
         def __init__(self, bits, length):
@@ -224,7 +227,7 @@ class Bitfield(BaseField):
             for bit in bits:
                 if hasattr(self, bit.name):
                     raise DescriptionError('Bit with name "%s" already added' %
-                            bit.name)
+                                           bit.name)
                 if bit.default is not None:
                     setattr(self, bit.name, bit.default)
                 else:
@@ -248,7 +251,7 @@ class Bitfield(BaseField):
                 bit_value = getattr(self, bit.name)
                 if bit_value is None:
                     bit_value = bit.default
-                if bit_value == None:
+                if bit_value is None:
                     raise EncodingError('Bitfield "%s" not set.' % bit.name)
 
                 value |= (bit_value & (2**bit._width - 1)) << bit.offset
@@ -275,17 +278,17 @@ class Bitfield(BaseField):
             offset += b._width
         if offset != 8 * self.length:
             raise DescriptionError('Bit description does not match bitfield '
-                    'length')
+                                   'length')
 
     def encode(self, obj, data):
         wrapper = getattr(obj, self.name)
         value = wrapper._value
-        for i in xrange(self.length):
+        for i in range(self.length):
             data.push_unsigned_int((value >> (8*i)) & 0xff, 1)
 
     def decode(self, obj, data):
         value = 0
-        for i in xrange(self.length):
+        for i in range(self.length):
             try:
                 value |= data.pop_unsigned_int(1) << (8*i)
             except IndexError:
@@ -295,6 +298,7 @@ class Bitfield(BaseField):
 
     def create(self):
         return Bitfield.BitWrapper(self._bits, self.length)
+
 
 class Message(object):
     RESERVED_FIELD_NAMES = ['cmdid', 'netfn', 'lun']
@@ -323,25 +327,25 @@ class Message(object):
         if args:
             self._decode(args[0])
         else:
-            for (name, value) in kwargs.iteritems():
+            for (name, value) in kwargs.items():
                 self._set_field(name, value)
 
     def _set_field(self, name, value):
         raise NotImplementedError()
         # TODO walk along the properties..
-        setattr(self, name, value)
 
     def _create_fields(self):
         for field in self.__fields__:
             if field.name in self.RESERVED_FIELD_NAMES:
                 raise DescriptionError('Field name "%s" is reserved' %
-                        field.name)
+                                       field.name)
             if hasattr(self, field.name):
                 raise DescriptionError('Field "%s" already added',
-                        field.name)
+                                       field.name)
             setattr(self, field.name, field.create())
 
     def _encode(self):
+        '''Encode the message and return a bytestring.'''
         if not hasattr(self, '__fields__'):
             return ''
 
@@ -359,12 +363,12 @@ class Message(object):
         for field in self.__fields__:
             try:
                 field.decode(self, data)
-            except CompletionCodeError, e:
+            except CompletionCodeError as e:
                 # stop decoding on completion code != 0
                 cc = e.cc
                 break
 
-        if (cc == None or cc == 0) and len(data) > 0:
+        if (cc is None or cc == 0) and len(data) > 0:
             raise DecodingError('Data has extra bytes')
 
     def _is_request(self):
@@ -378,4 +382,4 @@ class Message(object):
 
 
 encode_message = lambda m: m._encode()
-decode_message = lambda m,d: m._decode(d)
+decode_message = lambda m, d: m._decode(d)

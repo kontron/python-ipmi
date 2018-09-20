@@ -12,16 +12,15 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 import time
 import array
 
-from pyipmi.msgs import create_message, encode_message, decode_message
-from pyipmi.errors import TimeoutError
-from pyipmi.logger import log
-from pyipmi.interfaces.ipmb import IpmbHeader, checksum, encode_ipmb_msg, \
-        rx_filter
+from ..msgs import create_message, encode_message, decode_message
+from ..errors import IpmiTimeoutError
+from ..logger import log
+from ..interfaces.ipmb import IpmbHeader, checksum, rx_filter
 
 try:
     import pyaardvark
@@ -33,12 +32,12 @@ class Aardvark(object):
     NAME = 'aardvark'
 
     def __init__(self, slave_address=0x20, port=0, serial_number=None,
-            enable_i2c_pullups=True):
+                 enable_i2c_pullups=True):
         if pyaardvark is None:
             raise RuntimeError('No pyaardvark module found. You can not '
-                    'use this interface.')
+                               'use this interface.')
         self.slave_address = slave_address
-        self.timeout = 0.25 # 250 ms
+        self.timeout = 0.25
         self.max_retries = 3
         self.next_sequence_number = 0
 
@@ -73,45 +72,29 @@ class Aardvark(object):
         raw_data = []
 
         self._send_raw(header, raw_data)
-        rx_data = self._receive_raw(header)
+        self._receive_raw(header)
         return True
 
     def _inc_sequence_number(self):
         self.next_sequence_number = (self.next_sequence_number + 1) % 64
 
-#    def _rx_filter(self, header, rx_data):
-#
-#        log().debug('[%s]' % ' '.join(['%02x' % b for b in rx_data]))
-#
-#        checks = [
-#            (checksum(rx_data[0:3]), 0, 'Header checksum failed'),
-#            (checksum(rx_data[3:]), 0, 'payload checksum failed'),
-#            (rx_data[0], header.rq_sa, 'slave address mismatch'),
-#            (rx_data[1] & ~3, header.netfn << 2 | 4, 'NetFn mismatch'),
-#            (rx_data[3], header.rs_sa, 'target address mismatch'),
-#            (rx_data[1] & 3, header.rq_lun, 'request LUN mismatch'),
-#            (rx_data[4] & 3, header.rs_lun & 3, 'responder LUN mismatch'),
-#            (rx_data[4] >> 2, header.rq_seq, 'sequence number mismatch'),
-#            (rx_data[5], header.cmd_id, 'command id mismatch'),
-#        ]
-#
-#        match = True
-#
-#        for left, right, msg in checks:
-#            if left != right:
-#                log().debug('%s (%02Xh != %02Xh)' % (msg, left, right))
-#                match = False
-#
-#        return match
+    @staticmethod
+    def _encode_ipmb_msg_req(header, cmd_data):
+        data = header.encode()
+        data.extend(cmd_data)
+        data.append(checksum(data[2:]))
+
+        return data
 
     def _send_raw(self, header, raw_bytes):
 
-        tx_data = encode_ipmb_msg(header, raw_bytes)
+        cmd_data = [ord(c) for c in raw_bytes]
+        tx_data = self._encode_ipmb_msg_req(header, cmd_data)
 
         i2c_addr = header.rs_sa >> 1
         self._dev.i2c_master_write(i2c_addr, tx_data[1:])
         log().debug('I2C TX to %02Xh [%s]', i2c_addr,
-                ' '.join(['%02x' % ord(b) for b in tx_data[1:]]))
+                    ' '.join(['%02x' % b for b in tx_data]))
 
     def _receive_raw(self, header):
         start_time = time.time()
@@ -121,7 +104,7 @@ class Aardvark(object):
             timeout = self.timeout - (time.time() - start_time)
 
             if timeout <= 0 or poll_returned_no_data:
-                raise TimeoutError()
+                raise IpmiTimeoutError()
 
             ret = self._dev.poll(int(timeout * 1000))
 
@@ -132,10 +115,10 @@ class Aardvark(object):
 
             (i2c_addr, rx_data) = self._dev.i2c_slave_read()
             log().debug('I2C RX from %02Xh [%s]', i2c_addr << 1,
-                    ' '.join(['%02x' % ord(c) for c in rx_data]))
+                        ' '.join(['%02x' % ord(c) for c in rx_data]))
 
             rx_data = array.array('B', rx_data)
-            rq_sa = array.array('B', [i2c_addr << 1,])
+            rq_sa = array.array('B', [i2c_addr << 1, ])
 
             rsp_received = rx_filter(header, rq_sa + rx_data)
 
@@ -160,20 +143,19 @@ class Aardvark(object):
                 self._send_raw(header, raw_bytes)
                 rx_data = self._receive_raw(header)
                 break
-            except TimeoutError:
+            except IpmiTimeoutError:
                 log().warning('I2C transaction timed out'),
-                pass
 
             retries += 1
 
         else:
-            raise TimeoutError()
+            raise IpmiTimeoutError()
 
         return rx_data.tostring()[5:-1]
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
         return self._send_and_receive(target, lun, netfn, ord(raw_bytes[0]),
-                raw_bytes[1:])
+                                      raw_bytes[1:])
 
     def send_and_receive(self, msg):
         """Sends an IPMI request message and waits for its response.
@@ -184,7 +166,7 @@ class Aardvark(object):
         log().debug('IPMI Request [%s]', msg)
 
         rx_data = self._send_and_receive(msg.target, msg.lun, msg.netfn,
-                msg.cmdid, encode_message(msg))
+                                         msg.cmdid, encode_message(msg))
         msg = create_message(msg.cmdid, msg.netfn + 1)
         decode_message(msg, rx_data)
 

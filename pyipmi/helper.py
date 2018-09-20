@@ -12,18 +12,16 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-import array
 import time
 
-from pyipmi.errors import DecodingError, CompletionCodeError, RetryError
-from pyipmi.utils import check_completion_code, ByteBuffer
-from pyipmi.msgs import constants
+from .errors import CompletionCodeError, RetryError
+from .utils import check_completion_code, ByteBuffer
+from .msgs import constants
 
-import sdr
 
-def get_sdr_chunk_helper(send_fn, req, reserv_fn, retry=5):
+def get_sdr_chunk_helper(send_fn, req, reserve_fn, retry=5):
 
     while True:
         retry -= 1
@@ -46,6 +44,7 @@ def get_sdr_chunk_helper(send_fn, req, reserv_fn, retry=5):
             check_completion_code(rsp.completion_code)
 
     return rsp
+
 
 def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
     """Helper function to retrieve the sdr data using the specified
@@ -84,7 +83,7 @@ def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
 
         try:
             (next_id, data) = get_fn(reservation_id, record_id, offset, length)
-        except CompletionCodeError, e:
+        except CompletionCodeError as e:
             if e.cc == constants.CC_CANT_RET_NUM_REQ_BYTES:
                 # reduce max lenght
                 max_req_len -= 4
@@ -107,6 +106,7 @@ GET_ERASE_STATUS = 0x00
 ERASURE_IN_PROGRESS = 0x0
 ERASURE_COMPLETED = 0x1
 
+
 def _clear_repository(reserve_fn, clear_fn, ctrl, retry, reservation):
     while True:
         retry -= 1
@@ -115,7 +115,7 @@ def _clear_repository(reserve_fn, clear_fn, ctrl, retry, reservation):
 
         try:
             in_progress = clear_fn(ctrl, reservation)
-        except CompletionCodeError, e:
+        except CompletionCodeError as e:
             if e.cc == constants.CC_RES_CANCELED:
                 time.sleep(0.2)
                 reservation = reserve_fn()
@@ -130,6 +130,7 @@ def _clear_repository(reserve_fn, clear_fn, ctrl, retry, reservation):
         break
     return reservation
 
+
 def clear_repository_helper(reserve_fn, clear_fn, retry=5, reservation=None):
     """Helper function to start repository erasure and wait until finish.
     This helper is used by clear_sel and clear_sdr_repository.
@@ -140,11 +141,11 @@ def clear_repository_helper(reserve_fn, clear_fn, retry=5, reservation=None):
 
     # start erasure
     reservation = _clear_repository(reserve_fn, clear_fn,
-            INITIATE_ERASE, retry, reservation)
+                                    INITIATE_ERASE, retry, reservation)
 
     # give some time to clear
     time.sleep(0.5)
 
     # wait until finish
     reservation = _clear_repository(reserve_fn, clear_fn,
-            GET_ERASE_STATUS, retry, reservation)
+                                    GET_ERASE_STATUS, retry, reservation)

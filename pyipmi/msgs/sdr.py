@@ -12,9 +12,10 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
+from __future__ import absolute_import
 
-import constants
+from . import constants
 from . import register_message_class
 from . import Message
 from . import ByteArray
@@ -22,10 +23,8 @@ from . import UnsignedInt
 from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
-from . import Conditional
-from . import Optional
 from . import RemainingBytes
-from . import VariableByteArray
+
 
 @register_message_class
 class GetSdrRepositoryInfoReq(Message):
@@ -45,14 +44,13 @@ class GetSdrRepositoryInfoRsp(Message):
             Timestamp('most_recent_addition'),
             Timestamp('most_recent_erase'),
             Bitfield('support', 1,
-                Bitfield.Bit('get_allocation_info', 1),
-                Bitfield.Bit('reserve', 1),
-                Bitfield.Bit('partial_add', 1),
-                Bitfield.Bit('delete', 1),
-                Bitfield.ReservedBit(1, 0),
-                Bitfield.Bit('update_type', 2),
-                Bitfield.Bit('overflow_flag', 1)
-            ),
+                     Bitfield.Bit('get_allocation_info', 1),
+                     Bitfield.Bit('reserve', 1),
+                     Bitfield.Bit('partial_add', 1),
+                     Bitfield.Bit('delete', 1),
+                     Bitfield.ReservedBit(1, 0),
+                     Bitfield.Bit('update_type', 2),
+                     Bitfield.Bit('overflow_flag', 1)),
     )
 
 
@@ -144,9 +142,8 @@ class PartialAddSdrReq(Message):
             UnsignedInt('record_id', 2),
             UnsignedInt('offset', 1),
             Bitfield('status', 1,
-                Bitfield.Bit('in_progress', 4),
-                Bitfield.ReservedBit(4, 0),
-            ),
+                     Bitfield.Bit('in_progress', 4),
+                     Bitfield.ReservedBit(4, 0),),
             RemainingBytes('record_data'),
     )
 
@@ -199,9 +196,8 @@ class ClearSdrRepositoryRsp(Message):
     __fields__ = (
             CompletionCode(),
             Bitfield('status', 1,
-                Bitfield.Bit('erase_in_progress', 4),
-                Bitfield.ReservedBit(4, 0),
-            ),
+                     Bitfield.Bit('erase_in_progress', 4),
+                     Bitfield.ReservedBit(4, 0),),
     )
 
 
@@ -221,8 +217,6 @@ class RunInitializationAgentRsp(Message):
     __fields__ = (
             CompletionCode(),
             Bitfield('status', 1,
-                Bitfield.Bit('initialization_completed', 1),
-                Bitfield.ReservedBit(7, 0),
-            ),
+                     Bitfield.Bit('initialization_completed', 1),
+                     Bitfield.ReservedBit(7, 0),),
     )
-

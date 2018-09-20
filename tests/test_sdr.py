@@ -21,7 +21,7 @@ def test_sdrcommon_object():
 @raises(DecodingError)
 def test_sdrfullsensorrecord_invalid_length():
     data = (0, 0, 0, 0, 0)
-    sdr = SdrFullSensorRecord(data)
+    SdrFullSensorRecord(data)
 
 @raises(DecodingError)
 def test_sdrfullsensorrecord_linearization_key_error():
@@ -106,4 +106,4 @@ def test_sdrfrudevicelocator():
 @raises(DecodingError)
 def test_sdrmanagementcontollerdevicelocator():
     data = (0, 0, 0, 0, 0)
-    sdr = SdrManagementContollerDeviceLocator(data)
+    sdr = SdrManagementControllerDeviceLocator(data)

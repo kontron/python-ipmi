@@ -13,10 +13,6 @@ def test_DecodingError():
 def test_EncodingError():
     raise EncodingError()
 
-@raises(TimeoutError)
-def test_TimeoutError():
-    raise TimeoutError()
-
 @raises(CompletionCodeError)
 def test_CompletionCodeError():
     raise CompletionCodeError(cc=0x09)

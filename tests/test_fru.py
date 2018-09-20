@@ -19,4 +19,4 @@ def test_frudata_object():
     eq_(fruField.data[3], 3)
 
 def test_inventorycommonheader_object():
-    h = InventoryCommonHeader((0, 1, 2, 3, 4, 5, 6, 235))
+    InventoryCommonHeader((0, 1, 2, 3, 4, 5, 6, 235))

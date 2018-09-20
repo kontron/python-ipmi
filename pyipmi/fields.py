@@ -1,9 +1,11 @@
 #!/usr/bin/env python
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
+
 
 import array
 
-from pyipmi.errors import DecodingError
+from .errors import DecodingError
+
 
 class VersionField(object):
     """This class represent the Version fields defines by IPMI.

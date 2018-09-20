@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
-from nose.tools import eq_, raises
+from nose.tools import eq_
 
 from pyipmi.bmc import *
 import pyipmi.msgs.bmc
-from pyipmi.msgs import encode_message
 from pyipmi.msgs import decode_message
 
 def test_watchdog_object():

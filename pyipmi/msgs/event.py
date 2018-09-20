@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -12,17 +13,14 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-import constants
+from . import constants
 from . import register_message_class
 from . import Message
-from . import ByteArray
-from . import UnsignedInt
-from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
-from . import Conditional
+
 
 @register_message_class
 class SetEventReceiverReq(Message):
@@ -30,11 +28,10 @@ class SetEventReceiverReq(Message):
     __netfn__ = constants.NETFN_SENSOR_EVENT
     __fields__ = (
         Bitfield('event_receiver', 2,
-            Bitfield.ReservedBit(1, 0),
-            Bitfield.Bit('ipmb_i2c_slave_address', 7, 0),
-            Bitfield.Bit('lun', 2, 0),
-            Bitfield.ReservedBit(6, 0),
-        ),
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('ipmb_i2c_slave_address', 7, 0),
+                 Bitfield.Bit('lun', 2, 0),
+                 Bitfield.ReservedBit(6, 0),),
     )
 
 
@@ -60,9 +57,8 @@ class GetEventReceiverRsp(Message):
     __fields__ = (
         CompletionCode(),
         Bitfield('event_receiver', 2,
-            Bitfield.ReservedBit(1, 0),
-            Bitfield.Bit('ipmb_i2c_slave_address', 7, 0),
-            Bitfield.Bit('lun', 2, 0),
-            Bitfield.ReservedBit(6, 0),
-        ),
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('ipmb_i2c_slave_address', 7, 0),
+                 Bitfield.Bit('lun', 2, 0),
+                 Bitfield.ReservedBit(6, 0),),
     )

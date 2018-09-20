@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -12,19 +13,18 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-import constants
+from . import constants
 from . import register_message_class
 from . import Message
 from . import ByteArray
 from . import UnsignedInt
-from . import UnsignedIntMask
 from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
-from . import Conditional
 from . import RemainingBytes
+
 
 @register_message_class
 class GetSelInfoReq(Message):
@@ -44,13 +44,12 @@ class GetSelInfoRsp(Message):
             Timestamp('most_recent_addition'),
             Timestamp('most_recent_erase'),
             Bitfield('operation_support', 1,
-                Bitfield.Bit('get_sel_allocation_info', 1),
-                Bitfield.Bit('reserve_sel', 1),
-                Bitfield.Bit('partial_add_sel_entry', 1),
-                Bitfield.Bit('delete_sel', 1),
-                Bitfield.ReservedBit(3),
-                Bitfield.Bit('overflow_flag', 1)
-            )
+                     Bitfield.Bit('get_sel_allocation_info', 1),
+                     Bitfield.Bit('reserve_sel', 1),
+                     Bitfield.Bit('partial_add_sel_entry', 1),
+                     Bitfield.Bit('delete_sel', 1),
+                     Bitfield.ReservedBit(3),
+                     Bitfield.Bit('overflow_flag', 1)),
     )
 
 
@@ -170,9 +169,8 @@ class ClearSelRsp(Message):
     __fields__ = (
             CompletionCode(),
             Bitfield('status', 1,
-                Bitfield.Bit('erase_in_progress', 4),
-                Bitfield.ReservedBit(4),
-            )
+                     Bitfield.Bit('erase_in_progress', 4),
+                     Bitfield.ReservedBit(4),),
     )
 
 
