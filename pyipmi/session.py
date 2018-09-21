@@ -28,7 +28,7 @@ class Session(object):
     PRIV_LEVEL_OEM = 5
 
     _interface = None
-    _auth_type = None
+    _auth_type = AUTH_TYPE_NONE
     _auth_username = None
     _auth_password = None
     _rmcp_host = None
@@ -37,11 +37,8 @@ class Session(object):
     _serial_baudrate = None
 
     def __init__(self):
-        self._auth_type = self.AUTH_TYPE_NONE
         self.established = False
         self.sid = 0
-        self._auth_username = None
-        self._auth_password = None
         self.sequence_number = 0
         self.activated = False
 
@@ -83,11 +80,10 @@ class Session(object):
     def serial_baudrate(self):
         return self._serial_baudrate
 
-    def set_auth_type(self, auth_type):
+    def _set_auth_type(self, auth_type):
         self._auth_type = auth_type
 
-    @property
-    def auth_type(self):
+    def _get_auth_type(self):
         return self._auth_type
 
     def set_auth_type_user(self, username, password):
@@ -116,14 +112,15 @@ class Session(object):
             self.interface.rmcp_ping()
 
     def __str__(self):
-        s = 'Session:\n'
-        s += '  ID: 0x%08x\n' % self.sid
-        s += '  Seq: 0x%08x\n' % self.sequence_number
-        s += '  Host: %s:%s\n' % (self._rmcp_host, self._rmcp_port)
-        s += '  Auth.: %s\n' % self.auth_type
-        s += '  User: %s\n' % self._auth_username
-        s += '  Password: %s\n' % self._auth_password
-        s += '\n'
-        return s
+        string = 'Session:\n'
+        string += '  ID: 0x%08x\n' % self.sid
+        string += '  Seq: 0x%08x\n' % self.sequence_number
+        string += '  Host: %s:%s\n' % (self._rmcp_host, self._rmcp_port)
+        string += '  Auth.: %s\n' % self.auth_type
+        string += '  User: %s\n' % self._auth_username
+        string += '  Password: %s\n' % self._auth_password
+        string += '\n'
+        return string
 
     interface = property(_get_interface, _set_interface)
+    auth_type = property(_get_auth_type, _set_auth_type)

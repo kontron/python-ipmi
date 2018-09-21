@@ -152,8 +152,10 @@ class Ipmitool(object):
     @staticmethod
     def _build_ipmitool_target(target):
         cmd = ''
-        if hasattr(target, 'routing'):
+        if target.routing is not None:
             # we have to do bridging here
+            if len(target.routing) == 1:
+                pass
             if len(target.routing) == 2:
                 # ipmitool/shelfmanager does implicit bridging
                 cmd += (' -t 0x%02x' % target.routing[1].rs_sa)
@@ -165,7 +167,7 @@ class Ipmitool(object):
                 cmd += (' -b %d' % target.routing[1].channel)
             else:
                 raise RuntimeError('The impitool interface at most double '
-                                   'briding')
+                                   'briding %s' % target)
 
         elif target.ipmb_address:
             cmd += (' -t 0x%02x' % target.ipmb_address)

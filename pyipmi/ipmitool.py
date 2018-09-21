@@ -454,14 +454,14 @@ def version():
 def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:o:b:p:r:')
-    except getopt.GetoptError, err:
+    except getopt.GetoptError as err:
         print(str(err))
         usage()
         sys.exit(2)
     verbose = False
     interface_name = 'aardvark'
     target_address = 0x20
-    target_routing = [(0x20, 0)]
+    target_routing = [(0x20, 0, 0)]
     rmcp_host = None
     rmcp_port = 623
     rmcp_user = ''
@@ -479,7 +479,7 @@ def main():
         elif o == '-t':
             target_address = int(a, 0)
         elif o == '-b':
-            target_routing = [(0x20, int(a))]
+            target_routing = [(0x20, int(a), 0)]
         elif o == '-r':
             target_routing = a
         elif o == '-H':

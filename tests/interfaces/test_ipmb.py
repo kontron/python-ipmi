@@ -3,14 +3,16 @@
 
 from array import array
 
-from nose.tools import eq_, ok_, raises
+from nose.tools import eq_
 
 from pyipmi import Target
 from pyipmi.interfaces.ipmb import checksum, IpmbHeader, encode_ipmb_msg, \
-        encode_send_message, encode_bridged_message, rx_filter
+        encode_send_message, encode_bridged_message
+
 
 def test_checksum():
-    eq_(checksum([1,2,3,4,5]), 256-15)
+    eq_(checksum([1, 2, 3, 4, 5]), 256-15)
+
 
 def test_encode():
     header = IpmbHeader()
@@ -24,6 +26,7 @@ def test_encode():
     data = header.encode()
     eq_(data, array('B', [0x72, 0x18, 0x76, 0x20, 0x08, 0x01]))
 
+
 def test_encode_ipmb_msg():
     header = IpmbHeader()
     header.rs_lun = 0
@@ -34,20 +37,22 @@ def test_encode_ipmb_msg():
     header.netfn = 6
     header.cmd_id = 1
 
-    eq_(encode_ipmb_msg(header, [0xaa,0xbb,0xcc]),
-            '\x72\x18\x76\x20\x08\x01\xaa\xbb\xcc\xa6')
+    eq_(encode_ipmb_msg(header, [0xaa, 0xbb, 0xcc]),
+        '\x72\x18\x76\x20\x08\x01\xaa\xbb\xcc\xa6')
 
     eq_(encode_ipmb_msg(header, '\xaa\xbb\xcc'),
-            '\x72\x18\x76\x20\x08\x01\xaa\xbb\xcc\xa6')
+        '\x72\x18\x76\x20\x08\x01\xaa\xbb\xcc\xa6')
+
 
 def test_encode_send_message():
     data = encode_send_message('\xaa\xbb', 0x12, 0x20, 7, 0x22)
     eq_(data, '\x20\x18\xc8\x12\x88\x34\x47\xaa\xbb\x86')
 
+
 def test_encode_bridge_message():
     payload = '\xaa\xbb'
     t = Target(0)
-    t.set_routing([(0x81,0x20,7),(0x20,0x72,None)])
+    t.set_routing([(0x81, 0x20, 7), (0x20, 0x72, None)])
     header = IpmbHeader()
     header.netfn = 6
     header.rs_lun = 0

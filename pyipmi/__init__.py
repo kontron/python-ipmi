@@ -36,7 +36,7 @@ from . import msgs
 from .errors import IpmiTimeoutError, CompletionCodeError, RetryError
 from .msgs.registry import create_request_by_name
 from .session import Session
-from .utils import check_completion_code
+from .utils import check_completion_code, is_string
 
 try:
     from version import __version__
@@ -73,32 +73,36 @@ class NullRequester(object):
         raise AssertionError('NullRequester does not provide an IPMB address')
 
 
+class Routing(object):
+    """The Target class represents an IPMI target."""
+    def __init__(self, rq_sa, rs_sa, channel):
+        self.rq_sa = rq_sa
+        self.rs_sa = rs_sa
+        self.channel = channel
+
+    def __str__(self):
+        s = 'Routing: Rq: %s Rs: %s Ch: %s' \
+                % (self.rq_sa, self.rs_sa, self.channel)
+        return s
+
+
 class Target(object):
     '''The Target class represents an IPMI target.'''
+    routing = None
+    ipmb_address = None
 
-    def __init__(self, ipmb_address, routing=None):
+    def __init__(self, ipmb_address=None, routing=None):
         """
         `ipmb_address` is the IPMB target address
         `routing` is the bridging information used to build send message
         commands.
         """
 
-        self.routing = None
-        self.ipmb_address = ipmb_address
+        if ipmb_address:
+            self.ipmb_address = ipmb_address
+
         if routing:
             self.set_routing(routing)
-
-    class Routing(object):
-        """The Target class represents an IPMI target."""
-        def __init__(self, rq_sa, rs_sa, channel):
-            self.rq_sa = rq_sa
-            self.rs_sa = rs_sa
-            self.channel = channel
-
-        def __str__(self):
-            s = 'Routing: Rq: %s Rs: %s Ch: %s' \
-                    % (self.rq_sa, self.rs_sa, self.channel)
-            return s
 
     def set_routing_information(self, routing):
         self.set_routing(routing)
@@ -137,10 +141,11 @@ class Target(object):
         routing = [(0x81,0x20,0),(0x20,0x8e,7),(0x20,0x80,None)]
 
         """
-        if type(routing) in [unicode, str]:
+        if is_string(routing):
+            # if type(routing) in [unicode, str]:
             routing = ast.literal_eval(routing)
-
-        self.routing = [self.Routing(*r) for r in routing]
+        print(routing)
+        self.routing = [Routing(*route) for route in routing]
 
     def __str__(self):
         s = 'Target: IPMB: 0x%02x\n' % self.ipmb_address

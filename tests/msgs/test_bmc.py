@@ -2,12 +2,10 @@
 
 from array import array
 
-from nose.tools import eq_, raises
+from nose.tools import eq_
 
 import pyipmi.msgs.bmc
 
-from pyipmi.errors import DecodingError, EncodingError
-from pyipmi.msgs import encode_message
 from pyipmi.msgs import decode_message
 
 
@@ -16,10 +14,11 @@ def test_getdeviceid_decode_rsp_with_cc():
     decode_message(m, '\xc0')
     eq_(m.completion_code, 0xc0)
 
+
 def test_getdeviceid_decode_valid_res():
     m = pyipmi.msgs.bmc.GetDeviceIdRsp()
     decode_message(m, '\x00\x0c\x89\x00\x00\x02\x3d\x98'
-            '\x3a\x00\xbe\x14\x04\x00\x02\x00')
+                      '\x3a\x00\xbe\x14\x04\x00\x02\x00')
     eq_(m.completion_code, 0)
     eq_(m.device_id, 0x0c)
     eq_(m.device_revision.device_revision, 9)
@@ -38,12 +37,13 @@ def test_getdeviceid_decode_valid_res():
     eq_(m.additional_support.chassis, 0)
     eq_(m.manufacturer_id, 15000)
     eq_(m.product_id, 5310)
-    eq_(m.auxiliary, array('B', '\x04\x00\x02\x00'))
+    eq_(m.auxiliary, array('B', [4, 0, 2, 0]))
+
 
 def test_getdeviceid_decode_valid_res_wo_aux():
     m = pyipmi.msgs.bmc.GetDeviceIdRsp()
     decode_message(m, '\x00\x0c\x89\x00\x00\x02\x3d\x98'
-            '\x3a\x00\xbe\x14')
+                      '\x3a\x00\xbe\x14')
     eq_(m.completion_code, 0)
     eq_(m.device_id, 0x0c)
     eq_(m.device_revision.device_revision, 9)

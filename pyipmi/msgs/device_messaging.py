@@ -291,7 +291,7 @@ class GetSessionChallengeReq(Message):
         Bitfield('authentication', 1,
                  Bitfield.Bit('type', 4, 0),
                  Bitfield.ReservedBit(4, 0),),
-        String('user_name', 16),
+        String('user_name', 16, '\x00' * 16),
     )
 
 

@@ -37,6 +37,7 @@ from .message import decode_message
 
 from . import bmc
 from . import chassis
+from . import device_messaging
 from . import fru
 from . import hpm
 from . import picmg

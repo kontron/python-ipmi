@@ -134,3 +134,9 @@ def bcd_search(name):
     if name != 'bcd+':
         return None
     return codecs.CodecInfo(name='bcd+', encode=bcd_encode, decode=bcd_decode)
+
+
+def is_string(string):
+    if sys.version_info[0] >= 3:
+        return isinstance(string, str)
+    return isinstance(string, basestring)

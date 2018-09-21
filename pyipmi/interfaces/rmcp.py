@@ -3,16 +3,16 @@ import struct
 import hashlib
 import random
 import threading
-import Queue
+from queue import Queue
 
 from .. import Target
 from ..session import Session
 from ..msgs import create_message, create_request_by_name, \
         encode_message, decode_message, constants
 from ..messaging import ChannelAuthenticationCapabilities
-from ..errors import DecodingError, NotSupportedError, CompletionCodeError
+from ..errors import DecodingError, NotSupportedError
 from ..logger import log
-from ..interfaces.ipmb import IpmbHeader, checksum, encode_ipmb_msg, \
+from ..interfaces.ipmb import IpmbHeader, encode_ipmb_msg, \
         encode_bridged_message, decode_bridged_message, rx_filter
 from ..utils import check_completion_code
 
@@ -24,11 +24,13 @@ RMCP_CLASS_ASF = 0x06
 RMCP_CLASS_IPMI = 0x07
 RMCP_CLASS_OEM = 0x08
 
+
 def call_repeatedly(interval, func, *args):
     stopped = threading.Event()
 
     def loop():
-        while not stopped.wait(interval): # the first call is in `interval` secs
+        # the first call is in `interval` secs
+        while not stopped.wait(interval):
             try:
                 func(*args)
             except socket.timeout:
@@ -40,17 +42,18 @@ def call_repeatedly(interval, func, *args):
 
     return stopped.set
 
+
 class RmcpMsg:
     RMCP_HEADER_FORMAT = '!BxBB'
-    ASF_RMCP_V_1_0  = 6
+    ASF_RMCP_V_1_0 = 6
 
     def __init__(self, class_of_msg=None):
         if class_of_msg is not None:
             self.class_of_msg = class_of_msg
 
     def pack(self, sdu, seq_number):
-        pdu = struct.pack(self.RMCP_HEADER_FORMAT,
-                self.ASF_RMCP_V_1_0, seq_number, self.class_of_msg)
+        pdu = struct.pack(self.RMCP_HEADER_FORMAT, self.ASF_RMCP_V_1_0,
+                          seq_number, self.class_of_msg)
         if sdu is not None:
             pdu += sdu
         return pdu
@@ -59,7 +62,7 @@ class RmcpMsg:
         header_len = struct.calcsize(self.RMCP_HEADER_FORMAT)
         header = pdu[:header_len]
         (self.version, self.seq_number, self.class_of_msg) = \
-                struct.unpack(self.RMCP_HEADER_FORMAT, header)
+            struct.unpack(self.RMCP_HEADER_FORMAT, header)
         sdu = pdu[header_len:]
 
         if self.version != self.ASF_RMCP_V_1_0:
@@ -84,12 +87,15 @@ class AsfMsg:
 
     def pack(self):
         if self.data:
-            data_len = len(data)
+            data_len = len(self.data)
         else:
             data_len = 0
 
-        pdu = struct.pack(self.ASF_HEADER_FORMAT, self.iana_enterprise_number,
-                    self.asf_type, self.tag, data_len)
+        pdu = struct.pack(self.ASF_HEADER_FORMAT,
+                          self.iana_enterprise_number,
+                          self.asf_type,
+                          self.tag,
+                          data_len)
         if self.data:
             pdu += self.data
 
@@ -101,7 +107,7 @@ class AsfMsg:
 
         header = sdu[:header_len]
         (self.iana_enterprise_number, self.asf_type, self.tag, data_len) = \
-                struct.unpack(self.ASF_HEADER_FORMAT, header)
+            struct.unpack(self.ASF_HEADER_FORMAT, header)
 
         if len(sdu) < header_len + data_len:
             raise DecodingError('short SDU')
@@ -150,8 +156,8 @@ class AsfPong(AsfMsg):
         AsfMsg.unpack(self, sdu)
         header_len = struct.calcsize(self.ASF_HEADER_FORMAT)
         (self.oem_iana_enterprise_number, self.oem_defined,
-                self.supported_entities, self.supported_interactions) = \
-                        struct.unpack(self.DATA_FORMAT, self.data)
+            self.supported_entities, self.supported_interactions) =\
+                struct.unpack(self.DATA_FORMAT, self.data)
 
         self.check_data()
 
@@ -200,11 +206,11 @@ class IpmiMsg():
 
     def _pack_auth_code_md5(self, sdu):
         auth_code = struct.pack('>16s I %ds I 16s' % len(sdu),
-                self.session._auth_password,
-                self._pack_session_id(),
-                sdu,
-                self._pack_sequence_number(),
-                self.session._auth_password)
+                                self.session._auth_password,
+                                self._pack_session_id(),
+                                sdu,
+                                self._pack_sequence_number(),
+                                self.session._auth_password)
         return hashlib.md5(auth_code).digest()
 
     def pack(self, sdu):
@@ -221,9 +227,9 @@ class IpmiMsg():
             auth_type = Session.AUTH_TYPE_NONE
 
         pdu = struct.pack('!BII',
-                        auth_type,
-                        self._pack_sequence_number(),
-                        self._pack_session_id())
+                          auth_type,
+                          self._pack_sequence_number(),
+                          self._pack_session_id())
 
         if auth_type == Session.AUTH_TYPE_NONE:
             pass
@@ -256,12 +262,11 @@ class IpmiMsg():
             self.auth_type = ord(pdu[0])
             (self.sequence_number,) = struct.unpack('!I', pdu[1:5])
             (self.session_id,) = struct.unpack('!I', pdu[5:9])
-            self.auth_code =\
-                    [a for a in struct.unpack('!16B', pdu[9:25])]
+            self.auth_code = [a for a in struct.unpack('!16B', pdu[9:25])]
             data_len = ord(pdu[25])
         else:
             (self.auth_type, self.sequence_number,
-                    self.session_id, data_len) =\
+                self.session_id, data_len) =\
                             struct.unpack(self.HEADER_FORMAT_NO_AUTH, header)
 
         if len(pdu) < header_len + data_len:
@@ -279,7 +284,6 @@ class IpmiMsg():
 
         return self.sdu
 
-
     def check_data(self):
         pass
 
@@ -293,7 +297,7 @@ class Rmcp:
     _session = None
 
     def __init__(self, slave_address=0x81, host_target_address=0x20,
-            keep_alive_interval=1):
+                 keep_alive_interval=1):
         self.host = None
         self.port = None
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -304,7 +308,7 @@ class Rmcp:
         self.next_sequence_number = 0
         self.keep_alive_interval = keep_alive_interval
         self._stop_keep_alive = None
-        self._q = Queue.Queue()
+        self._q = Queue()
 
     def _send_rmcp_msg(self, sdu, class_of_msg):
         rmcp = RmcpMsg(class_of_msg)
@@ -323,7 +327,7 @@ class Rmcp:
         self._sock.settimeout(timeout)
 
     def _send_ipmi_msg(self, data):
-        log().debug('IPMI TX: %s' %(' '.join('%02x' % ord(b) for b in data)))
+        log().debug('IPMI TX: %s' % (' '.join('%02x' % ord(b) for b in data)))
         ipmi = IpmiMsg(self._session)
         tx_data = ipmi.pack(data)
         self._send_rmcp_msg(tx_data, RMCP_CLASS_IPMI)
@@ -334,7 +338,8 @@ class Rmcp:
             raise DecodingError('invalid class field in ASF message')
         msg = IpmiMsg()
         rx_data = msg.unpack(pdu)
-        log().debug('IPMI RX: %s' %(' '.join('%02x' % ord(b) for b in rx_data)))
+        log().debug('IPMI RX: %s' % (
+            ' '.join('%02x' % ord(b) for b in rx_data)))
         return rx_data
 
     def _send_asf_msg(self, msg):
@@ -353,7 +358,7 @@ class Rmcp:
     def ping(self):
         ping = AsfPing()
         self._send_asf_msg(ping)
-        pong = self._receive_asf_msg(AsfPong)
+        self._receive_asf_msg(AsfPong)
 
     def _get_channel_auth_cap(self):
         CHANNEL_NUMBER_FOR_THIS = 0xe
@@ -383,8 +388,8 @@ class Rmcp:
         req = create_request_by_name('ActivateSession')
         req.target = self.host_target
         req.authentication.type = session.auth_type
-        req.privilege_level.maximum_requested = \
-                        Session.PRIV_LEVEL_ADMINISTRATOR
+        req.privilege_level.maximum_requested =\
+            Session.PRIV_LEVEL_ADMINISTRATOR
         req.challenge_string = challenge
         req.session_id = self._session.sid
         req.initial_outbound_sequence_number = random.randrange(1, 0xffffffff)
@@ -440,7 +445,7 @@ class Rmcp:
         log().debug('Session opened')
 
         if self.keep_alive_interval:
-            self._stop_keep_alive = call_repeatedly( \
+            self._stop_keep_alive = call_repeatedly(
                     self.keep_alive_interval, self._get_device_id)
 
     def close_session(self):
@@ -448,7 +453,7 @@ class Rmcp:
             self._stop_keep_alive()
 
         if self._session.activated is False:
-            log().debug('Session already cloased')
+            log().debug('Session already closed')
             return
 
         log().debug('Close Session %s' % self._session)
@@ -478,15 +483,15 @@ class Rmcp:
 
         # Bridge message
         if target.routing:
-            tx_data = encode_bridged_message(target.routing, header,
-                                    payload, self.next_sequence_number)
+            tx_data = encode_bridged_message(target.routing, header, payload,
+                                             self.next_sequence_number)
         else:
             tx_data = encode_ipmb_msg(header, payload)
 
         self._send_ipmi_msg(tx_data)
 
         received = False
-        while received == False:
+        while received is False:
             if not self._q.empty():
                 rx_data = self._q.get()
             else:
@@ -503,18 +508,21 @@ class Rmcp:
         return rx_data[6:-1]
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
+        """Interface function"""
         return self._send_and_receive(target, lun, netfn, ord(raw_bytes[0]),
-                raw_bytes[1:])
+                                      raw_bytes[1:])
 
     def send_and_receive(self, req):
+        """Interface function"""
         rx_data = self._send_and_receive(req.target, req.lun, req.netfn,
-                        req.cmdid, encode_message(req))
+                                         req.cmdid, encode_message(req))
         rsp = create_message(req.cmdid, req.netfn + 1)
         decode_message(rsp, rx_data)
         return rsp
 
+
 if __name__ == '__main__':
-    host = '10.0.114.12'
+    host = '10.0.114.199'
     session = Session()
     session.set_auth_type_user('admin', 'admin')
 
