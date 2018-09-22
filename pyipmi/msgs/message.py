@@ -344,8 +344,18 @@ class Message(object):
                                        field.name)
             setattr(self, field.name, field.create())
 
+    def _pack(self):
+        """Pack the message and return an array."""
+        if not hasattr(self, '__fields__'):
+            return ''
+
+        data = ByteBuffer()
+        for field in self.__fields__:
+            field.encode(self, data)
+        return data.array
+
     def _encode(self):
-        '''Encode the message and return a bytestring.'''
+        """Encode the message and return a bytestring."""
         if not hasattr(self, '__fields__'):
             return ''
 
@@ -355,6 +365,7 @@ class Message(object):
         return data.tostring()
 
     def _decode(self, data):
+        """Decode the bytestring message."""
         if not hasattr(self, '__fields__'):
             raise NotImplementedError('You have to overwrite this method')
 
@@ -383,3 +394,4 @@ class Message(object):
 
 encode_message = lambda m: m._encode()
 decode_message = lambda m, d: m._decode(d)
+pack_message = lambda m: m._pack()

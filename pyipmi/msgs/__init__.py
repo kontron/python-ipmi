@@ -34,6 +34,7 @@ from .message import RemainingBytes
 from .message import String
 from .message import encode_message
 from .message import decode_message
+from .message import pack_message
 
 from . import bmc
 from . import chassis
