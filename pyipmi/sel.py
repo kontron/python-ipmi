@@ -15,6 +15,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from array import array
+
 from .errors import DecodingError
 from .utils import check_completion_code, ByteBuffer
 from .msgs import create_request_by_name
@@ -132,7 +134,8 @@ class SelEntry(State):
         string.append('  Sensor Number: %d' % self.sensor_number)
         string.append('  Event Direction: %d' % self.event_direction)
         string.append('  Event Type: 0x%02x' % self.event_type)
-        string.append('  Event Data: 0x%s' % self.event_data.encode('hex'))
+        string.append('  Event Data: %s' % array('B',
+            self.event_data).tolist())
         return "\n".join(string)
 
     @staticmethod
