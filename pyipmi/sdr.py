@@ -324,7 +324,7 @@ class SdrFullSensorRecord(SdrCommon):
                                        (self.linearization & 0x7f))
 
     @staticmethod
-    def _convert_complement(self, value, size):
+    def _convert_complement(value, size):
         if (value & (1 << (size-1))):
             value = -(1 << size) + value
         return value

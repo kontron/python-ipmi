@@ -23,15 +23,15 @@ from .errors import DecodingError, CompletionCodeError
 
 def py3enc_unic_bytes_fix(dat):
     # python 3 unicode fix
-    #if isinstance(dat, str) and int(sys.version[0]) > 2:
-    #    dat = dat.encode('raw_unicode_escape')
+    if isinstance(dat, str) and int(sys.version[0]) > 2:
+        dat = dat.encode('raw_unicode_escape')
     return dat
 
 
 def py3dec_unic_bytes_fix(dat):
     # python 3 unicode fix
-    #iif int(sys.version[0]) > 2:
-    #    return dat.decode('raw_unicode_escape')
+    if int(sys.version[0]) > 2:
+        return dat.decode('raw_unicode_escape')
     return dat
 
 
@@ -79,7 +79,8 @@ class ByteBuffer:
     def pop_string(self, length):
         string = self.array[0:length]
         del self.array[0:length]
-        return py3dec_unic_bytes_fix(string.tostring())
+        return string.tostring()
+        # return py3dec_unic_bytes_fix(string.tostring())
 
     def pop_slice(self, length):
         if len(self.array) < length:
@@ -90,7 +91,7 @@ class ByteBuffer:
         return c
 
     def tostring(self):
-        return py3dec_unic_bytes_fix(self.array.tostring())
+        return self.array.tostring()
 
     def extend(self, data):
         self.array.extend(data)
