@@ -20,7 +20,7 @@ from __future__ import absolute_import
 from array import array
 
 from . import constants
-from ..utils import ByteBuffer,  py3enc_unic_bytes_fix
+from ..utils import ByteBuffer
 from ..errors import CompletionCodeError, EncodingError, DecodingError, \
         DescriptionError
 
@@ -47,7 +47,6 @@ class ByteArray(BaseField):
     def __init__(self, name, length, default=None):
         BaseField.__init__(self, name, length)
         if default is not None:
-            default = py3enc_unic_bytes_fix(default)
             self.default = array('B', default)
         else:
             self.default = None
