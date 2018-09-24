@@ -24,6 +24,7 @@ from ..session import Session
 from ..errors import IpmiTimeoutError
 from ..logger import log
 from ..msgs import encode_message, decode_message, create_message
+from ..msgs.constants import CC_OK
 from ..utils import py3dec_unic_bytes_fix, ByteBuffer
 
 
@@ -88,15 +89,7 @@ class Ipmitool(object):
         return accessible
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
-        """Interface function to send and receive raw message.
 
-        target: IPMI target
-        lun: logical unit number
-        netfn: network function
-        raw_bytes: RAW bytes as bytestring
-
-        Returns the IPMI message response bytestring.
-        """
         if self._interface_type in ['lan', 'lanplus']:
             cmd = self._build_ipmitool_cmd(target, lun, netfn, raw_bytes)
         elif self._interface_type in ['serial-terminal']:
@@ -121,7 +114,7 @@ class Ipmitool(object):
             if rc != 0:
                 raise RuntimeError('ipmitool failed with rc=%d' % rc)
             # completion code
-            data.append(0)
+            data.append(CC_OK)
 
             output = py3dec_unic_bytes_fix(output)
 
@@ -135,16 +128,12 @@ class Ipmitool(object):
                 for x in output.split(' '):
                     data.append(int(x, 16))
 
+        log().debug('IPMI RX: {:s}'.format(
+            ''.join('%02x ' % b for b in array('B', data))))
+
         return data.tostring()
 
     def send_and_receive(self, req):
-        """Interface function to send and receive an IPMI message.
-
-        target: IPMI target
-        req: IPMI message request
-
-        Returns the IPMI message response.
-        """
         log().debug('IPMI Request [%s]', req)
 
         req_data = ByteBuffer((req.cmdid,))
@@ -160,10 +149,11 @@ class Ipmitool(object):
         return rsp
 
     @staticmethod
-    def _build_ipmitool_raw_data(lun, netfn, raw_bytes):
-        cmd_data = ' -l %d raw 0x%02x ' % (lun, netfn)
-        cmd_data += ' '.join(['0x%02x' % ord(d) for d in raw_bytes])
-        return cmd_data
+    def _build_ipmitool_raw_data(lun, netfn, raw):
+        cmd = ' -l {:d} raw '.format(lun)
+        cmd += ' '.join(['0x%02x' % (d)
+                        for d in [netfn] + array('B', raw).tolist()])
+        return cmd
 
     @staticmethod
     def _build_ipmitool_target(target):
