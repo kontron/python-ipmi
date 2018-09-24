@@ -10,7 +10,7 @@ from pyipmi.msgs import decode_message
 
 def test_watchdog_object():
     msg = pyipmi.msgs.bmc.GetWatchdogTimerRsp()
-    decode_message(msg, '\x00\x41\x42\x33\x44\x55\x66\x77\x88')
+    decode_message(msg, b'\x00\x41\x42\x33\x44\x55\x66\x77\x88')
 
     wdt = Watchdog(msg)
     eq_(wdt.timer_use, 1)
@@ -27,7 +27,7 @@ def test_watchdog_object():
 
 def test_deviceid_object():
     m = pyipmi.msgs.bmc.GetDeviceIdRsp()
-    decode_message(m, '\x00\x12\x84\x05\x67\x51\x55\x12\x34\x56\x44\x55')
+    decode_message(m, b'\x00\x12\x84\x05\x67\x51\x55\x12\x34\x56\x44\x55')
 
     d = DeviceId(m)
     eq_(d.device_id, 18)
@@ -44,8 +44,8 @@ def test_deviceid_object():
 def test_deviceid_object_with_aux():
     msg = pyipmi.msgs.bmc.GetDeviceIdRsp()
     decode_message(msg,
-                   '\x00\x00\x00\x00\x00\x00\x00\x00'
-                   '\x00\x00\x00\x00\x01\x02\x03\x04')
+                   b'\x00\x00\x00\x00\x00\x00\x00\x00'
+                   b'\x00\x00\x00\x00\x01\x02\x03\x04')
 
     device_id = DeviceId(msg)
     eq_(device_id.aux, [1, 2, 3, 4])

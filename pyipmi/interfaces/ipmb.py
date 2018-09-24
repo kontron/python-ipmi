@@ -14,12 +14,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-import array
+from array import array
 
 from ..logger import log
 from ..msgs import create_message, create_request_by_name, \
-        encode_message, decode_message, constants
-from ..utils import check_completion_code
+        pack_message, encode_message, decode_message, constants
+from ..utils import check_completion_code, py3dec_unic_bytes_fix
 
 
 def checksum(data):
@@ -40,53 +40,76 @@ class IpmbHeader(object):
         self.cmd_id = None
 
     def encode(self):
-        data = array.array('B')
+        data = array('B')
         data.append(self.rs_sa)
         data.append(self.netfn << 2 | self.rs_lun)
         data.append(checksum((self.rs_sa, data[1])))
         data.append(self.rq_sa)
         data.append(self.rq_seq << 2 | self.rq_lun)
         data.append(self.cmd_id)
-        return data
+        return data.tostring()
 
 
 def encode_ipmb_msg(header, data):
-    if type(data) == str:
-        data = [ord(c) for c in data]
-    msg = header.encode()
-    msg.extend(data)
+    """Encode an IPMB message.
+
+    header: IPMB header object
+    data: IPMI message data as bytestring
+
+    Returns the message as bytestring.
+    """
+    msg = array('B')
+
+    msg.fromstring(header.encode())
+    a = array('B')
+    a.fromstring(data)
+    print(a)
+    msg.extend(a)
     msg.append(checksum(msg[3:]))
     return msg.tostring()
 
 
 def encode_send_message(payload, rq_sa, rs_sa, channel, seq, tracking=1):
-        req = create_request_by_name('SendMessage')
-        req.channel.number = channel
-        req.channel.tracking = tracking
-        header = IpmbHeader()
-        header.netfn = req.__netfn__
-        header.rs_lun = 0
-        header.rs_sa = rs_sa
-        header.rq_seq = seq
-        header.rq_lun = 0
-        header.rq_sa = rq_sa
-        header.cmd_id = req.__cmdid__
-        data = encode_message(req)
-        return encode_ipmb_msg(header, data + payload)
+    """Encode a send message command and embedd the message to be send.
+
+    payload: the message to be send as bytestring
+    rq_sa: the requester source address
+    rs_sa: the responder source address
+    channel: the channel
+    seq: the sequence number
+    tracking: tracking
+
+    Returns an encode sens message as bytestring
+    """
+    req = create_request_by_name('SendMessage')
+    req.channel.number = channel
+    req.channel.tracking = tracking
+    data = encode_message(req)
+
+    header = IpmbHeader()
+    header.netfn = req.__netfn__
+    header.rs_lun = 0
+    header.rs_sa = rs_sa
+    header.rq_seq = seq
+    header.rq_lun = 0
+    header.rq_sa = rq_sa
+    header.cmd_id = req.__cmdid__
+
+    return encode_ipmb_msg(header, data + payload)
 
 
 def encode_bridged_message(routing, header, payload, seq):
-    if len(routing) < 2:
-        raise EncodingError('routing length error')
-
     # change header requester addresses for bridging
     header.rq_sa = routing[-1].rq_sa
     header.rs_sa = routing[-1].rs_sa
     tx_data = encode_ipmb_msg(header, payload)
 
-    for r in reversed(routing[:-1]):
-        tx_data = encode_send_message(tx_data, rq_sa=r.rq_sa, rs_sa=r.rs_sa,
-                                      channel=r.channel, seq=seq)
+    for bridge in reversed(routing[:-1]):
+        tx_data = encode_send_message(tx_data,
+                                      rq_sa=bridge.rq_sa,
+                                      rs_sa=bridge.rs_sa,
+                                      channel=bridge.channel,
+                                      seq=seq)
 
     return tx_data
 
@@ -107,7 +130,7 @@ def decode_bridged_message(rx_data):
 
 def rx_filter(header, rx_data):
     if type(rx_data) == str:
-        rx_data = array.array('B', rx_data)
+        rx_data = array('B', rx_data)
 
     checks = [
         (checksum(rx_data[0:3]), 0, 'Header checksum failed'),

@@ -23,15 +23,15 @@ from .errors import DecodingError, CompletionCodeError
 
 def py3enc_unic_bytes_fix(dat):
     # python 3 unicode fix
-    if isinstance(dat, str) and int(sys.version[0]) > 2:
-        dat = dat.encode('raw_unicode_escape')
+    #if isinstance(dat, str) and int(sys.version[0]) > 2:
+    #    dat = dat.encode('raw_unicode_escape')
     return dat
 
 
 def py3dec_unic_bytes_fix(dat):
     # python 3 unicode fix
-    if int(sys.version[0]) > 2:
-        return dat.decode('raw_unicode_escape')
+    #iif int(sys.version[0]) > 2:
+    #    return dat.decode('raw_unicode_escape')
     return dat
 
 
@@ -56,7 +56,7 @@ class ByteBuffer:
     def __init__(self, data=None):
 
         if data is not None:
-            self.array = array('B', py3enc_unic_bytes_fix(data))
+            self.array = array('B', data)
         else:
             self.array = array('B')
 

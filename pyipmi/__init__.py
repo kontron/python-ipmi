@@ -132,7 +132,6 @@ class Target(object):
                        |       |           |             |        |
                        |       `-----------|             |        |
                        `-------------------´             `--------´
-         \              /   \     /      \                 /
           `------------´     `---´        `---------------´
 
         Example #3: access to an AMC in a ATCA AMC carrier
@@ -160,6 +159,10 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
            messaging.Messaging):
 
     def __init__(self):
+        self._interface = None
+        self._session = None
+        self._target = None
+
         for base in Ipmi.__bases__:
             base.__init__(self)
 
@@ -205,6 +208,14 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
         return rsp
 
     def raw_command(self, lun, netfn, raw_bytes):
+        """Send the raw command data and return the raw response.
+
+        lun: the logical unit number
+        netfn: the network function
+        raw_bytes: the raw message as bytestring
+
+        Returns the response as bytestring.
+        """
         return self.interface.send_and_receive_raw(self.target, lun, netfn,
                                                    raw_bytes)
 

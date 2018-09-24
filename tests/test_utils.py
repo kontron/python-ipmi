@@ -59,49 +59,49 @@ def test_bytebuffer_pop_unsigned_int_error():
 
 def test_bytebuffer_push_string():
     buf = ByteBuffer()
-    buf.push_string('0123')
+    buf.push_string(b'0123')
     eq_(buf[0], 0x30)
     eq_(buf[1], 0x31)
     eq_(buf[2], 0x32)
     eq_(buf[3], 0x33)
-    eq_(buf.tostring(), '0123')
+    eq_(buf.tostring(), b'0123')
 
     buf = ByteBuffer()
     buf.push_string(b'\x00\xb4')
-    eq_(buf.tostring(), '\x00\xb4')
+    eq_(buf.tostring(), b'\x00\xb4')
 
 
 def test_bytebuffer_pop_string():
     buf = ByteBuffer(b'\x30\x31\x32\x33')
-    eq_(buf.pop_string(2), '01')
-    eq_(buf.tostring(), '23')
+    eq_(buf.pop_string(2), b'01')
+    eq_(buf.tostring(), b'23')
 
 
 def test_bytebuffer_tostring():
-    buf = ByteBuffer('\x30\x31\x32\x33')
-    eq_(buf.tostring(), '0123')
+    buf = ByteBuffer(b'\x30\x31\x32\x33')
+    eq_(buf.tostring(), b'0123')
 
 
 def test_bytebuffer_pop_slice():
     buf = ByteBuffer(b'\x30\x31\x32\x33')
     cut = buf.pop_slice(1)
-    eq_(buf.tostring(), '123')
-    eq_(cut.tostring(), '0')
+    eq_(buf.tostring(), b'123')
+    eq_(cut.tostring(), b'0')
 
     buf = ByteBuffer(b'\x30\x31\x32\x33')
     cut = buf.pop_slice(2)
-    eq_(buf.tostring(), '23')
-    eq_(cut.tostring(), '01')
+    eq_(buf.tostring(), b'23')
+    eq_(cut.tostring(), b'01')
 
     buf = ByteBuffer(b'\x30\x31\x32\x33')
     cut = buf.pop_slice(3)
-    eq_(buf.tostring(), '3')
-    eq_(cut.tostring(), '012')
+    eq_(buf.tostring(), b'3')
+    eq_(cut.tostring(), b'012')
 
     buf = ByteBuffer(b'\x30\x31\x32\x33')
     cut = buf.pop_slice(4)
-    eq_(buf.tostring(), '')
-    eq_(cut.tostring(), '0123')
+    eq_(buf.tostring(), b'')
+    eq_(cut.tostring(), b'0123')
 
 
 @raises(DecodingError)

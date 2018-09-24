@@ -18,11 +18,12 @@ from __future__ import print_function
 
 import os
 import codecs
-import array
 import struct
 import collections
 import hashlib
 import time
+
+from array import array
 
 from .errors import CompletionCodeError, HpmError, IpmiTimeoutError
 from .msgs import create_request_by_name
@@ -464,8 +465,8 @@ class ComponentPropertyDescriptionString(ComponentProperty):
 
     def _from_rsp_data(self, data):
         self.description = py3dec_unic_bytes_fix(
-            array.array('B', data).tostring())
-        self.description = self.description.replace('\0', '')
+            array('B', data).tostring())
+        self.description = self.description.replace(b'\0', b'')
 
 
 class ComponentPropertyRollbackVersion(ComponentProperty):
@@ -597,15 +598,16 @@ class UpgradeActionRecord(object):
     )
 
     def __init__(self, data=None):
-        self.action_type = ord(data[0])
+        self.action_type = array('B', data)[0]
         if data:
             (self.action, self.components, self.checksum) \
-                = struct.unpack('BBB', bytes(data[0:3], 'raw_unicode_escape'))
+                = struct.unpack('BBB', data[0:3])
+            #    = struct.unpack('BBB', bytes(data[0:3], 'raw_unicode_escape'))
             self.length = 3
 
     @staticmethod
     def create_from_data(data):
-        action_type = ord(data[0])
+        action_type = array('B', data)[0]
         if action_type == ACTION_BACKUP_COMPONENT:
             return UpgradeActionRecordBackup(data)
         elif action_type == ACTION_PREPARE_COMPONENT:
@@ -637,7 +639,7 @@ class UpgradeActionRecordUploadForUpgrade(UpgradeActionRecord):
     def __init__(self, data=None):
         UpgradeActionRecord.__init__(self, data)
         if data:
-            data = bytes(data, 'raw_unicode_escape')
+            # data = bytes(data, 'raw_unicode_escape')
             self.firmware_version = \
                 VersionField(
                     data[3:3 + VersionField.VERSION_WITH_AUX_FIELD_LEN])

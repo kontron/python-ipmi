@@ -346,20 +346,20 @@ class Message(object):
 
     def _pack(self):
         """Pack the message and return an array."""
-        if not hasattr(self, '__fields__'):
-            return ''
-
         data = ByteBuffer()
+        if not hasattr(self, '__fields__'):
+            return data.array
+
         for field in self.__fields__:
             field.encode(self, data)
         return data.array
 
     def _encode(self):
         """Encode the message and return a bytestring."""
-        if not hasattr(self, '__fields__'):
-            return ''
-
         data = ByteBuffer()
+        if not hasattr(self, '__fields__'):
+            return data.tostring()
+
         for field in self.__fields__:
             field.encode(self, data)
         return data.tostring()

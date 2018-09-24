@@ -88,6 +88,15 @@ class Ipmitool(object):
         return accessible
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
+        """Interface function to send and receive raw message.
+
+        target: IPMI target
+        lun: logical unit number
+        netfn: network function
+        raw_bytes: RAW bytes as bytestring
+
+        Returns the IPMI message response bytestring.
+        """
         if self._interface_type in ['lan', 'lanplus']:
             cmd = self._build_ipmitool_cmd(target, lun, netfn, raw_bytes)
         elif self._interface_type in ['serial-terminal']:
@@ -129,6 +138,13 @@ class Ipmitool(object):
         return data.tostring()
 
     def send_and_receive(self, req):
+        """Interface function to send and receive an IPMI message.
+
+        target: IPMI target
+        req: IPMI message request
+
+        Returns the IPMI message response.
+        """
         log().debug('IPMI Request [%s]', req)
 
         req_data = ByteBuffer((req.cmdid,))

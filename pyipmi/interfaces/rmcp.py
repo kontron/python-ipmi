@@ -3,18 +3,20 @@ import struct
 import hashlib
 import random
 import threading
+from array import array
 from queue import Queue
 
 from .. import Target
 from ..session import Session
-from ..msgs import create_message, create_request_by_name, \
-        encode_message, decode_message, constants
+from ..msgs import (create_message, create_request_by_name,
+                    encode_message, decode_message, constants)
 from ..messaging import ChannelAuthenticationCapabilities
 from ..errors import DecodingError, NotSupportedError
 from ..logger import log
 from ..interfaces.ipmb import IpmbHeader, encode_ipmb_msg, \
         encode_bridged_message, decode_bridged_message, rx_filter
-from ..utils import check_completion_code
+from ..utils import (check_completion_code, py3enc_unic_bytes_fix,
+                     py3dec_unic_bytes_fix)
 
 
 CLASS_NORMAL_MSG = 0x00
@@ -198,19 +200,23 @@ class IpmiMsg():
 
     def _padd_password(self):
         """The password/key is 0 padded to 16-bytes for all specified
-        authentication types. """
-        return self.session._auth_password.ljust(16, '\x00')
+        authentication types."""
+        password = self.session._auth_password
+        if isinstance(password, str):
+            password = str.encode(password)
+        return password.ljust(16, b'\x00')
 
     def _pack_auth_code_straight(self):
+        """Return the auth code as bytestring."""
         return self._padd_password()
 
     def _pack_auth_code_md5(self, sdu):
         auth_code = struct.pack('>16s I %ds I 16s' % len(sdu),
-                                self.session._auth_password,
+                                self._pack_auth_code_straight(),
                                 self._pack_session_id(),
                                 sdu,
                                 self._pack_sequence_number(),
-                                self.session._auth_password)
+                                self._pack_auth_code_straight())
         return hashlib.md5(auth_code).digest()
 
     def pack(self, sdu):
@@ -240,7 +246,7 @@ class IpmiMsg():
         else:
             raise NotSupportedError('authentication type %s' % auth_type)
 
-        pdu += chr(data_len)
+        pdu += array('B', [data_len]).tostring()
 
         if sdu is not None:
             pdu += sdu
@@ -248,8 +254,9 @@ class IpmiMsg():
         return pdu
 
     def unpack(self, pdu):
+        pdu = py3enc_unic_bytes_fix(pdu)
         self.pdu = pdu
-        auth_type = ord(pdu[0])
+        auth_type = array('B', self.pdu)[0]
 
         if auth_type != 0:
             header_len = struct.calcsize(self.HEADER_FORMAT_AUTH)
@@ -259,11 +266,11 @@ class IpmiMsg():
         header = pdu[:header_len]
         if auth_type != 0:
             # TBD .. find a way to do this better
-            self.auth_type = ord(pdu[0])
+            self.auth_type = array('B', self.pdu)[0]
             (self.sequence_number,) = struct.unpack('!I', pdu[1:5])
             (self.session_id,) = struct.unpack('!I', pdu[5:9])
             self.auth_code = [a for a in struct.unpack('!16B', pdu[9:25])]
-            data_len = ord(pdu[25])
+            data_len = array('B', self.pdu)[25]
         else:
             (self.auth_type, self.sequence_number,
                 self.session_id, data_len) =\
@@ -470,6 +477,16 @@ class Rmcp:
         self.next_sequence_number = (self.next_sequence_number + 1) % 64
 
     def _send_and_receive(self, target, lun, netfn, cmdid, payload):
+        """Send and receive data using RMCP interface.
+
+        target:
+        lun:
+        netfn:
+        cmdid:
+        payload: IPMI message payload as array
+
+        Returns the received data as array.
+        """
         self._inc_sequence_number()
 
         header = IpmbHeader()
@@ -508,12 +525,26 @@ class Rmcp:
         return rx_data[6:-1]
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
-        """Interface function"""
-        return self._send_and_receive(target, lun, netfn, ord(raw_bytes[0]),
+        """Interface function to send and receive raw message.
+
+        target: IPMI target
+        lun: logical unit number
+        netfn: network function
+        raw_bytes: RAW bytes as bytestring
+
+        Returns the IPMI message response bytestring.
+        """
+        return self._send_and_receive(target, lun, netfn, raw_bytes[0],
                                       raw_bytes[1:])
 
     def send_and_receive(self, req):
-        """Interface function"""
+        """Interface function to send and receive an IPMI message.
+
+        target: IPMI target
+        req: IPMI message request
+
+        Returns the IPMI message response.
+        """
         rx_data = self._send_and_receive(req.target, req.lun, req.netfn,
                                          req.cmdid, encode_message(req))
         rsp = create_message(req.cmdid, req.netfn + 1)

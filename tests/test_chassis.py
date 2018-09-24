@@ -10,7 +10,7 @@ from pyipmi.msgs import decode_message
 
 def test_chassisstatus_object():
     msg = pyipmi.msgs.chassis.GetChassisStatusRsp()
-    decode_message(msg, '\x00\xff\xff\xff')
+    decode_message(msg, b'\x00\xff\xff\xff')
 
     status = ChassisStatus(msg)
 
