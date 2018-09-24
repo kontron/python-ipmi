@@ -20,11 +20,12 @@ from __future__ import print_function
 from future import standard_library
 standard_library.install_aliases()
 
+
 import sys
 import getopt
 import logging
 import traceback
-import array
+from array import array
 
 from collections import namedtuple
 
@@ -279,9 +280,9 @@ def cmd_raw(ipmi, args):
         return
 
     netfn = int(args[0], 0)
-    raw_bytes = array.array('B', [int(d, 0) for d in args[1:]])
+    raw_bytes = array('B', [int(d, 0) for d in args[1:]])
     rsp = ipmi.raw_command(lun, netfn, raw_bytes.tostring())
-    print(' '.join('%02x' % ord(d) for d in rsp))
+    print(' '.join('%02x' % d for d in array('B', rsp)))
 
 
 def cmd_hpm_capabilities(ipmi, args):
