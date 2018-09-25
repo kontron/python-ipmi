@@ -7,7 +7,8 @@ from nose.tools import eq_
 
 from pyipmi import Target
 from pyipmi.interfaces.ipmb import (checksum, IpmbHeader, encode_send_message,
-                                    encode_bridged_message, encode_ipmb_msg)
+                                    encode_bridged_message, encode_ipmb_msg,
+                                    decode_bridged_message)
 
 
 def test_checksum():
@@ -46,7 +47,7 @@ def test_encode_send_message():
     eq_(data, b'\x20\x18\xc8\x12\x88\x34\x47\xaa\xbb\x86')
 
 
-def test_encode_bridge_message():
+def test_encode_bridged_message():
     payload = array('B', b'\xaa\xbb')
     t = Target(0)
     t.set_routing([(0x81, 0x20, 7), (0x20, 0x72, None)])
@@ -59,6 +60,15 @@ def test_encode_bridge_message():
     data = encode_bridged_message(t.routing, header, payload, seq=0x22)
     eq_(data,
         b'\x20\x18\xc8\x81\x88\x34\x47\x72\x18\x76\x20\x44\xaa\xaa\xbb\x8d\x7c')
-#    eq_(data, array('B',
-#        [0x20, 0x18, 0xc8, 0x81, 0x88, 0x34, 0x47, 0x72, 0x18,
-#         0x76, 0x20, 0x44, 0xaa, 0xaa, 0xbb, 0x8d, 0x7c]))
+
+
+def test_decode_bridged_message():
+    # 81 1c 63 20 14 34 00 20 1c c4 82 14 34 00 20 14 cc 74 14 22 00 ed ff 6a 36
+    data = b'\x81\x1c\x63\x20\x14\x34\x00\x20\x1c\xc4\x82\x14\x34\x00\x20\x14\xcc\x74\x14\x22\x00\xed\xff\x6a\x36'
+    data = decode_bridged_message(data)
+    eq_(len(data), 9)
+    eq_(data, b'\x20\x14\xcc\x74\x14\x22\x00\xed\xff')
+
+
+def test_rx_filter():
+    pass
