@@ -21,8 +21,8 @@ from array import array
 
 from . import constants
 from ..utils import ByteBuffer
-from ..errors import CompletionCodeError, EncodingError, DecodingError, \
-        DescriptionError
+from ..errors import (CompletionCodeError, EncodingError, DecodingError,
+                      DescriptionError)
 
 
 class BaseField(object):
