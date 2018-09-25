@@ -143,7 +143,6 @@ class Target(object):
         if is_string(routing):
             # if type(routing) in [unicode, str]:
             routing = ast.literal_eval(routing)
-        print(routing)
         self.routing = [Routing(*route) for route in routing]
 
     def __str__(self):
