@@ -464,9 +464,9 @@ class ComponentPropertyCurrentVersion(ComponentProperty):
 class ComponentPropertyDescriptionString(ComponentProperty):
 
     def _from_rsp_data(self, data):
-        self.description = py3dec_unic_bytes_fix(
-            array('B', data).tostring())
-        self.description = self.description.replace(b'\0', b'')
+        self.description = py3dec_unic_bytes_fix(array('B', data).tostring())
+        # strip '\x00'
+        self.description = self.description.replace('\0', '')
 
 
 class ComponentPropertyRollbackVersion(ComponentProperty):
