@@ -17,9 +17,9 @@
 from array import array
 
 from ..logger import log
-from ..msgs import create_message, create_request_by_name, \
-        pack_message, encode_message, decode_message, constants
-from ..utils import check_completion_code, py3dec_unic_bytes_fix
+from ..msgs import (create_message, create_request_by_name,
+                    encode_message, decode_message, constants)
+from ..utils import check_completion_code
 
 
 def checksum(data):
@@ -78,7 +78,7 @@ def encode_send_message(payload, rq_sa, rs_sa, channel, seq, tracking=1):
     seq: the sequence number
     tracking: tracking
 
-    Returns an encode sens message as bytestring
+    Returns an encode send message as bytestring
     """
     req = create_request_by_name('SendMessage')
     req.channel.number = channel
@@ -98,6 +98,16 @@ def encode_send_message(payload, rq_sa, rs_sa, channel, seq, tracking=1):
 
 
 def encode_bridged_message(routing, header, payload, seq):
+    """Encode a (multi-)bridged command and embedd the message to be send.
+
+    routing:
+    payload: the message to be send as bytestring
+    header:
+    seq: the sequence number
+
+    Returns the encoded send message as bytestring
+    """
+
     # change header requester addresses for bridging
     header.rq_sa = routing[-1].rq_sa
     header.rs_sa = routing[-1].rs_sa
@@ -114,12 +124,18 @@ def encode_bridged_message(routing, header, payload, seq):
 
 
 def decode_bridged_message(rx_data):
-    while rx_data[5] == constants.CMDID_SEND_MESSAGE:
+    """Decode a (multi-)bridged command.
+
+    rx_data: the received message as bytestring
+
+    Returns the decoded message as bytestring
+    """
+
+    while array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE:
         rsp = create_message(constants.CMDID_SEND_MESSAGE,
                              constants.NETFN_APP+1)
         decode_message(rsp, rx_data[6:])
-        check_completion_code(rsp.completion_code,
-                              cmd_id=constants.CMDID_SEND_MESSAGE)
+        check_completion_code(rsp.completion_code)
         rx_data = rx_data[7:-1]
 
         if len(rx_data) < 6:
@@ -127,20 +143,32 @@ def decode_bridged_message(rx_data):
     return rx_data
 
 
-def rx_filter(header, rx_data):
-    if type(rx_data) == str:
-        rx_data = array('B', rx_data)
+def rx_filter(header, data):
+    """Check if the message in rx_data matches to the information in header.
+
+    The following checks are done:
+      - Header checksum
+      - Payload checksum
+      - NetFn matching
+      - LUN matching
+      - Command Id matching
+
+    header: the header to compare with
+    data: the received message as bytestring
+    """
+
+    data = array('B', data)
 
     checks = [
-        (checksum(rx_data[0:3]), 0, 'Header checksum failed'),
-        (checksum(rx_data[3:]), 0, 'payload checksum failed'),
-        # (rx_data[0], header.rq_sa, 'slave address mismatch'),
-        (rx_data[1] & ~3, header.netfn << 2 | 4, 'NetFn mismatch'),
-        # (rx_data[3], header.rs_sa, 'target address mismatch'),
-        # (rx_data[1] & 3, header.rq_lun, 'request LUN mismatch'),
-        (rx_data[4] & 3, header.rs_lun & 3, 'responder LUN mismatch'),
-        (rx_data[4] >> 2, header.rq_seq, 'sequence number mismatch'),
-        (rx_data[5], header.cmd_id, 'command id mismatch'),
+        (checksum(data[0:3]), 0, 'Header checksum failed'),
+        (checksum(data[3:]), 0, 'payload checksum failed'),
+        # (data[0], header.rq_sa, 'slave address mismatch'),
+        (data[1] & ~3, header.netfn << 2 | 4, 'NetFn mismatch'),
+        # (data[3], header.rs_sa, 'target address mismatch'),
+        # (data[1] & 3, header.rq_lun, 'request LUN mismatch'),
+        (data[4] & 3, header.rs_lun & 3, 'responder LUN mismatch'),
+        (data[4] >> 2, header.rq_seq, 'sequence number mismatch'),
+        (data[5], header.cmd_id, 'command id mismatch'),
     ]
 
     match = True
