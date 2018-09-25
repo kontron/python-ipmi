@@ -15,8 +15,7 @@ from ..errors import DecodingError, NotSupportedError
 from ..logger import log
 from ..interfaces.ipmb import IpmbHeader, encode_ipmb_msg, \
         encode_bridged_message, decode_bridged_message, rx_filter
-from ..utils import (check_completion_code, py3enc_unic_bytes_fix,
-                     py3dec_unic_bytes_fix)
+from ..utils import check_completion_code
 
 
 CLASS_NORMAL_MSG = 0x00
@@ -68,7 +67,7 @@ class RmcpMsg:
         sdu = pdu[header_len:]
 
         if self.version != self.ASF_RMCP_V_1_0:
-            raise UnpackException('invalid RMCP version field')
+            raise DecodingError('invalid RMCP version field')
 
         return sdu
 
@@ -156,10 +155,10 @@ class AsfPong(AsfMsg):
 
     def unpack(self, sdu):
         AsfMsg.unpack(self, sdu)
-        header_len = struct.calcsize(self.ASF_HEADER_FORMAT)
+        # header_len = struct.calcsize(self.ASF_HEADER_FORMAT)
         (self.oem_iana_enterprise_number, self.oem_defined,
             self.supported_entities, self.supported_interactions) =\
-                struct.unpack(self.DATA_FORMAT, self.data)
+            struct.unpack(self.DATA_FORMAT, self.data)
 
         self.check_data()
 
@@ -254,27 +253,22 @@ class IpmiMsg():
         return pdu
 
     def unpack(self, pdu):
-        pdu = py3enc_unic_bytes_fix(pdu)
-        self.pdu = pdu
-        auth_type = array('B', self.pdu)[0]
+        auth_type = array('B', pdu)[0]
 
         if auth_type != 0:
             header_len = struct.calcsize(self.HEADER_FORMAT_AUTH)
-        else:
-            header_len = struct.calcsize(self.HEADER_FORMAT_NO_AUTH)
-
-        header = pdu[:header_len]
-        if auth_type != 0:
+            header = pdu[:header_len]
             # TBD .. find a way to do this better
-            self.auth_type = array('B', self.pdu)[0]
+            self.auth_type = array('B', pdu)[0]
             (self.sequence_number,) = struct.unpack('!I', pdu[1:5])
             (self.session_id,) = struct.unpack('!I', pdu[5:9])
             self.auth_code = [a for a in struct.unpack('!16B', pdu[9:25])]
-            data_len = array('B', self.pdu)[25]
+            data_len = array('B', pdu)[25]
         else:
-            (self.auth_type, self.sequence_number,
-                self.session_id, data_len) =\
-                            struct.unpack(self.HEADER_FORMAT_NO_AUTH, header)
+            header_len = struct.calcsize(self.HEADER_FORMAT_NO_AUTH)
+            header = pdu[:header_len]
+            (self.auth_type, self.sequence_number, self.session_id,
+                data_len) = struct.unpack(self.HEADER_FORMAT_NO_AUTH, header)
 
         if len(pdu) < header_len + data_len:
             raise DecodingError('short SDU')
@@ -285,11 +279,11 @@ class IpmiMsg():
             self.check_header()
 
         if data_len != 0:
-            self.sdu = pdu[header_len:header_len + data_len]
+            sdu = pdu[header_len:header_len + data_len]
         else:
-            self.sdu = None
+            sdu = None
 
-        return self.sdu
+        return sdu
 
     def check_data(self):
         pass
@@ -334,7 +328,8 @@ class Rmcp:
         self._sock.settimeout(timeout)
 
     def _send_ipmi_msg(self, data):
-        log().debug('IPMI TX: %s' % (' '.join('%02x' % ord(b) for b in data)))
+        log().debug('IPMI TX: {:s}'.format(
+            ''.join('%02x ' % b for b in array('B', data))))
         ipmi = IpmiMsg(self._session)
         tx_data = ipmi.pack(data)
         self._send_rmcp_msg(tx_data, RMCP_CLASS_IPMI)
@@ -344,10 +339,10 @@ class Rmcp:
         if class_of_msg != RMCP_CLASS_IPMI:
             raise DecodingError('invalid class field in ASF message')
         msg = IpmiMsg()
-        rx_data = msg.unpack(pdu)
-        log().debug('IPMI RX: %s' % (
-            ' '.join('%02x' % ord(b) for b in rx_data)))
-        return rx_data
+        data = msg.unpack(pdu)
+        log().debug('IPMI RX: {:s}'.format(
+            ''.join('%02x ' % b for b in array('B', data))))
+        return data
 
     def _send_asf_msg(self, msg):
         log().debug('ASF TX: msg')
@@ -385,7 +380,7 @@ class Rmcp:
         req.target = self.host_target
         req.authentication.type = session.auth_type
         if session._auth_username:
-            req.user_name = session._auth_username
+            req.user_name = session._auth_username.ljust(16, '\x00')
         rsp = self.send_and_receive(req)
         check_completion_code(rsp.completion_code)
         return rsp
@@ -427,6 +422,7 @@ class Rmcp:
         self.ping()
 
         # 1 - Get Channel Authentication Capabilities
+        log().debug('Get Channel Authentication Capabilities')
         caps = self._get_channel_auth_cap()
         log().debug('%s' % caps)
 
@@ -471,7 +467,7 @@ class Rmcp:
         check_completion_code(rsp.completion_code)
         self._session.activated = False
 
-#        self._q.join()
+        self._q.join()
 
     def _inc_sequence_number(self):
         self.next_sequence_number = (self.next_sequence_number + 1) % 64
@@ -483,7 +479,7 @@ class Rmcp:
         lun:
         netfn:
         cmdid:
-        payload: IPMI message payload as array
+        raw_bytes: IPMI message payload as bytestring
 
         Returns the received data as array.
         """
@@ -514,7 +510,7 @@ class Rmcp:
             else:
                 rx_data = self._receive_ipmi_msg()
 
-            if rx_data[5] == constants.CMDID_SEND_MESSAGE:
+            if array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE:
                 rx_data = decode_bridged_message(rx_data)
 
             received = rx_filter(header, rx_data)
@@ -534,8 +530,11 @@ class Rmcp:
 
         Returns the IPMI message response bytestring.
         """
-        return self._send_and_receive(target, lun, netfn, raw_bytes[0],
-                                      raw_bytes[1:])
+        return self._send_and_receive(target=target,
+                                      lun=lun,
+                                      netfn=netfn,
+                                      cmdid=array('B', raw_bytes)[0],
+                                      payload=raw_bytes[1:])
 
     def send_and_receive(self, req):
         """Interface function to send and receive an IPMI message.
@@ -545,8 +544,11 @@ class Rmcp:
 
         Returns the IPMI message response.
         """
-        rx_data = self._send_and_receive(req.target, req.lun, req.netfn,
-                                         req.cmdid, encode_message(req))
+        rx_data = self._send_and_receive(target=req.target,
+                                         lun=req.lun,
+                                         netfn=req.netfn,
+                                         cmdid=req.cmdid,
+                                         payload=encode_message(req))
         rsp = create_message(req.cmdid, req.netfn + 1)
         decode_message(rsp, rx_data)
         return rsp
