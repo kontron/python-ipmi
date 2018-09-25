@@ -92,6 +92,11 @@ def cmd_sensor_rearm(ipmi, args):
 
 
 def sdr_show(ipmi, s):
+
+    print("SDR record ID:    0x%04x" % s.id)
+    print("SDR type:         0x%02x" % s.type)
+    print("Device Id string: %s" % s.device_id_string)
+    print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
     if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
         (raw, states) = ipmi.get_sensor_reading(s.number, s.owner_lun)
         value = s.convert_sensor_raw_to_value(raw)
@@ -103,9 +108,6 @@ def sdr_show(ipmi, s):
         t_lnc = s.convert_sensor_raw_to_value(s.threshold['lnc'])
         t_lcr = s.convert_sensor_raw_to_value(s.threshold['lcr'])
         t_lnr = s.convert_sensor_raw_to_value(s.threshold['lnr'])
-        print("SDR record ID:    0x%04x" % s.id)
-        print("Device Id string: %s" % s.device_id_string)
-        print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
         print("Reading value:    %s" % value)
         print("Reading state:    0x%x" % states)
         print("UNR:              %s" % t_unr)
@@ -116,15 +118,19 @@ def sdr_show(ipmi, s):
         print("LNR:              %s" % t_lnr)
     elif s.type is pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
         (raw, states) = ipmi.get_sensor_reading(s.number)
-        print("SDR record ID:    0x%04x" % s.id)
-        print("Device Id string: %s" % s.device_id_string)
-        print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
         print("Reading:          %s" % raw)
         print("Reading state:    0x%x" % states)
-    else:
-        print("SDR record ID:    0x%04x" % s.id)
-        print("Device Id string: %s" % s.device_id_string)
-        print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
+
+
+def cmd_sdr_show_raw(ipmi, args):
+    if len(args) != 1:
+        usage()
+        return
+    try:
+        sdr = ipmi.get_device_sdr(int(args[0], 0))
+        print(' '.join(['0x%02x' % b for b in sdr.data]))
+    except ValueError:
+        print('')
 
 
 def cmd_sdr_show(ipmi, args):
@@ -598,6 +604,7 @@ COMMANDS = (
         Command('sel clear', cmd_sel_clear),
         Command('sensor rearm', cmd_sensor_rearm),
         Command('sdr list', cmd_sdr_list),
+        Command('sdr raw', cmd_sdr_show_raw),
         Command('sdr show', cmd_sdr_show),
         Command('sdr showall', cmd_sdr_show_all),
         Command('fru print', cmd_fru_print),
@@ -640,6 +647,7 @@ COMMAND_HELP = (
         CommandHelp('sdr', None,
                     'Print Sensor Data Repository entries and readings'),
         CommandHelp('sdr list', None, 'List all SDRs'),
+        CommandHelp('sdr raw', '<sdr-id>', 'Show SDR raw data'),
         CommandHelp('sdr show', '<sdr-id>', 'Show detail for one SDR'),
         CommandHelp('sdr showall', None, 'Show detail for all SDRs'),
 

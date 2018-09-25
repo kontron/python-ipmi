@@ -21,7 +21,7 @@ import math
 from . import errors
 
 from .errors import DecodingError
-from .utils import check_completion_code, ByteBuffer
+from .utils import check_completion_code, ByteBuffer, py3dec_unic_bytes_fix
 from .msgs import create_request_by_name
 
 from .helper import get_sdr_data_helper, clear_repository_helper
@@ -471,7 +471,7 @@ class SdrFullSensorRecord(SdrCommon):
         self.reserved = buffer.pop_unsigned_int(2)
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = buffer.tostring()
+        self.device_id_string = py3dec_unic_bytes_fix(buffer.tostring())
 
 
 ###
@@ -514,7 +514,7 @@ class SdrCompactSensorRecord(SdrCommon):
         self.reserved = buffer.pop_unsigned_int(3)
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = buffer.tostring()
+        self.device_id_string = py3dec_unic_bytes_fix(buffer.tostring())
 
 
 ###
@@ -544,7 +544,7 @@ class SdrEventOnlySensorRecord(SdrCommon):
         self.reserved = buffer.pop_unsigned_int(1)
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = buffer.tostring()
+        self.device_id_string = py3dec_unic_bytes_fix(buffer.tostring())
 
 
 ###
@@ -574,7 +574,7 @@ class SdrFruDeviceLocator(SdrCommon):
         self._entity(buffer.pop_slice(2))
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = buffer.tostring()
+        self.device_id_string = py3dec_unic_bytes_fix(buffer.tostring())
 
 
 ###
@@ -604,7 +604,7 @@ class SdrManagementControllerDeviceLocator(SdrCommon):
         self._entity(buffer.pop_slice(2))
         self.oem = buffer.pop_unsigned_int(1)
         self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = buffer.tostring()
+        self.device_id_string = py3dec_unic_bytes_fix(buffer.tostring())
 
 
 ###
