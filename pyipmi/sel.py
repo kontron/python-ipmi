@@ -107,7 +107,7 @@ class SelInfo(State):
         if rsp.operation_support.get_sel_allocation_info:
             self.operation_support.append('get_sel_allocation_info')
         if rsp.operation_support.reserve_sel:
-            self.operation_support.append('reserve_sel:')
+            self.operation_support.append('reserve_sel')
         if rsp.operation_support.partial_add_sel_entry:
             self.operation_support.append('partial_add_sel_entry')
         if rsp.operation_support.delete_sel:
