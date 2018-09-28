@@ -13,8 +13,9 @@ from ..msgs import (create_message, create_request_by_name,
 from ..messaging import ChannelAuthenticationCapabilities
 from ..errors import DecodingError, NotSupportedError
 from ..logger import log
-from ..interfaces.ipmb import IpmbHeader, encode_ipmb_msg, \
-        encode_bridged_message, decode_bridged_message, rx_filter
+from ..interfaces.ipmb import (IpmbHeader, encode_ipmb_msg,
+                               encode_bridged_message, decode_bridged_message,
+                               rx_filter)
 from ..utils import check_completion_code
 
 
