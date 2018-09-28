@@ -24,7 +24,9 @@ from ..interfaces.ipmb import IpmbHeader, checksum, rx_filter, encode_ipmb_msg
 
 try:
     import pyaardvark
-except ImportError:
+except ImportError: # python 2
+    pyaardvark = None
+except RuntimeError: # python 3
     pyaardvark = None
 
 
