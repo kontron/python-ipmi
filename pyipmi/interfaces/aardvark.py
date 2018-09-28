@@ -15,12 +15,12 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 import time
-import array
+from array import array
 
 from ..msgs import create_message, encode_message, decode_message
 from ..errors import IpmiTimeoutError
 from ..logger import log
-from ..interfaces.ipmb import IpmbHeader, checksum, rx_filter
+from ..interfaces.ipmb import IpmbHeader, checksum, rx_filter, encode_ipmb_msg
 
 try:
     import pyaardvark
@@ -68,10 +68,8 @@ class Aardvark(object):
         header.rq_seq = self.next_sequence_number
         header.rq_lun = 0
         header.rq_sa = self.slave_address
-        header.cmd_id = ord(1)
-        raw_data = []
-
-        self._send_raw(header, raw_data)
+        header.cmd_id = 1
+        self._send_raw(header, None)
         self._receive_raw(header)
         return True
 
@@ -87,14 +85,13 @@ class Aardvark(object):
         return data
 
     def _send_raw(self, header, raw_bytes):
-
-        cmd_data = [ord(c) for c in raw_bytes]
-        tx_data = self._encode_ipmb_msg_req(header, cmd_data)
-
+        raw_bytes = encode_ipmb_msg(header, raw_bytes)
         i2c_addr = header.rs_sa >> 1
-        self._dev.i2c_master_write(i2c_addr, tx_data[1:])
+
+        raw_bytes = array('B', raw_bytes)
         log().debug('I2C TX to %02Xh [%s]', i2c_addr,
-                    ' '.join(['%02x' % b for b in tx_data]))
+                    ' '.join(['%02x' % b for b in raw_bytes]))
+        self._dev.i2c_master_write(i2c_addr, raw_bytes[1:])
 
     def _receive_raw(self, header):
         start_time = time.time()
@@ -114,17 +111,26 @@ class Aardvark(object):
                 continue
 
             (i2c_addr, rx_data) = self._dev.i2c_slave_read()
+            rx_data = array('B', rx_data)
             log().debug('I2C RX from %02Xh [%s]', i2c_addr << 1,
-                        ' '.join(['%02x' % ord(c) for c in rx_data]))
+                        ' '.join(['%02x' % c for c in rx_data]))
 
-            rx_data = array.array('B', rx_data)
-            rq_sa = array.array('B', [i2c_addr << 1, ])
-
+            rq_sa = array('B', [i2c_addr << 1, ])
             rsp_received = rx_filter(header, rq_sa + rx_data)
 
         return rx_data
 
-    def _send_and_receive(self, target, lun, netfn, cmdid, raw_bytes):
+    def _send_and_receive(self, target, lun, netfn, cmdid, payload):
+        """Send and receive data using aardvark interface.
+
+        target:
+        lun:
+        netfn:
+        cmdid:
+        payload: IPMI message payload as bytestring
+
+        Returns the received data as bytestring
+        """
         self._inc_sequence_number()
 
         # assemble IPMB header
@@ -140,7 +146,7 @@ class Aardvark(object):
         retries = 0
         while retries < self.max_retries:
             try:
-                self._send_raw(header, raw_bytes)
+                self._send_raw(header, payload)
                 rx_data = self._receive_raw(header)
                 break
             except IpmiTimeoutError:
@@ -154,22 +160,40 @@ class Aardvark(object):
         return rx_data.tostring()[5:-1]
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
-        return self._send_and_receive(target, lun, netfn, ord(raw_bytes[0]),
-                                      raw_bytes[1:])
+        """Interface function to send and receive raw message.
 
-    def send_and_receive(self, msg):
-        """Sends an IPMI request message and waits for its response.
+        target: IPMI target
+        lun: logical unit number
+        netfn: network function
+        raw_bytes: RAW bytes as bytestring
 
-        `msg` is a IPMI Message containing both the request and response.
+        Returns the IPMI message response bytestring.
+        """
+        return self._send_and_receive(target=target,
+                                      lun=lun,
+                                      netfn=netfn,
+                                      cmdid=array('B', raw_bytes)[0],
+                                      payload=raw_bytes[1:])
+
+    def send_and_receive(self, req):
+        """Interface function to send and receive an IPMI message.
+
+        target: IPMI target
+        req: IPMI message request
+
+        Returns the IPMI message response.
         """
 
-        log().debug('IPMI Request [%s]', msg)
+        log().debug('IPMI Request [%s]', req)
 
-        rx_data = self._send_and_receive(msg.target, msg.lun, msg.netfn,
-                                         msg.cmdid, encode_message(msg))
-        msg = create_message(msg.cmdid, msg.netfn + 1)
-        decode_message(msg, rx_data)
+        rx_data = self._send_and_receive(target=req.target,
+                                         lun=req.lun,
+                                         netfn=req.netfn,
+                                         cmdid=req.cmdid,
+                                         payload=encode_message(req))
+        rsp = create_message(req.cmdid, req.netfn + 1)
+        decode_message(rsp, rx_data)
 
-        log().debug('IPMI Response [%s])', msg)
+        log().debug('IPMI Response [%s])', rsp)
 
-        return msg
+        return rsp
