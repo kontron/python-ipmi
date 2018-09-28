@@ -122,7 +122,7 @@ class SelEntry(State):
     TYPE_OEM_NON_TIMESTAMPED_RANGE = list(range(0xe0, 0x100))
 
     def __str__(self):
-        raw = '[%s]' % (' '.join(['%02x' % b for b in self.data]))
+        raw = '[%s]' % (' '.join(['0x%02x' % b for b in self.data]))
         string = []
         string.append('SEL Record ID 0x%04x' % self.record_id)
         string.append('  Raw: %s' % raw)
