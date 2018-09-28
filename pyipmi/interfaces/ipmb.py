@@ -61,9 +61,10 @@ def encode_ipmb_msg(header, data):
     msg = array('B')
 
     msg.fromstring(header.encode())
-    a = array('B')
-    a.fromstring(data)
-    msg.extend(a)
+    if data is not None:
+        a = array('B')
+        a.fromstring(data)
+        msg.extend(a)
     msg.append(checksum(msg[3:]))
     return msg.tostring()
 
