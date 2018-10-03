@@ -112,6 +112,8 @@ class String(BaseField):
     def encode(self, obj, data):
         value = getattr(obj, self.name)
         data.push_string(value)
+        # fill with 0
+        data.push_unsigned_int(0, self.length - len(value))
 
     def decode(self, obj, data):
         value = data.pop_string(self.length)

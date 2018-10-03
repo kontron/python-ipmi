@@ -3,6 +3,7 @@ import struct
 import hashlib
 import random
 import threading
+
 from array import array
 from queue import Queue
 
@@ -17,7 +18,6 @@ from ..interfaces.ipmb import (IpmbHeader, encode_ipmb_msg,
                                encode_bridged_message, decode_bridged_message,
                                rx_filter)
 from ..utils import check_completion_code
-
 
 CLASS_NORMAL_MSG = 0x00
 CLASS_ACK_MSG = 0x80
@@ -69,7 +69,6 @@ class RmcpMsg:
 
         if self.version != self.ASF_RMCP_V_1_0:
             raise DecodingError('invalid RMCP version field')
-
         return sdu
 
 
@@ -110,7 +109,6 @@ class AsfMsg:
         header = sdu[:header_len]
         (self.iana_enterprise_number, self.asf_type, self.tag, data_len) = \
             struct.unpack(self.ASF_HEADER_FORMAT, header)
-
         if len(sdu) < header_len + data_len:
             raise DecodingError('short SDU')
         elif len(sdu) > header_len + data_len:

@@ -45,10 +45,10 @@ def test_unsignedint_decode():
 
 
 def test_string_encode():
-    t = TestMessage(String('test', 10))
+    t = TestMessage(String('test', 8))
     t.test = '1234'
     byte_buffer = t.encode()
-    eq_(byte_buffer.array, array('B', [0x31, 0x32, 0x33, 0x34]))
+    eq_(byte_buffer.array, array('B', [0x31, 0x32, 0x33, 0x34, 0, 0, 0, 0]))
 
 
 def test_string_decode():
