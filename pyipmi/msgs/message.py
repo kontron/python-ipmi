@@ -58,7 +58,8 @@ class ByteArray(BaseField):
         a = getattr(obj, self.name)
         if len(a) != self._length(obj):
             raise EncodingError('Array must be exaclty %d bytes long '
-                                '(but is %d long)' % (self._length(obj), len(a)))
+                                '(but is %d long)' %
+                                (self._length(obj), len(a)))
         for i in range(self._length(obj)):
             data.push_unsigned_int(a[i], 1)
 
@@ -182,8 +183,7 @@ class Optional(object):
         if getattr(obj, self._field.name) is not None:
             self._field.encode(obj, data)
 
-    @staticmethod
-    def create():
+    def create(self):
         return None
 
 
