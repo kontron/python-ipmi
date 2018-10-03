@@ -30,12 +30,12 @@ def test_NotSupportedError():
 
 @raises(DescriptionError)
 def test_DescriptionError():
-    raise (DescriptionError)
+    raise DescriptionError()
 
 
 @raises(RetryError)
 def test_RetryError():
-    raise (RetryError)
+    raise RetryError()
 
 
 @raises(DataNotFound)
