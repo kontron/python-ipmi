@@ -3,15 +3,13 @@
 from nose.tools import eq_
 from pyipmi.picmg import LedState
 
-import pyipmi.msgs.picmg
-
-from pyipmi.msgs import encode_message
+from pyipmi.msgs.picmg import SetFruLedStateReq
 
 
 def test_to_request():
-    req = pyipmi.msgs.picmg.SetFruLedStateReq()
+    req = SetFruLedStateReq()
     led = LedState(fru_id=1, led_id=2, color=LedState.COLOR_GREEN,
-            function=LedState.FUNCTION_ON)
+                   function=LedState.FUNCTION_ON)
     led.to_request(req)
 
     eq_(req.fru_id, 1)
@@ -20,8 +18,9 @@ def test_to_request():
     eq_(req.led_function, 0xff)
     eq_(req.on_duration, 0)
 
+
 def test_to_request_function_on():
-    req = pyipmi.msgs.picmg.SetFruLedStateReq()
+    req = SetFruLedStateReq()
     led = LedState(fru_id=1, led_id=2, color=LedState.COLOR_RED)
     led.override_function = led.FUNCTION_ON
     led.to_request(req)
@@ -30,8 +29,9 @@ def test_to_request_function_on():
     eq_(req.led_function, 0xff)
     eq_(req.on_duration, 0)
 
+
 def test_to_request_function_off():
-    req = pyipmi.msgs.picmg.SetFruLedStateReq()
+    req = SetFruLedStateReq()
     led = LedState(fru_id=1, led_id=2, color=LedState.COLOR_RED)
     led.override_function = led.FUNCTION_OFF
     led.to_request(req)
@@ -40,8 +40,9 @@ def test_to_request_function_off():
     eq_(req.led_function, 0)
     eq_(req.on_duration, 0)
 
+
 def test_to_request_function_blinking():
-    req = pyipmi.msgs.picmg.SetFruLedStateReq()
+    req = SetFruLedStateReq()
     led = LedState(fru_id=1, led_id=2, color=LedState.COLOR_RED)
     led.override_function = led.FUNCTION_BLINKING
     led.override_off_duration = 3
@@ -52,8 +53,9 @@ def test_to_request_function_blinking():
     eq_(req.led_function, 3)
     eq_(req.on_duration, 4)
 
+
 def test_to_request_function_lamp_test():
-    req = pyipmi.msgs.picmg.SetFruLedStateReq()
+    req = SetFruLedStateReq()
     led = LedState(fru_id=1, led_id=2, color=LedState.COLOR_RED)
     led.override_function = led.FUNCTION_LAMP_TEST
     led.lamp_test_duration = 3
