@@ -16,49 +16,52 @@ from pyipmi.hpm import (ComponentProperty, ComponentPropertyDescriptionString,
                         PROPERTY_DEFERRED_VERSION)
 
 
-def test_componentpropertygeneral_object():
-    p = ComponentProperty().from_data(PROPERTY_GENERAL_PROPERTIES, b'\xaa')
-    eq_(type(p), ComponentPropertyGeneral)
+def test_componentpropertygeneral():
+    prop = ComponentProperty().from_data(PROPERTY_GENERAL_PROPERTIES, b'\xaa')
+    eq_(type(prop), ComponentPropertyGeneral)
 
-    p = ComponentProperty().from_data(PROPERTY_GENERAL_PROPERTIES, (0xaa,))
-    eq_(type(p), ComponentPropertyGeneral)
-
-
-def test_componentpropertycurrentversion_object():
-    p = ComponentProperty().from_data(PROPERTY_CURRENT_VERSION, b'\x01\x99')
-    eq_(type(p), ComponentPropertyCurrentVersion)
-
-    p = ComponentProperty().from_data(PROPERTY_CURRENT_VERSION, (0x01, 0x99))
-    eq_(type(p), ComponentPropertyCurrentVersion)
+    prop = ComponentProperty().from_data(PROPERTY_GENERAL_PROPERTIES, (0xaa,))
+    eq_(type(prop), ComponentPropertyGeneral)
 
 
-def test_componentpropertydescriptionstring_object():
-    p = ComponentProperty().from_data(PROPERTY_DESCRIPTION_STRING,
-                                      b'\x30\x31\x32')
-    eq_(type(p), ComponentPropertyDescriptionString)
-    eq_(p.description, '012')
+def test_componentpropertycurrentversion():
+    prop = ComponentProperty().from_data(PROPERTY_CURRENT_VERSION, b'\x01\x99')
+    eq_(type(prop), ComponentPropertyCurrentVersion)
 
-    p = ComponentProperty().from_data(PROPERTY_DESCRIPTION_STRING,
-                                      (0x33, 0x34, 0x35))
-    eq_(type(p), ComponentPropertyDescriptionString)
-    eq_(p.description, '345')
+    prop = ComponentProperty().from_data(
+        PROPERTY_CURRENT_VERSION, (0x01, 0x99))
+    eq_(type(prop), ComponentPropertyCurrentVersion)
 
 
-def test_componentpropertydescriptionstring_object_with_trailinge_zeros():
-    p = ComponentProperty().from_data(PROPERTY_DESCRIPTION_STRING,
-                                      b'\x36\x37\x38\x00\x00')
-    eq_(type(p), ComponentPropertyDescriptionString)
-    eq_(p.description, '678')
+def test_componentpropertydescriptionstring():
+    prop = ComponentProperty().from_data(PROPERTY_DESCRIPTION_STRING,
+                                         b'\x30\x31\x32')
+    eq_(type(prop), ComponentPropertyDescriptionString)
+    eq_(prop.description, '012')
+
+    prop = ComponentProperty().from_data(
+        PROPERTY_DESCRIPTION_STRING, (0x33, 0x34, 0x35))
+    eq_(type(prop), ComponentPropertyDescriptionString)
+    eq_(prop.description, '345')
 
 
-def test_componentpropertyrollbackversion_object():
-    p = ComponentProperty().from_data(PROPERTY_ROLLBACK_VERSION, (0x2, 0x88))
-    eq_(type(p), ComponentPropertyRollbackVersion)
+def test_componentpropertydescriptionstring_with_trailinge_zeros():
+    prop = ComponentProperty().from_data(PROPERTY_DESCRIPTION_STRING,
+                                         b'\x36\x37\x38\x00\x00')
+    eq_(type(prop), ComponentPropertyDescriptionString)
+    eq_(prop.description, '678')
 
 
-def test_componentpropertydeferredversion_object():
-    p = ComponentProperty().from_data(PROPERTY_DEFERRED_VERSION, (0x3, 0x77))
-    eq_(type(p), ComponentPropertyDeferredVersion)
+def test_componentpropertyrollbackversion():
+    prop = ComponentProperty().from_data(
+        PROPERTY_ROLLBACK_VERSION, (0x2, 0x88))
+    eq_(type(prop), ComponentPropertyRollbackVersion)
+
+
+def test_componentpropertydeferredversion():
+    prop = ComponentProperty().from_data(
+        PROPERTY_DEFERRED_VERSION, (0x3, 0x77))
+    eq_(type(prop), ComponentPropertyDeferredVersion)
 
 
 def test_upgradeactionrecord_create_from_data():
