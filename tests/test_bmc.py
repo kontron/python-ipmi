@@ -26,19 +26,19 @@ def test_watchdog_object():
 
 
 def test_deviceid_object():
-    m = pyipmi.msgs.bmc.GetDeviceIdRsp()
-    decode_message(m, b'\x00\x12\x84\x05\x67\x51\x55\x12\x34\x56\x44\x55')
+    rsp = pyipmi.msgs.bmc.GetDeviceIdRsp()
+    decode_message(rsp, b'\x00\x12\x84\x05\x67\x51\x55\x12\x34\x56\x44\x55')
 
-    d = DeviceId(m)
-    eq_(d.device_id, 18)
-    eq_(d.revision, 4)
-    eq_(d.provides_sdrs, True)
-    eq_(str(d.fw_revision), '5.67')
-    eq_(str(d.ipmi_version), '1.5')
-    eq_(d.manufacturer_id, 5649426)
-    eq_(d.product_id, 21828)
+    dev = DeviceId(rsp)
+    eq_(dev.device_id, 18)
+    eq_(dev.revision, 4)
+    eq_(dev.provides_sdrs, True)
+    eq_(str(dev.fw_revision), '5.67')
+    eq_(str(dev.ipmi_version), '1.5')
+    eq_(dev.manufacturer_id, 5649426)
+    eq_(dev.product_id, 21828)
 
-    eq_(d.aux, None)
+    eq_(dev.aux, None)
 
 
 def test_deviceid_object_with_aux():
