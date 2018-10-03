@@ -190,7 +190,7 @@ class Ipmitool(object):
         cmd += (' -p %s' % self._session.rmcp_port)
 
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
-            cmd += (' -A NONE')
+            cmd += ' -P ""'
         elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
             cmd += (' -U "%s"' % self._session.auth_username)
             cmd += (' -P "%s"' % self._session.auth_password)

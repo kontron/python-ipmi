@@ -321,7 +321,7 @@ class ActivateSessionReq(Message):
         UnsignedInt('initial_outbound_sequence_number', 4),
     )
 
-    
+
 @register_message_class
 class ActivateSessionRsp(Message):
     __cmdid__ = constants.CMDID_ACTIVATE_SESSION

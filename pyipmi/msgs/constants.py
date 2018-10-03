@@ -80,7 +80,6 @@ COMPLETION_CODE_DESCR = (
     (CC_UNSPECIFIED_ERROR, 'Unspecified error'),
 )
 
-
 # network functions
 NETFN_CHASSIS = 0x00
 NETFN_BRIDGE = 0x02

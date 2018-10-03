@@ -148,7 +148,7 @@ class Aardvark(object):
         retries = 0
         while retries < self.max_retries:
             try:
-                self._send_raw(header, raw_bytes)
+                self._send_raw(header, payload)
                 rx_data = self._receive_raw(header)
                 break
             except IpmiTimeoutError:

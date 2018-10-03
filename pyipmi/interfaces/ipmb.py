@@ -21,10 +21,6 @@ from ..msgs import (create_message, create_request_by_name,
                     encode_message, decode_message, constants)
 from ..utils import check_completion_code
 
-from ..logger import log
-from ..msgs import create_message, create_request_by_name, \
-        encode_message, decode_message, constants
-from ..utils import check_completion_code
 
 def checksum(data):
     csum = 0
@@ -53,7 +49,7 @@ class IpmbHeader(object):
         data.append(self.cmd_id)
         return data.tostring()
 
-      
+
 def encode_ipmb_msg(header, data):
     """Encode an IPMB message.
 
@@ -112,6 +108,7 @@ def encode_bridged_message(routing, header, payload, seq):
 
     Returns the encoded send message as bytestring
     """
+
     # change header requester addresses for bridging
     header.rq_sa = routing[-1].rq_sa
     header.rs_sa = routing[-1].rs_sa

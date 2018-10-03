@@ -31,9 +31,10 @@ from . import picmg
 from . import sdr
 from . import sel
 from . import sensor
-from . import messaging
+from . import msgs
 
 from .errors import IpmiTimeoutError, CompletionCodeError, RetryError
+from .msgs.registry import create_request_by_name
 from .session import Session
 from .utils import check_completion_code, is_string
 
@@ -49,6 +50,7 @@ def create_connection(interface):
     ipmi = Ipmi()
     ipmi.interface = interface
     ipmi.session = session
+    ipmi.requester = NullRequester()
     return ipmi
 
 
@@ -191,6 +193,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
                     continue
         else:
             raise RetryError()
+
         return rsp
 
     def send_message_with_name(self, name, *args, **kwargs):

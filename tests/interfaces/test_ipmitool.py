@@ -52,7 +52,7 @@ class TestIpmitool:
         target = Target(0x20)
         self._interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
-        mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 -A NONE -t 0x20 -l 0 raw 0x06 0x01 2>&1')
+        mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 -P "" -t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
     def test_send_and_receive_raw_return_value(self):
         mock = MagicMock()
