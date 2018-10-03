@@ -31,11 +31,11 @@ class SetLanConfigurationParametersReq(Message):
     __cmdid__ = constants.CMDID_SET_LAN_CONFIGURATION_PARAMETERS
     __netfn__ = constants.NETFN_TRANSPORT
     __fields__ = (
-            Bitfield('command', 1,
-                     Bitfield.Bit('channel_number', 4, 0),
-                     Bitfield.ReservedBit(4, 0),),
-            UnsignedInt('parameter_selector', 1),
-            RemainingBytes('data'),
+        Bitfield('command', 1,
+                 Bitfield.Bit('channel_number', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
+        UnsignedInt('parameter_selector', 1),
+        RemainingBytes('data'),
     )
 
 
@@ -44,8 +44,8 @@ class SetLanConfigurationParametersRsp(Message):
     __cmdid__ = constants.CMDID_SET_LAN_CONFIGURATION_PARAMETERS
     __netfn__ = constants.NETFN_TRANSPORT | 1
     __fields__ = (
-            CompletionCode(),
-            Optional(ByteArray('auxiliary', 4))
+        CompletionCode(),
+        Optional(ByteArray('auxiliary', 4))
     )
 
 
@@ -54,13 +54,13 @@ class GetLanConfigurationParametersReq(Message):
     __cmdid__ = constants.CMDID_GET_LAN_CONFIGURATION_PARAMETERS
     __netfn__ = constants.NETFN_TRANSPORT
     __fields__ = (
-            Bitfield('command', 1,
-                     Bitfield.Bit('channel_number', 4),
-                     Bitfield.ReservedBit(3, 0),
-                     Bitfield.Bit('get_parameter_revision_only', 1, 0),),
-            UnsignedInt('parameter_selector', 1, 0),
-            UnsignedInt('set_selector', 1, 0),
-            UnsignedInt('block_selector', 1, 0),
+        Bitfield('command', 1,
+                 Bitfield.Bit('channel_number', 4),
+                 Bitfield.ReservedBit(3, 0),
+                 Bitfield.Bit('get_parameter_revision_only', 1, 0),),
+        UnsignedInt('parameter_selector', 1, 0),
+        UnsignedInt('set_selector', 1, 0),
+        UnsignedInt('block_selector', 1, 0),
     )
 
 
@@ -69,7 +69,7 @@ class GetLanConfigurationParametersRsp(Message):
     __cmdid__ = constants.CMDID_GET_LAN_CONFIGURATION_PARAMETERS
     __netfn__ = constants.NETFN_TRANSPORT | 1
     __fields__ = (
-            CompletionCode(),
-            UnsignedInt('parameter_revision', 1, 0),
-            RemainingBytes('data'),
+        CompletionCode(),
+        UnsignedInt('parameter_revision', 1, 0),
+        RemainingBytes('data'),
     )

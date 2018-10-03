@@ -53,9 +53,9 @@ class ReadFruDataReq(Message):
     __cmdid__ = constants.CMDID_READ_FRU_DATA
     __netfn__ = constants.NETFN_STORAGE
     __fields__ = (
-            UnsignedInt('fru_id', 1),
-            UnsignedInt('offset', 2),
-            UnsignedInt('count', 1),
+        UnsignedInt('fru_id', 1),
+        UnsignedInt('offset', 2),
+        UnsignedInt('count', 1),
     )
 
 
@@ -68,9 +68,9 @@ class ReadFruDataRsp(Message):
         return obj.count
 
     __fields__ = (
-            CompletionCode(),
-            UnsignedInt('count', 1),
-            VariableByteArray('data', _length_count),
+        CompletionCode(),
+        UnsignedInt('count', 1),
+        VariableByteArray('data', _length_count),
     )
 
 
