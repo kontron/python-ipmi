@@ -12,19 +12,19 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-
-from builtins import chr
-from builtins import object
 
 import re
+
 from subprocess import Popen, PIPE
 from array import array
-from .. import Session
-from ..errors import TimeoutError
+
+from ..session import Session
+from ..errors import IpmiTimeoutError
 from ..logger import log
 from ..msgs import encode_message, decode_message, create_message
+from ..msgs.constants import CC_OK
 from ..utils import py3dec_unic_bytes_fix, ByteBuffer
 
 
@@ -46,7 +46,7 @@ class Ipmitool(object):
             self._interface_type = interface_type
         else:
             raise RuntimeError('interface type %s not supported' %
-                    interface_type)
+                               interface_type)
 
         self.re_completion_code = re.compile(
                 b"Unable to send RAW command \(.*rsp=(0x[0-9a-f]+)\)")
@@ -66,33 +66,35 @@ class Ipmitool(object):
         # for now this uses impitool..
         cmd = self.IPMITOOL_PATH
         cmd += (' -I %s' % self._interface_type)
-        cmd += (' -H %s' % self._session._rmcp_host)
-        cmd += (' -p %s' % self._session._rmcp_port)
+        cmd += (' -H %s' % self._session.rmcp_host)
+        cmd += (' -p %s' % self._session.rmcp_port)
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += (' -A NONE')
         elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
-            cmd += (' -U "%s"' % self._session._auth_username)
-            cmd += (' -P "%s"' % self._session._auth_password)
+            cmd += (' -U "%s"' % self._session.auth_username)
+            cmd += (' -P "%s"' % self._session.auth_password)
         cmd += (' session info all')
 
         output, rc = self._run_ipmitool(cmd)
         if rc:
-            raise TimeoutError()
+            raise IpmiTimeoutError()
 
     def is_ipmc_accessible(self, target):
         try:
             self.rmcp_ping()
             accessible = True
-        except TimeoutError:
+        except IpmiTimeoutError:
             accessible = False
 
         return accessible
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
+
         if self._interface_type in ['lan', 'lanplus']:
             cmd = self._build_ipmitool_cmd(target, lun, netfn, raw_bytes)
         elif self._interface_type in ['serial-terminal']:
-            cmd = self._build_serial_ipmitool_cmd(target, lun, netfn, raw_bytes)
+            cmd = self._build_serial_ipmitool_cmd(
+                        target, lun, netfn, raw_bytes)
         else:
             raise RuntimeError('interface type %s not supported' %
                                self._interface_type)
@@ -107,23 +109,27 @@ class Ipmitool(object):
             cc = int(match_completion_code.group(1), 16)
             data.append(cc)
         elif match_timeout:
-            raise TimeoutError()
+            raise IpmiTimeoutError()
         else:
             if rc != 0:
                 raise RuntimeError('ipmitool failed with rc=%d' % rc)
             # completion code
-            data.append(0)
+            data.append(CC_OK)
 
             output = py3dec_unic_bytes_fix(output)
 
             output_lines = output.split('\n')
             # strip 'Close Session command failed' lines
-            output_lines = [ l for l in output_lines
-                    if not l.startswith('Close Session command failed') ]
-            output = ''.join(output_lines).replace('\r','').strip()
+            output_lines = [l for l in output_lines
+                            if not l.startswith(
+                                'Close Session command failed')]
+            output = ''.join(output_lines).replace('\r', '').strip()
             if len(output):
                 for x in output.split(' '):
                     data.append(int(x, 16))
+
+        log().debug('IPMI RX: {:s}'.format(
+            ''.join('%02x ' % b for b in array('B', data))))
 
         return data.tostring()
 
@@ -134,7 +140,7 @@ class Ipmitool(object):
         req_data.push_string(encode_message(req))
 
         rsp_data = self.send_and_receive_raw(req.target, req.lun, req.netfn,
-                req_data.tostring())
+                                             req_data.tostring())
 
         rsp = create_message(req.cmdid, req.netfn + 1)
         decode_message(rsp, rsp_data)
@@ -142,15 +148,20 @@ class Ipmitool(object):
 
         return rsp
 
-    def _build_ipmitool_raw_data(self, lun, netfn, raw_bytes):
-        cmd_data = ' -l %d raw 0x%02x ' % (lun, netfn)
-        cmd_data += ' '.join(['0x%02x' % ord(d) for d in raw_bytes])
-        return cmd_data
+    @staticmethod
+    def _build_ipmitool_raw_data(lun, netfn, raw):
+        cmd = ' -l {:d} raw '.format(lun)
+        cmd += ' '.join(['0x%02x' % (d)
+                        for d in [netfn] + array('B', raw).tolist()])
+        return cmd
 
-    def _build_ipmitool_target(self, target):
+    @staticmethod
+    def _build_ipmitool_target(target):
         cmd = ''
         if target.routing is not None:
             # we have to do bridging here
+            if len(target.routing) == 1:
+                pass
             if len(target.routing) == 2:
                 # ipmitool/shelfmanager does implicit bridging
                 cmd += (' -t 0x%02x' % target.routing[1].rs_sa)
@@ -162,7 +173,7 @@ class Ipmitool(object):
                 cmd += (' -b %d' % target.routing[1].channel)
             else:
                 raise RuntimeError('The impitool interface at most double '
-                       'briding')
+                                   'briding %s' % target)
 
         elif target.ipmb_address:
             cmd += (' -t 0x%02x' % target.ipmb_address)
@@ -175,18 +186,17 @@ class Ipmitool(object):
 
         cmd = self.IPMITOOL_PATH
         cmd += (' -I %s' % self._interface_type)
-        cmd += (' -H %s' % self._session._rmcp_host)
-        cmd += (' -p %s' % self._session._rmcp_port)
-
+        cmd += (' -H %s' % self._session.rmcp_host)
+        cmd += (' -p %s' % self._session.rmcp_port)
 
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
-            cmd += (' -A NONE')
+            cmd += ' -P ""'
         elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
-            cmd += (' -U "%s"' % self._session._auth_username)
-            cmd += (' -P "%s"' % self._session._auth_password)
+            cmd += (' -U "%s"' % self._session.auth_username)
+            cmd += (' -P "%s"' % self._session.auth_password)
         else:
             raise RuntimeError('Session type %d not supported' %
-                    self._session.auth_type)
+                               self._session.auth_type)
 
         cmd += self._build_ipmitool_target(target)
         cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)
@@ -202,17 +212,17 @@ class Ipmitool(object):
             .format(
                 path=self.IPMITOOL_PATH,
                 interface=self._interface_type,
-                port=self._session._serial_port,
-                baud=self._session._serial_baudrate
+                port=self._session.serial_port,
+                baud=self._session.serial_baudrate
             )
 
         cmd += self._build_ipmitool_target(target)
         cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)
-        #cmd += (' 2>&1')
 
         return cmd
 
-    def _run_ipmitool(self, cmd):
+    @staticmethod
+    def _run_ipmitool(cmd):
         """Legacy call of ipmitool (will be removed in future).
         """
 
@@ -221,8 +231,8 @@ class Ipmitool(object):
         child = Popen(cmd, shell=True, stdout=PIPE)
         output = child.communicate()[0]
 
-        log().debug('return with rc=%d, output was:\n%s', child.returncode,
-                output)
+        log().debug('return with rc=%d, output was:\n%s',
+                    child.returncode,
+                    output)
 
         return output, child.returncode
-

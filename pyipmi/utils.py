@@ -12,15 +12,13 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-from builtins import range
 import sys
 import codecs
 from array import array
 from .msgs import constants
 from .errors import DecodingError, CompletionCodeError
-#from .msgs import create_request_by_name
 
 
 def py3enc_unic_bytes_fix(dat):
@@ -49,16 +47,16 @@ def check_completion_code(cc):
         raise CompletionCodeError(cc)
 
 
-def chunks(d, n):
-    for i in range(0, len(d), n):
-        yield d[i:i+n]
+def chunks(data, count):
+    for i in range(0, len(data), count):
+        yield data[i:i+count]
 
 
 class ByteBuffer:
     def __init__(self, data=None):
 
         if data is not None:
-            self.array = array('B', py3enc_unic_bytes_fix(data))
+            self.array = array('B', data)
         else:
             self.array = array('B')
 
@@ -79,9 +77,10 @@ class ByteBuffer:
         self.array.fromstring(value)
 
     def pop_string(self, length):
-        s = self.array[0:length]
+        string = self.array[0:length]
         del self.array[0:length]
-        return py3dec_unic_bytes_fix(s.tostring())
+        return string.tostring()
+        # return py3dec_unic_bytes_fix(string.tostring())
 
     def pop_slice(self, length):
         if len(self.array) < length:
@@ -92,7 +91,7 @@ class ByteBuffer:
         return c
 
     def tostring(self):
-        return py3dec_unic_bytes_fix(self.array.tostring())
+        return self.array.tostring()
 
     def extend(self, data):
         self.array.extend(data)
@@ -113,21 +112,21 @@ class ByteBuffer:
         return self.array[idx]
 
 
-bcd_map = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '-', '.' ]
+BCD_MAP = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '-', '.']
 
 
 def bcd_encode(input, errors='strict'):
     raise NotImplementedError()
 
 
-def bcd_decode(input, errors='strict'):
+def bcd_decode(encoded_input):
     chars = list()
     try:
-        for b in input:
+        for data in encoded_input:
             if int(sys.version[0]) == 2:
-                b = ord(b)
-            chars.append(bcd_map[b >> 4 & 0xf] + bcd_map[b & 0xf])
-        return (''.join(chars), len(input) * 2)
+                data = ord(data)
+            chars.append(BCD_MAP[data >> 4 & 0xf] + BCD_MAP[data & 0xf])
+        return (''.join(chars), len(encoded_input) * 2)
     except IndexError:
         raise ValueError()
 
@@ -135,7 +134,10 @@ def bcd_decode(input, errors='strict'):
 def bcd_search(name):
     if name != 'bcd+':
         return None
-    return codecs.CodecInfo(
-            name = 'bcd+',
-            encode = bcd_encode,
-            decode = bcd_decode)
+    return codecs.CodecInfo(name='bcd+', encode=bcd_encode, decode=bcd_decode)
+
+
+def is_string(string):
+    if sys.version_info[0] >= 3:
+        return isinstance(string, str)
+    return isinstance(string, basestring)

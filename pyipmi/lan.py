@@ -12,13 +12,10 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-
-# from builtins import object
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from .msgs import create_request_by_name
-# from .errors import DecodingError, CompletionCodeError
-from .utils import check_completion_code, ByteBuffer
+from .utils import check_completion_code
 
 LAN_PARAMETER_SET_IN_PROGRESS = 0
 LAN_PARAMETER_AUTHENTICATION_TYPE_SUPPORT = 1
@@ -54,9 +51,11 @@ LAN_PARAMETER_IP_ADDRESS_SOURCE_DHCP = 2
 LAN_PARAMETER_IP_ADDRESS_SOURCE_BIOS_OR_SYSTEM_SOFTWARE = 3
 LAN_PARAMETER_IP_ADDRESS_SOURCE_BMC_OTHER_PROTOCOL = 4
 
+
 class Lan(object):
-    def get_lan_configuration_parameters(self, channel=0, parameter_selector=0,
-            set_selector=0, block_selector=0, revision_only=0):
+    def get_lan_config_param(self, channel=0, parameter_selector=0,
+                             set_selector=0, block_selector=0,
+                             revision_only=0):
         req = create_request_by_name('GetLanConfigurationParameters')
         req.command.get_parameter_revision_only = revision_only
         if revision_only is not 1:
@@ -68,7 +67,8 @@ class Lan(object):
         check_completion_code(rsp.completion_code)
         return rsp.data
 
-    def set_lan_configuration_parameters(self, channel, parameter_selector, data):
+    def set_lan_config_param(self, channel,
+                             parameter_selector, data):
         req = create_request_by_name('SetLanConfigurationParameters')
         req.command.channel_number = channel
         req.parameter_selector = parameter_selector

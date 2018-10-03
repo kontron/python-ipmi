@@ -1,7 +1,7 @@
 Pure Python IPMI Library
 ========================
 
-|BuildStatus| |PyPiVersion| |Coveralls| |CodeClimate|
+|BuildStatus| |PyPiVersion| |Coveralls| |CodeClimate| |Codacy|
 
 Features
 --------
@@ -13,6 +13,25 @@ Requirements
 
 You need an either the `ipmitool`_ for accessing RCMP interface or a
 `Total Phase`_ Aardvark for communication over the IPMB interface.
+
+Installation
+------------
+
+Using ``pip``
+'''''''''''''
+
+The recommended installation method is using
+`pip <http://pip-installer.org>`__::
+
+    pip install python-ipmi
+
+Manual installation
+'''''''''''''''''''
+
+Download the source distribution package for the library. Extract the the package to
+a temporary location and install::
+
+    python setup.py install
 
 Example
 -------
@@ -117,3 +136,6 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
                  :target: http://codeclimate.com/github/kontron/python-ipmi
 .. |Coveralls|   image:: https://coveralls.io/repos/github/kontron/python-ipmi/badge.svg?branch=master
                  :target: https://coveralls.io/github/kontron/python-ipmi?branch=master
+.. |Codacy|      image:: https://api.codacy.com/project/badge/Grade/bdda77c6596b4e9b8508d95805ba34c5
+                 :alt: Codacy Badge
+                 :target: https://app.codacy.com/app/hthiery/python-ipmi?utm_source=github.com&utm_medium=referral&utm_content=kontron/python-ipmi&utm_campaign=Badge_Grade_Dashboard

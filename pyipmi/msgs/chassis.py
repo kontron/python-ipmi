@@ -13,18 +13,15 @@ from __future__ import absolute_import
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from . import constants
 
 from . import register_message_class
 from . import Message
 from . import UnsignedInt
-from . import UnsignedIntMask
-from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
-from . import Conditional
 from . import Optional
 
 CONTROL_POWER_DOWN = 0
@@ -48,12 +45,11 @@ class GetChassisCapabilitiesRsp(Message):
     __fields__ = (
         CompletionCode(),
         Bitfield('capabilities_flags', 1,
-            Bitfield.Bit('intrusion_sensor', 1),
-            Bitfield.Bit('frontpanel_lockout', 1),
-            Bitfield.Bit('diagnostic_interrupt', 1),
-            Bitfield.Bit('power_interlock', 1),
-            Bitfield.ReservedBit(4, 0)
-        ),
+                 Bitfield.Bit('intrusion_sensor', 1),
+                 Bitfield.Bit('frontpanel_lockout', 1),
+                 Bitfield.Bit('diagnostic_interrupt', 1),
+                 Bitfield.Bit('power_interlock', 1),
+                 Bitfield.ReservedBit(4, 0)),
         UnsignedInt('fru_info_device_address', 1),
         UnsignedInt('sdr_device_address', 1),
         UnsignedInt('sel_device_address', 1),
@@ -77,41 +73,28 @@ class GetChassisStatusRsp(Message):
     __fields__ = (
         CompletionCode(),
         Bitfield('current_power_state', 1,
-            Bitfield.Bit('power_on', 1),
-            Bitfield.Bit('power_overload', 1),
-            Bitfield.Bit('interlock', 1),
-            Bitfield.Bit('power_fault', 1),
-            Bitfield.Bit('power_control_fault', 1),
-            Bitfield.Bit('power_restore_policy', 2),
-            Bitfield.ReservedBit(1, 0),
-        ),
+                 Bitfield.Bit('power_on', 1),
+                 Bitfield.Bit('power_overload', 1),
+                 Bitfield.Bit('interlock', 1),
+                 Bitfield.Bit('power_fault', 1),
+                 Bitfield.Bit('power_control_fault', 1),
+                 Bitfield.Bit('power_restore_policy', 2),
+                 Bitfield.ReservedBit(1, 0),),
         Bitfield('last_power_event', 1,
-            Bitfield.Bit('ac_failed', 1),
-            Bitfield.Bit('power_overload', 1),
-            Bitfield.Bit('power_interlock', 1),
-            Bitfield.Bit('power_fault', 1),
-            Bitfield.Bit('power_is_on_via_ipmi_command', 1),
-            Bitfield.ReservedBit(3, 0),
-        ),
+                 Bitfield.Bit('ac_failed', 1),
+                 Bitfield.Bit('power_overload', 1),
+                 Bitfield.Bit('power_interlock', 1),
+                 Bitfield.Bit('power_fault', 1),
+                 Bitfield.Bit('power_is_on_via_ipmi_command', 1),
+                 Bitfield.ReservedBit(3, 0),),
         Bitfield('misc_chassis_state', 1,
-            Bitfield.Bit('chassis_intrusion_active', 1),
-            Bitfield.Bit('front_panel_lockout_active', 1),
-            Bitfield.Bit('drive_fault', 1),
-            Bitfield.Bit('cooling_fault_detected', 1),
-            Bitfield.ReservedBit(4, 0),
-        ),
+                 Bitfield.Bit('chassis_intrusion_active', 1),
+                 Bitfield.Bit('front_panel_lockout_active', 1),
+                 Bitfield.Bit('drive_fault', 1),
+                 Bitfield.Bit('cooling_fault_detected', 1),
+                 Bitfield.ReservedBit(4, 0),),
         Optional(
             UnsignedInt('front_panel_button_capabilities', 1),
-#            Bitfield('front_panel_button_capabilites', 1,
-#                Bitfield.Bit('power_off_disabled', 1),
-#                Bitfield.Bit('reset_disabled', 1),
-#                Bitfield.Bit('diagnostic_interrupt_disabled', 1),
-#                Bitfield.Bit('standby_disabled', 1),
-#                Bitfield.Bit('power_off_disable_allowed', 1),
-#                Bitfield.Bit('reset_disable_allowed', 1),
-#                Bitfield.Bit('diagnostic_interrupt_disable_allowed', 1),
-#                Bitfield.Bit('standby_disable_allowed', 1),
-#            ),
         ),
     )
 
@@ -122,9 +105,8 @@ class ChassisControlReq(Message):
     __netfn__ = constants.NETFN_CHASSIS
     __fields__ = (
         Bitfield('control', 1,
-            Bitfield.Bit('option', 4),
-            Bitfield.ReservedBit(4, 0)
-        ),
+                 Bitfield.Bit('option', 4),
+                 Bitfield.ReservedBit(4, 0)),
     )
 
 

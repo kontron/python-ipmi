@@ -12,15 +12,11 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from __future__ import absolute_import
-from builtins import object
-
-# from functools import partial
 
 from .msgs import create_request_by_name
-# from pyipmi.errors import DecodingError, CompletionCodeError
 from .utils import check_completion_code
 from .state import State
 
@@ -60,6 +56,15 @@ class Chassis(object):
 
 
 class ChassisStatus(State):
+    power_on = None
+    overload = None
+    interlock = None
+    fault = None
+    control_fault = None
+    restore_policy = None
+    last_event = []
+    chassis_state = []
+
     def _from_response(self, rsp):
         self.power_on = bool(rsp.current_power_state.power_on)
         self.overload = bool(rsp.current_power_state.power_overload)
@@ -68,7 +73,6 @@ class ChassisStatus(State):
         self.control_fault = bool(rsp.current_power_state.power_control_fault)
         self.restore_policy = rsp.current_power_state.power_restore_policy
 
-        self.last_event = []
         if rsp.last_power_event.ac_failed:
             self.last_event.append('ac_failed')
         if rsp.last_power_event.power_overload:
@@ -80,7 +84,6 @@ class ChassisStatus(State):
         if rsp.last_power_event.power_is_on_via_ipmi_command:
             self.last_event.append('power_on_via_ipmi')
 
-        self.chassis_state = []
         if rsp.misc_chassis_state.chassis_intrusion_active:
             self.chassis_state.append('intrusion')
         if rsp.misc_chassis_state.front_panel_lockout_active:

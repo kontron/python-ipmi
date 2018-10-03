@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
-import sys
-from array import array
 
-import nose
 from mock import MagicMock, patch
-from nose.tools import eq_, ok_, raises
+from nose.tools import eq_, ok_
 
 from pyipmi.interfaces.ipmb import IpmbHeader
 

@@ -12,27 +12,33 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 
 class Session(object):
-    AUTH_TYPE_NONE        = 0x0
-    AUTH_TYPE_MD2         = 0x1
-    AUTH_TYPE_MD5         = 0x2
-    AUTH_TYPE_PASSWORD    = 0x4
-    AUTH_TYPE_OEM         = 0x5
+    AUTH_TYPE_NONE = 0x00
+    AUTH_TYPE_MD2 = 0x01
+    AUTH_TYPE_MD5 = 0x02
+    AUTH_TYPE_PASSWORD = 0x04
+    AUTH_TYPE_OEM = 0x05
 
     PRIV_LEVEL_USER = 2
     PRIV_LEVEL_OPERATOR = 3
     PRIV_LEVEL_ADMINISTRATOR = 4
     PRIV_LEVEL_OEM = 5
 
+    _interface = None
+    _auth_type = AUTH_TYPE_NONE
+    _auth_username = None
+    _auth_password = None
+    _rmcp_host = None
+    _rmcp_port = None
+    _serial_port = None
+    _serial_baudrate = None
+
     def __init__(self):
-        self.auth_type = self.AUTH_TYPE_NONE
         self.established = False
         self.sid = 0
-        self._auth_username = None
-        self._auth_password = None
         self.sequence_number = 0
         self.activated = False
 
@@ -54,14 +60,44 @@ class Session(object):
         self._rmcp_host = host
         self._rmcp_port = port
 
+    @property
+    def rmcp_host(self):
+        return self._rmcp_host
+
+    @property
+    def rmcp_port(self):
+        return self._rmcp_port
+
     def set_session_type_serial(self, port, baudrate):
         self._serial_port = port
         self._serial_baudrate = baudrate
 
+    @property
+    def serial_port(self):
+        return self._serial_port
+
+    @property
+    def serial_baudrate(self):
+        return self._serial_baudrate
+
+    def _set_auth_type(self, auth_type):
+        self._auth_type = auth_type
+
+    def _get_auth_type(self):
+        return self._auth_type
+
     def set_auth_type_user(self, username, password):
-        self.auth_type = self.AUTH_TYPE_PASSWORD
+        self._auth_type = self.AUTH_TYPE_PASSWORD
         self._auth_username = username
         self._auth_password = password
+
+    @property
+    def auth_username(self):
+        return self._auth_username
+
+    @property
+    def auth_password(self):
+        return self._auth_password
 
     def establish(self):
         if hasattr(self.interface, 'establish_session'):
@@ -76,14 +112,15 @@ class Session(object):
             self.interface.rmcp_ping()
 
     def __str__(self):
-        s = 'Session:\n'
-        s += '  ID: 0x%08x\n' % self.sid
-        s += '  Seq: 0x%08x\n' % self.sequence_number
-        s += '  Host: %s:%s\n' % (self._rmcp_host, self._rmcp_port)
-        s += '  Auth.: %s\n' % self.auth_type
-        s += '  User: %s\n' % self._auth_username
-        s += '  Password: %s\n' % self._auth_password
-        s += '\n'
-        return s
+        string = 'Session:\n'
+        string += '  ID: 0x%08x\n' % self.sid
+        string += '  Seq: 0x%08x\n' % self.sequence_number
+        string += '  Host: %s:%s\n' % (self._rmcp_host, self._rmcp_port)
+        string += '  Auth.: %s\n' % self.auth_type
+        string += '  User: %s\n' % self._auth_username
+        string += '  Password: %s\n' % self._auth_password
+        string += '\n'
+        return string
 
     interface = property(_get_interface, _set_interface)
+    auth_type = property(_get_auth_type, _set_auth_type)

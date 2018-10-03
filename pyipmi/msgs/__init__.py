@@ -13,7 +13,7 @@ from __future__ import absolute_import
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from .registry import register_message_class
 from .registry import create_request_by_name
@@ -34,9 +34,11 @@ from .message import RemainingBytes
 from .message import String
 from .message import encode_message
 from .message import decode_message
+from .message import pack_message
 
 from . import bmc
 from . import chassis
+from . import device_messaging
 from . import fru
 from . import hpm
 from . import picmg

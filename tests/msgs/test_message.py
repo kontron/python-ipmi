@@ -1,11 +1,12 @@
 #!/usr/bin/env python
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
-from nose.tools import eq_, raises
+from nose.tools import eq_
 
 from array import array
 from pyipmi.utils import ByteBuffer
 from pyipmi.msgs.message import Message, UnsignedInt, RemainingBytes, String
+
 
 class TestMessage(object):
     def __init__(self, field):
@@ -21,6 +22,7 @@ class TestMessage(object):
         data = ByteBuffer(data)
         self.field.decode(self, data)
 
+
 def test_unsignedint_encode():
     t = TestMessage(UnsignedInt('test', 4))
     t.test = 0x12345678
@@ -32,30 +34,35 @@ def test_unsignedint_encode():
     byte_buffer = t.encode()
     eq_(byte_buffer.array, array('B', [0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0]))
 
+
 def test_unsignedint_decode():
     t = TestMessage(UnsignedInt('test', 1))
-    t.decode('\x12')
+    t.decode(b'\x12')
     eq_(t.test, 0x12)
 
-    t.decode('\xd7')
+    t.decode(b'\xd7')
     eq_(t.test, 0xd7)
 
+
 def test_string_encode():
-    t = TestMessage(String('test', 8))
+    t = TestMessage(String('test', 10))
     t.test = '1234'
     byte_buffer = t.encode()
-    eq_(byte_buffer.array, array('B', [0x31, 0x32, 0x33, 0x34, 0, 0, 0, 0]))
+    eq_(byte_buffer.array, array('B', [0x31, 0x32, 0x33, 0x34]))
 
-def test_string_decoce():
+
+def test_string_decode():
     t = TestMessage(String('test', 10))
-    t.decode('abcdef')
-    eq_(t.test, 'abcdef')
+    t.decode(b'abcdef')
+    eq_(t.test, b'abcdef')
+
 
 def test_remainingbytes_encode():
     t = TestMessage(RemainingBytes('test'))
     t.test = [0xb4, 1]
     byte_buffer = t.encode()
     eq_(byte_buffer.array, array('B', [0xb4, 0x01]))
+
 
 def test_message():
     msg = Message()

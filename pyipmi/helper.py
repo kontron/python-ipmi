@@ -12,17 +12,14 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-
-import array
 import time
 
-from .errors import DecodingError, CompletionCodeError, RetryError
+from .errors import CompletionCodeError, RetryError
 from .utils import check_completion_code, ByteBuffer
 from .msgs import constants
 
-#from . import sdr #unused
 
 def get_sdr_chunk_helper(send_fn, req, reserve_fn, retry=5):
 
@@ -47,6 +44,7 @@ def get_sdr_chunk_helper(send_fn, req, reserve_fn, retry=5):
             check_completion_code(rsp.completion_code)
 
     return rsp
+
 
 def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
     """Helper function to retrieve the sdr data using the specified
@@ -108,6 +106,7 @@ GET_ERASE_STATUS = 0x00
 ERASURE_IN_PROGRESS = 0x0
 ERASURE_COMPLETED = 0x1
 
+
 def _clear_repository(reserve_fn, clear_fn, ctrl, retry, reservation):
     while True:
         retry -= 1
@@ -131,6 +130,7 @@ def _clear_repository(reserve_fn, clear_fn, ctrl, retry, reservation):
         break
     return reservation
 
+
 def clear_repository_helper(reserve_fn, clear_fn, retry=5, reservation=None):
     """Helper function to start repository erasure and wait until finish.
     This helper is used by clear_sel and clear_sdr_repository.
@@ -141,11 +141,11 @@ def clear_repository_helper(reserve_fn, clear_fn, retry=5, reservation=None):
 
     # start erasure
     reservation = _clear_repository(reserve_fn, clear_fn,
-            INITIATE_ERASE, retry, reservation)
+                                    INITIATE_ERASE, retry, reservation)
 
     # give some time to clear
     time.sleep(0.5)
 
     # wait until finish
     reservation = _clear_repository(reserve_fn, clear_fn,
-            GET_ERASE_STATUS, retry, reservation)
+                                    GET_ERASE_STATUS, retry, reservation)

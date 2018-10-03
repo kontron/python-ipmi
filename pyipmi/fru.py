@@ -12,12 +12,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-
-
-from builtins import chr
-from builtins import range
-from builtins import object
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 import array
 import codecs
@@ -36,13 +31,15 @@ class Fru(object):
 
     def get_fru_inventory_area_info(self, fru_id=0):
         rsp = self.send_message_with_name('GetFruInventoryAreaInfo',
-                fru_id=fru_id)
+                                          fru_id=fru_id)
         return rsp.area_size
 
     def write_fru_data(self, data, offset=0, fru_id=0):
         for chunk in chunks(data, self.write_length):
             write_rsp = self.send_message_with_name('WriteFruData',
-                            fru_id=fru_id, offset=offset, data=chunk)
+                                                    fru_id=fru_id,
+                                                    offset=offset,
+                                                    data=chunk)
 
             # check if device wrote the same number of bytes sent
             if write_rsp.count_written != len(chunk):
@@ -52,8 +49,6 @@ class Fru(object):
             offset += len(chunk)
 
     def read_fru_data(self, offset=None, count=None, fru_id=0):
-        #off = 0
-        #area_size = 0
         req_size = 32
         data = array.array('B')
 
@@ -70,12 +65,12 @@ class Fru(object):
                 req_size = area_size - off
 
             try:
-                rsp = self.send_message_with_name('ReadFruData',
-                            fru_id=fru_id, offset=off, count=req_size)
-            except CompletionCodeError as e:
-                if e.cc in (constants.CC_CANT_RET_NUM_REQ_BYTES,
-                            constants.CC_REQ_DATA_FIELD_EXCEED,
-                            constants.CC_PARAM_OUT_OF_RANGE):
+                rsp = self.send_message_with_name('ReadFruData', fru_id=fru_id,
+                                                  offset=off, count=req_size)
+            except CompletionCodeError as ex:
+                if ex.cc in (constants.CC_CANT_RET_NUM_REQ_BYTES,
+                             constants.CC_REQ_DATA_FIELD_EXCEED,
+                             constants.CC_PARAM_OUT_OF_RANGE):
                     req_size -= 2
                     if req_size <= 0:
                         raise
@@ -125,6 +120,8 @@ class FruDataField(object):
 
 
 CUSTOM_FIELD_END = 0xc1
+
+
 def _decode_custom_fields(data):
     offset = 0
     fields = []
@@ -212,7 +209,7 @@ class InventoryBoardInfoArea(CommonInfoArea):
         self.language_code = data[2]
         minutes = data[5] << 16 | data[4] << 8 | data[3]
         self.mfg_date = (datetime.datetime(1996, 1, 1)
-                + datetime.timedelta(minutes=minutes))
+                         + datetime.timedelta(minutes=minutes))
         offset = 6
         self.manufacturer = FruDataField(data, offset)
         offset += self.manufacturer.length + 1
@@ -328,16 +325,18 @@ class FruPicmgRecord(FruDataMultiRecord):
         if picmg_record.picmg_record_type_id ==\
                 FruPicmgRecord.PICMG_RECORD_ID_MTCA_POWER_MODULE_CAPABILITY:
             return FruPicmgPowerModuleCapabilityRecord(data)
-        else:
-            return FruPicmgRecord(data)
+
+        return FruPicmgRecord(data)
 
     def _from_data(self, data):
         if len(data) < 10:
             raise DecodingError('data too short')
+        data = array.array('B', data)
         FruDataMultiRecord._from_data(self, data)
-        self.manufacturer_id = ord(data[5]) | ord(data[6]) << 8 | ord(data[7]) << 16
-        self.picmg_record_type_id = ord(data[8])
-        self.format_version = ord(data[9])
+        self.manufacturer_id = \
+            data[5] | data[6] << 8 | data[7] << 16
+        self.picmg_record_type_id = data[8]
+        self.format_version = data[9]
 
 
 class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
@@ -381,16 +380,16 @@ class FruInventory(object):
 
         if self.common_header.chassis_info_area_offset:
             self.chassis_info_area = InventoryChassisInfoArea(
-                    data[self.common_header.chassis_info_area_offset:])
+                data[self.common_header.chassis_info_area_offset:])
 
         if self.common_header.board_info_area_offset:
             self.board_info_area = InventoryBoardInfoArea(
-                    data[self.common_header.board_info_area_offset:])
+                data[self.common_header.board_info_area_offset:])
 
         if self.common_header.product_info_area_offset:
             self.product_info_area = InventoryProductInfoArea(
-                    data[self.common_header.product_info_area_offset:])
+                data[self.common_header.product_info_area_offset:])
 
         if self.common_header.multirecord_area_offset:
             self.multirecord_area = InventoryMultiRecordArea(
-                    data[self.common_header.multirecord_area_offset:])
+                data[self.common_header.multirecord_area_offset:])

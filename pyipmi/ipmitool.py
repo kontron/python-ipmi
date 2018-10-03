@@ -14,22 +14,17 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
-#from builtins import hex
-#from builtins import str
-#from builtins import map
-#from builtins import range
 
-from collections import namedtuple
 import sys
 import getopt
 import logging
 import traceback
-import array
+from array import array
+
+from collections import namedtuple
 
 import pyipmi
 import pyipmi.interfaces
@@ -37,19 +32,20 @@ import pyipmi.interfaces
 Command = namedtuple('Command', 'name fn')
 CommandHelp = namedtuple('CommandHelp', 'name arguments help')
 
-# print helper
+
 def _print(s):
     print(s)
+
 
 def _get_command_function(name):
     for cmd in COMMANDS:
         if cmd.name == name:
             return cmd.fn
-    else:
-        return None
+    return None
+
 
 def cmd_bmc_info(ipmi, args):
-    id = ipmi.get_device_id()
+    device_id = ipmi.get_device_id()
     print('''
 Device ID:          %(device_id)s
 Device Revision:    %(revision)s
@@ -60,7 +56,7 @@ Product ID:         %(product_id)d (0x%(product_id)04x)
 Device Available:   %(available)d
 Provides SDRs:      %(provides_sdrs)d
 Additional Device Support:
-'''[1:-1] % id.__dict__)
+'''[1:-1] % device_id.__dict__)
 
     functions = (
             ('SENSOR', 'Sensor Device'),
@@ -73,23 +69,31 @@ Additional Device Support:
             ('CHASSIS', 'Chassis Device')
     )
     for n, s in functions:
-        if id.supports_function(n):
+        if device_id.supports_function(n):
             print('  %s' % s)
 
-    if id.aux is not None:
-        print('Aux Firmware Rev Info:  [%02x %02x %02x %02x]' % (
-                id.aux[0], id.aux[1], id.aux[2], id.aux[3]))
+    if device_id.aux is not None:
+        print('Aux Firmware Rev Info:  [%s]' % (
+                ' '.join('0x%02x' % d for d in device_id.aux)))
+
 
 def cmd_sel_clear(ipmi, args):
     ipmi.clear_sel()
+
 
 def cmd_sensor_rearm(ipmi, args):
     if len(args) < 1:
         return
     number = int(args[0], 0)
-    rsp = ipmi.rearm_sensor_events(number)
+    ipmi.rearm_sensor_events(number)
+
 
 def sdr_show(ipmi, s):
+
+    print("SDR record ID:    0x%04x" % s.id)
+    print("SDR type:         0x%02x" % s.type)
+    print("Device Id string: %s" % s.device_id_string)
+    print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
     if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
         (raw, states) = ipmi.get_sensor_reading(s.number, s.owner_lun)
         value = s.convert_sensor_raw_to_value(raw)
@@ -101,9 +105,6 @@ def sdr_show(ipmi, s):
         t_lnc = s.convert_sensor_raw_to_value(s.threshold['lnc'])
         t_lcr = s.convert_sensor_raw_to_value(s.threshold['lcr'])
         t_lnr = s.convert_sensor_raw_to_value(s.threshold['lnr'])
-        print("SDR record ID:    0x%04x" % s.id)
-        print("Device Id string: %s" % s.device_id_string)
-        print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
         print("Reading value:    %s" % value)
         print("Reading state:    0x%x" % states)
         print("UNR:              %s" % t_unr)
@@ -114,15 +115,20 @@ def sdr_show(ipmi, s):
         print("LNR:              %s" % t_lnr)
     elif s.type is pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
         (raw, states) = ipmi.get_sensor_reading(s.number)
-        print("SDR record ID:    0x%04x" % s.id)
-        print("Device Id string: %s" % s.device_id_string)
-        print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
         print("Reading:          %s" % raw)
         print("Reading state:    0x%x" % states)
-    else:
-        print("SDR record ID:    0x%04x" % s.id)
-        print("Device Id string: %s" % s.device_id_string)
-        print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
+
+
+def cmd_sdr_show_raw(ipmi, args):
+    if len(args) != 1:
+        usage()
+        return
+    try:
+        sdr = ipmi.get_device_sdr(int(args[0], 0))
+        print(' '.join(['0x%02x' % b for b in sdr.data]))
+    except ValueError:
+        print('')
+
 
 def cmd_sdr_show(ipmi, args):
     if len(args) != 1:
@@ -135,6 +141,7 @@ def cmd_sdr_show(ipmi, args):
     except ValueError:
         print('')
 
+
 def cmd_sdr_show_all(ipmi, args):
     for s in ipmi.device_sdr_entries():
         try:
@@ -142,6 +149,7 @@ def cmd_sdr_show_all(ipmi, args):
         except ValueError:
             print('')
         print("\n")
+
 
 def print_sdr_list_entry(record_id, number, id_string, value, states):
     if number:
@@ -155,7 +163,8 @@ def print_sdr_list_entry(record_id, number, id_string, value, states):
         states = 'na'
 
     print("0x%04x | %3s | %-16s | %9s | %s" % (record_id, number,
-                        id_string, value, states))
+                                               id_string, value, states))
+
 
 def cmd_sdr_list(ipmi, args):
     print("SDR-ID |     | Device String    |")
@@ -178,13 +187,17 @@ def cmd_sdr_list(ipmi, args):
                 number = s.number
 
             print_sdr_list_entry(s.id, number, s.device_id_string,
-                        value, states)
+                                 value, states)
 
         except pyipmi.errors.CompletionCodeError as e:
             if s.type in (pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD,
-                    pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD):
-                print("0x%04x | %3d | %-16s | ERR: CC=0x%02x " % (s.id,
-                        s.number, s.device_id_string, e.cc))
+                          pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD):
+                print('0x{:04x} | {:3d} | {:16s} | ERR: CC=0x{:02x}'.format(
+                      s.id,
+                      s.number,
+                      s.device_id_string,
+                      e.cc))
+
 
 def cmd_fru_print(ipmi, args):
     fru_id = 0
@@ -258,6 +271,7 @@ Product Info Area:
         else:
             print('  Skipped. Use "print <fruid> all"')
 
+
 def cmd_raw(ipmi, args):
     lun = 0
     if len(args) > 1 and args[0] == 'lun':
@@ -269,18 +283,20 @@ def cmd_raw(ipmi, args):
         return
 
     netfn = int(args[0], 0)
-    raw_bytes = array.array('B', [int(d, 0) for d in args[1:]])
+    raw_bytes = array('B', [int(d, 0) for d in args[1:]])
     rsp = ipmi.raw_command(lun, netfn, raw_bytes.tostring())
-    print(' '.join('%02x' % ord(d) for d in rsp))
+    print(' '.join('%02x' % d for d in array('B', rsp)))
+
 
 def cmd_hpm_capabilities(ipmi, args):
     cap = ipmi.get_target_upgrade_capabilities()
 
     for c in cap.components:
-        prop = ipmi.get_component_properties(c)
+        properties = ipmi.get_component_properties(c)
         print("Component ID: %d" % c)
-        for p in  prop:
-            print("  %s" % p)
+        for prop in properties:
+            print("  %s" % prop)
+
 
 def cmd_hpm_check_file(ipmi, args):
     if len(args) < 1:
@@ -291,10 +307,12 @@ def cmd_hpm_check_file(ipmi, args):
     for action in cap.actions:
         print(action)
 
+
 def cmd_hpm_install(ipmi, args):
     if len(args) < 2:
         return
     ipmi.install_component_from_file(args[0], int(args[1]))
+
 
 def cmd_chassis_status(ipmi, args):
     status = ipmi.get_chassis_status()
@@ -312,27 +330,31 @@ Restore Policy:    %(restore_policy)s
     for state in status.chassis_state:
         print(state)
 
+
 def cmd_picmg_get_power(ipmi, args):
     pwr = ipmi.get_power_level(0, 0)
     print(pwr)
+
 
 def print_link_state(p, s):
     intf_str = pyipmi.picmg.LinkDescriptor().get_interface_string(p.interface)
     link_str = pyipmi.picmg.LinkDescriptor().get_link_type_string(
             p.type, p.extension, p.sig_class)
-    print('CH=%02d INTF=%d FLAGS=0x%x TYPE=%d SIG=%d EXT=%d STATE=%d (%s/%s)'\
-            % (p.channel, p.interface, p.link_flags, p.type, p.sig_class,
-            p.extension, s, intf_str, link_str))
+    print('CH=%02d INTF=%d FLAGS=0x%x TYPE=%d SIG=%d EXT=%d STATE=%d (%s/%s)'
+          % (p.channel, p.interface, p.link_flags, p.type, p.sig_class,
+             p.extension, s, intf_str, link_str))
+
 
 def cmd_picmg_get_portstate_all(ipmi, args):
     for interface in range(3):
         for channel in range(16):
-           try:
-               (p, s) = ipmi.get_port_state(channel, interface)
-               print_link_state(p, s)
-           except pyipmi.errors.CompletionCodeError as e:
-               if e.cc is 0xcc:
-                   continue
+            try:
+                (p, s) = ipmi.get_port_state(channel, interface)
+                print_link_state(p, s)
+            except pyipmi.errors.CompletionCodeError as e:
+                if e.cc is 0xcc:
+                    continue
+
 
 def cmd_picmg_get_portstate(ipmi, args):
     if len(args) < 2:
@@ -342,8 +364,10 @@ def cmd_picmg_get_portstate(ipmi, args):
     (p, s) = ipmi.get_port_state(channel, interface)
     print_link_state(p, s)
 
+
 def cmd_picmg_frucontrol_cold_reset(ipmi, args):
     ipmi.fru_control_cold_reset(0)
+
 
 def usage(toplevel=False):
     commands = []
@@ -426,12 +450,14 @@ Aardvark options:
             name = '%s %s' % (name, cmd.arguments)
         print('  %-*s   %s' % (maxlen, name, cmd.help))
 
+
 def version():
     print('ipmitool v%s' % pyipmi.__version__)
 
+
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:o:b:')
+        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:o:b:p:r:')
     except getopt.GetoptError as err:
         print(str(err))
         usage()
@@ -439,7 +465,7 @@ def main():
     verbose = False
     interface_name = 'aardvark'
     target_address = 0x20
-    target_routing = None
+    target_routing = [(0x20, 0, 0)]
     rmcp_host = None
     rmcp_port = 623
     rmcp_user = ''
@@ -457,15 +483,13 @@ def main():
         elif o == '-t':
             target_address = int(a, 0)
         elif o == '-b':
-            target_routing = [(0x20,int(a))]
+            target_routing = [(0x20, int(a), 0)]
         elif o == '-r':
             target_routing = a
-        elif o == '-A':
-            authentication_type = a
         elif o == '-H':
             rmcp_host = a
         elif o == '-p':
-            rmcp_port = int(a,0)
+            rmcp_port = int(a, 0)
         elif o == '-U':
             rmcp_user = a
         elif o == '-P':
@@ -501,7 +525,6 @@ def main():
         usage()
         sys.exit(1)
 
-
     aardvark_serial = None
     aardvark_pullups = None
     aardvark_target_power = None
@@ -523,8 +546,9 @@ def main():
 
     try:
         if interface_name == 'aardvark':
-            interface = pyipmi.interfaces.create_interface(interface_name,
-                            serial_number=aardvark_serial)
+            interface = pyipmi.interfaces.create_interface(
+                                                interface_name,
+                                                serial_number=aardvark_serial)
         else:
             interface = pyipmi.interfaces.create_interface(interface_name)
     except RuntimeError as e:
@@ -554,7 +578,7 @@ def main():
         if verbose:
             traceback.print_exc()
         sys.exit(1)
-    except pyipmi.errors.TimeoutError as e:
+    except pyipmi.errors.IpmiTimeoutError as e:
         print('Command timed out')
         if verbose:
             traceback.print_exc()
@@ -568,6 +592,7 @@ def main():
         if rmcp_host is not None:
             ipmi.session.close()
 
+
 COMMANDS = (
         Command('bmc info', cmd_bmc_info),
         Command('bmc reset cold', lambda i, a: i.cold_reset()),
@@ -576,6 +601,7 @@ COMMANDS = (
         Command('sel clear', cmd_sel_clear),
         Command('sensor rearm', cmd_sensor_rearm),
         Command('sdr list', cmd_sdr_list),
+        Command('sdr raw', cmd_sdr_show_raw),
         Command('sdr show', cmd_sdr_show),
         Command('sdr showall', cmd_sdr_show_all),
         Command('fru print', cmd_fru_print),
@@ -589,24 +615,24 @@ COMMANDS = (
         Command('hpm install', cmd_hpm_install),
         Command('chassis status', cmd_chassis_status),
         Command('chassis power off',
-            lambda i, a: i.chassis_control_power_down()),
+                lambda i, a: i.chassis_control_power_down()),
         Command('chassis power on',
-            lambda i, a: i.chassis_control_power_up()),
+                lambda i, a: i.chassis_control_power_up()),
         Command('chassis power cycle',
-            lambda i, a: i.chassis_control_power_cycle()),
+                lambda i, a: i.chassis_control_power_cycle()),
         Command('chassis power reset',
-            lambda i, a: i.chassis_control_hard_reset()),
+                lambda i, a: i.chassis_control_hard_reset()),
         Command('chassis power diag',
-            lambda i, a: i.chassis_control_power_diagnostic_interrupt()),
+                lambda i, a: i.chassis_control_power_diagnostic_interrupt()),
         Command('chassis power soft',
-            lambda i, a: i.chassis_control_power_soft_shutdown()),
+                lambda i, a: i.chassis_control_power_soft_shutdown()),
 )
 
 COMMAND_HELP = (
         CommandHelp('raw', None, 'Send a RAW IPMI request and print response'),
 
         CommandHelp('fru', None,
-                'Print built-in FRU and scan SDR for FRU locators'),
+                    'Print built-in FRU and scan SDR for FRU locators'),
 
         CommandHelp('sensor', None, None),
         CommandHelp('sensor rearm', '<sensor-numer>', 'Rearm Sensor Events'),
@@ -616,39 +642,40 @@ COMMAND_HELP = (
         CommandHelp('sel clear', None, 'Clear SEL'),
 
         CommandHelp('sdr', None,
-                'Print Sensor Data Repository entries and readings'),
+                    'Print Sensor Data Repository entries and readings'),
         CommandHelp('sdr list', None, 'List all SDRs'),
+        CommandHelp('sdr raw', '<sdr-id>', 'Show SDR raw data'),
         CommandHelp('sdr show', '<sdr-id>', 'Show detail for one SDR'),
         CommandHelp('sdr showall', None, 'Show detail for all SDRs'),
 
         CommandHelp('bmc', None,
-                'Management Controller status and global enables'),
+                    'Management Controller status and global enables'),
         CommandHelp('bmc info', None, 'BMC Device ID inforamtion'),
         CommandHelp('bmc reset', '<cold|warm>', 'BMC reset control'),
 
         CommandHelp('picmg', None, 'PICMG commands'),
         CommandHelp('picmg frucontrol', '<cr>', 'Issue frucontrol'),
         CommandHelp('picmg power get', 'get PICMG power level',
-                'Request the power level'),
+                    'Request the power level'),
         CommandHelp('picmg portstate getall', '',
-                'Request all portstates for all interfaces'),
+                    'Request all portstates for all interfaces'),
         CommandHelp('picmg portstate get', '<channel> <interface>',
-                'Request the portstate for an interface'),
+                    'Request the portstate for an interface'),
 
         CommandHelp('hpm', None, 'HPM.1 commands'),
         CommandHelp('hpm capabilities', 'HPM.1 target upgrade capabilities',
-                'Request the target upgrade capabilities'),
+                    'Request the target upgrade capabilities'),
         CommandHelp('hpm check', 'HPM.1 file check',
-                'Check the specified HPM.1 file'),
+                    'Check the specified HPM.1 file'),
         CommandHelp('hpm install', '<file> <component id>',
-                'Install the specified HPM.1 file to the controller'),
+                    'Install the specified HPM.1 file to the controller'),
 
         CommandHelp('chassis', None, 'Get chassis status and set power state'),
         CommandHelp('chassis status', '', 'Get chassis status'),
         CommandHelp('chassis power', '<on|off|cycle|reset|diag|soft>',
-            'Set power state')
+                    'Set power state')
 )
+
 
 if __name__ == '__main__':
     main()
-

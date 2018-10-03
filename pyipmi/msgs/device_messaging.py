@@ -12,16 +12,14 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from . import constants
-
 from . import register_message_class
 from . import Message
 from . import UnsignedInt
 from . import Bitfield
 from . import String
-from . import ByteArray
 from . import CompletionCode
 from . import RemainingBytes
 
@@ -32,15 +30,14 @@ class SetBmcGlobalEnablesReq(Message):
     __netfn__ = constants.NETFN_APP
     __fields__ = (
         Bitfield('enables', 1,
-            Bitfield.Bit('receive_message_queue_interrupt', 1, 0),
-            Bitfield.Bit('event_message_buffer_full_interrupt', 1, 0),
-            Bitfield.Bit('event_message_buffer', 1, 0),
-            Bitfield.Bit('system_event_logging', 1, 0),
-            Bitfield.ReservedBit(1, 0),
-            Bitfield.Bit('oem_0', 1, 0),
-            Bitfield.Bit('oem_1', 1, 0),
-            Bitfield.Bit('oem_2', 1, 0),
-        ),
+                 Bitfield.Bit('receive_message_queue_interrupt', 1, 0),
+                 Bitfield.Bit('event_message_buffer_full_interrupt', 1, 0),
+                 Bitfield.Bit('event_message_buffer', 1, 0),
+                 Bitfield.Bit('system_event_logging', 1, 0),
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('oem_0', 1, 0),
+                 Bitfield.Bit('oem_1', 1, 0),
+                 Bitfield.Bit('oem_2', 1, 0),),
     )
 
 
@@ -66,15 +63,14 @@ class GetBmcGlobalEnablesRsp(Message):
     __fields__ = (
         CompletionCode(),
         Bitfield('enables', 1,
-            Bitfield.Bit('receive_message_queue_interrupt', 1, 0),
-            Bitfield.Bit('event_message_buffer_full_interrupt', 1, 0),
-            Bitfield.Bit('event_message_buffer', 1, 0),
-            Bitfield.Bit('system_event_logging', 1, 0),
-            Bitfield.ReservedBit(1, 0),
-            Bitfield.Bit('oem_0', 1, 0),
-            Bitfield.Bit('oem_1', 1, 0),
-            Bitfield.Bit('oem_2', 1, 0),
-        ),
+                 Bitfield.Bit('receive_message_queue_interrupt', 1, 0),
+                 Bitfield.Bit('event_message_buffer_full_interrupt', 1, 0),
+                 Bitfield.Bit('event_message_buffer', 1, 0),
+                 Bitfield.Bit('system_event_logging', 1, 0),
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('oem_0', 1, 0),
+                 Bitfield.Bit('oem_1', 1, 0),
+                 Bitfield.Bit('oem_2', 1, 0),),
     )
 
 
@@ -84,15 +80,14 @@ class ClearMessageFlagsReq(Message):
     __netfn__ = constants.NETFN_APP
     __fields__ = (
         Bitfield('clear', 1,
-            Bitfield.Bit('receive_message_queue', 1, 0),
-            Bitfield.Bit('event_message_buffer', 1, 0),
-            Bitfield.ReservedBit(1, 0),
-            Bitfield.Bit('watchdog_pretimeout_interrupt_flag', 1, 0),
-            Bitfield.ReservedBit(1, 0),
-            Bitfield.Bit('oem_0', 1, 0),
-            Bitfield.Bit('oem_1', 1, 0),
-            Bitfield.Bit('oem_2', 1, 0),
-        ),
+                 Bitfield.Bit('receive_message_queue', 1, 0),
+                 Bitfield.Bit('event_message_buffer', 1, 0),
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('watchdog_pretimeout_interrupt_flag', 1, 0),
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('oem_0', 1, 0),
+                 Bitfield.Bit('oem_1', 1, 0),
+                 Bitfield.Bit('oem_2', 1, 0),),
     )
 
 
@@ -118,15 +113,14 @@ class GetMessageFlagsRsp(Message):
     __fields__ = (
         CompletionCode(),
         Bitfield('flag', 1,
-            Bitfield.Bit('receive_message_available', 1, 0),
-            Bitfield.Bit('event_message_buffer_full', 1, 0),
-            Bitfield.ReservedBit(1, 0),
-            Bitfield.Bit('watchdog_pretimeout_interrupt_occurred', 1, 0),
-            Bitfield.ReservedBit(1, 0),
-            Bitfield.Bit('oem_0', 1, 0),
-            Bitfield.Bit('oem_1', 1, 0),
-            Bitfield.Bit('oem_2', 1, 0),
-        ),
+                 Bitfield.Bit('receive_message_available', 1, 0),
+                 Bitfield.Bit('event_message_buffer_full', 1, 0),
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('watchdog_pretimeout_interrupt_occurred', 1, 0),
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('oem_0', 1, 0),
+                 Bitfield.Bit('oem_1', 1, 0),
+                 Bitfield.Bit('oem_2', 1, 0),),
     )
 
 
@@ -136,11 +130,10 @@ class EnableMessageChannelReceiveReq(Message):
     __netfn__ = constants.NETFN_APP
     __fields__ = (
         Bitfield('channel', 2,
-            Bitfield.Bit('number', 4, 0),
-            Bitfield.ReservedBit(4, 0),
-            Bitfield.Bit('state', 2, 0),
-            Bitfield.ReservedBit(6, 0),
-        ),
+                 Bitfield.Bit('number', 4, 0),
+                 Bitfield.ReservedBit(4, 0),
+                 Bitfield.Bit('state', 2, 0),
+                 Bitfield.ReservedBit(6, 0),),
     )
 
 
@@ -151,11 +144,10 @@ class EnableMessageChannelReceiveRsp(Message):
     __fields__ = (
         CompletionCode(),
         Bitfield('channel', 2,
-            Bitfield.Bit('number', 4, 0),
-            Bitfield.ReservedBit(4, 0),
-            Bitfield.Bit('state', 1, 0),
-            Bitfield.ReservedBit(7, 0),
-        ),
+                 Bitfield.Bit('number', 4, 0),
+                 Bitfield.ReservedBit(4, 0),
+                 Bitfield.Bit('state', 1, 0),
+                 Bitfield.ReservedBit(7, 0),),
     )
 
 
@@ -172,9 +164,8 @@ class GetMessageRsp(Message):
     __fields__ = (
         CompletionCode(),
         Bitfield('channel', 1,
-            Bitfield.Bit('number', 4, 0),
-            Bitfield.Bit('privilege_level', 4, 0),
-        ),
+                 Bitfield.Bit('number', 4, 0),
+                 Bitfield.Bit('privilege_level', 4, 0),),
         RemainingBytes('data'),
     )
 
@@ -185,11 +176,10 @@ class SendMessageReq(Message):
     __netfn__ = constants.NETFN_APP
     __fields__ = (
         Bitfield('channel', 1,
-            Bitfield.Bit('number', 4, 0),
-            Bitfield.Bit('authenticated', 1, 0),
-            Bitfield.Bit('encrypted', 1, 0),
-            Bitfield.Bit('tracking', 2, 0),
-        ),
+                 Bitfield.Bit('number', 4, 0),
+                 Bitfield.Bit('authenticated', 1, 0),
+                 Bitfield.Bit('encrypted', 1, 0),
+                 Bitfield.Bit('tracking', 2, 0),),
     )
 
 
@@ -225,12 +215,11 @@ class MasterWriteReadReq(Message):
     __netfn__ = constants.NETFN_APP
     __fields__ = (
         Bitfield('bus_id', 2,
-            Bitfield.Bit('type', 1, 0),
-            Bitfield.Bit('id', 3, 0),
-            Bitfield.Bit('channel', 4, 0),
-            Bitfield.ReservedBit(1, 0),
-            Bitfield.Bit('slave_address', 7, 0),
-        ),
+                 Bitfield.Bit('type', 1, 0),
+                 Bitfield.Bit('id', 3, 0),
+                 Bitfield.Bit('channel', 4, 0),
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('slave_address', 7, 0),),
         UnsignedInt('read_count', 1),
         RemainingBytes('data'),
     )
@@ -252,14 +241,12 @@ class GetChannelAuthenticationCapabilitiesReq(Message):
     __netfn__ = constants.NETFN_APP
     __fields__ = (
         Bitfield('channel', 1,
-            Bitfield.Bit('number', 4, 0),
-            Bitfield.ReservedBit(3, 0),
-            Bitfield.Bit('type', 1, 0),
-        ),
+                 Bitfield.Bit('number', 4, 0),
+                 Bitfield.ReservedBit(3, 0),
+                 Bitfield.Bit('type', 1, 0),),
         Bitfield('privilege_level', 1,
-            Bitfield.Bit('requested', 4, 0),
-            Bitfield.ReservedBit(4, 0),
-        ),
+                 Bitfield.Bit('requested', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
     )
 
 
@@ -271,29 +258,26 @@ class GetChannelAuthenticationCapabilitiesRsp(Message):
         CompletionCode(),
         UnsignedInt('channel_number', 1),
         Bitfield('support', 1,
-            Bitfield.Bit('none', 1, 0),
-            Bitfield.Bit('md2', 1, 0),
-            Bitfield.Bit('md5', 1, 0),
-            Bitfield.ReservedBit(1, 0),
-            Bitfield.Bit('straight', 1, 0),
-            Bitfield.Bit('oem_proprietary', 1, 0),
-            Bitfield.ReservedBit(1, 0),
-            Bitfield.Bit('ipmi_2_0', 1, 0),
-        ),
+                 Bitfield.Bit('none', 1, 0),
+                 Bitfield.Bit('md2', 1, 0),
+                 Bitfield.Bit('md5', 1, 0),
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('straight', 1, 0),
+                 Bitfield.Bit('oem_proprietary', 1, 0),
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('ipmi_2_0', 1, 0),),
         Bitfield('status', 1,
-            Bitfield.Bit('anonymous_login_enabled', 1, 0),
-            Bitfield.Bit('anonymous_login_null_user', 1, 0),
-            Bitfield.Bit('anonymous_login_non_null', 1, 0),
-            Bitfield.Bit('user_level', 1, 0),
-            Bitfield.Bit('per_message', 1, 0),
-            Bitfield.Bit('kg', 1, 0),
-            Bitfield.ReservedBit(2, 0),
-        ),
+                 Bitfield.Bit('anonymous_login_enabled', 1, 0),
+                 Bitfield.Bit('anonymous_login_null_user', 1, 0),
+                 Bitfield.Bit('anonymous_login_non_null', 1, 0),
+                 Bitfield.Bit('user_level', 1, 0),
+                 Bitfield.Bit('per_message', 1, 0),
+                 Bitfield.Bit('kg', 1, 0),
+                 Bitfield.ReservedBit(2, 0),),
         Bitfield('extended_capabilities', 1,
-            Bitfield.Bit('1_5', 1, 0),
-            Bitfield.Bit('2_0', 1, 0),
-            Bitfield.ReservedBit(6, 0),
-        ),
+                 Bitfield.Bit('1_5', 1, 0),
+                 Bitfield.Bit('2_0', 1, 0),
+                 Bitfield.ReservedBit(6, 0),),
         UnsignedInt('oem_id', 3),
         UnsignedInt('oem_auxiliary_data', 1),
     )
@@ -305,10 +289,9 @@ class GetSessionChallengeReq(Message):
     __netfn__ = constants.NETFN_APP
     __fields__ = (
         Bitfield('authentication', 1,
-            Bitfield.Bit('type', 4, 0),
-            Bitfield.ReservedBit(4, 0),
-        ),
-        String('user_name', 16),
+                 Bitfield.Bit('type', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
+        String('user_name', 16, '\x00' * 16),
     )
 
 
@@ -329,16 +312,15 @@ class ActivateSessionReq(Message):
     __netfn__ = constants.NETFN_APP
     __fields__ = (
         Bitfield('authentication', 1,
-            Bitfield.Bit('type', 4, 0),
-            Bitfield.ReservedBit(4, 0),
-        ),
+                 Bitfield.Bit('type', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
         Bitfield('privilege_level', 1,
-            Bitfield.Bit('maximum_requested', 4, 0),
-            Bitfield.ReservedBit(4, 0),
-        ),
+                 Bitfield.Bit('maximum_requested', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
         String('challenge_string', 16),
         UnsignedInt('initial_outbound_sequence_number', 4),
     )
+
 
 @register_message_class
 class ActivateSessionRsp(Message):
@@ -347,15 +329,13 @@ class ActivateSessionRsp(Message):
     __fields__ = (
         CompletionCode(),
         Bitfield('authentication', 1,
-            Bitfield.Bit('type', 4, 0),
-            Bitfield.ReservedBit(4, 0),
-        ),
+                 Bitfield.Bit('type', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
         UnsignedInt('session_id', 4),
         UnsignedInt('initial_inbound_sequence_number', 4),
         Bitfield('privilege_level', 1,
-            Bitfield.Bit('maximum_allowed', 4, 0),
-            Bitfield.ReservedBit(4, 0),
-        ),
+                 Bitfield.Bit('maximum_allowed', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
     )
 
 
@@ -365,9 +345,8 @@ class SetSessionPrivilegeLevelReq(Message):
     __netfn__ = constants.NETFN_APP
     __fields__ = (
         Bitfield('privilege_level', 1,
-            Bitfield.Bit('requested', 4, 0),
-            Bitfield.ReservedBit(4, 0),
-        ),
+                 Bitfield.Bit('requested', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
     )
 
 
@@ -378,9 +357,8 @@ class SetSessionPrivilegeLevelRsp(Message):
     __fields__ = (
         CompletionCode(),
         Bitfield('privilege_level', 1,
-            Bitfield.Bit('new', 4, 0),
-            Bitfield.ReservedBit(4, 0),
-        ),
+                 Bitfield.Bit('new', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
     )
 
 

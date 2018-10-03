@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Lesser General Public
 # License along with this library; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 # completion codes
 CC_OK = 0x00
@@ -41,8 +41,7 @@ CC_NOT_SUPPORTED_PRESENT_STATE = 0xd5
 CC_ILLEGAL_COMMAND_DISABLED = 0xd6
 CC_UNSPECIFIED_ERROR = 0xff
 
-
-cc_err_desc = (
+COMPLETION_CODE_DESCR = (
     (CC_OK, 'Command Completed Normally'),
     (CC_NODE_BUSY, 'Node Busy'),
     (CC_INV_CMD, 'Invalid Command'),
@@ -55,43 +54,42 @@ cc_err_desc = (
     (CC_REQ_DATA_FIELD_EXCEED, 'Request data field length limit exceeded'),
     (CC_PARAM_OUT_OF_RANGE, 'Parameter out of range'),
     (CC_CANT_RET_NUM_REQ_BYTES,
-        'Cannot return number of requested data bytes'),
+     'Cannot return number of requested data bytes'),
     (CC_REQ_DATA_NOT_PRESENT, 'Requested data not present'),
     (CC_INV_DATA_FIELD_IN_REQ, 'Invalid data field in Request'),
     (CC_ILL_SENSOR_OR_RECORD,
-        'Command illegal for specified sensor or record'),
+     'Command illegal for specified sensor or record'),
     (CC_RESP_COULD_NOT_BE_PRV, 'Command response could not be provided'),
     (CC_CANT_RESP_DUPLI_REQ, 'Cannot execute duplicated request'),
     (CC_CANT_RESP_SDRR_UPDATE,
-        'Command response could not be provided. SDRR in update mode'),
+     'Command response could not be provided. SDRR in update mode'),
     (CC_CANT_RESP_FIRM_UPDATE,
-        'Command response could not be provided. Device in firmware '
-        'update mode'),
+     'Command response could not be provided. Device in firmware '
+     'update mode'),
     (CC_CANT_RESP_BMC_INIT,
-        'Command response could not be provided. BMC initialization or '
-        'initialization agent in progress'),
+     'Command response could not be provided. BMC initialization or '
+     'initialization agent in progress'),
     (CC_DESTINATION_UNAVAILABLE, 'Destination unavailable'),
     (CC_INSUFFICIENT_PRIVILEGES,
-        'Cannot execute command due to insufficient privilege level'),
+     'Cannot execute command due to insufficient privilege level'),
     (CC_NOT_SUPPORTED_PRESENT_STATE,
-        'Cannot execute command. Not supported in present state'),
+     'Cannot execute command. Not supported in present state'),
     (CC_ILLEGAL_COMMAND_DISABLED,
-        'Cannot execute command. Command sub-function has been disabled '
-        'or is unavailable'),
+     'Cannot execute command. Command sub-function has been disabled '
+     'or is unavailable'),
     (CC_UNSPECIFIED_ERROR, 'Unspecified error'),
 )
 
-
 # network functions
-NETFN_CHASSIS          = 0x00
-NETFN_BRIDGE           = 0x02
-NETFN_SENSOR_EVENT     = 0x04
-NETFN_APP              = 0x06
-NETFN_FIRMWARE         = 0x08
-NETFN_STORAGE          = 0x0a
-NETFN_TRANSPORT        = 0x0c
-NETFN_GROUP_EXTENSION  = 0x2c
-NETFN_OEM              = 0x2e
+NETFN_CHASSIS = 0x00
+NETFN_BRIDGE = 0x02
+NETFN_SENSOR_EVENT = 0x04
+NETFN_APP = 0x06
+NETFN_FIRMWARE = 0x08
+NETFN_STORAGE = 0x0a
+NETFN_TRANSPORT = 0x0c
+NETFN_GROUP_EXTENSION = 0x2c
+NETFN_OEM = 0x2e
 
 # IPM device 'global'
 CMDID_GET_DEVICE_ID = 0x01
@@ -279,13 +277,13 @@ cc_err_cmd_specific_desc = {
 
     CMDID_ACTIVATE_SESSION: {
         0x81: 'No session slot available (BMC cannot accept any more'
-                ' sessions)',
+              ' sessions)',
         0x82: 'No slot available for given user',
         0x83: 'No slot available to support user due to maximum privilege'
-                ' capability',
+              ' capability',
         0x84: 'session sequence number out-of-range',
         0x85: 'invalid Session ID in request',
         0x86: 'requested maximum privilege level exceeds user and/or channel'
-                ' privilege limit',
+              ' privilege limit',
     },
 }
