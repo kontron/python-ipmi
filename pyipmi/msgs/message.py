@@ -20,9 +20,9 @@ from __future__ import absolute_import
 from array import array
 
 from . import constants
-from ..utils import ByteBuffer,  py3enc_unic_bytes_fix
-from ..errors import CompletionCodeError, EncodingError, DecodingError, \
-        DescriptionError
+from ..utils import ByteBuffer
+from ..errors import (CompletionCodeError, EncodingError, DecodingError,
+                      DescriptionError)
 
 
 class BaseField(object):
@@ -47,7 +47,6 @@ class ByteArray(BaseField):
     def __init__(self, name, length, default=None):
         BaseField.__init__(self, name, length)
         if default is not None:
-            default = py3enc_unic_bytes_fix(default)
             self.default = array('B', default)
         else:
             self.default = None
@@ -59,7 +58,8 @@ class ByteArray(BaseField):
         a = getattr(obj, self.name)
         if len(a) != self._length(obj):
             raise EncodingError('Array must be exaclty %d bytes long '
-                                '(but is %d long)' % (self._length(obj), len(a)))
+                                '(but is %d long)' %
+                                (self._length(obj), len(a)))
         for i in range(self._length(obj)):
             data.push_unsigned_int(a[i], 1)
 
@@ -183,8 +183,7 @@ class Optional(object):
         if getattr(obj, self._field.name) is not None:
             self._field.encode(obj, data)
 
-    @staticmethod
-    def create():
+    def create(self):
         return None
 
 
@@ -278,7 +277,7 @@ class Bitfield(BaseField):
             offset += b._width
         if offset != 8 * self.length:
             raise DescriptionError('Bit description does not match bitfield '
-                    'length')
+                                   'length')
 
     def encode(self, obj, data):
         wrapper = getattr(obj, self.name)
@@ -344,17 +343,28 @@ class Message(object):
                                        field.name)
             setattr(self, field.name, field.create())
 
-    def _encode(self):
-        '''Encode the message and return a bytestring.'''
-        if not hasattr(self, '__fields__'):
-            return ''
-
+    def _pack(self):
+        """Pack the message and return an array."""
         data = ByteBuffer()
+        if not hasattr(self, '__fields__'):
+            return data.array
+
+        for field in self.__fields__:
+            field.encode(self, data)
+        return data.array
+
+    def _encode(self):
+        """Encode the message and return a bytestring."""
+        data = ByteBuffer()
+        if not hasattr(self, '__fields__'):
+            return data.tostring()
+
         for field in self.__fields__:
             field.encode(self, data)
         return data.tostring()
 
     def _decode(self, data):
+        """Decode the bytestring message."""
         if not hasattr(self, '__fields__'):
             raise NotImplementedError('You have to overwrite this method')
 
@@ -383,3 +393,4 @@ class Message(object):
 
 encode_message = lambda m: m._encode()
 decode_message = lambda m, d: m._decode(d)
+pack_message = lambda m: m._pack()

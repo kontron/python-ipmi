@@ -1,10 +1,13 @@
 #!/usr/bin/env python
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 from mock import MagicMock, call
 from nose.tools import eq_
 
-from pyipmi.helper import *
+from pyipmi.helper import (clear_repository_helper, ERASURE_COMPLETED,
+                           ERASURE_IN_PROGRESS, INITIATE_ERASE,
+                           GET_ERASE_STATUS)
+
 
 def test_clear_repository_helper():
     reserve_fn = MagicMock()

@@ -25,7 +25,7 @@ class TestIpmitool:
         self._interface._run_ipmitool = mock
 
         target = Target(0x20)
-        self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
+        self._interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 -U "admin" -P "secret" -t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
@@ -38,7 +38,7 @@ class TestIpmitool:
         interface._run_ipmitool = mock
 
         target = Target(0x20)
-        interface.send_and_receive_raw(target, 0, 0x6, '\x01')
+        interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         mock.assert_called_once_with('ipmitool -I lanplus -H 10.0.1.1 -p 623 -U "admin" -P "secret" -t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
@@ -47,10 +47,10 @@ class TestIpmitool:
         mock.return_value = (b'', 0)
         self._interface._run_ipmitool = mock
 
-        self._interface._session.set_auth_type(Session.AUTH_TYPE_NONE)
+        self._interface._session.auth_type = Session.AUTH_TYPE_NONE
 
         target = Target(0x20)
-        self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
+        self._interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 -P "" -t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
@@ -60,7 +60,7 @@ class TestIpmitool:
         self._interface._run_ipmitool = mock
 
         target = Target(0x20)
-        data = self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
+        data = self._interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         eq_(data, b'\x00\x10\x80\x01\x02\x51\xbd\x98\x3a\x00\xa8\x06\x00\x03\x00\x00')
 
@@ -70,7 +70,7 @@ class TestIpmitool:
 
         target = Target(0x20)
         self._interface._run_ipmitool = mock
-        data = self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
+        data = self._interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         eq_(data, b'\xc3')
 
@@ -80,7 +80,7 @@ class TestIpmitool:
 
         target = Target(0x20)
         self._interface._run_ipmitool = mock
-        data = self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
+        data = self._interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         eq_(data, b'\xcc')
 
@@ -91,8 +91,7 @@ class TestIpmitool:
 
         target = Target(0x20)
         self._interface._run_ipmitool = mock
-        self._interface.send_and_receive_raw(target, 0, 0x6, '\x01')
-
+        self._interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
     def test_send_and_receive_raw_serial(self):
         interface = Ipmitool(interface_type='serial-terminal')
@@ -104,6 +103,6 @@ class TestIpmitool:
         interface._run_ipmitool = mock
 
         target = Target(0x20)
-        data = interface.send_and_receive_raw(target, 0, 0x6, '\x01')
+        interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         mock.assert_called_once_with('ipmitool -I serial-terminal -D /dev/tty2:115200 -t 0x20 -l 0 raw 0x06 0x01')

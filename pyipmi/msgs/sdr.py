@@ -184,7 +184,7 @@ class ClearSdrRepositoryReq(Message):
     __netfn__ = constants.NETFN_STORAGE
     __fields__ = (
             UnsignedInt('reservation_id', 2),
-            ByteArray('key', 3, default='CLR'),
+            ByteArray('key', 3, default=b'CLR'),
             UnsignedInt('cmd', 1)
     )
 

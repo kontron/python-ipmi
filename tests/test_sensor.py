@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 from nose.tools import eq_
 from mock import MagicMock
 
-from pyipmi.sensor import *
 from pyipmi import interfaces, create_connection
 from pyipmi.msgs.sensor import SetSensorThresholdsRsp
+
 
 def test_set_sensor_thresholds():
 
@@ -21,13 +21,13 @@ def test_set_sensor_thresholds():
     ipmi.send_message = mock_send_recv
 
     ipmi.set_sensor_thresholds(sensor_number=5, lun=1)
-    args, kwargs = mock_send_recv.call_args
+    args, _ = mock_send_recv.call_args
     req = args[0]
     eq_(req.lun, 1)
     eq_(req.sensor_number, 5)
 
     ipmi.set_sensor_thresholds(sensor_number=0, unr=10)
-    args, kwargs = mock_send_recv.call_args
+    args, _ = mock_send_recv.call_args
     req = args[0]
     eq_(req.set_mask.unr, 1)
     eq_(req.threshold.unr, 10)
@@ -43,7 +43,7 @@ def test_set_sensor_thresholds():
     eq_(req.threshold.lnr, 0)
 
     ipmi.set_sensor_thresholds(sensor_number=5, ucr=11)
-    args, kwargs = mock_send_recv.call_args
+    args, _ = mock_send_recv.call_args
     req = args[0]
     eq_(req.lun, 0)
     eq_(req.set_mask.unr, 0)

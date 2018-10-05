@@ -15,6 +15,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from array import array
+
 from .errors import DecodingError
 from .utils import check_completion_code, ByteBuffer
 from .msgs import create_request_by_name
@@ -105,7 +107,7 @@ class SelInfo(State):
         if rsp.operation_support.get_sel_allocation_info:
             self.operation_support.append('get_sel_allocation_info')
         if rsp.operation_support.reserve_sel:
-            self.operation_support.append('reserve_sel:')
+            self.operation_support.append('reserve_sel')
         if rsp.operation_support.partial_add_sel_entry:
             self.operation_support.append('partial_add_sel_entry')
         if rsp.operation_support.delete_sel:
@@ -120,7 +122,7 @@ class SelEntry(State):
     TYPE_OEM_NON_TIMESTAMPED_RANGE = list(range(0xe0, 0x100))
 
     def __str__(self):
-        raw = '[%s]' % (' '.join(['%02x' % b for b in self.data]))
+        raw = '[%s]' % (' '.join(['0x%02x' % b for b in self.data]))
         string = []
         string.append('SEL Record ID 0x%04x' % self.record_id)
         string.append('  Raw: %s' % raw)
@@ -132,7 +134,8 @@ class SelEntry(State):
         string.append('  Sensor Number: %d' % self.sensor_number)
         string.append('  Event Direction: %d' % self.event_direction)
         string.append('  Event Type: 0x%02x' % self.event_type)
-        string.append('  Event Data: 0x%s' % self.event_data.encode('hex'))
+        string.append('  Event Data: %s' % array('B',
+            self.event_data).tolist())
         return "\n".join(string)
 
     @staticmethod

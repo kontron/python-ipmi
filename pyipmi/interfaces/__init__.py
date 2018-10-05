@@ -17,11 +17,13 @@
 from .ipmitool import Ipmitool
 from .aardvark import Aardvark
 from .mock import Mock
+from .rmcp import Rmcp
 
 INTERFACES = [
     Ipmitool,
     Aardvark,
     Mock,
+    Rmcp,
 ]
 
 

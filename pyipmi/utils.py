@@ -56,7 +56,7 @@ class ByteBuffer:
     def __init__(self, data=None):
 
         if data is not None:
-            self.array = array('B', py3enc_unic_bytes_fix(data))
+            self.array = array('B', data)
         else:
             self.array = array('B')
 
@@ -79,7 +79,8 @@ class ByteBuffer:
     def pop_string(self, length):
         string = self.array[0:length]
         del self.array[0:length]
-        return py3dec_unic_bytes_fix(string.tostring())
+        return string.tostring()
+        # return py3dec_unic_bytes_fix(string.tostring())
 
     def pop_slice(self, length):
         if len(self.array) < length:
@@ -90,7 +91,7 @@ class ByteBuffer:
         return c
 
     def tostring(self):
-        return py3dec_unic_bytes_fix(self.array.tostring())
+        return self.array.tostring()
 
     def extend(self, data):
         self.array.extend(data)
@@ -134,3 +135,9 @@ def bcd_search(name):
     if name != 'bcd+':
         return None
     return codecs.CodecInfo(name='bcd+', encode=bcd_encode, decode=bcd_decode)
+
+
+def is_string(string):
+    if sys.version_info[0] >= 3:
+        return isinstance(string, str)
+    return isinstance(string, basestring)

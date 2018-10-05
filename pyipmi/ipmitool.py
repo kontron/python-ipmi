@@ -17,14 +17,12 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
 
 import sys
 import getopt
 import logging
 import traceback
-import array
+from array import array
 
 from collections import namedtuple
 
@@ -76,7 +74,7 @@ Additional Device Support:
 
     if device_id.aux is not None:
         print('Aux Firmware Rev Info:  [{:s}]'.format(
-            ' '.join('%02x' % d for d in device_id.aux )))
+              ' '.join('%02x' % d for d in device_id.aux)))
 
 
 def cmd_sel_clear(ipmi, args):
@@ -91,6 +89,11 @@ def cmd_sensor_rearm(ipmi, args):
 
 
 def sdr_show(ipmi, s):
+
+    print("SDR record ID:    0x%04x" % s.id)
+    print("SDR type:         0x%02x" % s.type)
+    print("Device Id string: %s" % s.device_id_string)
+    print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
     if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
         (raw, states) = ipmi.get_sensor_reading(s.number, s.owner_lun)
         value = s.convert_sensor_raw_to_value(raw)
@@ -102,9 +105,6 @@ def sdr_show(ipmi, s):
         t_lnc = s.convert_sensor_raw_to_value(s.threshold['lnc'])
         t_lcr = s.convert_sensor_raw_to_value(s.threshold['lcr'])
         t_lnr = s.convert_sensor_raw_to_value(s.threshold['lnr'])
-        print("SDR record ID:    0x%04x" % s.id)
-        print("Device Id string: %s" % s.device_id_string)
-        print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
         print("Reading value:    %s" % value)
         print("Reading state:    0x%x" % states)
         print("UNR:              %s" % t_unr)
@@ -115,15 +115,19 @@ def sdr_show(ipmi, s):
         print("LNR:              %s" % t_lnr)
     elif s.type is pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
         (raw, states) = ipmi.get_sensor_reading(s.number)
-        print("SDR record ID:    0x%04x" % s.id)
-        print("Device Id string: %s" % s.device_id_string)
-        print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
         print("Reading:          %s" % raw)
         print("Reading state:    0x%x" % states)
-    else:
-        print("SDR record ID:    0x%04x" % s.id)
-        print("Device Id string: %s" % s.device_id_string)
-        print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
+
+
+def cmd_sdr_show_raw(ipmi, args):
+    if len(args) != 1:
+        usage()
+        return
+    try:
+        sdr = ipmi.get_device_sdr(int(args[0], 0))
+        print(' '.join(['0x%02x' % b for b in sdr.data]))
+    except ValueError:
+        print('')
 
 
 def cmd_sdr_show(ipmi, args):
@@ -279,9 +283,9 @@ def cmd_raw(ipmi, args):
         return
 
     netfn = int(args[0], 0)
-    raw_bytes = array.array('B', [int(d, 0) for d in args[1:]])
+    raw_bytes = array('B', [int(d, 0) for d in args[1:]])
     rsp = ipmi.raw_command(lun, netfn, raw_bytes.tostring())
-    print(' '.join('%02x' % ord(d) for d in rsp))
+    print(' '.join('%02x' % d for d in array('B', rsp)))
 
 
 def cmd_hpm_capabilities(ipmi, args):
@@ -453,7 +457,7 @@ def version():
 
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:o:b:')
+        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:o:b:p:r:')
     except getopt.GetoptError as err:
         print(str(err))
         usage()
@@ -461,8 +465,9 @@ def main():
     verbose = False
     interface_name = 'aardvark'
     target_address = 0x20
-    target_routing = [(0x20, 0)]
+    target_routing = [(0x20, 0, 0)]
     rmcp_host = None
+    rmcp_port = 623
     rmcp_user = ''
     rmcp_password = ''
     interface_options = list()
@@ -478,9 +483,13 @@ def main():
         elif o == '-t':
             target_address = int(a, 0)
         elif o == '-b':
-            target_routing = [(0x20, int(a))]
+            target_routing = [(0x20, int(a), 0)]
+        elif o == '-r':
+            target_routing = a
         elif o == '-H':
             rmcp_host = a
+        elif o == '-p':
+            rmcp_port = int(a, 0)
         elif o == '-U':
             rmcp_user = a
         elif o == '-P':
@@ -553,10 +562,12 @@ def main():
 
     ipmi = pyipmi.create_connection(interface)
     ipmi.target = pyipmi.Target(target_address)
-    ipmi.target.set_routing(target_routing)
+
+    if target_routing is not None:
+        ipmi.target.set_routing(target_routing)
 
     if rmcp_host is not None:
-        ipmi.session.set_session_type_rmcp(rmcp_host)
+        ipmi.session.set_session_type_rmcp(rmcp_host, rmcp_port)
         ipmi.session.set_auth_type_user(rmcp_user, rmcp_password)
         ipmi.session.establish()
 
@@ -577,8 +588,9 @@ def main():
             traceback.print_exc()
         sys.exit(1)
 
-    if rmcp_host is not None:
-        ipmi.session.close()
+    finally:
+        if rmcp_host is not None:
+            ipmi.session.close()
 
 
 COMMANDS = (
@@ -589,6 +601,7 @@ COMMANDS = (
         Command('sel clear', cmd_sel_clear),
         Command('sensor rearm', cmd_sensor_rearm),
         Command('sdr list', cmd_sdr_list),
+        Command('sdr raw', cmd_sdr_show_raw),
         Command('sdr show', cmd_sdr_show),
         Command('sdr showall', cmd_sdr_show_all),
         Command('fru print', cmd_fru_print),
@@ -631,6 +644,7 @@ COMMAND_HELP = (
         CommandHelp('sdr', None,
                     'Print Sensor Data Repository entries and readings'),
         CommandHelp('sdr list', None, 'List all SDRs'),
+        CommandHelp('sdr raw', '<sdr-id>', 'Show SDR raw data'),
         CommandHelp('sdr show', '<sdr-id>', 'Show detail for one SDR'),
         CommandHelp('sdr showall', None, 'Show detail for all SDRs'),
 

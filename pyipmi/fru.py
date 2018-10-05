@@ -331,11 +331,12 @@ class FruPicmgRecord(FruDataMultiRecord):
     def _from_data(self, data):
         if len(data) < 10:
             raise DecodingError('data too short')
+        data = array.array('B', data)
         FruDataMultiRecord._from_data(self, data)
         self.manufacturer_id = \
-            ord(data[5]) | ord(data[6]) << 8 | ord(data[7]) << 16
-        self.picmg_record_type_id = ord(data[8])
-        self.format_version = ord(data[9])
+            data[5] | data[6] << 8 | data[7] << 16
+        self.picmg_record_type_id = data[8]
+        self.format_version = data[9]
 
 
 class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
