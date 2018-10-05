@@ -185,7 +185,7 @@ class SdrRepositoryAllocationInfo(State):
 
 
 class SdrCommon(object):
-    def __init__(self, data, next_id=None):
+    def __init__(self, data=None, next_id=None):
         if data:
             self.data = data
             self._common_header(data)
@@ -254,7 +254,7 @@ class SdrFullSensorRecord(SdrCommon):
     DATA_FMT_2S_COMPLEMENT = 2
     DATA_FMT_NONE = 3
 
-    def __init__(self, data, next_id=None):
+    def __init__(self, data=None, next_id=None):
         super(SdrFullSensorRecord, self).__init__(data, next_id)
         if data:
             self._from_data(data)
@@ -325,9 +325,56 @@ class SdrFullSensorRecord(SdrCommon):
 
     @staticmethod
     def _convert_complement(value, size):
-        if (value & (1 << (size-1))):
+        if (value & (1 << (size - 1))):
             value = -(1 << size) + value
         return value
+
+    def _decode_capabilities(self, capabilities):
+        self.capabilities = []
+
+        # ignore sensor
+        if capabilities & 0x80:
+            self.capabilities.append('ignore_sensor')
+        # sensor auto re-arm support
+        if capabilities & 0x40:
+            self.capabilities.append('auto_rearm')
+        # sensor hysteresis support
+        HYSTERESIS_MASK = 0x30
+        HYSTERESIS_IS_NOT_SUPPORTED = 0x00
+        HYSTERESIS_IS_READABLE = 0x10
+        HYSTERESIS_IS_READ_AND_SETTABLE = 0x20
+        HYSTERESIS_IS_FIXED = 0x30
+        if capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_NOT_SUPPORTED:
+            self.capabilities.append('hysteresis_not_supported')
+        elif capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_READABLE:
+            self.capabilities.append('hysteresis_readable')
+        elif capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_READ_AND_SETTABLE:
+            self.capabilities.append('hysteresis_read_and_setable')
+        elif capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_FIXED:
+            self.capabilities.append('hysteresis_fixed')
+        # sensor threshold support
+        THRESHOLD_MASK = 0x0C
+        THRESHOLD_IS_NOT_SUPPORTED = 0x00
+        THRESHOLD_IS_READABLE = 0x08
+        THRESHOLD_IS_READ_AND_SETTABLE = 0x04
+        THRESHOLD_IS_FIXED = 0x0C
+        if capabilities & THRESHOLD_MASK == THRESHOLD_IS_NOT_SUPPORTED:
+            self.capabilities.append('threshold_not_supported')
+        elif capabilities & THRESHOLD_MASK == THRESHOLD_IS_READABLE:
+            self.capabilities.append('threshold_readable')
+        elif capabilities & THRESHOLD_MASK == THRESHOLD_IS_READ_AND_SETTABLE:
+            self.capabilities.append('threshold_read_and_setable')
+        elif capabilities & THRESHOLD_MASK == THRESHOLD_IS_FIXED:
+            self.capabilities.append('threshold_fixed')
+        # sensor event message control support
+        if (capabilities & 0x03) is 0:
+            pass
+        if (capabilities & 0x03) is 1:
+            pass
+        if (capabilities & 0x03) is 2:
+            pass
+        if (capabilities & 0x03) is 3:
+            pass
 
     def _from_data(self, data):
         buffer = ByteBuffer(data[5:])
@@ -355,51 +402,7 @@ class SdrFullSensorRecord(SdrCommon):
             self.initialization.append('default_scanning')
 
         # byte 12 - sensor capabilities
-        capabilities = buffer.pop_unsigned_int(1)
-        self.capabilities = []
-        # ignore sensor
-        if capabilities & 0x80:
-            self.capabilities.append('ignore_sensor')
-        # sensor auto re-arm support
-        if capabilities & 0x40:
-            self.capabilities.append('auto_rearm')
-        # sensor hysteresis support
-        HYSTERESIS_MASK = 0x30
-        HYSTERESIS_IS_NOT_SUPPORTED = 0x00
-        HYSTERESIS_IS_READABLE = 0x10
-        HYSTERESIS_IS_READ_AND_SETTABLE = 0x20
-        HYSTERESIS_IS_FIXED = 0x30
-        if capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_NOT_SUPPORTED:
-            self.capabilities.append('hysteresis_not_supported')
-        elif capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_READABLE:
-            self.capabilities.append('hysteresis_readable')
-        elif capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_READ_AND_SETTABLE:
-            self.capabilities.append('hysteresis_read_and_setable')
-        elif capabilities & HYSTERESIS_MASK == HYSTERESIS_IS_FIXED:
-            self.capabilities.append('hysteresis_fixed')
-        # sensor threshold support
-        THRESHOLD_MASK = 0x30
-        THRESHOLD_IS_NOT_SUPPORTED = 0x00
-        THRESHOLD_IS_READABLE = 0x10
-        THRESHOLD_IS_READ_AND_SETTABLE = 0x20
-        THRESHOLD_IS_FIXED = 0x30
-        if capabilities & THRESHOLD_MASK == THRESHOLD_IS_NOT_SUPPORTED:
-            self.capabilities.append('threshold_not_supported')
-        elif capabilities & THRESHOLD_MASK == THRESHOLD_IS_READABLE:
-            self.capabilities.append('threshold_readable')
-        elif capabilities & THRESHOLD_MASK == THRESHOLD_IS_READ_AND_SETTABLE:
-            self.capabilities.append('threshold_read_and_setable')
-        elif capabilities & THRESHOLD_MASK == THRESHOLD_IS_FIXED:
-            self.capabilities.append('threshold_fixed')
-        # sensor event message control support
-        if (capabilities & 0x03) is 0:
-            pass
-        if (capabilities & 0x03) is 1:
-            pass
-        if (capabilities & 0x03) is 2:
-            pass
-        if (capabilities & 0x03) is 3:
-            pass
+        self._decode_capabilities(buffer.pop_unsigned_int(1))
 
         self.sensor_type_code = buffer.pop_unsigned_int(1)
         self.event_reading_type_code = buffer.pop_unsigned_int(1)
@@ -478,7 +481,7 @@ class SdrFullSensorRecord(SdrCommon):
 # SDR type 0x02
 ##################################################
 class SdrCompactSensorRecord(SdrCommon):
-    def __init__(self, data, next_id=None):
+    def __init__(self, data=None, next_id=None):
         super(SdrCompactSensorRecord, self).__init__(data, next_id)
         if data:
             self._from_data(data)
@@ -521,7 +524,7 @@ class SdrCompactSensorRecord(SdrCommon):
 # SDR type 0x03
 ##################################################
 class SdrEventOnlySensorRecord(SdrCommon):
-    def __init__(self, data, next_id=None):
+    def __init__(self, data=None, next_id=None):
         super(SdrEventOnlySensorRecord, self).__init__(data, next_id)
         if data:
             self._from_data(data)
@@ -551,7 +554,7 @@ class SdrEventOnlySensorRecord(SdrCommon):
 # SDR type 0x11
 ##################################################
 class SdrFruDeviceLocator(SdrCommon):
-    def __init__(self, data, next_id=None):
+    def __init__(self, data=None, next_id=None):
         super(SdrFruDeviceLocator, self).__init__(data, next_id)
         if data:
             self._from_data(data)
@@ -581,7 +584,7 @@ class SdrFruDeviceLocator(SdrCommon):
 # SDR type 0x12
 ##################################################
 class SdrManagementControllerDeviceLocator(SdrCommon):
-    def __init__(self, data, next_id=None):
+    def __init__(self, data=None, next_id=None):
         super(SdrManagementControllerDeviceLocator, self).__init__(
                 data, next_id)
         if data:
@@ -611,7 +614,7 @@ class SdrManagementControllerDeviceLocator(SdrCommon):
 # SDR type 0xC0
 ##################################################
 class SdrOEMSensorRecord(SdrCommon):
-    def __init__(self, data, next_id=None):
+    def __init__(self, data=None, next_id=None):
         super(SdrOEMSensorRecord, self).__init__(data, next_id)
         if data:
             self._from_data(data)

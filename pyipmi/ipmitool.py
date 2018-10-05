@@ -73,8 +73,8 @@ Additional Device Support:
             print('  %s' % s)
 
     if device_id.aux is not None:
-        print('Aux Firmware Rev Info:  [%s]' % (
-                ' '.join('0x%02x' % d for d in device_id.aux)))
+        print('Aux Firmware Rev Info:  [{:s}]'.format(
+              ' '.join('%02x' % d for d in device_id.aux)))
 
 
 def cmd_sel_clear(ipmi, args):

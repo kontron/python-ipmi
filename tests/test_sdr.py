@@ -1,12 +1,52 @@
 #!/usr/bin/env python
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
-from nose.tools import eq_, raises
+from nose.tools import eq_, ok_, raises
 
 from pyipmi.errors import DecodingError
 from pyipmi.sdr import (SdrCommon, SdrFullSensorRecord, SdrCompactSensorRecord,
                         SdrEventOnlySensorRecord, SdrFruDeviceLocator,
                         SdrManagementControllerDeviceLocator)
+
+
+def test_convert_complement():
+    eq_(SdrFullSensorRecord()._convert_complement(0x8, 4), -8)
+    eq_(SdrFullSensorRecord()._convert_complement(0x80, 8), -128)
+    eq_(SdrFullSensorRecord()._convert_complement(0x8000, 16), -32768)
+
+
+def test__decode_capabilities():
+    record = SdrFullSensorRecord()
+
+    record._decode_capabilities(0)
+    ok_('ignore_sensor' not in record.capabilities)
+    ok_('auto_rearm' not in record.capabilities)
+    ok_('hysteresis_not_supported' in record.capabilities)
+    ok_('threshold_not_supported' in record.capabilities)
+
+    record._decode_capabilities(0x80)
+    ok_('ignore_sensor' in record.capabilities)
+    ok_('auto_rearm' not in record.capabilities)
+    ok_('hysteresis_not_supported' in record.capabilities)
+    ok_('threshold_not_supported' in record.capabilities)
+
+    record._decode_capabilities(0x40)
+    ok_('ignore_sensor' not in record.capabilities)
+    ok_('auto_rearm' in record.capabilities)
+    ok_('hysteresis_not_supported' in record.capabilities)
+    ok_('threshold_not_supported' in record.capabilities)
+
+    record._decode_capabilities(0x30)
+    ok_('ignore_sensor' not in record.capabilities)
+    ok_('auto_rearm' not in record.capabilities)
+    ok_('hysteresis_fixed' in record.capabilities)
+    ok_('threshold_not_supported' in record.capabilities)
+
+    record._decode_capabilities(0x0c)
+    ok_('ignore_sensor' not in record.capabilities)
+    ok_('auto_rearm' not in record.capabilities)
+    ok_('hysteresis_not_supported' in record.capabilities)
+    ok_('threshold_fixed' in record.capabilities)
 
 
 @raises(DecodingError)
