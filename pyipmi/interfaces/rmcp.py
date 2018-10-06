@@ -274,7 +274,8 @@ class IpmiMsg():
         if len(pdu) < header_len + data_len:
             raise DecodingError('short SDU')
         elif len(pdu) > header_len + data_len:
-            raise DecodingError('SDU has extra bytes')
+            raise DecodingError('SDU has extra bytes ({:d},{:d},{:d} )'.format(
+                len(pdu), header_len, data_len))
 
         if hasattr(self, 'check_header'):
             self.check_header()

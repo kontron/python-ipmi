@@ -102,19 +102,25 @@ class TestIpmiMsg:
                            11, 12, 13, 14, 15, 16])
 
 
-#class TestRmcp:
+class TestRmcp:
 #    def test_send_and_receive_raw(self):
-#        mock = MagicMock()
+#        mock_send = MagicMock()
+#        mock_recv = MagicMock()
+#        mock_recv.return_value = (b'\x06\x00\xee\x07\x00\x00\x00\x00\x00\x00'
+#                                  b'\x00\x00\x00\x06'
+#                                  b'\x01\x02\x03\x04\x05\x06', 0)
+#
 #        target = Target()
 #        target.ipmb_address = 0x20
 #        rmcp = Rmcp()
 #        rmcp.host = '10.10.10.10'
 #        rmcp.port = 637
 #
-#        rmcp._sock = mock
+#        rmcp._sock.sendto = mock_send
+#        rmcp._sock.recvfrom = mock_recv
 #
 #        rmcp.send_and_receive_raw(target, 0, 0, b'\x00')
 #        rmcp._send_ipmi_msg.assert_called_with(1)
-#
-#    def test_send_and_receive(self):
-#        pass
+
+    def test_send_and_receive(self):
+        pass
