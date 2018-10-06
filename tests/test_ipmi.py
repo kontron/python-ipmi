@@ -20,6 +20,27 @@ def test_target():
     eq_(target.ipmb_address, 0xa0)
     eq_(target.routing, None)
 
+    target = Target(ipmb_address=0xb0)
+    eq_(target.ipmb_address, 0xb0)
+    eq_(target.routing, None)
+
+
+def test_target_routing():
+    target = Target(routing=[(0x82, 0x20, 0)])
+    eq_(len(target.routing), 1)
+    eq_(target.routing[0].rq_sa, 0x82)
+    eq_(target.routing[0].rs_sa, 0x20)
+    eq_(target.routing[0].channel, 0)
+
+    target = Target(routing=[(0x82, 0x20, 0), (0x20, 0x82, 7)])
+    eq_(len(target.routing), 2)
+    eq_(target.routing[0].rq_sa, 0x82)
+    eq_(target.routing[0].rs_sa, 0x20)
+    eq_(target.routing[0].channel, 0)
+    eq_(target.routing[1].rq_sa, 0x20)
+    eq_(target.routing[1].rs_sa, 0x82)
+    eq_(target.routing[1].channel, 7)
+
 
 def test_routing():
     routing = Routing(0x82, 0x20, 7)
