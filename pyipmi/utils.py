@@ -52,7 +52,7 @@ def chunks(data, count):
         yield data[i:i+count]
 
 
-class ByteBuffer:
+class ByteBuffer(object):
     def __init__(self, data=None):
 
         if data is not None:

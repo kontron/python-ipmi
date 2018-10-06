@@ -53,6 +53,8 @@ class Ipmitool(object):
         self.re_timeout = re.compile(
                 b"Unable to send RAW command \(.*cmd=0x[0-9a-f]+\)")
 
+        self._session = None
+
     def establish_session(self, session):
         # just remember session parameters here
         self._session = session
@@ -75,7 +77,7 @@ class Ipmitool(object):
             cmd += (' -P "%s"' % self._session.auth_password)
         cmd += (' session info all')
 
-        output, rc = self._run_ipmitool(cmd)
+        _, rc = self._run_ipmitool(cmd)
         if rc:
             raise IpmiTimeoutError()
 
@@ -93,8 +95,8 @@ class Ipmitool(object):
         if self._interface_type in ['lan', 'lanplus']:
             cmd = self._build_ipmitool_cmd(target, lun, netfn, raw_bytes)
         elif self._interface_type in ['serial-terminal']:
-            cmd = self._build_serial_ipmitool_cmd(
-                        target, lun, netfn, raw_bytes)
+            cmd = self._build_serial_ipmitool_cmd(target, lun, netfn,
+                                                  raw_bytes)
         else:
             raise RuntimeError('interface type %s not supported' %
                                self._interface_type)
@@ -125,8 +127,8 @@ class Ipmitool(object):
                                 'Close Session command failed')]
             output = ''.join(output_lines).replace('\r', '').strip()
             if len(output):
-                for x in output.split(' '):
-                    data.append(int(x, 16))
+                for value in output.split(' '):
+                    data.append(int(value, 16))
 
         log().debug('IPMI RX: {:s}'.format(
             ''.join('%02x ' % b for b in array('B', data))))
@@ -152,7 +154,7 @@ class Ipmitool(object):
     def _build_ipmitool_raw_data(lun, netfn, raw):
         cmd = ' -l {:d} raw '.format(lun)
         cmd += ' '.join(['0x%02x' % (d)
-                        for d in [netfn] + array('B', raw).tolist()])
+                         for d in [netfn] + array('B', raw).tolist()])
         return cmd
 
     @staticmethod
