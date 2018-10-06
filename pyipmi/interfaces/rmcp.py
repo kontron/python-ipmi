@@ -45,7 +45,7 @@ def call_repeatedly(interval, func, *args):
     return stopped.set
 
 
-class RmcpMsg:
+class RmcpMsg(object):
     RMCP_HEADER_FORMAT = '!BxBB'
     ASF_RMCP_V_1_0 = 6
 
@@ -73,7 +73,7 @@ class RmcpMsg:
         return sdu
 
 
-class AsfMsg:
+class AsfMsg(object):
     ASF_HEADER_FORMAT = '!IBBxB'
 
     ASF_TYPE_PRESENCE_PONG = 0x40
@@ -176,7 +176,7 @@ class AsfPong(AsfMsg):
             raise DecodingError('Data length mismatch')
 
 
-class IpmiMsg():
+class IpmiMsg(object):
     HEADER_FORMAT_NO_AUTH = '!BIIB'
     HEADER_FORMAT_AUTH = '!BII16BB'
 
@@ -294,7 +294,7 @@ class IpmiMsg():
         pass
 
 
-class Rmcp:
+class Rmcp(object):
     NAME = 'rmcp'
 
     _session = None
