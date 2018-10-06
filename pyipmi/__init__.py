@@ -146,11 +146,11 @@ class Target(object):
         self.routing = [Routing(*route) for route in routing]
 
     def __str__(self):
-        s = 'Target: IPMB: 0x%02x\n' % self.ipmb_address
+        string = 'Target: IPMB: 0x%02x\n' % self.ipmb_address
         if self.routing:
-            for r in self.routing:
-                s += ' %s\n' % r
-        return s
+            for route in self.routing:
+                string += ' %s\n' % route
+        return string
 
 
 class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
@@ -199,8 +199,8 @@ class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
     def send_message_with_name(self, name, *args, **kwargs):
         req = create_request_by_name(name)
 
-        for k, v in kwargs.items():
-            setattr(req, k, v)
+        for key, value in kwargs.items():
+            setattr(req, key, value)
 
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
