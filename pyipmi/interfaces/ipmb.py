@@ -176,7 +176,7 @@ def rx_filter(header, data):
 
     for left, right, msg in checks:
         if left != right:
-            log().debug('{:s}: {:s} {:s}'.format(msg, left, right))
+            log().debug('{:s}: {:d} {:d}'.format(msg, left, right))
             match = False
 
     return match
