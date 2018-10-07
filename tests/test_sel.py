@@ -81,6 +81,13 @@ class TestSelInfo(object):
 
 class TestSelEnty(object):
 
+    def test_from_data(self):
+        data = [0xff, 0x03, 0x02, 0xf7, 0x61, 0xef, 0x52, 0x7e,
+                0x00, 0x04, 0xf2, 0x09, 0x6f, 0x00, 0xff, 0xff]
+        entry = SelEntry(data)
+        eq_(entry.type, 2)
+        eq_(entry.sensor_type, 0xf2)
+
     def test_type_to_string(self):
         eq_(SelEntry.type_to_string(0), None)
         eq_(SelEntry.type_to_string(0x02),
