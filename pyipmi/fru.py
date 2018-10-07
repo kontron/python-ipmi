@@ -90,7 +90,7 @@ class Fru(object):
 
 def get_fru_inventory_from_file(filename):
     try:
-        file = open(filename, "r")
+        file = open(filename, "rb")
     except IOError:
         print('Error open file "%s"' % filename)
 
@@ -99,6 +99,7 @@ def get_fru_inventory_from_file(filename):
     file_size = os.stat(filename).st_size
     file_data = file.read(file_size)
     data = array.array('B', file_data)
+    file.close()
     return FruInventory(data)
 
 
