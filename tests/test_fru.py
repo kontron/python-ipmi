@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
 
 from nose.tools import eq_
 
@@ -26,12 +27,17 @@ def test_commonheader_object():
 
 
 def test_fru_inventory_from_file():
-    fru = get_fru_inventory_from_file('fru_bin/kontron_am4010.bin')
+    path = os.path.dirname(os.path.abspath(__file__))
+    fru_file = os.path.join(path, 'fru_bin/kontron_am4010.bin')
+    fru = get_fru_inventory_from_file(fru_file)
     eq_(fru.chassis_info_area, None)
 
 
 def test_board_area():
-    fru = get_fru_inventory_from_file('fru_bin/kontron_am4010.bin')
+    path = os.path.dirname(os.path.abspath(__file__))
+    fru_file = os.path.join(path, 'fru_bin/kontron_am4010.bin')
+    fru = get_fru_inventory_from_file(fru_file)
+
     board_area = fru.board_info_area
     eq_(board_area.manufacturer.value, 'Kontron')
     eq_(board_area.product_name.value, 'AM4010')
@@ -40,7 +46,10 @@ def test_board_area():
 
 
 def test_product_area():
-    fru = get_fru_inventory_from_file('fru_bin/kontron_am4010.bin')
+    path = os.path.dirname(os.path.abspath(__file__))
+    fru_file = os.path.join(path, 'fru_bin/kontron_am4010.bin')
+    fru = get_fru_inventory_from_file(fru_file)
+
     product_area = fru.product_info_area
     eq_(product_area.manufacturer.value, 'Kontron')
     eq_(product_area.name.value, 'AM4010')
