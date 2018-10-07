@@ -3,7 +3,8 @@
 
 from nose.tools import eq_
 
-from pyipmi.fru import FruData, InventoryCommonHeader
+from pyipmi.fru import (FruData, InventoryCommonHeader,
+                        get_fru_inventory_from_file)
 
 
 def test_frudata_object():
@@ -20,5 +21,28 @@ def test_frudata_object():
     eq_(fru_field.data[3], 3)
 
 
-def test_inventorycommonheader_object():
+def test_commonheader_object():
     InventoryCommonHeader((0, 1, 2, 3, 4, 5, 6, 235))
+
+
+def test_fru_inventory_from_file():
+    fru = get_fru_inventory_from_file('fru_bin/kontron_am4010.bin')
+    eq_(fru.chassis_info_area, None)
+
+
+def test_board_area():
+    fru = get_fru_inventory_from_file('fru_bin/kontron_am4010.bin')
+    board_area = fru.board_info_area
+    eq_(board_area.manufacturer.value, 'Kontron')
+    eq_(board_area.product_name.value, 'AM4010')
+    eq_(board_area.serial_number.value, '0023721003')
+    eq_(board_area.part_number.value, '35943')
+
+
+def test_product_area():
+    fru = get_fru_inventory_from_file('fru_bin/kontron_am4010.bin')
+    product_area = fru.product_info_area
+    eq_(product_area.manufacturer.value, 'Kontron')
+    eq_(product_area.name.value, 'AM4010')
+    eq_(product_area.serial_number.value, '0000000000000000000000000')
+    eq_(product_area.part_number.value, '0012')

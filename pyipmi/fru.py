@@ -17,6 +17,7 @@
 import array
 import codecs
 import datetime
+import os
 
 from .errors import DecodingError, CompletionCodeError
 from .msgs import constants
@@ -85,6 +86,20 @@ class Fru(object):
 
     def get_fru_inventory(self, fru_id=0):
         return FruInventory(self.read_fru_data(fru_id=fru_id))
+
+
+def get_fru_inventory_from_file(filename):
+    try:
+        file = open(filename, "r")
+    except IOError:
+        print('Error open file "%s"' % filename)
+
+    ################################
+    # get file size
+    file_size = os.stat(filename).st_size
+    file_data = file.read(file_size)
+    data = array.array('B', file_data)
+    return FruInventory(data)
 
 
 class FruDataField(object):
