@@ -469,7 +469,7 @@ class Rmcp(object):
         check_completion_code(rsp.completion_code)
         self._session.activated = False
 
-        self._q.join()
+#        self._q.join()
 
     def _inc_sequence_number(self):
         self.next_sequence_number = (self.next_sequence_number + 1) % 64
