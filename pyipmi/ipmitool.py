@@ -429,7 +429,7 @@ Options:
   -h               Show this help
   -v               Be verbose
   -V               Print version
-  -I <interface>   Set interface (available: aardvark ipmitool)
+  -I <interface>   Set interface (available: rmcp, aardvark ipmitool)
   -H <host>        Set RMCP host
   -U <user>        Set RMCP user
   -P <password>    Set RMCP password
