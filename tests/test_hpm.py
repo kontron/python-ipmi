@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from nose.tools import eq_
+import os
+
+from nose.tools import eq_, ok_
 
 from pyipmi.hpm import (ComponentProperty, ComponentPropertyDescriptionString,
                         ComponentPropertyGeneral,
@@ -10,58 +12,55 @@ from pyipmi.hpm import (ComponentProperty, ComponentPropertyDescriptionString,
                         ComponentPropertyRollbackVersion,
                         UpgradeActionRecord, UpgradeActionRecordBackup,
                         UpgradeActionRecordPrepare,
-                        UpgradeActionRecordUploadForCompare,
+                        UpgradeActionRecordUploadForUpgrade,
+                        UpgradeActionRecordUploadForCompare, UpgradeImage,
                         PROPERTY_GENERAL_PROPERTIES, PROPERTY_CURRENT_VERSION,
                         PROPERTY_DESCRIPTION_STRING, PROPERTY_ROLLBACK_VERSION,
                         PROPERTY_DEFERRED_VERSION)
 
 
-def test_componentpropertygeneral():
-    prop = ComponentProperty().from_data(PROPERTY_GENERAL_PROPERTIES, b'\xaa')
-    eq_(type(prop), ComponentPropertyGeneral)
+class TestComponentProperty(object):
+    def test_general(self):
+        prop = ComponentProperty().from_data(PROPERTY_GENERAL_PROPERTIES, b'\xaa')
+        eq_(type(prop), ComponentPropertyGeneral)
 
-    prop = ComponentProperty().from_data(PROPERTY_GENERAL_PROPERTIES, (0xaa,))
-    eq_(type(prop), ComponentPropertyGeneral)
+        prop = ComponentProperty().from_data(PROPERTY_GENERAL_PROPERTIES, (0xaa,))
+        eq_(type(prop), ComponentPropertyGeneral)
 
+    def test_currentversion(self):
+        prop = ComponentProperty().from_data(PROPERTY_CURRENT_VERSION, b'\x01\x99')
+        eq_(type(prop), ComponentPropertyCurrentVersion)
 
-def test_componentpropertycurrentversion():
-    prop = ComponentProperty().from_data(PROPERTY_CURRENT_VERSION, b'\x01\x99')
-    eq_(type(prop), ComponentPropertyCurrentVersion)
+        prop = ComponentProperty().from_data(
+            PROPERTY_CURRENT_VERSION, (0x01, 0x99))
+        eq_(type(prop), ComponentPropertyCurrentVersion)
 
-    prop = ComponentProperty().from_data(
-        PROPERTY_CURRENT_VERSION, (0x01, 0x99))
-    eq_(type(prop), ComponentPropertyCurrentVersion)
+    def test_descriptionstring(self):
+        prop = ComponentProperty().from_data(PROPERTY_DESCRIPTION_STRING,
+                                             b'\x30\x31\x32')
+        eq_(type(prop), ComponentPropertyDescriptionString)
+        eq_(prop.description, '012')
 
+        prop = ComponentProperty().from_data(
+            PROPERTY_DESCRIPTION_STRING, (0x33, 0x34, 0x35))
+        eq_(type(prop), ComponentPropertyDescriptionString)
+        eq_(prop.description, '345')
 
-def test_componentpropertydescriptionstring():
-    prop = ComponentProperty().from_data(PROPERTY_DESCRIPTION_STRING,
-                                         b'\x30\x31\x32')
-    eq_(type(prop), ComponentPropertyDescriptionString)
-    eq_(prop.description, '012')
+    def test_descriptionstring_with_trailinge_zeros(self):
+        prop = ComponentProperty().from_data(PROPERTY_DESCRIPTION_STRING,
+                                             b'\x36\x37\x38\x00\x00')
+        eq_(type(prop), ComponentPropertyDescriptionString)
+        eq_(prop.description, '678')
 
-    prop = ComponentProperty().from_data(
-        PROPERTY_DESCRIPTION_STRING, (0x33, 0x34, 0x35))
-    eq_(type(prop), ComponentPropertyDescriptionString)
-    eq_(prop.description, '345')
+    def test_rollbackversion(self):
+        prop = ComponentProperty().from_data(
+            PROPERTY_ROLLBACK_VERSION, (0x2, 0x88))
+        eq_(type(prop), ComponentPropertyRollbackVersion)
 
-
-def test_componentpropertydescriptionstring_with_trailinge_zeros():
-    prop = ComponentProperty().from_data(PROPERTY_DESCRIPTION_STRING,
-                                         b'\x36\x37\x38\x00\x00')
-    eq_(type(prop), ComponentPropertyDescriptionString)
-    eq_(prop.description, '678')
-
-
-def test_componentpropertyrollbackversion():
-    prop = ComponentProperty().from_data(
-        PROPERTY_ROLLBACK_VERSION, (0x2, 0x88))
-    eq_(type(prop), ComponentPropertyRollbackVersion)
-
-
-def test_componentpropertydeferredversion():
-    prop = ComponentProperty().from_data(
-        PROPERTY_DEFERRED_VERSION, (0x3, 0x77))
-    eq_(type(prop), ComponentPropertyDeferredVersion)
+    def test_deferredversion(self):
+        prop = ComponentProperty().from_data(
+            PROPERTY_DEFERRED_VERSION, (0x3, 0x77))
+        eq_(type(prop), ComponentPropertyDeferredVersion)
 
 
 def test_upgradeactionrecord_create_from_data():
@@ -87,3 +86,11 @@ def test_upgradeactionrecord_create_from_data():
     record = UpgradeActionRecord.create_from_data(b'\x03\x08\x02')
     eq_(record.action, 3)
     eq_(type(record), UpgradeActionRecordUploadForCompare)
+
+
+def test_upgrade_image():
+    path = os.path.dirname(os.path.abspath(__file__))
+    hpm_file = os.path.join(path, 'hpm_bin/firmware.hpm')
+    image = UpgradeImage(hpm_file)
+    ok_(isinstance(image.actions[0], UpgradeActionRecordPrepare))
+    ok_(isinstance(image.actions[1], UpgradeActionRecordUploadForUpgrade))
