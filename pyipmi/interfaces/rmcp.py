@@ -570,13 +570,3 @@ class Rmcp(object):
         rsp = create_message(req.cmdid, req.netfn + 1)
         decode_message(rsp, rx_data)
         return rsp
-
-
-if __name__ == '__main__':
-    host = '10.0.114.199'
-    session = Session()
-    session.set_auth_type_user('admin', 'admin')
-
-    r = Rmcp(host)
-    r.ping()
-    r.establish_session(session)
