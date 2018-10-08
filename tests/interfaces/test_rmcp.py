@@ -37,6 +37,11 @@ class TestAsfMsg:
         pdu = m.pack()
         eq_(pdu, b'\x00\x00\x11\xbe\x00\x00\x00\x00')
 
+    def test_tostr(self):
+        m = AsfMsg()
+        m.data = b'\xaa\xbb\xcc'
+        eq_(str(m), 'aa bb cc')
+
 
 class TestIpmiMsg:
     def test_ipmimsg_pack(self):
