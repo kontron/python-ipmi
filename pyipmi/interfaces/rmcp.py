@@ -347,7 +347,7 @@ class Rmcp(object):
 
     def _send_ipmi_msg(self, data):
         log().debug('IPMI TX: {:s}'.format(
-            ''.join('%02x ' % b for b in array('B', data))))
+            ' '.join('%02x' % b for b in array('B', data))))
         ipmi = IpmiMsg(self._session)
         tx_data = ipmi.pack(data)
         self._send_rmcp_msg(tx_data, RMCP_CLASS_IPMI)
@@ -359,7 +359,7 @@ class Rmcp(object):
         msg = IpmiMsg()
         data = msg.unpack(pdu)
         log().debug('IPMI RX: {:s}'.format(
-            ''.join('%02x ' % b for b in array('B', data))))
+            ' '.join('%02x' % b for b in array('B', data))))
         return data
 
     def _send_asf_msg(self, msg):
