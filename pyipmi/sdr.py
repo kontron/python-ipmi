@@ -268,6 +268,8 @@ class SdrFullSensorRecord(SdrCommon):
         return s
 
     def convert_sensor_raw_to_value(self, raw):
+        if raw is None:
+            return None
         fmt = self.analog_data_format
         if (fmt == self.DATA_FMT_1S_COMPLEMENT):
             if raw & 0x80:

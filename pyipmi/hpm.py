@@ -668,6 +668,8 @@ HPM_IMAGE_CHECKSUM_SIZE = 16
 
 class UpgradeImage(object):
     def __init__(self, filename=None):
+        self.actions = None
+
         if filename:
             self._from_file(filename)
 
@@ -684,7 +686,7 @@ class UpgradeImage(object):
     def _from_file(self, filename):
 
         try:
-            file = open(filename, "r")
+            file = open(filename, "rb")
         except IOError:
             print('Error open file "%s"' % filename)
 
