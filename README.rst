@@ -5,14 +5,14 @@ Pure Python IPMI Library
 
 Features
 --------
-* RMCP interface (using ipmitool)
-* IPMB interface (The `Total Phase`_ Aardvark)
+* native RMCP interface
+* legacy RMCP interface (using ipmitool)
+* IPMB interface (using the `Total Phase`_ Aardvark)
 
 Requirements
 ------------
 
-You need an either the `ipmitool`_ for accessing RCMP interface or a
-`Total Phase`_ Aardvark for communication over the IPMB interface.
+For IPMB interface a `Total Phase`_ Aardvark is needed.
 
 Installation
 ------------
