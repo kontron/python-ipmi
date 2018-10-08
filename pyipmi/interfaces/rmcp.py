@@ -142,9 +142,9 @@ class AsfMsg(object):
 
     def __str__(self):
         if self.data:
-            return ' '.join('%02x' % ord(b) for b in self.data)
+            return ' '.join('%02x' % b for b in array('B', self.data))
         if self.sdu:
-            return ' '.join('%02x' % ord(b) for b in self.sdu)
+            return ' '.join('%02x' % b for b in array('B', self.sdu))
         return ''
 
 
