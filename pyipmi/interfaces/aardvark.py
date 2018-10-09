@@ -20,7 +20,7 @@ from array import array
 from ..msgs import create_message, encode_message, decode_message
 from ..errors import IpmiTimeoutError
 from ..logger import log
-from ..interfaces.ipmb import IpmbHeader, checksum, rx_filter, encode_ipmb_msg
+from ..interfaces.ipmb import IpmbHeaderReq, checksum, rx_filter, encode_ipmb_msg
 
 try:
     import pyaardvark
@@ -63,7 +63,7 @@ class Aardvark(object):
         self._dev.close()
 
     def is_ipmc_accessible(self, target):
-        header = IpmbHeader()
+        header = IpmbHeaderReq()
         header.netfn = 6
         header.rs_lun = 0
         header.rs_sa = target.ipmb_address
@@ -136,7 +136,7 @@ class Aardvark(object):
         self._inc_sequence_number()
 
         # assemble IPMB header
-        header = IpmbHeader()
+        header = IpmbHeaderReq()
         header.netfn = netfn
         header.rs_lun = lun
         header.rs_sa = target.ipmb_address

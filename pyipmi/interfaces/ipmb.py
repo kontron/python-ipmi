@@ -30,15 +30,30 @@ def checksum(data):
 
 
 class IpmbHeader(object):
-    def __init__(self):
-        self.rs_sa = None
-        self.rs_lun = None
-        self.rq_sa = None
-        self.rq_lun = None
-        self.rq_seq = None
-        self.netfn = None
-        self.cmd_id = None
+    """Representation of the IPMI message header.
 
+    Request:
+    *-------*--------------*----------*-------*---------------*--------*
+    | rs_sa | netfn/rs_lun | checksum | rq_sa | rq_seq/rq_lun | cmd_id |
+    *-------*--------------*----------*-------*---------------*--------*
+
+    Response:
+    *-------*--------------*----------*-------*---------------*--------*
+    | rq_sa | netfn/rq_lun | checksum | rs_sa | rq_seq/rs_lun | cmd_id |
+    *-------*--------------*----------*-------*---------------*--------*
+
+    """
+    rs_sa = None
+    rs_lun = None
+    rq_sa = None
+    rq_lun = None
+    rq_seq = None
+    netfn = None
+    cmd_id = None
+    checksum = None
+
+
+class IpmbHeaderReq(IpmbHeader):
     def encode(self):
         data = array('B')
         data.append(self.rs_sa)
@@ -48,6 +63,25 @@ class IpmbHeader(object):
         data.append(self.rq_seq << 2 | self.rq_lun)
         data.append(self.cmd_id)
         return data.tostring()
+
+    def decode(self):
+        raise NotImplementedError()
+
+
+class IpmbHeaderRsp(IpmbHeader):
+    def encode(self):
+        raise NotImplementedError()
+
+    def decode(self, data):
+        data = array('B', data)
+        self.rq_sa = data[0]
+        self.netfn = data[1] >> 2
+        self.rq_lun = data[1] & 3
+        self.checksum =  data[2]
+        self.rs_sa = data[3]
+        self.rq_seq = data[4] >> 2
+        self.rs_lun = data[4] & 3
+        self.cmd_id = data[5]
 
 
 def encode_ipmb_msg(header, data):
@@ -86,7 +120,7 @@ def encode_send_message(payload, rq_sa, rs_sa, channel, seq, tracking=1):
     req.channel.tracking = tracking
     data = encode_message(req)
 
-    header = IpmbHeader()
+    header = IpmbHeaderReq()
     header.netfn = req.__netfn__
     header.rs_lun = 0
     header.rs_sa = rs_sa
@@ -158,18 +192,21 @@ def rx_filter(header, data):
     data: the received message as bytestring
     """
 
+    rsp_header = IpmbHeaderRsp()
+    rsp_header.decode(data)
+
     data = array('B', data)
 
     checks = [
         (checksum(data[0:3]), 0, 'Header checksum failed'),
         (checksum(data[3:]), 0, 'payload checksum failed'),
-        # (data[0], header.rq_sa, 'slave address mismatch'),
-        (data[1] & ~3, header.netfn << 2 | 4, 'NetFn mismatch'),
-        # (data[3], header.rs_sa, 'target address mismatch'),
-        # (data[1] & 3, header.rq_lun, 'request LUN mismatch'),
-        (data[4] & 3, header.rs_lun & 3, 'responder LUN mismatch'),
-        (data[4] >> 2, header.rq_seq, 'sequence number mismatch'),
-        (data[5], header.cmd_id, 'command id mismatch'),
+        # rsp_header.rq_sa, header.rq_sa, 'slave address mismatch'),
+        (rsp_header.netfn, header.netfn | 1, 'NetFn mismatch'),
+        # rsp_header.rs_sa, header.rs_sa, 'target address mismatch'),
+        # rsp_header.rq_lun, header.rq_lun, 'request LUN mismatch'),
+        (rsp_header.rs_lun, header.rs_lun, 'responder LUN mismatch'),
+        (rsp_header.rq_seq, header.rq_seq, 'sequence number mismatch'),
+        (rsp_header.cmd_id, header.cmd_id, 'command id mismatch'),
     ]
 
     match = True
