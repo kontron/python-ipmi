@@ -455,6 +455,31 @@ def version():
     print('ipmitool v%s' % pyipmi.__version__)
 
 
+def parse_interface_options(interface_name, options):
+    if options:
+        options = options.split(',')
+
+    interface_options = {}
+
+    for option in options:
+        (name, value) = option.split('=', 1)
+        if interface_name == 'aardvark':
+            if name == 'serial':
+                interface_options['serial_number'] = value
+            elif (name, value) == ('pullups', 'on'):
+                interface_options['enable_i2c_pullups'] = True
+            elif (name, value) == ('pullups', 'off'):
+                interface_options['enable_i2c_pullups'] = False
+            elif (name, value) == ('power', 'on'):
+                interface_options['enable_target_power'] = True
+            elif (name, value) == ('power', 'off'):
+                interface_options['enable_target_power'] = False
+            else:
+                print('Warning: unknown option %s' % name)
+
+    return interface_options
+
+
 def main():
     try:
         opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:o:b:p:r:')
@@ -497,7 +522,8 @@ def main():
         elif o == '-I':
             interface_name = a
         elif o == '-o':
-            interface_options = a.split(',')
+            interface_options = a
+            #interface_options = a.split(',')
         else:
             assert False, 'unhandled option'
 
@@ -525,40 +551,18 @@ def main():
         usage()
         sys.exit(1)
 
-    aardvark_serial = None
-    aardvark_pullups = None
-    aardvark_target_power = None
-
-    for option in interface_options:
-        (name, value) = option.split('=', 1)
-        if (interface_name, name) == ('aardvark', 'serial'):
-            aardvark_serial = value
-        elif (interface_name, name, value) == ('aardvark', 'pullups', 'on'):
-            aardvark_pullups = True
-        elif (interface_name, name, value) == ('aardvark', 'pullups', 'off'):
-            aardvark_pullups = False
-        elif (interface_name, name, value) == ('aardvark', 'power', 'on'):
-            aardvark_target_power = True
-        elif (interface_name, name, value) == ('aardvark', 'power', 'off'):
-            aardvark_target_power = False
-        else:
-            print('Warning: unknown option %s' % name)
+    interface_options = parse_interface_options(interface_name,
+                                                interface_options)
 
     try:
         if interface_name == 'aardvark':
-            interface = pyipmi.interfaces.create_interface(
-                                                interface_name,
-                                                serial_number=aardvark_serial)
+            interface = pyipmi.interfaces.create_interface(interface_name,
+                                                           **interface_options)
         else:
             interface = pyipmi.interfaces.create_interface(interface_name)
     except RuntimeError as e:
         print(e)
         sys.exit(1)
-
-    if aardvark_pullups:
-        interface.enable_pullups(aardvark_pullups)
-    if aardvark_target_power:
-        interface.enable_target_power(aardvark_target_power)
 
     ipmi = pyipmi.create_connection(interface)
     ipmi.target = pyipmi.Target(target_address)
