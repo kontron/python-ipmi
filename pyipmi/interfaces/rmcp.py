@@ -567,6 +567,6 @@ class Rmcp(object):
                                          netfn=req.netfn,
                                          cmdid=req.cmdid,
                                          payload=encode_message(req))
-        rsp = create_message(req.cmdid, req.netfn + 1)
+        rsp = create_message(req.netfn + 1, req.cmdid)
         decode_message(rsp, rx_data)
         return rsp

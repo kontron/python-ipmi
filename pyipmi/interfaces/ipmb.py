@@ -167,8 +167,8 @@ def decode_bridged_message(rx_data):
     """
 
     while array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE:
-        rsp = create_message(constants.CMDID_SEND_MESSAGE,
-                             constants.NETFN_APP+1)
+        rsp = create_message(constants.NETFN_APP + 1,
+                             constants.CMDID_SEND_MESSAGE)
         decode_message(rsp, rx_data[6:])
         check_completion_code(rsp.completion_code)
         rx_data = rx_data[7:-1]
