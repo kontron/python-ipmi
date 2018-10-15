@@ -8,8 +8,15 @@ import pyipmi.msgs.event
 import pyipmi.msgs.hpm
 import pyipmi.msgs.sensor
 
-from pyipmi.msgs import encode_message
-from pyipmi.msgs import decode_message
+from pyipmi.msgs import constants, decode_message, encode_message
+from pyipmi.msgs.picmg import PICMG_IDENTIFIER
+
+
+def test_get_picmg_properties_req():
+    msg = pyipmi.msgs.picmg.GetPicmgPropertiesReq()
+    eq_(msg.cmdid, constants.CMDID_GET_PICMG_PROPERTIES)
+    eq_(msg.netfn, constants.NETFN_GROUP_EXTENSION)
+    eq_(msg.group_extension, PICMG_IDENTIFIER)
 
 
 def test_get_address_info_picmg_2_9_rsp():

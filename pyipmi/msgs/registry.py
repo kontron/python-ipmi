@@ -29,7 +29,8 @@ class MessageRegistry(object):
         if cls.__name__[-3:] not in ('Req', 'Rsp'):
             raise DescriptionError('Class name has to end in Req or Rsp')
         # (2) mandantory fields
-        for attr in ('__netfn__', '__cmdid__', '__default_lun__'):
+        for attr in ('__netfn__', '__cmdid__', '__default_lun__',
+                     '__group_extension__'):
             if not hasattr(cls, attr):
                 raise DescriptionError('Class has to have attribute "%s"' %
                                        attr)
@@ -44,21 +45,21 @@ class MessageRegistry(object):
         if cls.__name__ in self.registry:
             raise DescriptionError('Message %s already registered' %
                                    cls.__name__)
-        msg_id = (cls.__netfn__, cls.__cmdid__)
+        msg_id = (cls.__netfn__, cls.__cmdid__, cls.__group_extension__)
         if msg_id in self.registry:
-            raise DescriptionError('Message (%d,%d) already registered (%s)'
-                                   % (msg_id[0], msg_id[1],
+            raise DescriptionError('Message (%d,%d,%d) already registered (%s)'
+                                   % (msg_id[0], msg_id[1], msg_id[2],
                                       self.registry[msg_id]))
 
         # register name
         self.registry[cls.__name__] = cls
-        # register (netfn, cmdid) tuple
-        self.registry[(cls.__netfn__, cls.__cmdid__)] = cls
+        # register (netfn, cmdid, group_extension) tuple
+        self.registry[msg_id] = cls
 
         # register
         return cls
 
-    def create(self, netfn, cmdid, *args, **kwargs):
+    def create(self, netfn, cmdid, group_extension, *args, **kwargs):
         return self.registry[(netfn, cmdid)](*args, **kwargs)
 
     def create_request_by_name(self, name, *args, **kwargs):

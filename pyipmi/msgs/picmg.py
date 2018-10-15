@@ -26,6 +26,7 @@ from . import CompletionCode
 from . import Conditional
 from . import RemainingBytes
 from . import Optional
+from . import GroupExtensionIdentifier
 
 PICMG_IDENTIFIER = 0x00
 
@@ -99,22 +100,26 @@ class PicmgIdentifier(UnsignedInt):
         super(PicmgIdentifier, self).__init__(name, 1, PICMG_IDENTIFIER)
 
 
+class PicmgMessage(Message):
+    __group_extension__ = PICMG_IDENTIFIER
+
+
 @register_message_class
-class GetPicmgPropertiesReq(Message):
+class GetPicmgPropertiesReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_PICMG_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class GetPicmgPropertiesRsp(Message):
+class GetPicmgPropertiesRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_PICMG_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('extension_version', 1),
         UnsignedInt('max_fru_device_id', 1),
         UnsignedInt('fru_device_id', 1),
@@ -122,22 +127,22 @@ class GetPicmgPropertiesRsp(Message):
 
 
 @register_message_class
-class GetAddressInfoReq(Message):
+class GetAddressInfoReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_ADDRESS_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
     )
 
 
 @register_message_class
-class GetAddressInfoRsp(Message):
+class GetAddressInfoRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_ADDRESS_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('hardware_address', 1),
         UnsignedInt('ipmb_0_address', 1),
         UnsignedInt('ipmb_1_address', 1),
@@ -157,64 +162,64 @@ class GetAddressInfoRsp(Message):
 
 
 @register_message_class
-class GetShelfAddressInfoReq(Message):
+class GetShelfAddressInfoReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_SHELF_ADDRESS_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class GetShelfAddressInfoRsp(Message):
+class GetShelfAddressInfoRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_SHELF_ADDRESS_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         RemainingBytes('shelf_address'),
     )
 
 
 @register_message_class
-class FruControlReq(Message):
+class FruControlReq(PicmgMessage):
     __cmdid__ = constants.CMDID_FRU_CONTROL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
         UnsignedInt('option', 1),
     )
 
 
 @register_message_class
-class FruControlRsp(Message):
+class FruControlRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_FRU_CONTROL
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         RemainingBytes('rsp_data'),
     )
 
 
 @register_message_class
-class GetFruControlCapabilitiesReq(Message):
+class GetFruControlCapabilitiesReq(PicmgMessage):
     __cmdid__ = constants.CMDID_FRU_CONTROL_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
     )
 
 
 @register_message_class
-class GetFruControlCapabilitiesRsp(Message):
+class GetFruControlCapabilitiesRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_FRU_CONTROL_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('capabilities', 1,
                  Bitfield.ReservedBit(1),
                  Bitfield.Bit('warm_reset', 1),
@@ -225,11 +230,11 @@ class GetFruControlCapabilitiesRsp(Message):
 
 
 @register_message_class
-class SetFruActivationPolicyReq(Message):
+class SetFruActivationPolicyReq(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION_POLICY
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
         Bitfield('mask', 1,
                  Bitfield.Bit('activation_locked', 1, default=0),
@@ -243,32 +248,32 @@ class SetFruActivationPolicyReq(Message):
 
 
 @register_message_class
-class SetFruActivationPolicyRsp(Message):
+class SetFruActivationPolicyRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION_POLICY
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class GetFruActivationPolicyReq(Message):
+class GetFruActivationPolicyReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FRU_ACTIVATION_POLICY
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
     )
 
 
 @register_message_class
-class GetFruActivationPolicyRsp(Message):
+class GetFruActivationPolicyRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FRU_ACTIVATION_POLICY
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('policy', 1,
                  Bitfield.Bit('activation_locked', 1, default=0),
                  Bitfield.Bit('deactivation_locked', 1, default=0),
@@ -277,64 +282,64 @@ class GetFruActivationPolicyRsp(Message):
 
 
 @register_message_class
-class SetFruActivationReq(Message):
+class SetFruActivationReq(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
         UnsignedInt('control', 1),
     )
 
 
 @register_message_class
-class SetFruActivationRsp(Message):
+class SetFruActivationRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class GetDeviceLocatorRecordIdReq(Message):
+class GetDeviceLocatorRecordIdReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_DEVLOC_RECORD_ID
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
     )
 
 
 @register_message_class
-class GetDeviceLocatorRecordIdRsp(Message):
+class GetDeviceLocatorRecordIdRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_DEVLOC_RECORD_ID
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('record_id', 2),
     )
 
 
 @register_message_class
-class GetFruLedPropertiesReq(Message):
+class GetFruLedPropertiesReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FRU_LED_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
     )
 
 
 @register_message_class
-class GetFruLedPropertiesRsp(Message):
+class GetFruLedPropertiesRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FRU_LED_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('general_status_led_properties', 1,
                  Bitfield.Bit('blue_led', 1),
                  Bitfield.Bit('led1', 1),
@@ -346,23 +351,23 @@ class GetFruLedPropertiesRsp(Message):
 
 
 @register_message_class
-class GetFruLedColorCapabilitiesReq(Message):
+class GetFruLedColorCapabilitiesReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FRU_LED_COLOR_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
         UnsignedInt('led_id', 1),
     )
 
 
 @register_message_class
-class GetFruLedColorCapabilitiesRsp(Message):
+class GetFruLedColorCapabilitiesRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FRU_LED_COLOR_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('color_capabilities', 1,
                  Bitfield.ReservedBit(1),
                  Bitfield.Bit('blue', 1),
@@ -378,23 +383,23 @@ class GetFruLedColorCapabilitiesRsp(Message):
 
 
 @register_message_class
-class GetPowerLevelReq(Message):
+class GetPowerLevelReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_POWER_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
         UnsignedInt('power_type', 1),
     )
 
 
 @register_message_class
-class GetPowerLevelRsp(Message):
+class GetPowerLevelRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_POWER_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('properties', 1,
                  Bitfield.Bit('power_level', 5, 0),
                  Bitfield.ReservedBit(2, 0),
@@ -406,22 +411,22 @@ class GetPowerLevelRsp(Message):
 
 
 @register_message_class
-class GetFanSpeedPropertiesReq(Message):
+class GetFanSpeedPropertiesReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FAN_SPEED_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
     )
 
 
 @register_message_class
-class GetFanSpeedPropertiesRsp(Message):
+class GetFanSpeedPropertiesRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FAN_SPEED_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('minimum_speed_level', 1),
         UnsignedInt('maximum_speed_level', 1),
         UnsignedInt('normal_operation_level', 1),
@@ -432,11 +437,11 @@ class GetFanSpeedPropertiesRsp(Message):
 
 
 @register_message_class
-class SetFanLevelReq(Message):
+class SetFanLevelReq(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_FAN_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
         UnsignedInt('fan_level', 1),
         UnsignedInt('extra_byte', 1),
@@ -444,32 +449,32 @@ class SetFanLevelReq(Message):
 
 
 @register_message_class
-class SetFanLevelRsp(Message):
+class SetFanLevelRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_FAN_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class GetFanLevelReq(Message):
+class GetFanLevelReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FAN_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
     )
 
 
 @register_message_class
-class GetFanLevelRsp(Message):
+class GetFanLevelRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FAN_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('override_fan_level', 1),
         Optional(
             RemainingBytes('data'),
@@ -478,11 +483,11 @@ class GetFanLevelRsp(Message):
 
 
 @register_message_class
-class SetFruLedStateReq(Message):
+class SetFruLedStateReq(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_FRU_LED_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
         UnsignedInt('led_id', 1),
         UnsignedInt('led_function', 1),
@@ -492,29 +497,29 @@ class SetFruLedStateReq(Message):
 
 
 @register_message_class
-class SetFruLedStateRsp(Message):
+class SetFruLedStateRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_FRU_LED_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class GetFruLedStateReq(Message):
+class GetFruLedStateReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FRU_LED_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
 
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
         UnsignedInt('led_id', 1),
     )
 
 
 @register_message_class
-class GetFruLedStateRsp(Message):
+class GetFruLedStateRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FRU_LED_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
 
@@ -527,7 +532,7 @@ class GetFruLedStateRsp(Message):
 
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('led_states', 1,
                  Bitfield.Bit('local_avail', 1),
                  Bitfield.Bit('override_en', 1),
@@ -548,11 +553,11 @@ class GetFruLedStateRsp(Message):
 
 
 @register_message_class
-class SetPortStateReq(Message):
+class SetPortStateReq(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_PORT_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('link_info', 4,
                  Bitfield.Bit('channel', 6),
                  Bitfield.Bit('interface', 2),
@@ -569,21 +574,21 @@ class SetPortStateReq(Message):
 
 
 @register_message_class
-class SetPortStateRsp(Message):
+class SetPortStateRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_PORT_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class GetPortStateReq(Message):
+class GetPortStateReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_PORT_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('channel', 1,
                  Bitfield.Bit('number', 6),
                  Bitfield.Bit('interface', 2),),
@@ -591,22 +596,22 @@ class GetPortStateReq(Message):
 
 
 @register_message_class
-class GetPortStateRsp(Message):
+class GetPortStateRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_PORT_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         RemainingBytes('data'),
     )
 
 
 @register_message_class
-class SetSignalingClassReq(Message):
+class SetSignalingClassReq(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_CHANNEL_SIGNALING_CLASS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('channel_info', 1,
                  Bitfield.Bit('channel_number', 6, 0),
                  Bitfield.Bit('interface', 2, 0),),
@@ -617,21 +622,21 @@ class SetSignalingClassReq(Message):
 
 
 @register_message_class
-class SetSignalingClassRsp(Message):
+class SetSignalingClassRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_CHANNEL_SIGNALING_CLASS
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class GetSignalingClassReq(Message):
+class GetSignalingClassReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_CHANNEL_SIGNALING_CLASS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('channel_info', 1,
                  Bitfield.Bit('channel_number', 6, 0),
                  Bitfield.Bit('interface', 2, 0),),
@@ -639,12 +644,12 @@ class GetSignalingClassReq(Message):
 
 
 @register_message_class
-class GetSignalingClassRsp(Message):
+class GetSignalingClassRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_CHANNEL_SIGNALING_CLASS
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('channel_info', 1,
                  Bitfield.Bit('channel_number', 6, 0),
                  Bitfield.Bit('interface', 2, 0),),
@@ -655,11 +660,11 @@ class GetSignalingClassRsp(Message):
 
 
 @register_message_class
-class GetLocationInformationReq(Message):
+class GetLocationInformationReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_LOCATION_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('info', 1,
                  Bitfield.Bit('carrier_number', 5, 0),
                  Bitfield.ReservedBit(1),
@@ -670,12 +675,12 @@ class GetLocationInformationReq(Message):
 
 
 @register_message_class
-class GetLocationInformationRsp(Message):
+class GetLocationInformationRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_LOCATION_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('slot_number', 1),
         UnsignedInt('tier_number', 1),
         Bitfield('info', 1,
@@ -689,23 +694,23 @@ class GetLocationInformationRsp(Message):
 
 
 @register_message_class
-class GetPowerChannelStatusReq(Message):
+class GetPowerChannelStatusReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_POWER_CHANNEL_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('starting_power_channel_number', 1),
         UnsignedInt('power_channel_count', 1),
     )
 
 
 @register_message_class
-class GetPowerChannelStatusRsp(Message):
+class GetPowerChannelStatusRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_POWER_CHANNEL_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('max_power_channel_number', 1),
         Bitfield('global_status', 1,
                  Bitfield.Bit('role', 1, 0),
@@ -718,22 +723,22 @@ class GetPowerChannelStatusRsp(Message):
 
 
 @register_message_class
-class GetTelcoAlarmCapabilityReq(Message):
+class GetTelcoAlarmCapabilityReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_TELCO_ALARM_CAPABILITY
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
     )
 
 
 @register_message_class
-class GetTelcoAlarmCapabilityRsp(Message):
+class GetTelcoAlarmCapabilityRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_TELCO_ALARM_CAPABILITY
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('alarm_capabilities', 1,
                  Bitfield.Bit('critical_alarm', 1, 0),
                  Bitfield.Bit('major_alarm', 1, 0),

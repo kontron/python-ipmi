@@ -32,6 +32,7 @@ from .message import Conditional
 from .message import Optional
 from .message import RemainingBytes
 from .message import String
+from .message import GroupExtensionIdentifier
 from .message import encode_message
 from .message import decode_message
 from .message import pack_message

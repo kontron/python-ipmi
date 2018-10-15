@@ -299,10 +299,16 @@ class Bitfield(BaseField):
         return Bitfield.BitWrapper(self._bits, self.length)
 
 
+class GroupExtensionIdentifier(UnsignedInt):
+    def __init__(self, name='picmg_identifier', value=None):
+        UnsignedInt.__init__(self, name, 1, value)
+
+
 class Message(object):
-    RESERVED_FIELD_NAMES = ['cmdid', 'netfn', 'lun']
+    RESERVED_FIELD_NAMES = ['cmdid', 'netfn', 'lun', 'group_extension']
 
     __default_lun__ = 0
+    __group_extension__ = None
 
     def __init__(self, *args, **kwargs):
         """Message constructor with ([buf], [field=val,...]) prototype.
@@ -389,6 +395,7 @@ class Message(object):
 
     netfn = property(lambda s: s.__netfn__)
     cmdid = property(lambda s: s.__cmdid__)
+    group_extension = property(lambda s: s.__group_extension__)
 
 
 encode_message = lambda m: m._encode()

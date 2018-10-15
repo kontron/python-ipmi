@@ -17,31 +17,31 @@ from __future__ import absolute_import
 
 from . import constants
 from . import register_message_class
-from . import Message
 from . import UnsignedInt
 from . import Bitfield
 from . import CompletionCode
 from . import Optional
 from . import RemainingBytes
-from .picmg import PicmgIdentifier
+from . import GroupExtensionIdentifier
+from .picmg import PicmgMessage, PICMG_IDENTIFIER
 
 
 @register_message_class
-class GetTargetUpgradeCapabilitiesReq(Message):
+class GetTargetUpgradeCapabilitiesReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_GET_TARGET_UPGRADE_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class GetTargetUpgradeCapabilitiesRsp(Message):
+class GetTargetUpgradeCapabilitiesRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_GET_TARGET_UPGRADE_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('hpm_1_version', 1),
         Bitfield('capabilities', 1,
                  Bitfield.Bit('firmware_upgrade_undesirable', 1),
@@ -62,127 +62,127 @@ class GetTargetUpgradeCapabilitiesRsp(Message):
 
 
 @register_message_class
-class GetComponentPropertiesReq(Message):
+class GetComponentPropertiesReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_GET_COMPONENT_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('id', 1),
         UnsignedInt('selector', 1),
     )
 
 
 @register_message_class
-class GetComponentPropertiesRsp(Message):
+class GetComponentPropertiesRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_GET_COMPONENT_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         RemainingBytes('data'),
     )
 
 
 @register_message_class
-class AbortFirmwareUpgradeReq(Message):
+class AbortFirmwareUpgradeReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_ABORT_FIRMWARE_UPGRADE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class AbortFirmwareUpgradeRsp(Message):
+class AbortFirmwareUpgradeRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_ABORT_FIRMWARE_UPGRADE
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class InitiateUpgradeActionReq(Message):
+class InitiateUpgradeActionReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_INITIATE_UPGRADE_ACTION
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('components', 1),
         UnsignedInt('action', 1),
     )
 
 
 @register_message_class
-class InitiateUpgradeActionRsp(Message):
+class InitiateUpgradeActionRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_INITIATE_UPGRADE_ACTION
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class UploadFirmwareBlockReq(Message):
+class UploadFirmwareBlockReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_UPLOAD_FIRMWARE_BLOCK
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('number', 1),
         RemainingBytes('data'),
     )
 
 
 @register_message_class
-class UploadFirmwareBlockRsp(Message):
+class UploadFirmwareBlockRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_UPLOAD_FIRMWARE_BLOCK
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Optional(UnsignedInt('section_offset', 4)),
         Optional(UnsignedInt('section_length', 4)),
     )
 
 
 @register_message_class
-class FinishFirmwareUploadReq(Message):
+class FinishFirmwareUploadReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_FINISH_FIRMWARE_UPLOAD
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('component_id', 1),
         UnsignedInt('image_length', 4),
     )
 
 
 @register_message_class
-class FinishFirmwareUploadRsp(Message):
+class FinishFirmwareUploadRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_FINISH_FIRMWARE_UPLOAD
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class GetUpgradeStatusReq(Message):
+class GetUpgradeStatusReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_GET_UPGRADE_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class GetUpgradeStatusRsp(Message):
+class GetUpgradeStatusRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_GET_UPGRADE_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('command_in_progress', 1),
         UnsignedInt('last_completion_code', 1),
         Optional(UnsignedInt('completion_estimate', 1)),
@@ -190,81 +190,81 @@ class GetUpgradeStatusRsp(Message):
 
 
 @register_message_class
-class ActivateFirmwareReq(Message):
+class ActivateFirmwareReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_ACTIVATE_FIRMWARE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Optional(UnsignedInt('rollback_override_policy', 1)),
     )
 
 
 @register_message_class
-class ActivateFirmwareRsp(Message):
+class ActivateFirmwareRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_ACTIVATE_FIRMWARE
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class QuerySelftestResultsReq(Message):
+class QuerySelftestResultsReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_QUERY_SELFTEST_RESULTS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class QuerySelftestResultsRsp(Message):
+class QuerySelftestResultsRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_QUERY_SELFTEST_RESULTS
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('selftest_result_1', 1),
         UnsignedInt('selftest_result_2', 1),
     )
 
 
 @register_message_class
-class QueryRollbackStatusReq(Message):
+class QueryRollbackStatusReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_QUERY_ROLLBACK_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class QueryRollbackStatusRsp(Message):
+class QueryRollbackStatusRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_QUERY_ROLLBACK_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('rollback_status', 1),
         Optional(UnsignedInt('completion_estimate', 1)),
     )
 
 
 @register_message_class
-class InitiateManualRollbackReq(Message):
+class InitiateManualRollbackReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_INITIATE_MANUAL_ROLLBACK
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
 @register_message_class
-class InitiateManualRollbackRsp(Message):
+class InitiateManualRollbackRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_INITIATE_MANUAL_ROLLBACK
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
     __fields__ = (
         CompletionCode(),
-        PicmgIdentifier(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
