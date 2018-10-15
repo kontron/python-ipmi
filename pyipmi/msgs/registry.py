@@ -60,7 +60,10 @@ class MessageRegistry(object):
         return cls
 
     def create(self, netfn, cmdid, group_extension, *args, **kwargs):
-        return self.registry[(netfn, cmdid)](*args, **kwargs)
+        return self.registry[(netfn, cmdid, group_extension)](*args, **kwargs)
+
+    def create_response(self, req):
+        return self.create(self, req.netfn + 1, req.cmdid, req.group_extension)
 
     def create_request_by_name(self, name, *args, **kwargs):
         return self.registry[name + "Req"](*args, **kwargs)
@@ -73,6 +76,8 @@ DEFAULT_REGISTRY = MessageRegistry()
 register_message_class = partial(MessageRegistry.register_class,
                                  DEFAULT_REGISTRY)
 create_message = partial(MessageRegistry.create, DEFAULT_REGISTRY)
+create_response_message = partial(MessageRegistry.create_response,
+                                  DEFAULT_REGISTRY)
 create_request_by_name = partial(MessageRegistry.create_request_by_name,
                                  DEFAULT_REGISTRY)
 create_response_by_name = partial(MessageRegistry.create_response_by_name,

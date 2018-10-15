@@ -144,7 +144,7 @@ class Ipmitool(object):
         rsp_data = self.send_and_receive_raw(req.target, req.lun, req.netfn,
                                              req_data.tostring())
 
-        rsp = create_message(req.netfn + 1, req.cmdid)
+        rsp = create_message(req.netfn + 1, req.cmdid, req.group_extension)
         decode_message(rsp, rsp_data)
         log().debug('IPMI Response [%s])', rsp)
 

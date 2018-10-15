@@ -19,6 +19,7 @@ from .registry import register_message_class
 from .registry import create_request_by_name
 from .registry import create_response_by_name
 from .registry import create_message
+from .registry import create_response_message
 
 from .message import Message
 from .message import ByteArray
