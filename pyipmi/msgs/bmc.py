@@ -146,6 +146,48 @@ class GetSelftestResultsRsp(Message):
 
 
 @register_message_class
+class SetAcpiPowerStateReq(Message):
+    __cmdid__ = constants.CMDID_SET_ACPI_POWER_STATE
+    __netfn__ = constants.NETFN_APP
+    __not_implemented__ = True
+
+
+@register_message_class
+class SetAcpiPowerStateRsp(Message):
+    __cmdid__ = constants.CMDID_SET_ACPI_POWER_STATE
+    __netfn__ = constants.NETFN_APP | 1
+    __not_implemented__ = True
+
+
+@register_message_class
+class GetAcpiPowerStateReq(Message):
+    __cmdid__ = constants.CMDID_GET_ACPI_POWER_STATE
+    __netfn__ = constants.NETFN_APP
+    __not_implemented__ = True
+
+
+@register_message_class
+class GetAcpiPowerStateRsp(Message):
+    __cmdid__ = constants.CMDID_GET_ACPI_POWER_STATE
+    __netfn__ = constants.NETFN_APP | 1
+    __not_implemented__ = True
+
+
+@register_message_class
+class GetDeviceGuideReq(Message):
+    __cmdid__ = constants.CMDID_GET_DEVICE_GUID
+    __netfn__ = constants.NETFN_APP
+    __not_implemented__ = True
+
+
+@register_message_class
+class GetDeviceGuideRsp(Message):
+    __cmdid__ = constants.CMDID_GET_DEVICE_GUID
+    __netfn__ = constants.NETFN_APP | 1
+    __not_implemented__ = True
+
+
+@register_message_class
 class ResetWatchdogTimerReq(Message):
     __cmdid__ = constants.CMDID_RESET_WATCHDOG_TIMER
     __netfn__ = constants.NETFN_APP

@@ -309,6 +309,7 @@ class Message(object):
 
     __default_lun__ = 0
     __group_extension__ = None
+    __not_implemented__ = False
 
     def __init__(self, *args, **kwargs):
         """Message constructor with ([buf], [field=val,...]) prototype.
