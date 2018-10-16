@@ -91,6 +91,18 @@ NETFN_TRANSPORT = 0x0c
 NETFN_GROUP_EXTENSION = 0x2c
 NETFN_OEM = 0x2e
 
+NETFN_DESCR = (
+    (NETFN_CHASSIS, 'Chassis'),
+    (NETFN_BRIDGE, 'Bridge'),
+    (NETFN_SENSOR_EVENT, 'Sensor/Event'),
+    (NETFN_APP, 'App'),
+    (NETFN_FIRMWARE, 'Firmware'),
+    (NETFN_STORAGE, 'Storage'),
+    (NETFN_TRANSPORT, 'Transport'),
+    (NETFN_GROUP_EXTENSION, 'Group Extension'),
+    (NETFN_OEM, 'IANA'),
+)
+
 # IPM device 'global'
 CMDID_GET_DEVICE_ID = 0x01
 CMDID_COLD_RESET = 0x02
