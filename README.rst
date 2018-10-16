@@ -9,6 +9,13 @@ Features
 * legacy RMCP interface (using ipmitool)
 * IPMB interface (using the `Total Phase`_ Aardvark)
 
+Tested Devices
+--------------
+* Kontron mTCA Carrier Manager
+* Kontron CompactPCI boards
+* Pigeon Point Shelf Manager
+* HPE iLO3/iLO4
+
 Requirements
 ------------
 
