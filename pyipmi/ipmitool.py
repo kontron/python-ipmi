@@ -498,7 +498,7 @@ def main():
     verbose = False
     interface_name = 'aardvark'
     target_address = 0x20
-    target_routing = [(0x20, 0, 0)]
+    target_routing = None
     rmcp_host = None
     rmcp_port = 623
     rmcp_user = ''
