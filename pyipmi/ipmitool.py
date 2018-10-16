@@ -429,7 +429,7 @@ Options:
   -h               Show this help
   -v               Be verbose
   -V               Print version
-  -I <interface>   Set interface (available: rmcp, aardvark ipmitool)
+  -I <interface>   Set interface (available: rmcp, aardvark, ipmitool)
   -H <host>        Set RMCP host
   -U <user>        Set RMCP user
   -P <password>    Set RMCP password
@@ -437,10 +437,13 @@ Options:
                    by commas, see below for available options).
 '''[1:])
         print('''
-Aardvark options:
+Aardvark interface options:
   serial=<SN>       Serial number of the device
   pullups=<on|off>  Enable/disable pullups
   power=<on|off>    Enable/disable target power
+
+Ipmitool interface options:
+  interface_type    Set the interface type to be used (lan, lanplus, serial)
 '''[1:])
         print('Commands:')
 
@@ -474,6 +477,11 @@ def parse_interface_options(interface_name, options):
                 interface_options['enable_target_power'] = True
             elif (name, value) == ('power', 'off'):
                 interface_options['enable_target_power'] = False
+            else:
+                print('Warning: unknown option %s' % name)
+        elif interface_name == 'ipmitool':
+            if name == 'interface_type':
+                interface_options['interface_type'] = value
             else:
                 print('Warning: unknown option %s' % name)
 
@@ -555,11 +563,8 @@ def main():
                                                 interface_options)
 
     try:
-        if interface_name == 'aardvark':
-            interface = pyipmi.interfaces.create_interface(interface_name,
-                                                           **interface_options)
-        else:
-            interface = pyipmi.interfaces.create_interface(interface_name)
+        interface = pyipmi.interfaces.create_interface(interface_name,
+                                                       **interface_options)
     except RuntimeError as e:
         print(e)
         sys.exit(1)
