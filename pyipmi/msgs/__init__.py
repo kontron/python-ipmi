@@ -40,6 +40,7 @@ from .message import pack_message
 
 from . import bmc
 from . import chassis
+from . import dcmi
 from . import device_messaging
 from . import fru
 from . import hpm

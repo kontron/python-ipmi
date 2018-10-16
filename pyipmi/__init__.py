@@ -22,6 +22,7 @@ import ast
 
 from . import bmc
 from . import chassis
+from . import dcmi
 from . import event
 from . import fru
 from . import hpm
@@ -153,7 +154,7 @@ class Target(object):
         return string
 
 
-class Ipmi(bmc.Bmc, chassis.Chassis, fru.Fru, picmg.Picmg, hpm.Hpm,
+class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
            sdr.Sdr, sensor.Sensor, event.Event, sel.Sel, lan.Lan,
            messaging.Messaging):
 
