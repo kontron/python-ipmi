@@ -237,7 +237,7 @@ class Bitfield(BaseField):
             for attr in dir(self):
                 if attr.startswith('_'):
                     continue
-                s += '%s=%s ' % (attr, getattr(self, attr))
+                s += '%s=%s, ' % (attr, getattr(self, attr))
             s += ']'
             return s
 
