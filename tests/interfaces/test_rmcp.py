@@ -8,7 +8,8 @@ from nose.tools import eq_
 from pyipmi import Target
 
 from pyipmi.session import Session
-from pyipmi.interfaces.rmcp import RmcpMsg, AsfMsg, IpmiMsg, Rmcp
+from pyipmi.interfaces.rmcp import (AsfMsg, AsfPing, AsfPong, IpmiMsg,
+                                    Rmcp, RmcpMsg)
 
 
 class TestRmcpMsg:
@@ -32,15 +33,34 @@ class TestRmcpMsg:
 
 
 class TestAsfMsg:
-    def test_asfmsg(self):
+    def test_pack(self):
         m = AsfMsg()
         pdu = m.pack()
         eq_(pdu, b'\x00\x00\x11\xbe\x00\x00\x00\x00')
+
+    def test_unpack(self):
+        pdu = b'\x00\x00\x11\xbe\x00\x00\x00\x00'
+        msg = AsfMsg()
+        msg.unpack(pdu)
 
     def test_tostr(self):
         m = AsfMsg()
         m.data = b'\xaa\xbb\xcc'
         eq_(str(m), 'aa bb cc')
+
+
+class TestAsfPing():
+    def test_pack(self):
+        m = AsfPing()
+        pdu = m.pack()
+        eq_(pdu, b'\x00\x00\x11\xbe\x80\x00\x00\x00')
+
+
+class TestAsfPong():
+    def test_unpack(self):
+        pdu = b'\x00\x00\x11\xbe\x40\x00\x00\x10\x00\x00\x11\xbe\x00\x00\x00\x00\x81\x00\x00\x00\x00\x00\x00\x00'
+        m = AsfPong()
+        m.unpack(pdu)
 
 
 class TestIpmiMsg:
