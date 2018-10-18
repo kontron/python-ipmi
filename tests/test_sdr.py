@@ -188,10 +188,20 @@ class TestSdrCommon():
         eq_(sdr.length, 0x04)
 
 
-@raises(DecodingError)
-def test_sdrcompactsensorrecord():
-    data = (0, 0, 0, 0, 0)
-    SdrCompactSensorRecord(data)
+class TestSdrCompactSensorRecord():
+    @raises(DecodingError)
+    def test_invalid_length(self):
+        data = (0, 0, 0, 0, 0)
+        SdrCompactSensorRecord(data)
+
+    def test_decode(self):
+        data = [0xd3, 0x00, 0x51, 0x02, 0x28, 0x82, 0x00, 0xd3,
+                0xc1, 0x64, 0x03, 0x40, 0x21, 0x6f, 0x00, 0x00,
+                0x00, 0x00, 0x03, 0x00, 0xc0, 0x00, 0x00, 0x01,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xcd,
+                0x41, 0x34, 0x3a, 0x50, 0x72, 0x65, 0x73, 0x20,
+                0x53, 0x46, 0x50, 0x2d, 0x31]
+        SdrCompactSensorRecord(data)
 
 
 @raises(DecodingError)
@@ -200,22 +210,30 @@ def test_sdreventonlysensorrecord():
     SdrEventOnlySensorRecord(data)
 
 
-@raises(DecodingError)
-def test_sdrfrudevicelocator():
-    data = (0, 0, 0, 0, 0)
-    SdrFruDeviceLocator(data)
+class TestSdrFruDeviceLocatorRecord():
+    @raises(DecodingError)
+    def test_invalid_length(self):
+        data = (0, 0, 0, 0, 0)
+        SdrFruDeviceLocator(data)
+
+    def test_decode(self):
+        data = [0x02, 0x00, 0x51, 0x11, 0x17, 0x82, 0x03, 0x80,
+                0x00, 0x00, 0x10, 0x02, 0xc2, 0x61, 0x00, 0xcc,
+                0x4b, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6e, 0x20,
+                0x4d, 0x43, 0x4d, 0x43]
+        SdrFruDeviceLocator(data)
 
 
-@raises(DecodingError)
-def test_sdrmanagementcontollerdevicelocator():
-    data = (0, 0, 0, 0, 0)
-    SdrManagementControllerDeviceLocator(data)
+class TestSdrManagementControllerDeviceRecord():
+    @raises(DecodingError)
+    def test_invalid_length(self):
+        data = (0, 0, 0, 0, 0)
+        SdrManagementControllerDeviceLocator(data)
 
-
-def test_sdrmanagementcontollerdevicelocator_deocde():
-    data = [0x00, 0x01, 0x51, 0x12, 0x1b, 0x00, 0x01, 0x51,
-            0x12, 0x1b, 0x00, 0x01, 0x51, 0x12, 0x1b, 0xd0,
-            0x41, 0x32, 0x3a, 0x41, 0x4d, 0x34, 0x32, 0x32,
-            0x30, 0x20]
-    sdr = SdrManagementControllerDeviceLocator(data)
-    eq_(sdr.device_id_string, 'A2:AM4220 ')
+    def test_decode(self):
+        data = [0x00, 0x01, 0x51, 0x12, 0x1b, 0x00, 0x01, 0x51,
+                0x12, 0x1b, 0x00, 0x01, 0x51, 0x12, 0x1b, 0xd0,
+                0x41, 0x32, 0x3a, 0x41, 0x4d, 0x34, 0x32, 0x32,
+                0x30, 0x20]
+        sdr = SdrManagementControllerDeviceLocator(data)
+        eq_(sdr.device_id_string, 'A2:AM4220 ')
