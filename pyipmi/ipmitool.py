@@ -167,10 +167,18 @@ def print_sdr_list_entry(record_id, number, id_string, value, states):
 
 
 def cmd_sdr_list(ipmi, args):
+    iter_fct = None
+
+    device_id = ipmi.get_device_id()
+    if device_id.supports_function('sdr_repository'):
+        iter_fct = ipmi.sdr_repository_entries
+    elif device_id.supports_function('sensor'):
+        iter_fct = ipmi.device_sdr_entries
+
     print("SDR-ID |     | Device String    |")
     print("=======|=====|==================|====================")
 
-    for s in ipmi.device_sdr_entries():
+    for s in iter_fct():
         try:
             number = None
             value = None
