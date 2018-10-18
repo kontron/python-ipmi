@@ -220,6 +220,11 @@ class SdrCommon(object):
         self.entity_id = buffer.pop_unsigned_int(1)
         self.entity_instance = buffer.pop_unsigned_int(1)
 
+    def _device_id_string(self, buffer):
+        self.device_id_string_type_length = buffer.pop_unsigned_int(1)
+        self.device_id_string = \
+            buffer.pop_string(self.device_id_string_type_length & 0x3f)
+
     @staticmethod
     def from_data(data, next_id=None):
         sdr_type = data[3]
@@ -475,8 +480,7 @@ class SdrFullSensorRecord(SdrCommon):
         self.hysteresis['negative_going'] = buffer.pop_unsigned_int(1)
         self.reserved = buffer.pop_unsigned_int(2)
         self.oem = buffer.pop_unsigned_int(1)
-        self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = py3dec_unic_bytes_fix(buffer.tostring())
+        self._device_id_string(buffer)
 
 
 ###
@@ -518,8 +522,7 @@ class SdrCompactSensorRecord(SdrCommon):
         self.negative_going_hysteresis = buffer.pop_unsigned_int(1)
         self.reserved = buffer.pop_unsigned_int(3)
         self.oem = buffer.pop_unsigned_int(1)
-        self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = py3dec_unic_bytes_fix(buffer.tostring())
+        self._device_id_string(buffer)
 
 
 ###
@@ -548,8 +551,7 @@ class SdrEventOnlySensorRecord(SdrCommon):
         self.record_sharing = buffer.pop_unsigned_int(2)
         self.reserved = buffer.pop_unsigned_int(1)
         self.oem = buffer.pop_unsigned_int(1)
-        self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = py3dec_unic_bytes_fix(buffer.tostring())
+        self._device_id_string(buffer)
 
 
 ###
@@ -578,8 +580,7 @@ class SdrFruDeviceLocator(SdrCommon):
         self.device_type_modifier = buffer.pop_unsigned_int(1)
         self._entity(buffer.pop_slice(2))
         self.oem = buffer.pop_unsigned_int(1)
-        self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = py3dec_unic_bytes_fix(buffer.tostring())
+        self._device_id_string(buffer)
 
 
 ###
@@ -608,8 +609,7 @@ class SdrManagementControllerDeviceLocator(SdrCommon):
         self.reserved = buffer.pop_unsigned_int(3)
         self._entity(buffer.pop_slice(2))
         self.oem = buffer.pop_unsigned_int(1)
-        self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = py3dec_unic_bytes_fix(buffer.tostring())
+        self._device_id_string(buffer)
 
 
 ###
