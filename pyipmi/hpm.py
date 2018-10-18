@@ -206,6 +206,8 @@ class Hpm(object):
                     return
             except IpmiTimeoutError:
                 time.sleep(interval)
+            except IOError:
+                time.sleep(interval)
 
     def activate_firmware(self, rollback_override=None):
         req = create_request_by_name('ActivateFirmware')
@@ -342,6 +344,8 @@ class Hpm(object):
                 self.get_upgrade_status()
                 self.get_device_id()
             except IpmiTimeoutError:
+                time.sleep(interval)
+            except IOError:
                 time.sleep(interval)
         time.sleep(5)
 
