@@ -93,7 +93,7 @@ class Sdr(object):
         """A generator that returns the SDR list. Starting with ID=0x0000 and
         end when ID=0xffff is returned.
         """
-        reservation_id = self.reserve_device_sdr_repository()
+        reservation_id = self.reserve_sdr_repository()
         record_id = 0
 
         while True:
