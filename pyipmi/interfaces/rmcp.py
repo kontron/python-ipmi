@@ -368,7 +368,7 @@ class Rmcp(object):
 
     def _receive_asf_msg(self, cls):
         (_, class_of_msg, data) = self._receive()
-        log().debug('ASF: msg')
+        log().debug('ASF RX: msg')
         if class_of_msg != RMCP_CLASS_ASF:
             raise DecodingError('invalid class field in ASF message')
         msg = cls()
