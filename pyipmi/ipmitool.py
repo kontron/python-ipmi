@@ -310,6 +310,7 @@ def cmd_hpm_check_file(ipmi, args):
 
 def cmd_hpm_install(ipmi, args):
     if len(args) < 2:
+        print('missing argument')
         return
     ipmi.install_component_from_file(args[0], int(args[1]))
 
