@@ -170,7 +170,7 @@ class TestSdrFullSensorRecord():
                 0x41, 0x32, 0x3a, 0x56, 0x63, 0x63, 0x20, 0x31,
                 0x32, 0x56]
         sdr = SdrFullSensorRecord(data)
-        eq_(sdr.device_id_string, 'A2:Vcc 12V')
+        eq_(sdr.device_id_string, b'A2:Vcc 12V')
 
 
 class TestSdrCommon():
@@ -236,4 +236,4 @@ class TestSdrManagementControllerDeviceRecord():
                 0x41, 0x32, 0x3a, 0x41, 0x4d, 0x34, 0x32, 0x32,
                 0x30, 0x20]
         sdr = SdrManagementControllerDeviceLocator(data)
-        eq_(sdr.device_id_string, 'A2:AM4220 ')
+        eq_(sdr.device_id_string, b'A2:AM4220 ')
