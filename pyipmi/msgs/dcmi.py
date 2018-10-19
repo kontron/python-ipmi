@@ -177,9 +177,12 @@ class GetAssetTagRsp(DcmiMessage):
 class GetDcmiSensorInfoReq(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_DCMI_SENSOR_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __not_implemented__ = True
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('sensor_type', 1),
+        UnsignedInt('entity_id', 1),
+        UnsignedInt('entity_instance', 1),
+        UnsignedInt('entity_instance_start', 1),
     )
 
 
@@ -187,10 +190,12 @@ class GetDcmiSensorInfoReq(DcmiMessage):
 class GetDcmiSensorInfoRsp(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_DCMI_SENSOR_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __not_implemented__ = True
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('total_number_of_instances', 1),
+        UnsignedInt('number_of_record_ids', 1),
+        RemainingBytes('record_ids'),
     )
 
 
