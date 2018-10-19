@@ -14,8 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-#from .msgs import create_request_by_name
-#from .utils import check_completion_code
+from .constants import (ENTITY_ID_DCMI_AIR_INLET, ENTITY_ID_DCMI_CPU,
+                        ENTITY_ID_DCMI_BASEBOARD)
 
 
 PARAM_SUPPORTED_DCMI_CAPABILITIES = 1
@@ -35,3 +35,23 @@ class Dcmi(object):
         rsp = self.send_message_with_name('GetPowerReading',
                                           mode=mode, attributes=attributes)
         return rsp
+
+    def get_dcmi_sensor_record_ids(self):
+
+        record_ids = list()
+
+        DCMI_ENTITIES = (ENTITY_ID_DCMI_AIR_INLET, ENTITY_ID_DCMI_CPU,
+                         ENTITY_ID_DCMI_BASEBOARD)
+
+        for entity_id in DCMI_ENTITIES:
+            rsp = self.send_message_with_name('GetDcmiSensorInfo',
+                                              sensor_type=1,
+                                              entity_id=entity_id,
+                                              entity_instance=0,
+                                              entity_instance_start=0)
+            # convert the returned raw data in a list of SDR record IDs
+            ids = [msb << 8 | lsb for (lsb, msb) in
+                   zip(rsp.record_ids, rsp.record_ids[1:])[::2]]
+            record_ids.extend(ids)
+
+        return record_ids
