@@ -18,6 +18,7 @@ def git_pep440_version():
     tail = full[len(tag):]
     return tag + tail.replace('-', '.dev', 1).replace('-', '+', 1)
 
+
 try:
     version = git_pep440_version()
     with open(version_py, 'w') as f:
@@ -32,7 +33,6 @@ except (OSError, subprocess.CalledProcessError, IOError) as e:
     except IOError:
         version = 'unknown'
 
-version = version.decode('utf-8')
 
 with open('README.rst') as f:
     readme = f.read()
