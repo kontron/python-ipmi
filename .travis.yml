@@ -1,10 +1,12 @@
 sudo: false
 language: python
+
 python:
   - '2.7'
   - '3.4'
   - '3.5'
   - '3.6'
+
 install:
   - pip install python-coveralls
   - pip install coverage
@@ -14,13 +16,19 @@ install:
 script:
   - python setup.py install
   - nosetests --with-coverage
+
 after_success:
   - coveralls
-deploy:
-  provider: pypi
-  user: mwalle
-  password:
-    secure: ES9znx3LnSVqPVpQJmcR9Xtk5qvLeyjzSmD7on0fRjR3yvhnycd2Tlc+vGEYow27nqleAVkspUsom/FMiWjccJFhk5yuTql6vYnKiXGcmFtMPPtOv+hR0CHXH5hqniSKjqRVJyRlMyDEN+vzv0Wucg+Cb3pKUyly2+Zp9M9sphY=
-  on:
-    tags: true
 
+jobs:
+  include:
+    - stage: PyPi deploy
+      script: true
+      python: 3.6
+      deploy:
+        provider: pypi
+        user: mwalle
+        password:
+          secure: ES9znx3LnSVqPVpQJmcR9Xtk5qvLeyjzSmD7on0fRjR3yvhnycd2Tlc+vGEYow27nqleAVkspUsom/FMiWjccJFhk5yuTql6vYnKiXGcmFtMPPtOv+hR0CHXH5hqniSKjqRVJyRlMyDEN+vzv0Wucg+Cb3pKUyly2+Zp9M9sphY=
+        on:
+          tags: true
