@@ -39,7 +39,7 @@ class Ipmitool(object):
 
     NAME = 'ipmitool'
     IPMITOOL_PATH = 'ipmitool'
-    supported_interfaces = ['lan', 'lanplus', 'serial-terminal']
+    supported_interfaces = ['lan', 'lanplus', 'serial-terminal', 'open']
 
     def __init__(self, interface_type='lan'):
         if interface_type in self.supported_interfaces:
@@ -94,6 +94,8 @@ class Ipmitool(object):
 
         if self._interface_type in ['lan', 'lanplus']:
             cmd = self._build_ipmitool_cmd(target, lun, netfn, raw_bytes)
+        elif self._interface_type in ['open']:
+            cmd = self._build_open_ipmitool_cmd(target, lun, netfn, raw_bytes)
         elif self._interface_type in ['serial-terminal']:
             cmd = self._build_serial_ipmitool_cmd(target, lun, netfn,
                                                   raw_bytes)
@@ -222,6 +224,20 @@ class Ipmitool(object):
         cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)
 
         return cmd
+
+    def _build_open_ipmitool_cmd(self, target, lun, netfn, raw_bytes):
+        if not hasattr(self, '_session'):
+            raise RuntimeError('Session needs to be set')
+
+        cmd = self.IPMITOOL_PATH
+        cmd += (' -I %s' % self._interface_type)
+
+        cmd += self._build_ipmitool_target(target)
+        cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)
+        cmd += (' 2>&1')
+
+        return cmd
+
 
     @staticmethod
     def _run_ipmitool(cmd):
