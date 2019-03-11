@@ -20,7 +20,7 @@ Before establishing the session the interface type shall be defined. There are 4
 
   * **'rmcp'** - using native :abbr:`RMCP (Remote Management Control Protocol)` encapsulation over :abbr:`LAN (Local Area Network)` (so called :abbr:`IPMI (Intelligent Platform Management Interface)` over :abbr:`LAN (Local Area Network)`). This interface requires only common python libraries.
   * **'ipmitool'** - so called legacy :abbr:`RMCP (Remote Management Control Protocol)`, still an :abbr:`IPMI (Intelligent Platform Management Interface)` over :abbr:`LAN (Local Area Network)`, but requires IPMITOOL as backend. This interface requires `ipmitool`_  compiled and installed, and each time an ipmitool command is issued a new session is established with the Target (left for legacy purpuses; used before native rmcp was not implemented yet).
-  * **'aardwark'** - :abbr:`IPMB (Intelligent Platform Management Bus)` interface (using the `Total Phase`_ Aardvark)
+  * **'aardvark'** - :abbr:`IPMB (Intelligent Platform Management Bus)` interface (using the `Total Phase`_ Aardvark)
   * **'mock'** - This interface uses the ipmitool raw command to "emulate" an :abbr:`RMCP (Remote Management Control Protocol)` session. It uses the session information to assemble the correct ipmitool parameters. Therefore, a session must be established before any request can be sent.
 
 Then you create an instance of the ``pyipmi.Ipmi`` object using the ``interface`` instance just created, and set also the required parameteres of the interface type. You should also set the :abbr:`IPMI (Intelligent Platform Management Interface)` **Target**, otherwise different runtime errors shall be expected later on when invoking methods of this library. Finally, you can try to establish a session. If there is a connection problem (no response), then you get the following error during session establishment: 
@@ -257,10 +257,10 @@ ipmitool command:
 
     ipmitool -I serial-terminal -D /dev/tty2:115200 -t 0xb2 -l 0 raw 0x06 0x01
 
-IPMB with Aardwark:
+IPMB with Aardvark:
 *******************
 
-For :abbr:`IPMB (Intelligent Platform Management Bus)` interface with Aardwark tool you should use the followig code:
+For :abbr:`IPMB (Intelligent Platform Management Bus)` interface with Aardvark tool you should use the followig code:
 
 .. code:: python
 
