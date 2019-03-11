@@ -40,6 +40,12 @@ a temporary location and install::
 
     python setup.py install
 
+Documentation
+-------------
+
+You can find the most up to date documentation at:
+http://python-ipmi.rtfd.org
+
 Example
 -------
 
