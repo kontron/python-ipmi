@@ -1,7 +1,7 @@
 IPMI Messaging Support Commands
 ===============================
 
-This section describes the commands used to support the system messaging interfaces. This includes control bits for using the :abbr:`BMC (Board Management Controller)` as an Event receiver and :abbr:`SEL (System Event Log)` Devixe. :abbr:`SMM (System Management Mode)` Messaging and Event Message Buffer support is optional. The `IPMI standard`_ defines the following IPMI Messaging Support commands:
+This section describes the commands used to support the system messaging interfaces. This includes control bits for using the :abbr:`BMC (Board Management Controller)` as an Event receiver and :abbr:`SEL (System Event Log)` Device. :abbr:`SMM (System Management Mode)` Messaging and Event Message Buffer support is optional. The `IPMI standard`_ defines the following IPMI Messaging Support commands:
 
 +-----------------------------------------+-----+---------+-----+
 | Command                                 | O/M | Support | API |
@@ -75,8 +75,8 @@ This section describes the commands used to support the system messaging interfa
    - Support - Supported command by **send_message_with_name** method
    - API - High level API support implemented in this library
 
-Establish Session:
-~~~~~~~~~~~~~~~~~~
+Establish Session
+~~~~~~~~~~~~~~~~~
 
 This is not equivalent with a single IPMI command, but represents a high level API function using several IPMI commands. It is used to establish a session between the **Slave** and the **Target**. The method
 
@@ -87,10 +87,10 @@ This is not equivalent with a single IPMI command, but represents a high level A
 creates and activates a session of the ``ipmi.session`` instance with the given authentication and privilige level. Multiple IPMI commands are used to establish the session. The following steps are done during the session establishment for an RMCP interface:
 
   - ping the **Target** IP address
-  - isuue a **"Get Channel Authentication Capabilities"** command
+  - issue a **"Get Channel Authentication Capabilities"** command
   - issue a **"Get Session Challenge"** command
   - issue an **"Activate Session"** command
-  - issue a **"Set Session Privilege Level"** command (privilige set always to ADMINISTRATOR level)
+  - issue a **"Set Session Privilege Level"** command (privilige is set always to ADMINISTRATOR level)
 
 If ``keep_alive_interval`` argument for the interface instantiation was set to a nonzero value then the channel is kept alive by regularly sending the **"Get Device ID"** IPMI command.
 
@@ -100,8 +100,8 @@ Example of establishing a session:
 
   ipmi.session.establsih()
 
-Get Channel Authentication Capabilities command:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Get Channel Authentication Capabilities Command
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This command is used to retrieve capability information about a particular channel.
 
@@ -118,10 +118,10 @@ Example:
   ipmi.get_channel_authentication_capabilities(channel=0x0E,priv_lvl=1)
 
 
-Master Write-Read command:
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Master Write-Read Command
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This command can be used for low level |I2C|/SMBus write, read, or write-read accesses to the IPMB or private busses behind a management controller. The command can also be used for prviding low-level access to devixed that provide and SMBus slave interface.
+This command can be used for low level |I2C|/SMBus write, read, or write-read accesses to the IPMB or private busses behind a management controller. The command can also be used for providing low-level access to devices that provide an SMBus slave interface.
 
 +---------------------------------------------------------------------------+
 | **i2c_write_read(bus_type, bus_id, channel, address, count, data=None)**  |
@@ -129,8 +129,8 @@ This command can be used for low level |I2C|/SMBus write, read, or write-read ac
 
 
 
-Close Session command:
-~~~~~~~~~~~~~~~~~~~~~~
+Close Session Command
+~~~~~~~~~~~~~~~~~~~~~
 
 This command is used to immediately terminate a session in progress. The method
 
