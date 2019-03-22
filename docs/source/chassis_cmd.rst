@@ -39,10 +39,10 @@ These commands are primarily to provide standardized chassis status and control 
    - Support - Supported command by **send_message_with_name** method
    - API - High level API support implemented in this library
 
-Get Chassis Capabilities command:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Get Chassis Capabilities Command
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This command returns information about which main chassis management functions are present on the :abbr:`IPMB (Intelligent Platform Management Bus)` and what addresses are used to access those functions. This command is used to find the devixes that provide functions such as :abbr:`SEL (System Event Log)`, :abbr:`SDR (Snesor Data Record)`, and :abbr:`ICMB (Intelligent Chassis Management Bus)` Bridging so that theyt can be accessed via commands delivered via a physical or logical :abbr:`IPMB (Intelligent Platform Management Bus)`.
+This command returns information about which main chassis management functions are present on the :abbr:`IPMB (Intelligent Platform Management Bus)` and what addresses are used to access those functions. This command is used to find the devices that provide functions such as :abbr:`SEL (System Event Log)`, :abbr:`SDR (Snesor Data Record)`, and :abbr:`ICMB (Intelligent Chassis Management Bus)` Bridging so that theyt can be accessed via commands delivered via a physical or logical :abbr:`IPMB (Intelligent Platform Management Bus)`.
 
 +-------------------------------------+
 | **get_chassis_capabilities()**      |
@@ -50,8 +50,8 @@ This command returns information about which main chassis management functions a
 
 **NOT IMPLEMENTED YET!!!**
 
-Get Chassis Status command:
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Get Chassis Status Command
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This command returns information regarding the high-level status of the system chassis and main power subsystem.
 
@@ -77,8 +77,8 @@ For example:
    chassis_status=ipmi.get_chassis_status()
 
 
-Chassis Control command:
-~~~~~~~~~~~~~~~~~~~~~~~~
+Chassis Control Command
+~~~~~~~~~~~~~~~~~~~~~~~
 
 This command provides a mechanism for providing power up, power down, and reset control.
 

@@ -92,7 +92,9 @@ class GetChassisStatusRsp(Message):
                  Bitfield.Bit('front_panel_lockout_active', 1),
                  Bitfield.Bit('drive_fault', 1),
                  Bitfield.Bit('cooling_fault_detected', 1),
-                 Bitfield.ReservedBit(4, 0),),
+                 Bitfield.Bit('chassis_id_state', 2),
+                 Bitfield.Bit('id_cmd_state_info_support', 1),
+                 Bitfield.ReservedBit(1, 0),),
         Optional(
             UnsignedInt('front_panel_button_capabilities', 1),
         ),

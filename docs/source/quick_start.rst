@@ -31,8 +31,8 @@ Then you create an instance of the ``pyipmi.Ipmi`` object using the ``interface`
 
 This runtime error occurs anytime with any method in case of no response.
 
-Native RMCP interface:
-**********************
+Native RMCP interface
+*********************
 
 Here is an example to create a native :abbr:`RMCP (Remote Management Control Protocol)` interface:
 
@@ -43,7 +43,7 @@ Here is an example to create a native :abbr:`RMCP (Remote Management Control Pro
                                                host_target_address=0x20,
                                                keep_alive_interval=1)
   ipmi = pyipmi.create_connection(interface)
-  ipmi.session.set_session_type_rmcp(hots='10.0.114.199', port=623)
+  ipmi.session.set_session_type_rmcp(host='10.0.114.199', port=623)
   ipmi.session.set_auth_type_user(username='admin', password='admin')
   
   ipmi.target = pyipmi.Target(ipmb_address=0x20)
@@ -87,10 +87,10 @@ For ``create_interface`` method the first argument tells that a native RMCP inte
   CompletionCodeError: CompletionCodeError cc=0x81 desc=Unknown error description
 
 
-Legacy RMCP interface with IPMITOOL as backend:
-***********************************************
+Legacy RMCP interface with IPMITOOL as backend
+**********************************************
 
-An example that shows how to setup the interface and the connection using the ipmitool as backend with network interface:
+An example showing how to setup the interface and the connection using the ipmitool as backend with network interface:
 
 .. code:: python
 
@@ -105,12 +105,13 @@ An example that shows how to setup the interface and the connection using the ip
   ipmi.session.establish()
   ipmi.get_device_id()
 
-where the in the ``create_interface`` method the supported interface types for ipmitool are **'lan'** , **'lanplus'**, and **'serial-terminal'**. When setting the **Target**, the ``ipmb_address`` argument represents the :abbr:`IPMI (Intelligent Platform Management Interface)` target address, and ``routing`` argument represents the bridging information over which a target is reachable. The path is given as a list of tuples in the form (address, bridge_channel). Here are three examples to have a better understanding about the format of the routing.
+where in the ``create_interface`` method the supported interface types for ipmitool are **'lan'** , **'lanplus'**, and **'serial-terminal'**. When setting the **Target**, the ``ipmb_address`` argument represents the :abbr:`IPMI (Intelligent Platform Management Interface)` target address, and ``routing`` argument represents the bridging information over which a target is reachable. The path is given as a list of tuples in the form (address, bridge_channel). Here are three examples to have a better understanding about the format of the routing:
 
 * **Example #1**: access to an :abbr:`ATCA (Advanced Telecommunication Computing Architecture)` blade in a chassis
 
   - slave = 0x81, target = 0x82
   - routing = [(0x81,0x20,0),(0x20,0x82,None)]
+
 
 .. graphviz::
 
@@ -257,8 +258,8 @@ ipmitool command:
 
     ipmitool -I serial-terminal -D /dev/tty2:115200 -t 0xb2 -l 0 raw 0x06 0x01
 
-IPMB with Aardvark:
-*******************
+IPMB with Aardvark
+******************
 
 For :abbr:`IPMB (Intelligent Platform Management Bus)` interface with Aardvark tool you should use the followig code:
 
@@ -322,7 +323,7 @@ The following example requests the device ID:
 
 .. note::
 
-  The returned object is different from the one shown for the native :abbr:`RMCP (Remote Management Control Protocol)` example above.
+  The returned object in this case is different from the one shown for the native :abbr:`RMCP (Remote Management Control Protocol)` example shown above.
 
 Closing the session
 -------------------
@@ -344,7 +345,7 @@ in which case debug, info and warning messages are all recorded in the **'ipmi_d
 
 .. note::
 
-  It is assumed in all code examples that the instantiation of the ``pyipmi.Ipmi`` object is called **ipmi**, thus **ipmi** will preceed all the methods of the ``pyipmi.Ipmi`` object.
+  It is assumed in all code examples that the instantiation of the ``pyipmi.Ipmi`` object is called **ipmi**, thus **ipmi** will preceed all the methods and attributes of the ``pyipmi.Ipmi`` object.
 
 .. _Total Phase: http://www.totalphase.com
 .. _ipmitool: http://sourceforge.net/projects/ipmitool/

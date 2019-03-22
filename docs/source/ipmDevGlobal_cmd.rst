@@ -29,10 +29,10 @@ This section describes the high level :abbr:`API (Application Programming Interf
    - Support - Supported command by **send_message_with_name** method
    - API - High level API support implemented in this library
 
-Get Device ID command:
-~~~~~~~~~~~~~~~~~~~~~~
+Get Device ID Command
+~~~~~~~~~~~~~~~~~~~~~
 
-You can retrieve the Intelligent Devices's HW revision, FW/SW revision, and information regarding aditional logical device functionality with
+You can retrieve the Intelligent Devices's HW revision, FW/SW revision, and information regarding additional logical device functionality with
 
 +------------------------------+
 | **get_device_id()**          |
@@ -44,7 +44,7 @@ where the returned object has the following attributes shown in the order as app
   * ``provides_sdrs``
   * ``revision``
   * ``available``
-  * ``fw_revision.minor (fw_revision.major, fw_revision.minor)``
+  * ``fw_revision (fw_revision.major, fw_revision.minor)``
   * ``ipmi_version (ipmi_version.major, ipmi_version.minor)``
   * ``supported_functions``
   * ``manufacturer_id``
@@ -70,6 +70,7 @@ For example:
 
     device_id = ipmi.get_device_id()
     
+    print("--- Printing Device ID ---")
     functions = (
             ('SENSOR', 'Sensor Device', 11),
             ('SDR_REPOSITORY', 'SDR Repository Device', 3),
@@ -80,7 +81,7 @@ For example:
             ('BRIDGE', 'Bridge', 18),
             ('CHASSIS', 'Chassis Device', 10))
     ChkBox=['[ ]','[X]']
-    print('''\n
+    print('''
     Device ID:                  %(device_id)s
     Provides Device SDRs:       %(provides_sdrs)s
     Device Revision:            %(revision)s
@@ -98,8 +99,8 @@ For example:
             print('        %s%s%s' % (s,l*' ',ChkBox[0]))
 
 
-Cold Reset command:
-~~~~~~~~~~~~~~~~~~~
+Cold Reset Command
+~~~~~~~~~~~~~~~~~~
 
 This command directs the **Target** to perform a 'Cold Reset' of itself. The device reinitalizes its event, communcation, and sensor funtioncs. Self Test, if implemented, will be also run.
 
@@ -113,10 +114,10 @@ For example:
 
    ipmi.cold_reset()
 
-Warm Reset command:
-~~~~~~~~~~~~~~~~~~~
+Warm Reset Command
+~~~~~~~~~~~~~~~~~~
 
-This command directs the **Target** to perform a 'Warm Reset' of itself. Communication interfaces are reset, but current configurations of interrupt enables, thresholds, etc. will be left alone, and no Selft Test initiated.
+This command directs the **Target** to perform a 'Warm Reset' of itself. Communication interfaces are reset, but current configurations of interrupt enables, thresholds, etc. will be left alone, and no Self Test initiated.
 
 +------------------------------+
 | **warm_reset()**             |
