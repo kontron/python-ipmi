@@ -31,6 +31,20 @@ class Messaging(object):
         caps = ChannelAuthenticationCapabilities(rsp)
         return caps
 
+    def set_username(self, userid=0, username=''):
+        req = create_request_by_name('SetUserName')
+        req.userid.userid = userid
+        req.user_name = username.ljust(16, '\x00')
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
+    def get_username(self, userid=0):
+        req = create_request_by_name('GetUserName')
+        req.userid.userid = userid
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return rsp.user_name
+
 
 class ChannelAuthenticationCapabilities(State):
 

@@ -344,3 +344,21 @@ def test_get_session_challenge_req():
     eq_(m.cmdid, 0x39)
     eq_(m.netfn, 6)
     eq_(data, b'\x010123456789abcdef')
+
+
+def test_get_username_rsp():
+    m = pyipmi.msgs.device_messaging.GetUserNameRsp()
+    decode_message(m, b'\x00\x72\x6f\x6f\x74\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+    eq_(m.cmdid, 0x46)
+    eq_(m.netfn, 7)
+    eq_(m.completion_code, 0x00)
+    eq_(m.user_name, b'root\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+
+
+def test_get_username_req():
+    m = pyipmi.msgs.device_messaging.GetUserNameReq()
+    m.userid.userid = 2
+    data = encode_message(m)
+    eq_(m.cmdid, 0x46)
+    eq_(m.netfn, 6)
+    eq_(m.userid.userid, 2)
