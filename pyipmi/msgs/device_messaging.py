@@ -378,3 +378,45 @@ class CloseSessionRsp(Message):
     __fields__ = (
         CompletionCode(),
     )
+
+
+@register_message_class
+class SetUserNameReq(Message):
+    __cmdid__ = constants.CMDID_SET_USER_NAME
+    __netfn__ = constants.NETFN_APP
+    __fields__ = (
+        Bitfield('userid', 1,
+                 Bitfield.Bit('userid', 6, 0),
+                 Bitfield.ReservedBit(2, 0),),
+        String('user_name', 16),
+    )
+
+
+@register_message_class
+class SetUserNameRsp(Message):
+    __cmdid__ = constants.CMDID_SET_USER_NAME
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
+    )
+
+
+@register_message_class
+class GetUserNameReq(Message):
+    __cmdid__ = constants.CMDID_GET_USER_NAME
+    __netfn__ = constants.NETFN_APP
+    __fields__ = (
+        Bitfield('userid', 1,
+                 Bitfield.Bit('userid', 6, 0),
+                 Bitfield.ReservedBit(2, 0),),
+    )
+
+
+@register_message_class
+class GetUserNameRsp(Message):
+    __cmdid__ = constants.CMDID_GET_USER_NAME
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
+        String('user_name', 16, '\x00' * 16),
+    )
