@@ -67,6 +67,10 @@ setup(name=name,
           ]
       },
       test_suite='tests',
+      tests_requires=[
+          'nose',
+          'mock',
+      ],
       install_requires=[
           'markdown',
           'future',
