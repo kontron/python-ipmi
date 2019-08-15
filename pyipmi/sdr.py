@@ -417,13 +417,13 @@ class SdrFullSensorRecord(SdrCommon):
         self.deassertion_mask = buffer.pop_unsigned_int(2)
         self.discrete_reading_mask = buffer.pop_unsigned_int(2)
         # byte 21, 22, 23
-        units_1 = buffer.pop_unsigned_int(1)
-        units_2 = buffer.pop_unsigned_int(1)
-        units_3 = buffer.pop_unsigned_int(1)
-        self.analog_data_format = (units_1 >> 6) & 0x3
-        self.rate_unit = (units_1 >> 3) >> 0x7
-        self.modifier_unit = (units_1 >> 1) & 0x2
-        self.percentage = units_1 & 0x1
+        self.units_1 = buffer.pop_unsigned_int(1)
+        self.units_2 = buffer.pop_unsigned_int(1)
+        self.units_3 = buffer.pop_unsigned_int(1)
+        self.analog_data_format = (self.units_1 >> 6) & 0x3
+        self.rate_unit = (self.units_1 >> 3) >> 0x7
+        self.modifier_unit = (self.units_1 >> 1) & 0x2
+        self.percentage = self.units_1 & 0x1
         # byte 24
         self.linearization = buffer.pop_unsigned_int(1) & 0x7f
         # byte 25, 26
