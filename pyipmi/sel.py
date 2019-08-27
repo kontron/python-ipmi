@@ -175,4 +175,6 @@ class SelEntry(State):
         else:
             self.event_direction = EVENT_ASSERTION
         self.event_type = event_desc & 0x3f
-        self.event_data = buffer.pop_string(3)
+        self.event_data_1 = buffer.pop_unsigned_int(1)
+        self.event_data_2 = buffer.pop_unsigned_int(1)
+        self.event_data_3 = buffer.pop_unsigned_int(1)
