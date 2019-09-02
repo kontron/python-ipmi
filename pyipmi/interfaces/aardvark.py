@@ -159,6 +159,8 @@ class Aardvark(object):
                 break
             except IpmiTimeoutError:
                 pass
+            except IOError:
+                pass
 
             retries += 1
 
