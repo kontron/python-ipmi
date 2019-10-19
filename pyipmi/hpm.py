@@ -148,7 +148,7 @@ class Hpm(object):
     def _determine_max_block_size():
         return 22
 
-    def upload_binary(self, binary, timeout=2, interval=0.1):
+    def upload_binary(self, binary, timeout=2, interval=0.1, retry=3):
         """ Upload all firmware blocks from binary and wait for
             long running command. """
         block_number = 0
@@ -159,11 +159,17 @@ class Hpm(object):
                 self.upload_firmware_block(block_number, chunk)
             except CompletionCodeError as e:
                 if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
+
                     self.wait_for_long_duration_command(
                             constants.CMDID_HPM_UPLOAD_FIRMWARE_BLOCK,
                             timeout, interval)
                 else:
                     raise HpmError('upload_firmware_block CC=0x%02x' % e.cc)
+            except IpmiTimeoutError:
+                retry -= 1
+                if retry == 0:
+                    raise IpmiTimeoutError()
+
             block_number += 1
             block_number &= 0xff
 

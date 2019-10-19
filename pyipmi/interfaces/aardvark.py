@@ -158,7 +158,9 @@ class Aardvark(object):
                 rx_data = self._receive_raw(header)
                 break
             except IpmiTimeoutError:
-                log().warning('I2C transaction timed out'),
+                pass
+            except IOError:
+                pass
 
             retries += 1
 
