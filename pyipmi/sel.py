@@ -134,8 +134,7 @@ class SelEntry(State):
         string.append('  Sensor Number: %d' % self.sensor_number)
         string.append('  Event Direction: %d' % self.event_direction)
         string.append('  Event Type: 0x%02x' % self.event_type)
-        string.append('  Event Data: %s' % array('B',
-                                                 self.event_data).tolist())
+        string.append('  Event Data: %s' % array('B', self.event_data).tolist())
         return "\n".join(string)
 
     @staticmethod
