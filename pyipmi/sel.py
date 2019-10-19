@@ -135,7 +135,7 @@ class SelEntry(State):
         string.append('  Event Direction: %d' % self.event_direction)
         string.append('  Event Type: 0x%02x' % self.event_type)
         string.append('  Event Data: %s' % array('B',
-            self.event_data).tolist())
+                                                 self.event_data).tolist())
         return "\n".join(string)
 
     @staticmethod
@@ -175,6 +175,4 @@ class SelEntry(State):
         else:
             self.event_direction = EVENT_ASSERTION
         self.event_type = event_desc & 0x7f
-        self.event_data_1 = buffer.pop_unsigned_int(1)
-        self.event_data_2 = buffer.pop_unsigned_int(1)
-        self.event_data_3 = buffer.pop_unsigned_int(1)
+        self.event_data = [int(i) for i in buffer.pop_string(3)]
