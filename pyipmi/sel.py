@@ -134,8 +134,7 @@ class SelEntry(State):
         string.append('  Sensor Number: %d' % self.sensor_number)
         string.append('  Event Direction: %d' % self.event_direction)
         string.append('  Event Type: 0x%02x' % self.event_type)
-        string.append('  Event Data: %s' % array('B',
-            self.event_data).tolist())
+        string.append('  Event Data: %s' % array('B', self.event_data).tolist())
         return "\n".join(string)
 
     @staticmethod
@@ -174,5 +173,5 @@ class SelEntry(State):
             self.event_direction = EVENT_DEASSERTION
         else:
             self.event_direction = EVENT_ASSERTION
-        self.event_type = event_desc & 0x3f
-        self.event_data = buffer.pop_string(3)
+        self.event_type = event_desc & 0x7f
+        self.event_data = [int(i) for i in buffer.pop_string(3)]
