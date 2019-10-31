@@ -162,7 +162,7 @@ def print_sdr_list_entry(record_id, number, id_string, value, states):
     else:
         states = 'na'
 
-    print("0x%04x | %3s | %-16s | %9s | %s" % (record_id, number,
+    print("0x%04x | %3s | %-18s | %9s | %s" % (record_id, number,
                                                id_string, value, states))
 
 
@@ -175,8 +175,8 @@ def cmd_sdr_list(ipmi, args):
     elif device_id.supports_function('sensor'):
         iter_fct = ipmi.device_sdr_entries
 
-    print("SDR-ID |     | Device String    |")
-    print("=======|=====|==================|====================")
+    print("SDR-ID |     | Device String      |")
+    print("=======|=====|====================|====================")
 
     for s in iter_fct():
         try:
@@ -200,7 +200,7 @@ def cmd_sdr_list(ipmi, args):
         except pyipmi.errors.CompletionCodeError as e:
             if s.type in (pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD,
                           pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD):
-                print('0x{:04x} | {:3d} | {:16s} | ERR: CC=0x{:02x}'.format(
+                print('0x{:04x} | {:3d} | {:18s} | ERR: CC=0x{:02x}'.format(
                       s.id,
                       s.number,
                       s.device_id_string,
