@@ -163,6 +163,7 @@ class Aardvark(object):
                 pass
 
             retries += 1
+            time.sleep(retries*0.2)
 
         else:
             raise IpmiTimeoutError()
