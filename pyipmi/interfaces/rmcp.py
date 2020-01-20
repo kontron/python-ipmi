@@ -32,7 +32,7 @@ from ..logger import log
 from ..interfaces.ipmb import (IpmbHeaderReq, encode_ipmb_msg,
                                encode_bridged_message, decode_bridged_message,
                                rx_filter)
-from ..utils import check_completion_code
+from ..utils import check_completion_code, py3_array_tobytes
 
 
 CLASS_NORMAL_MSG = 0x00
@@ -262,7 +262,7 @@ class IpmiMsg(object):
         else:
             raise NotSupportedError('authentication type %s' % auth_type)
 
-        pdu += array('B', [data_len]).tostring()
+        pdu += py3_array_tobytes(array('B', [data_len]))
 
         if sdu is not None:
             pdu += sdu

@@ -25,7 +25,7 @@ from ..errors import IpmiTimeoutError
 from ..logger import log
 from ..msgs import encode_message, decode_message, create_message
 from ..msgs.constants import CC_OK
-from ..utils import py3dec_unic_bytes_fix, ByteBuffer
+from ..utils import py3dec_unic_bytes_fix, ByteBuffer, py3_array_tobytes
 
 
 class Ipmitool(object):
@@ -49,9 +49,9 @@ class Ipmitool(object):
                                interface_type)
 
         self.re_completion_code = re.compile(
-                b"Unable to send RAW command \(.*rsp=(0x[0-9a-f]+)\)")
+                br"Unable to send RAW command \(.*rsp=(0x[0-9a-f]+)\)")
         self.re_timeout = re.compile(
-                b"Unable to send RAW command \(.*cmd=0x[0-9a-f]+\)")
+                br"Unable to send RAW command \(.*cmd=0x[0-9a-f]+\)")
 
         self._session = None
 
@@ -135,7 +135,7 @@ class Ipmitool(object):
         log().debug('IPMI RX: {:s}'.format(
             ''.join('%02x ' % b for b in array('B', data))))
 
-        return data.tostring()
+        return py3_array_tobytes(data)
 
     def send_and_receive(self, req):
         log().debug('IPMI Request [%s]', req)
@@ -144,7 +144,7 @@ class Ipmitool(object):
         req_data.push_string(encode_message(req))
 
         rsp_data = self.send_and_receive_raw(req.target, req.lun, req.netfn,
-                                             req_data.tostring())
+                                             py3_array_tobytes(req_data))
 
         rsp = create_message(req.netfn + 1, req.cmdid, req.group_extension)
         decode_message(rsp, rsp_data)
