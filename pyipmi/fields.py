@@ -5,6 +5,7 @@
 import array
 
 from .errors import DecodingError
+from .utils import py3_array_tobytes
 
 
 class VersionField(object):
@@ -38,10 +39,10 @@ class VersionField(object):
         """`data` is array.array"""
         self.major = data[0]
 
-        if data[1] is 0xff:
+        if data[1] == 0xff:
             self.minor = data[1]
         elif data[1] <= 0x99:
-            self.minor = int(data[1:2].tostring().decode('bcd+'))
+            self.minor = int(py3_array_tobytes(data[1:2]).decode('bcd+'))
         else:
             raise DecodingError()
 

@@ -58,7 +58,7 @@ class Lan(object):
                              revision_only=0):
         req = create_request_by_name('GetLanConfigurationParameters')
         req.command.get_parameter_revision_only = revision_only
-        if revision_only is not 1:
+        if revision_only != 1:
             req.command.channel_number = channel
             req.parameter_selector = parameter_selector
             req.set_selector = set_selector

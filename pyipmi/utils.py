@@ -21,25 +21,42 @@ from .msgs import constants
 from .errors import DecodingError, CompletionCodeError
 
 
+_PY3 = (sys.version_info >= (3,))
+
+
 def py3enc_unic_bytes_fix(dat):
     # python 3 unicode fix
-    if isinstance(dat, str) and int(sys.version[0]) > 2:
+    if isinstance(dat, str) and _PY3:
         dat = dat.encode('raw_unicode_escape')
     return dat
 
 
 def py3dec_unic_bytes_fix(dat):
     # python 3 unicode fix
-    if int(sys.version[0]) > 2:
+    if _PY3:
         return dat.decode('raw_unicode_escape')
     return dat
 
 
 def bytes2(dat, enc):
     # python 2-3 workaround
-    if int(sys.version[0]) > 2:
+    if _PY3:
         return bytes(dat, enc)
     return dat
+
+
+def py3_array_frombytes(msg, data):
+    if _PY3:
+        return msg.frombytes(data)
+    else:
+        return msg.fromstring(data)
+
+
+def py3_array_tobytes(msg):
+    if _PY3:
+        return msg.tobytes()
+    else:
+        return msg.tostring()
 
 
 def check_completion_code(cc):
@@ -74,12 +91,15 @@ class ByteBuffer(object):
         return value
 
     def push_string(self, value):
-        self.array.fromstring(value)
+        if _PY3 and isinstance(value, str):
+            # Encode Unicode to UTF-8
+            value = value.encode()
+        py3_array_frombytes(self.array, value)
 
     def pop_string(self, length):
         string = self.array[0:length]
         del self.array[0:length]
-        return string.tostring()
+        return py3_array_tobytes(string)
         # return py3dec_unic_bytes_fix(string.tostring())
 
     def pop_slice(self, length):
@@ -91,7 +111,7 @@ class ByteBuffer(object):
         return c
 
     def tostring(self):
-        return self.array.tostring()
+        return py3_array_tobytes(self.array)
 
     def extend(self, data):
         self.array.extend(data)
@@ -123,7 +143,7 @@ def bcd_decode(encoded_input):
     chars = list()
     try:
         for data in encoded_input:
-            if int(sys.version[0]) == 2:
+            if not _PY3:
                 data = ord(data)
             chars.append(BCD_MAP[data >> 4 & 0xf] + BCD_MAP[data & 0xf])
         return (''.join(chars), len(encoded_input) * 2)
@@ -132,12 +152,13 @@ def bcd_decode(encoded_input):
 
 
 def bcd_search(name):
-    if name != 'bcd+':
+    # Python 3.9 normalizes 'bcd+' as 'bcd_'
+    if name not in ('bcd+', 'bcd'):
         return None
     return codecs.CodecInfo(name='bcd+', encode=bcd_encode, decode=bcd_decode)
 
 
 def is_string(string):
-    if sys.version_info[0] >= 3:
+    if _PY3:
         return isinstance(string, str)
     return isinstance(string, basestring)

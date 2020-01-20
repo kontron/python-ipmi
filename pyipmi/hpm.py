@@ -29,7 +29,7 @@ from .errors import CompletionCodeError, HpmError, IpmiTimeoutError
 from .msgs import create_request_by_name
 from .msgs import constants
 from .utils import check_completion_code, bcd_search, chunks
-from .utils import py3dec_unic_bytes_fix, bytes2 as bytes
+from .utils import py3dec_unic_bytes_fix, bytes2 as bytes, py3_array_tobytes
 from .state import State
 from .fields import VersionField
 
@@ -203,7 +203,7 @@ class Hpm(object):
             try:
                 status = self.get_upgrade_status()
                 if status.command_in_progress is not expected_cmd \
-                        and status.command_in_progress is not 0x34:
+                        and status.command_in_progress != 0x34:
                     pass
                 if status.last_completion_code \
                         == CC_LONG_DURATION_CMD_IN_PROGRESS:
@@ -474,9 +474,11 @@ class ComponentPropertyCurrentVersion(ComponentProperty):
 class ComponentPropertyDescriptionString(ComponentProperty):
 
     def _from_rsp_data(self, data):
-        self.description = py3dec_unic_bytes_fix(array('B', data).tostring())
+        descr = py3_array_tobytes(array('B', data))
+        descr = py3dec_unic_bytes_fix(descr)
         # strip '\x00'
-        self.description = self.description.replace('\0', '')
+        descr = descr.replace('\0', '')
+        self.description = descr
 
 
 class ComponentPropertyRollbackVersion(ComponentProperty):

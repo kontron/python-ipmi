@@ -10,6 +10,7 @@ from pyipmi import Target
 from pyipmi.session import Session
 from pyipmi.interfaces.rmcp import (AsfMsg, AsfPing, AsfPong, IpmiMsg,
                                     Rmcp, RmcpMsg)
+from pyipmi.utils import py3_array_tobytes
 
 
 class TestRmcpMsg:
@@ -83,7 +84,7 @@ class TestIpmiMsg:
         eq_(psw, b'admin\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
 
     def test_ipmimsg_pack_with_data(self):
-        data = array.array('B', (1, 2, 3, 4)).tostring()
+        data = py3_array_tobytes(array.array('B', (1, 2, 3, 4)))
         m = IpmiMsg()
         pdu = m.pack(data)
         eq_(pdu, b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x01\x02\x03\x04')

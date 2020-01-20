@@ -20,6 +20,7 @@ from ..logger import log
 from ..msgs import (create_message, create_request_by_name,
                     encode_message, decode_message, constants)
 from ..utils import check_completion_code
+from ..utils import py3_array_tobytes, py3_array_frombytes
 
 
 def checksum(data):
@@ -62,7 +63,7 @@ class IpmbHeaderReq(IpmbHeader):
         data.append(self.rq_sa)
         data.append(self.rq_seq << 2 | self.rq_lun)
         data.append(self.cmd_id)
-        return data.tostring()
+        return py3_array_tobytes(data)
 
     def decode(self):
         raise NotImplementedError()
@@ -93,14 +94,13 @@ def encode_ipmb_msg(header, data):
     Returns the message as bytestring.
     """
     msg = array('B')
-
-    msg.fromstring(header.encode())
+    py3_array_frombytes(msg, header.encode())
     if data is not None:
         a = array('B')
-        a.fromstring(data)
+        py3_array_frombytes(a, data)
         msg.extend(a)
     msg.append(checksum(msg[3:]))
-    return msg.tostring()
+    return py3_array_tobytes(msg)
 
 
 def encode_send_message(payload, rq_sa, rs_sa, channel, seq, tracking=1):

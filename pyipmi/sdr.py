@@ -374,13 +374,13 @@ class SdrFullSensorRecord(SdrCommon):
         elif capabilities & THRESHOLD_MASK == THRESHOLD_IS_FIXED:
             self.capabilities.append('threshold_fixed')
         # sensor event message control support
-        if (capabilities & 0x03) is 0:
+        if (capabilities & 0x03) == 0:
             pass
-        if (capabilities & 0x03) is 1:
+        if (capabilities & 0x03) == 1:
             pass
-        if (capabilities & 0x03) is 2:
+        if (capabilities & 0x03) == 2:
             pass
-        if (capabilities & 0x03) is 3:
+        if (capabilities & 0x03) == 3:
             pass
 
     def _from_data(self, data):
