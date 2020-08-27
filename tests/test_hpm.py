@@ -3,6 +3,7 @@
 
 import os
 
+import nose
 from nose.tools import eq_, ok_
 
 from pyipmi.hpm import (ComponentProperty, ComponentPropertyDescriptionString,
@@ -91,6 +92,8 @@ def test_upgradeactionrecord_create_from_data():
 def test_upgrade_image():
     path = os.path.dirname(os.path.abspath(__file__))
     hpm_file = os.path.join(path, 'hpm_bin/firmware.hpm')
+    if not os.path.isfile(hpm_file):
+        raise nose.SkipTest("HPM binary file '%s' is missing." % (hpm_file))
     image = UpgradeImage(hpm_file)
     ok_(isinstance(image.actions[0], UpgradeActionRecordPrepare))
     ok_(isinstance(image.actions[1], UpgradeActionRecordUploadForUpgrade))
