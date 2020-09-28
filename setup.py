@@ -72,7 +72,6 @@ setup(name=name,
           'mock',
       ],
       install_requires=[
-          'markdown',
           'future',
       ],
 )
