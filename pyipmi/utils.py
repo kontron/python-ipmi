@@ -110,6 +110,9 @@ class ByteBuffer(object):
         self.__delslice__(0, length)
         return c
 
+    def tobytes(self):
+        return self.array.tobytes()
+
     def tostring(self):
         return py3_array_tobytes(self.array)
 
