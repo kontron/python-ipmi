@@ -328,6 +328,7 @@ class Rmcp(object):
         self.keep_alive_interval = keep_alive_interval
         self._stop_keep_alive = None
         self._q = Queue()
+        self.transaction_lock = threading.Lock()
 
     def _send_rmcp_msg(self, sdu, class_of_msg):
         rmcp = RmcpMsg(class_of_msg)
@@ -519,22 +520,23 @@ class Rmcp(object):
         else:
             tx_data = encode_ipmb_msg(header, payload)
 
-        self._send_ipmi_msg(tx_data)
+        with self.transaction_lock:
+            self._send_ipmi_msg(tx_data)
 
-        received = False
-        while received is False:
-            if not self._q.empty():
-                rx_data = self._q.get()
-            else:
-                rx_data = self._receive_ipmi_msg()
+            received = False
+            while received is False:
+                if not self._q.empty():
+                    rx_data = self._q.get()
+                else:
+                    rx_data = self._receive_ipmi_msg()
 
-            if array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE:
-                rx_data = decode_bridged_message(rx_data)
+                if array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE:
+                    rx_data = decode_bridged_message(rx_data)
 
-            received = rx_filter(header, rx_data)
+                received = rx_filter(header, rx_data)
 
-            if not received:
-                self._q.put(rx_data)
+                if not received:
+                    self._q.put(rx_data)
 
         return rx_data[6:-1]
 
