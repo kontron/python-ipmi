@@ -123,10 +123,8 @@ class Ipmitool(object):
             output = py3dec_unic_bytes_fix(output)
 
             output_lines = output.split('\n')
-            # strip 'Close Session command failed' lines
-            output_lines = [l for l in output_lines
-                            if not l.startswith(
-                                'Close Session command failed')]
+            # strip any error messages
+            output_lines = [l for l in output_lines if 'failed' not in l]
             output = ''.join(output_lines).replace('\r', '').strip()
             if len(output):
                 for value in output.split(' '):
