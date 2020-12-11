@@ -7,6 +7,7 @@ from nose.tools import eq_, raises
 from pyipmi.errors import IpmiTimeoutError
 from pyipmi.interfaces import Ipmitool
 from pyipmi import Session, Target
+from pyipmi.utils import py3_array_tobytes
 
 
 class TestIpmitool:
@@ -150,3 +151,29 @@ class TestIpmitool:
         mock.assert_called_once_with('ipmitool -I serial-terminal '
                                      '-D /dev/tty2:115200 -t 0x20 -l 0 '
                                      'raw 0x06 0x01')
+
+    def test_parse_output_rsp(self):
+        test_str = b' 12 34 56 78 \r\n d0 0f af fe de ad be ef\naa 55\r\nbb    \n'
+        cc, rsp = self._interface._parse_output(test_str)
+        eq_(cc, None)
+        eq_(py3_array_tobytes(rsp), b'\x12\x34\x56\x78\xd0\x0f\xaf\xfe\xde\xad\xbe\xef\xaa\x55\xbb')
+
+    def test_parse_output_rsp_suppressed_error(self):
+        test_str = b'Get HPM.x Capabilities request failed, compcode = c9\n'\
+                   b' 12 34 56 78 \r\n d0 0f af fe de ad be ef\naa 55\r\nbb    \n'
+        cc, rsp = self._interface._parse_output(test_str)
+        eq_(cc, None)
+        eq_(py3_array_tobytes(rsp), b'\x12\x34\x56\x78\xd0\x0f\xaf\xfe\xde\xad\xbe\xef\xaa\x55\xbb')
+
+    def test_parse_output_cc(self):
+        test_str = b'Unable to send RAW command (channel=0x0 netfn=0x6 lun=0x0 cmd=0x1 rsp=0xcc): Ignore Me\n'
+        cc, rsp = self._interface._parse_output(test_str)
+        eq_(cc, 0xcc)
+        eq_(rsp, None)
+
+    def test_parse_output_cc_suppressed_error(self):
+        test_str = b'Get HPM.x Capabilities request failed, compcode = c9\n'\
+                   b'Unable to send RAW command (channel=0x0 netfn=0x6 lun=0x0 cmd=0x1 rsp=0xcc): Ignore Me\n'
+        cc, rsp = self._interface._parse_output(test_str)
+        eq_(cc, 0xcc)
+        eq_(rsp, None)
