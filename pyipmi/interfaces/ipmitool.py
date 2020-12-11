@@ -49,9 +49,9 @@ class Ipmitool(object):
                                interface_type)
 
         self.re_completion_code = re.compile(
-                br"Unable to send RAW command \(.*rsp=(0x[0-9a-f]+)\)")
+                r"Unable to send RAW command \(.*rsp=(0x[0-9a-f]+)\)")
         self.re_timeout = re.compile(
-                br"Unable to send RAW command \(.*cmd=0x[0-9a-f]+\)")
+                r"Unable to send RAW command \(.*cmd=0x[0-9a-f]+\)")
 
         self._session = None
 
@@ -90,8 +90,36 @@ class Ipmitool(object):
 
         return accessible
 
-    def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
+    def _parse_output(self, output):
+        cc, rsp = None, None
+        hexstr = ''
 
+        for line in py3dec_unic_bytes_fix(output).split('\n'):
+            # Don't try to parse ipmitool error messages
+            if 'failed' in line:
+                continue
+
+            # Check for timeout
+            if self.re_timeout.match(line):
+                raise IpmiTimeoutError()
+
+            # Check for completion code
+            match_completion_code = self.re_completion_code.match(line)
+            if match_completion_code:
+                cc = int(match_completion_code.group(1), 16)
+                break
+
+            hexstr += line.replace('\r', '').strip() + ' '
+
+        hexstr = hexstr.strip()
+        if len(hexstr):
+            rsp = array('B', [
+                int(value, 16) for value in hexstr.split(' ')
+            ])
+
+        return cc, rsp
+
+    def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
         if self._interface_type in ['lan', 'lanplus']:
             cmd = self._build_ipmitool_cmd(target, lun, netfn, raw_bytes)
         elif self._interface_type in ['open']:
@@ -104,31 +132,19 @@ class Ipmitool(object):
                                self._interface_type)
 
         output, rc = self._run_ipmitool(cmd)
+        cc, rsp = self._parse_output(output)
 
-        # check for errors
-        match_completion_code = self.re_completion_code.match(output)
-        match_timeout = self.re_timeout.match(output)
         data = array('B')
-        if match_completion_code:
-            cc = int(match_completion_code.group(1), 16)
+
+        if cc is not None:
             data.append(cc)
-        elif match_timeout:
-            raise IpmiTimeoutError()
         else:
             if rc != 0:
                 raise RuntimeError('ipmitool failed with rc=%d' % rc)
             # completion code
             data.append(CC_OK)
-
-            output = py3dec_unic_bytes_fix(output)
-
-            output_lines = output.split('\n')
-            # strip any error messages
-            output_lines = [l for l in output_lines if 'failed' not in l]
-            output = ''.join(output_lines).replace('\r', '').strip()
-            if len(output):
-                for value in output.split(' '):
-                    data.append(int(value, 16))
+            if rsp:
+                data.extend(rsp)
 
         log().debug('IPMI RX: {:s}'.format(
             ''.join('%02x ' % b for b in array('B', data))))
