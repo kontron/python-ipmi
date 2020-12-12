@@ -15,6 +15,8 @@ Tested Devices
 * Kontron CompactPCI boards
 * Pigeon Point Shelf Manager
 * HPE iLO3/iLO4
+* N.A.T. NAT-MCH
+* DESY MMC STAMP & related AMCs (DAMC-FMC2ZUP, DAMC-FMC1Z7IO)
 
 Requirements
 ------------
