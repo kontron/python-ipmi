@@ -23,7 +23,8 @@ from .state import State
 from .msgs.chassis import \
         CONTROL_POWER_DOWN, CONTROL_POWER_UP, CONTROL_POWER_CYCLE, \
         CONTROL_HARD_RESET, CONTROL_DIAGNOSTIC_INTERRUPT, \
-        CONTROL_SOFT_SHUTDOWN
+        CONTROL_SOFT_SHUTDOWN, \
+        BOOT_OPTION_LEGACY, BOOT_OPTION_EFI, BOOT_DEVICE_PXE, BOOT_DEVICE_DISK \
 
 
 class Chassis(object):
@@ -36,10 +37,39 @@ class Chassis(object):
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def chassis_control_power_down(self):
+    def set_boot_options(self, persistent_boot_option, boot_device):
+        req = create_request_by_name('SetSystemBootOptions')
+        req.parameter_selector.boot_options = 5
+        req.parameter_selector.parameter_valid = 0
+        req.data_1.valid_flag = 1
+        # intersted field
+        req.data_1.persistent_boot_option = persistent_boot_option
+        req.data_1.bios_boot_efi = 0
+        req.data_3.ignore = 0
+        req.data_4.ignore = 0
+        req.data_5.ignore = 0
+        req.data_2.lock_reset_buttons = 1
+        req.data_2.screen_blank = 1
+        # intersted field
+        req.data_2.boot_device = boot_device
+        req.data_2.lock_keyboard = 1
+        req.data_2.cmos_clear = 1
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
+    def get_boot_options(self):
+        req = create_request_by_name('GetSystemBootOptions')
+        req.parameter_selector.boot_options = 5
+        req.set_selector.boot_options = 0
+        req.block_selector.boot_options = 0
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return ChassisBootOptions(rsp)
+
+    def chassis_control_power_down_krub(self):
         self.chassis_control(CONTROL_POWER_DOWN)
 
-    def chassis_control_power_up(self):
+    def chassis_control_power_up_krub(self):
         self.chassis_control(CONTROL_POWER_UP)
 
     def chassis_control_power_cycle(self):
@@ -54,6 +84,20 @@ class Chassis(object):
     def chassis_control_soft_shutdown(self):
         self.chassis_control(CONTROL_SOFT_SHUTDOWN)
 
+class ChassisBootOptions(State):
+  completion_code = None
+  parameter_valid = None
+  boot_options = None
+  parameter_version = None
+  # only interested in data_2
+  data_2 = {
+    'boot_device': None
+  }
+  def _from_response(self, rsp):
+        self.parameter_version = bool(rsp.parameter_version.version)
+        self.parameter_valid = rsp.parameter_validator.is_parameter_valid
+        self.boot_options = rsp.parameter_validator.boot_options
+        self.data_2['boot_device'] = rsp.data_2.boot_device
 
 class ChassisStatus(State):
     power_on = None

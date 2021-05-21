@@ -188,6 +188,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
             retry -= 1
             try:
                 rsp = self.interface.send_and_receive(req)
+                print("response received", retry, req.requester)
                 break
             except CompletionCodeError as e:
                 if e.cc == msgs.constants.CC_NODE_BUSY:

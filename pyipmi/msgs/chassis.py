@@ -24,12 +24,19 @@ from . import Bitfield
 from . import CompletionCode
 from . import Optional
 
+# Control power
 CONTROL_POWER_DOWN = 0
 CONTROL_POWER_UP = 1
 CONTROL_POWER_CYCLE = 2
 CONTROL_HARD_RESET = 3
 CONTROL_DIAGNOSTIC_INTERRUPT = 4
 CONTROL_SOFT_SHUTDOWN = 5
+
+# System boot options
+BOOT_OPTION_LEGACY = 0
+BOOT_OPTION_EFI = 1
+BOOT_DEVICE_PXE = 1
+BOOT_DEVICE_DISK = 3
 
 
 @register_message_class
@@ -120,6 +127,84 @@ class ChassisControlRsp(Message):
         CompletionCode(),
     )
 
+@register_message_class
+class GetSystemBootOptionsReq(Message):
+    __cmdid__ = constants.CMDID_GET_SYSTEM_BOOT_OPTIONS
+    __netfn__ = constants.NETFN_CHASSIS
+    __fields__ = (
+        Bitfield('parameter_selector', 1,
+                 Bitfield.Bit('boot_options', 7),
+                 Bitfield.ReservedBit(1, 0)),
+        Bitfield('set_selector', 1,
+                 Bitfield.Bit('boot_options', 8)),
+        Bitfield('block_selector', 1,
+                 Bitfield.Bit('boot_options', 8)),
+    )
+
+@register_message_class
+class GetSystemBootOptionsRsp(Message):
+    __cmdid__ = constants.CMDID_GET_SYSTEM_BOOT_OPTIONS
+    __netfn__ = constants.NETFN_CHASSIS | 1
+    __fields__ = (
+        CompletionCode(),
+        Bitfield('parameter_version', 1,
+                 Bitfield.Bit('version', 4),
+                 Bitfield.ReservedBit(4, 0)),
+        Bitfield('parameter_validator', 1,
+                 Bitfield.Bit('boot_options', 7),
+                 Bitfield.Bit('is_parameter_valid', 1)),
+        # Boot flags (semi-volatiles)
+        Bitfield('data_1', 1,
+                 Bitfield.Bit('ignore', 8)),
+        Bitfield('data_2', 1,
+                 Bitfield.Bit('lock_reset_buttons', 1),
+                 Bitfield.Bit('screen_blank', 1),
+                 Bitfield.Bit('boot_device', 4),
+                 Bitfield.Bit('lock_keyboard', 1),
+                 Bitfield.Bit('cmos_clear', 1)),
+        Bitfield('data_3', 1,
+                 Bitfield.Bit('ignore', 8)),
+        Bitfield('data_4', 1,
+                 Bitfield.Bit('ignore', 8)),
+        Bitfield('data_5', 1,
+                 Bitfield.Bit('ignore', 8)),
+    )
+
+@register_message_class
+class SetSystemBootOptionsReq(Message):
+    __cmdid__ = constants.CMDID_SET_SYSTEM_BOOT_OPTIONS
+    __netfn__ = constants.NETFN_CHASSIS
+    __fields__ = (
+        Bitfield('parameter_selector', 1,
+                 Bitfield.Bit('boot_options', 7),
+                 Bitfield.ReservedBit(1, 0)),
+        # boot flags (semi vi)
+         Bitfield('data_1', 1,
+                 Bitfield.ReservedBit(5, 0),
+                 Bitfield.Bit('bios_boot_efi', 1),
+                 Bitfield.Bit('persistent_boot_option', 1),
+                 Bitfield.Bit('valid_flag', 1)),
+        Bitfield('data_2', 1,
+                 Bitfield.Bit('lock_reset_buttons', 1),
+                 Bitfield.Bit('screen_blank', 1),
+                 Bitfield.Bit('boot_device', 4),
+                 Bitfield.Bit('lock_keyboard', 1),
+                 Bitfield.Bit('cmos_clear', 1)),
+        Bitfield('data_3', 1,
+                 Bitfield.Bit('ignore', 8)),
+        Bitfield('data_4', 1,
+                 Bitfield.Bit('ignore', 8)),
+        Bitfield('data_5', 1,
+                 Bitfield.Bit('ignore', 8)),
+    )
+
+@register_message_class
+class SetSystemBootOptionsRsp(Message):
+    __cmdid__ = constants.CMDID_SET_SYSTEM_BOOT_OPTIONS
+    __netfn__ = constants.NETFN_CHASSIS | 1
+    __fields__ = (
+        CompletionCode(),
+    )
 
 @register_message_class
 class GetPohCounterReq(Message):
