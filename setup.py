@@ -69,7 +69,7 @@ setup(name=name,
           ]
       },
       test_suite='tests',
-      tests_requires=[
+      tests_require=[
           'nose',
           'mock',
       ],
