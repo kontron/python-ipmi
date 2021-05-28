@@ -68,7 +68,7 @@ class Hpm(object):
 
     @staticmethod
     def _get_component_count(components):
-        """Return the number of components"""
+        """Return the number of components."""
         return bin(components).count('1')
 
     def get_target_upgrade_capabilities(self):
@@ -109,7 +109,8 @@ class Hpm(object):
         self.send_message_with_name('AbortFirmwareUpgrade')
 
     def initiate_upgrade_action(self, components_mask, action):
-        """ Initiate Upgrade Action
+        """Initiate Upgrade Action.
+
         components:
         action:
             ACTION_BACKUP_COMPONENT = 0x00
@@ -117,7 +118,6 @@ class Hpm(object):
             ACTION_UPLOAD_FOR_UPGRADE = 0x02
             ACTION_UPLOAD_FOR_COMPARE = 0x03
         """
-
         if action in (ACTION_UPLOAD_FOR_UPGRADE, ACTION_UPLOAD_FOR_COMPARE):
             if self._get_component_count(components_mask) != 1:
                 raise HpmError("more than 1 component not support for action")
@@ -127,8 +127,7 @@ class Hpm(object):
 
     def initiate_upgrade_action_and_wait(self, components_mask, action,
                                          timeout=2, interval=0.1):
-        """ Initiate Upgrade Action and wait for
-            long running command. """
+        """Initiate Upgrade Action and wait for long running command."""
         try:
             self.initiate_upgrade_action(components_mask, action)
         except CompletionCodeError as e:
@@ -149,8 +148,7 @@ class Hpm(object):
         return 22
 
     def upload_binary(self, binary, timeout=2, interval=0.1, retry=3):
-        """ Upload all firmware blocks from binary and wait for
-            long running command. """
+        """Upload all firmware blocks from a binary."""
         block_number = 0
         block_size = self._determine_max_block_size()
 
@@ -180,8 +178,7 @@ class Hpm(object):
 
     def finish_upload_and_wait(self, component, length,
                                timeout=2, interval=0.1):
-        """ Finish the firmware upload process and wait for
-            long running command. """
+        """Finish, upload and for the firmware."""
         try:
             rsp = self.finish_firmware_upload(component, length)
             check_completion_code(rsp.completion_code)
@@ -224,8 +221,7 @@ class Hpm(object):
 
     def activate_firmware_and_wait(self, rollback_override=None,
                                    timeout=2, interval=1):
-        """ Activate the new uploaded firmware and wait for
-            long running command. """
+        """Activate and wait for the new uploaded firmware."""
         try:
             self.activate_firmware(rollback_override)
         except CompletionCodeError as e:

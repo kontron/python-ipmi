@@ -47,13 +47,13 @@ def get_sdr_chunk_helper(send_fn, req, reserve_fn, retry=5):
 
 
 def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
-    """Helper function to retrieve the sdr data using the specified
-    functions.
+    """Helper function to retrieve the sdr data.
+
+    A specified helper function is used to retrieve the chunks.
 
     This can be used for SDRs from the Sensor Device or form the SDR
     repository.
     """
-
     if reservation_id is None:
         reservation_id = reserve_fn()
 
@@ -133,9 +133,9 @@ def _clear_repository(reserve_fn, clear_fn, ctrl, retry, reservation):
 
 def clear_repository_helper(reserve_fn, clear_fn, retry=5, reservation=None):
     """Helper function to start repository erasure and wait until finish.
+
     This helper is used by clear_sel and clear_sdr_repository.
     """
-
     if reservation is None:
         reservation = reserve_fn()
 

@@ -31,6 +31,8 @@ except RuntimeError: # python 3
 
 
 class Aardvark(object):
+    """This interface uses an I2C USB adapter."""
+
     NAME = 'aardvark'
 
     def __init__(self, slave_address=0x20, port=0, serial_number=None,
@@ -194,7 +196,6 @@ class Aardvark(object):
 
         Returns the IPMI message response.
         """
-
         log().debug('IPMI Request [%s]', req)
 
         rx_data = self._send_and_receive(target=req.target,

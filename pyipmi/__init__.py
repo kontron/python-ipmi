@@ -56,18 +56,22 @@ def create_connection(interface):
 
 
 class Requester(object):
-    '''The Requester class represents an IPMI device which initiates a
-    request/response message exchange.
-    '''
+    """The Requester class.
+
+    This represents an IPMI device which initiates a request/response
+    message exchange.
+    """
 
     def __init__(self, ipmb_address):
         self.ipmb_address = ipmb_address
 
 
 class NullRequester(object):
-    '''The NullRequester is used for interfaces which doesn't require a
-    valid requester.
-    '''
+    """The NullRequester class.
+
+    This requester is used for interfaces which doesn't require a valid
+    requester.
+    """
 
     @property
     def ipmb_address(self):
@@ -76,6 +80,7 @@ class NullRequester(object):
 
 class Routing(object):
     """The Target class represents an IPMI target."""
+
     def __init__(self, rq_sa, rs_sa, channel):
         self.rq_sa = rq_sa
         self.rs_sa = rs_sa
@@ -88,17 +93,18 @@ class Routing(object):
 
 
 class Target(object):
-    '''The Target class represents an IPMI target.'''
+    """The Target class represents an IPMI target."""
+
     routing = None
     ipmb_address = None
 
     def __init__(self, ipmb_address=None, routing=None):
-        """
+        """Initializer for the Target class.
+
         `ipmb_address` is the IPMB target address
         `routing` is the bridging information used to build send message
         commands.
         """
-
         if ipmb_address:
             self.ipmb_address = ipmb_address
 

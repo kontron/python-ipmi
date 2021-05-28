@@ -321,7 +321,6 @@ class Message(object):
         Optional keyword arguments corresponts to members to set (matching
         fields in self.__fields__, or 'data').
         """
-
         # create message fields
         if hasattr(self, '__fields__'):
             self._create_fields()

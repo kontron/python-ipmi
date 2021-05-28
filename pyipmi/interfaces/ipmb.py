@@ -24,6 +24,7 @@ from ..utils import py3_array_tobytes, py3_array_frombytes
 
 
 def checksum(data):
+    """Calculate the checksum."""
     csum = 0
     for b in data:
         csum += b
@@ -42,8 +43,8 @@ class IpmbHeader(object):
     *-------*--------------*----------*-------*---------------*--------*
     | rq_sa | netfn/rq_lun | checksum | rs_sa | rq_seq/rs_lun | cmd_id |
     *-------*--------------*----------*-------*---------------*--------*
-
     """
+
     rs_sa = None
     rs_lun = None
     rq_sa = None
@@ -55,7 +56,10 @@ class IpmbHeader(object):
 
 
 class IpmbHeaderReq(IpmbHeader):
+    """Representation of the IPMI request message header."""
+
     def encode(self):
+        """Encode the header."""
         data = array('B')
         data.append(self.rs_sa)
         data.append(self.netfn << 2 | self.rs_lun)
@@ -66,14 +70,19 @@ class IpmbHeaderReq(IpmbHeader):
         return py3_array_tobytes(data)
 
     def decode(self):
+        """Decode the header."""
         raise NotImplementedError()
 
 
 class IpmbHeaderRsp(IpmbHeader):
+    """Representation of the IPMI response message header."""
+
     def encode(self):
+        """Encode the header."""
         raise NotImplementedError()
 
     def decode(self, data):
+        """Decode the header."""
         data = array('B', data)
         self.rq_sa = data[0]
         self.netfn = data[1] >> 2
@@ -142,7 +151,6 @@ def encode_bridged_message(routing, header, payload, seq):
 
     Returns the encoded send message as bytestring
     """
-
     # change header requester addresses for bridging
     header.rq_sa = routing[-1].rq_sa
     header.rs_sa = routing[-1].rs_sa
@@ -165,7 +173,6 @@ def decode_bridged_message(rx_data):
 
     Returns the decoded message as bytestring
     """
-
     while array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE:
         rsp = create_message(constants.NETFN_APP + 1,
                              constants.CMDID_SEND_MESSAGE, None)
@@ -191,7 +198,6 @@ def rx_filter(header, data):
     header: the header to compare with
     data: the received message as bytestring
     """
-
     rsp_header = IpmbHeaderRsp()
     rsp_header.decode(data)
 

@@ -91,7 +91,7 @@ class Sel(object):
                 break
 
     def get_sel_entries(self):
-        '''Returns all SEL entries as a list.'''
+        """Return all SEL entries as a list."""
         return list(self.sel_entries())
 
 

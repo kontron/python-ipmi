@@ -36,7 +36,7 @@ class VersionField(object):
         return self.version_to_string()
 
     def _decode_data(self, data):
-        """`data` is array.array"""
+        """`data` is array.array."""
         self.major = data[0]
 
         if data[1] == 0xff:

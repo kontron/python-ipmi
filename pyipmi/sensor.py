@@ -112,8 +112,7 @@ class Sensor(object):
         return (rsp.next_record_id, rsp.record_data)
 
     def get_device_sdr(self, record_id, reservation_id=None):
-        """Collects all data from the sensor device to get the SDR
-        specified by record id.
+        """Collect all data from the sensor device to get the SDR.
 
         `record_id` the Record ID.
         `reservation_id=None` can be set. if None the reservation ID will
@@ -127,7 +126,9 @@ class Sensor(object):
         return sdr.SdrCommon.from_data(record_data, next_id)
 
     def device_sdr_entries(self):
-        """A generator that returns the SDR list. Starting with ID=0x0000 and
+        """A generator that returns the SDR list.
+
+        Starting with ID=0x0000 and
         end when ID=0xffff is returned.
         """
         reservation_id = self.reserve_device_sdr_repository()
@@ -141,19 +142,16 @@ class Sensor(object):
             record_id = record.next_id
 
     def get_device_sdr_list(self, reservation_id=None):
-        """Returns the complete SDR list.
-        """
+        """Return the complete SDR list."""
         return list(self.device_sdr_entries())
 
     def rearm_sensor_events(self, sensor_number):
-        """Rearm sensor events for the given sensor number.
-        """
+        """Rearm sensor events for the given sensor number."""
         self.send_message_with_name('RearmSensorEvents',
                                     sensor_number=sensor_number)
 
     def get_sensor_reading(self, sensor_number, lun=0):
-        """Returns the sensor reading at the assertion states for the given
-        sensor number.
+        """Return the sensor reading at the assertion states.
 
         `sensor_number`
 
@@ -177,7 +175,7 @@ class Sensor(object):
     def set_sensor_thresholds(self, sensor_number, lun=0,
                               unr=None, ucr=None, unc=None,
                               lnc=None, lcr=None, lnr=None):
-        """Set the sensor thresholds that are not 'None'
+        """Set the sensor thresholds that are not 'None'.
 
         `sensor_number`
         `unr` for upper non-recoverable

@@ -215,8 +215,11 @@ class IpmiMsg(object):
         return struct.unpack("<I", struct.pack(">I", seq))[0]
 
     def _padd_password(self):
-        """The password/key is 0 padded to 16-bytes for all specified
-        authentication types."""
+        """Padd the password.
+
+        The password/key is 0 padded to 16-bytes for all specified
+        authentication types.
+        """
         password = self.session._auth_password
         if isinstance(password, str):
             password = str.encode(password)

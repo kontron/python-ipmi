@@ -29,8 +29,9 @@ from ..utils import py3dec_unic_bytes_fix, ByteBuffer, py3_array_tobytes
 
 
 class Ipmitool(object):
-    """This interface uses the ipmitool raw command to "emulate" a RMCP
-    session.
+    """This interface uses the ipmitool raw command.
+
+    This "emulates" a RMCP session by using raw commands.
 
     It uses the session information to assemble the correct ipmitool
     parameters. Therefore, a session has to be established before any request
@@ -255,9 +256,7 @@ class Ipmitool(object):
 
     @staticmethod
     def _run_ipmitool(cmd):
-        """Legacy call of ipmitool (will be removed in future).
-        """
-
+        """Legacy call of ipmitool (will be removed in future)."""
         log().debug('Running ipmitool "%s"', cmd)
 
         child = Popen(cmd, shell=True, stdout=PIPE)

@@ -124,12 +124,11 @@ class DeviceId(State):
         return string
 
     def supports_function(self, name):
-        """Returns if a function is supported.
+        """Return if a function is supported.
 
         `name` is one of 'SENSOR', 'SDR_REPOSITORY', 'SEL', 'FRU_INVENTORY',
         'IPMB_EVENT_RECEIVER', 'IPMB_EVENT_GENERATOR', 'BRIDGE', 'CHASSIS'.
         """
-
         return name.lower() in self.supported_functions
 
     def _from_response(self, rsp):

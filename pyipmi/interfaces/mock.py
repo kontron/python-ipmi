@@ -1,11 +1,5 @@
 class Mock(object):
-    """This interface uses the ipmitool raw command to "emulate" a RMCP
-    session.
-
-    It uses the session information to assemble the correct ipmitool
-    parameters. Therefore, a session has to be established before any request
-    can be sent.
-    """
+    """This interface is used as mock."""
 
     NAME = 'mock'
 

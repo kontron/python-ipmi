@@ -300,6 +300,7 @@ class FruDataMultiRecord(FruData):
 
 class FruDataUnknown(FruDataMultiRecord):
     """This class is used to indicate undecoded picmg record."""
+
     pass
 
 

@@ -90,8 +90,10 @@ class Sdr(object):
         return SdrCommon.from_data(record_data, next_id)
 
     def sdr_repository_entries(self):
-        """A generator that returns the SDR list. Starting with ID=0x0000 and
-        end when ID=0xffff is returned.
+        """A generator that returns the SDR list.
+
+        The Generator starts with ID=0x0000 and ends when ID=0xffff
+        is returned.
         """
         reservation_id = self.reserve_sdr_repository()
         record_id = 0
@@ -104,8 +106,7 @@ class Sdr(object):
             record_id = s.next_id
 
     def get_repository_sdr_list(self, reservation_id=None):
-        """Returns the complete SDR list.
-        """
+        """Return the complete SDR list."""
         return list(self.sdr_repository_entries())
 
     def partial_add_sdr(self, reservation_id, record_id,
@@ -122,10 +123,7 @@ class Sdr(object):
         return rsp.record_id
 
     def delete_sdr(self, record_id):
-        """
-        Deletes the sensor record specified by 'record_id'.
-        """
-
+        """Delete the sensor record specified by 'record_id'."""
         reservation_id = self.reserve_device_sdr_repository()
         rsp = self.send_message_with_name('DeleteSdr',
                                           reservation_id=reservation_id,
