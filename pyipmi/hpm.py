@@ -29,7 +29,7 @@ from .errors import CompletionCodeError, HpmError, IpmiTimeoutError
 from .msgs import create_request_by_name
 from .msgs import constants
 from .utils import check_completion_code, bcd_search, chunks
-from .utils import py3dec_unic_bytes_fix, bytes2 as bytes, py3_array_tobytes
+from .utils import py3dec_unic_bytes_fix, py3_array_tobytes
 from .state import State
 from .fields import VersionField
 
@@ -614,7 +614,6 @@ class UpgradeActionRecord(object):
         if data:
             (self.action, self.components, self.checksum) \
                 = struct.unpack('BBB', data[0:3])
-            #    = struct.unpack('BBB', bytes(data[0:3], 'raw_unicode_escape'))
             self.length = 3
 
     @staticmethod
@@ -651,7 +650,6 @@ class UpgradeActionRecordUploadForUpgrade(UpgradeActionRecord):
     def __init__(self, data=None):
         UpgradeActionRecord.__init__(self, data)
         if data:
-            # data = bytes(data, 'raw_unicode_escape')
             self.firmware_version = \
                 VersionField(
                     data[3:3 + VersionField.VERSION_WITH_AUX_FIELD_LEN])

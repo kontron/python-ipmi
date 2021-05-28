@@ -38,13 +38,6 @@ def py3dec_unic_bytes_fix(dat):
     return dat
 
 
-def bytes2(dat, enc):
-    # python 2-3 workaround
-    if _PY3:
-        return bytes(dat, enc)
-    return dat
-
-
 def py3_array_frombytes(msg, data):
     if _PY3:
         return msg.frombytes(data)
