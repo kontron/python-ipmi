@@ -17,7 +17,7 @@ def test_checksum():
     eq_(checksum([1, 2, 3, 4, 5]), 256-15)
 
 
-def test_header_encode():
+def test_header_req_encode():
     header = IpmbHeaderReq()
     header.rs_lun = 0
     header.rs_sa = 0x72
