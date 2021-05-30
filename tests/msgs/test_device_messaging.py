@@ -328,6 +328,20 @@ def test_get_channel_authentication_capabilities_rsp():
     eq_(m.status.kg, 0)
 
 
+def test_get_session_challenge_rsp():
+    m = pyipmi.msgs.device_messaging.GetSessionChallengeRsp()
+    data = encode_message(m)
+
+
+def test_get_session_challenge_rsp_cc_not_ok():
+    m = pyipmi.msgs.device_messaging.GetSessionChallengeRsp()
+    m.completion_code = 0xc1
+    m.temporary_session_id = 0x11121314
+    m.challenge_string = '0123456789abcdef'
+    data = encode_message(m)
+    eq_(data, b'\xc1\x14\x13\x12\x110123456789abcdef')
+
+
 def test_get_session_challenge_req():
     m = pyipmi.msgs.device_messaging.GetSessionChallengeReq()
     m.authentication.type = 1
