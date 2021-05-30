@@ -69,9 +69,18 @@ class IpmbHeaderReq(IpmbHeader):
         data.append(self.cmd_id)
         return py3_array_tobytes(data)
 
-    def decode(self):
+    def decode(self, data):
         """Decode the header."""
-        raise NotImplementedError()
+        msg = array('B')
+        py3_array_frombytes(msg, data)
+        self.rq_sa = msg[0]
+        self.netfn = msg[1] >> 2
+        self.rq_lun = msg[1] & 3
+        self.checksum = msg[2]
+        self.rs_sa = msg[3]
+        self.rq_seq = msg[4] >> 2
+        self.rs_lun = msg[4] & 3
+        self.cmd_id = msg[5]
 
 
 class IpmbHeaderRsp(IpmbHeader):

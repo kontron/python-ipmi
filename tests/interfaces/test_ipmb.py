@@ -3,13 +3,14 @@
 
 from array import array
 
-from nose.tools import eq_, ok_
+from nose.tools import eq_, ok_, raises
 
 from pyipmi import Target
 from pyipmi.interfaces.ipmb import (checksum, IpmbHeaderReq, IpmbHeaderRsp,
                                     encode_send_message, encode_bridged_message,
                                     encode_ipmb_msg, decode_bridged_message,
                                     rx_filter)
+#from pyipmi.errors import NotImplementedError
 
 
 def test_checksum():
@@ -27,6 +28,22 @@ def test_header_encode():
     header.cmd_id = 1
     data = header.encode()
     eq_(data, b'\x72\x18\x76\x20\x09\x01')
+
+
+def test_header_req_decode():
+    header = IpmbHeaderReq()
+    data = header.decode(b'\x72\x19\x76\x20\x08\x01')
+    eq_(header.rq_sa, 0x72)
+    eq_(header.rq_lun, 1)
+    eq_(header.rs_sa, 0x20)
+    eq_(header.rs_lun, 0)
+    eq_(header.netfn, 6)
+
+
+@raises(NotImplementedError)
+def test_header_rsp_encode():
+    header = IpmbHeaderRsp()
+    data = header.encode()
 
 
 def test_header_rsp_decode():
