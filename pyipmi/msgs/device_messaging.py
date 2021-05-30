@@ -302,7 +302,7 @@ class GetSessionChallengeRsp(Message):
     __fields__ = (
         CompletionCode(),
         UnsignedInt('temporary_session_id', 4),
-        String('challenge_string', 16, 0),
+        String('challenge_string', 16, '\x00' * 16),
     )
 
 
