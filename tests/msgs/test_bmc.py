@@ -20,7 +20,7 @@ def test_getdeviceid_decode_rsp_with_cc():
     eq_(m.completion_code, 0xc0)
 
 
-def test_getdeviceid_decode_valid_res():
+def test_getdeviceid_decode_valid_rsp():
     m = pyipmi.msgs.bmc.GetDeviceIdRsp()
     decode_message(m, b'\x00\x0c\x89\x00\x00\x02\x3d\x98'
                       b'\x3a\x00\xbe\x14\x04\x00\x02\x00')
@@ -45,7 +45,7 @@ def test_getdeviceid_decode_valid_res():
     eq_(m.auxiliary, array('B', [4, 0, 2, 0]))
 
 
-def test_getdeviceid_decode_valid_res_wo_aux():
+def test_getdeviceid_decode_valid_rsp_wo_aux():
     m = pyipmi.msgs.bmc.GetDeviceIdRsp()
     decode_message(m, b'\x00\x0c\x89\x00\x00\x02\x3d\x98'
                       b'\x3a\x00\xbe\x14')
