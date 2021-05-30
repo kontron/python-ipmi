@@ -9,6 +9,11 @@ import pyipmi.msgs.bmc
 from pyipmi.msgs import decode_message
 
 
+def test_getdeviceid_decode_req():
+    m = pyipmi.msgs.bmc.GetDeviceIdReq()
+    decode_message(m, b'')
+
+
 def test_getdeviceid_decode_rsp_with_cc():
     m = pyipmi.msgs.bmc.GetDeviceIdRsp()
     decode_message(m, b'\xc0')
