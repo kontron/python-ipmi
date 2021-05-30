@@ -63,7 +63,7 @@ class MessageRegistry(object):
         return self.registry[(netfn, cmdid, group_extension)](*args, **kwargs)
 
     def create_response(self, req):
-        return self.create(self, req.netfn + 1, req.cmdid, req.group_extension)
+        return self.create(req.netfn + 1, req.cmdid, req.group_extension)
 
     def create_request_by_name(self, name, *args, **kwargs):
         return self.registry[name + "Req"](*args, **kwargs)
