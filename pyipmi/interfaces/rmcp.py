@@ -170,6 +170,14 @@ class AsfPong(AsfMsg):
         self.supported_entities = 0
         self.supported_interactions = 0
 
+    def pack(self):
+        pdu = struct.pack(self.DATA_FORMAT,
+                          self.oem_iana_enterprise_number,
+                          self.oem_defined,
+                          self.supported_entities,
+                          self.supported_interactions)
+        return pdu
+
     def unpack(self, sdu):
         AsfMsg.unpack(self, sdu)
         # header_len = struct.calcsize(self.ASF_HEADER_FORMAT)
