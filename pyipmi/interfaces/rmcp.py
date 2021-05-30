@@ -348,7 +348,7 @@ class Rmcp(object):
         if self.seq_number != 255:
             self.seq_number = (self.seq_number + 1) % 254
 
-    def _receive(self):
+    def _receive_rmcp_msg(self):
         (pdu, _) = self._sock.recvfrom(4096)
         rmcp = RmcpMsg()
         sdu = rmcp.unpack(pdu)
@@ -365,7 +365,7 @@ class Rmcp(object):
         self._send_rmcp_msg(tx_data, RMCP_CLASS_IPMI)
 
     def _receive_ipmi_msg(self):
-        (_, class_of_msg, pdu) = self._receive()
+        (_, class_of_msg, pdu) = self._receive_rmcp_msg()
         if class_of_msg != RMCP_CLASS_IPMI:
             raise DecodingError('invalid class field in ASF message')
         msg = IpmiMsg()
@@ -379,7 +379,7 @@ class Rmcp(object):
         self._send_rmcp_msg(msg.pack(), RMCP_CLASS_ASF)
 
     def _receive_asf_msg(self, cls):
-        (_, class_of_msg, data) = self._receive()
+        (_, class_of_msg, data) = self._receive_rmcp_msg()
         log().debug('ASF RX: msg')
         if class_of_msg != RMCP_CLASS_ASF:
             raise DecodingError('invalid class field in ASF message')
