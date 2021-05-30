@@ -372,7 +372,7 @@ class Message(object):
     def _decode(self, data):
         """Decode the bytestring message."""
         if not hasattr(self, '__fields__'):
-            raise NotImplementedError('You have to overwrite this method')
+            return
 
         data = ByteBuffer(data)
         cc = None
