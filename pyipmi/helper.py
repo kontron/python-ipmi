@@ -100,13 +100,6 @@ def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
     return (next_id, record_data)
 
 
-REPOSITORY_INITIATE_ERASE = 0xaa
-REPOSITORY_GET_ERASE_STATUS = 0x00
-
-REPOSITORY_ERASURE_IN_PROGRESS = 0x0
-REPOSITORY_ERASURE_COMPLETED = 0x1
-
-
 def _clear_repository(reserve_fn, clear_fn, ctrl, retry, reservation):
     while True:
         retry -= 1
@@ -123,7 +116,7 @@ def _clear_repository(reserve_fn, clear_fn, ctrl, retry, reservation):
             else:
                 check_completion_code(e.cc)
 
-        if in_progress == REPOSITORY_ERASURE_IN_PROGRESS:
+        if in_progress == constants.REPOSITORY_ERASURE_IN_PROGRESS:
             time.sleep(0.5)
             continue
 
@@ -141,13 +134,13 @@ def clear_repository_helper(reserve_fn, clear_fn, retry=5, reservation=None):
 
     # start erasure
     reservation = _clear_repository(reserve_fn, clear_fn,
-                                    REPOSITORY_INITIATE_ERASE, retry,
-                                    reservation)
+                                    constants.REPOSITORY_INITIATE_ERASE,
+                                    retry, reservation)
 
     # give some time to clear
     time.sleep(0.5)
 
     # wait until finish
     reservation = _clear_repository(reserve_fn, clear_fn,
-                                    REPOSITORY_GET_ERASE_STATUS, retry,
-                                    reservation)
+                                    constants.REPOSITORY_GET_ERASE_STATUS,
+                                    retry, reservation)
