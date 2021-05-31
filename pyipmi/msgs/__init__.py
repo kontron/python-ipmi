@@ -50,3 +50,4 @@ from . import sel
 from . import sensor
 from . import event
 from . import lan
+from . import vita
