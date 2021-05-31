@@ -27,6 +27,7 @@ class Session(object):
     PRIV_LEVEL_ADMINISTRATOR = 4
     PRIV_LEVEL_OEM = 5
 
+    session_id = None
     _interface = None
     _auth_type = AUTH_TYPE_NONE
     _auth_username = None
