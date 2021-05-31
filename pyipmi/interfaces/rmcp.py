@@ -64,6 +64,9 @@ def call_repeatedly(interval, func, *args):
 class RmcpMsg(object):
     RMCP_HEADER_FORMAT = '!BxBB'
     ASF_RMCP_V_1_0 = 6
+    version = None
+    seq_number = None
+    class_of_msg = None
 
     def __init__(self, class_of_msg=None):
         if class_of_msg is not None:
