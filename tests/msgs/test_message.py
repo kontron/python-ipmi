@@ -5,7 +5,8 @@ from nose.tools import eq_
 
 from array import array
 from pyipmi.utils import ByteBuffer
-from pyipmi.msgs.message import Message, UnsignedInt, RemainingBytes, String
+from pyipmi.msgs.message import (Bitfield, Message, UnsignedInt,
+                                 RemainingBytes, String)
 
 
 class TestMessage(object):
@@ -21,6 +22,15 @@ class TestMessage(object):
     def decode(self, data):
         data = ByteBuffer(data)
         self.field.decode(self, data)
+
+
+def test_bitfield_encode():
+    t = TestMessage(Bitfield('status', 1,
+                             Bitfield.Bit('erase_in_progress', 4),
+                             Bitfield.ReservedBit(4, 0),))
+    t.status.erase_in_progress = 1
+    byte_buffer = t.encode()
+    eq_(byte_buffer.array, array('B', [0x1]))
 
 
 def test_unsignedint_encode():
