@@ -4,11 +4,11 @@
 from mock import MagicMock, call
 from nose.tools import eq_
 
-from pyipmi.helper import (clear_repository_helper,
-                           REPOSITORY_ERASURE_COMPLETED,
-                           REPOSITORY_ERASURE_IN_PROGRESS,
-                           REPOSITORY_INITIATE_ERASE,
-                           REPOSITORY_GET_ERASE_STATUS)
+from pyipmi.helper import clear_repository_helper
+from pyipmi.msgs.constants import (REPOSITORY_ERASURE_COMPLETED,
+                                   REPOSITORY_ERASURE_IN_PROGRESS,
+                                   REPOSITORY_INITIATE_ERASE,
+                                   REPOSITORY_GET_ERASE_STATUS)
 
 
 def test_clear_repository_helper():

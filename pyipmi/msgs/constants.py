@@ -349,3 +349,9 @@ cc_err_cmd_specific_desc = {
               ' privilege limit',
     },
 }
+
+REPOSITORY_INITIATE_ERASE = 0xaa
+REPOSITORY_GET_ERASE_STATUS = 0x00
+
+REPOSITORY_ERASURE_IN_PROGRESS = 0x0
+REPOSITORY_ERASURE_COMPLETED = 0x1
