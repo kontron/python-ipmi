@@ -142,8 +142,8 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 .. _Total Phase: http://www.totalphase.com
 .. _ipmitool: http://sourceforge.net/projects/ipmitool/
-.. |BuildStatus| image:: https://travis-ci.org/kontron/python-ipmi.png?branch=master
-                 :target: https://travis-ci.org/kontron/python-ipmi
+.. |BuildStatus| image:: https://github.com/kontron/python-ipmi/actions/workflows/test.yml/badge.svg
+                 :target: https://github.com/kontron/python-ipmi/actions/workflows/test.yml
 .. |PyPiVersion| image:: https://badge.fury.io/py/python-ipmi.svg
                  :target: http://badge.fury.io/py/python-ipmi
 .. |Documentation| image:: https://readthedocs.org/projects/python-ipmi/badge/?version=latest
