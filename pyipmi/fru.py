@@ -361,7 +361,7 @@ class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
         if len(data) < 12:
             raise DecodingError('data too short')
         FruPicmgRecord._from_data(self, data)
-        maximum_current_output = ord(data[10]) | ord(data[11]) << 8
+        maximum_current_output = data[10] | data[11] << 8
         self.maximum_current_output = float(maximum_current_output/10)
 
 
