@@ -3,10 +3,10 @@
 import os
 
 import nose
-from nose.tools import eq_
+from nose.tools import eq_, ok_
 
-from pyipmi.fru import (FruData, InventoryCommonHeader,
-                        get_fru_inventory_from_file)
+from pyipmi.fru import (FruData, FruPicmgPowerModuleCapabilityRecord,
+                        InventoryCommonHeader, get_fru_inventory_from_file)
 
 
 def test_frudata_object():
@@ -62,3 +62,15 @@ def test_product_area():
     eq_(product_area.name.value, 'AM4010')
     eq_(product_area.serial_number.value, '0000000000000000000000000')
     eq_(product_area.part_number.value, '0012')
+
+
+def test_multirecord_with_power_module_capability_record():
+    path = os.path.dirname(os.path.abspath(__file__))
+    fru_file = os.path.join(path, 'fru_bin/vadatech_utc017.bin')
+    if not os.path.isfile(fru_file):
+        raise nose.SkipTest("FRU file '%s' is missing." % (fru_file))
+    fru = get_fru_inventory_from_file(fru_file)
+    eq_(len(fru.multirecord_area.records), 1)
+    record = fru.multirecord_area.records[0]
+    ok_(isinstance(record, FruPicmgPowerModuleCapabilityRecord))
+    eq_(record.maximum_current_output, 42.0)
