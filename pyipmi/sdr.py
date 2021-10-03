@@ -227,23 +227,20 @@ class SdrCommon(object):
     def from_data(data, next_id=None):
         sdr_type = data[3]
 
-        try:
-            cls = {
-                SDR_TYPE_FULL_SENSOR_RECORD:
-                    SdrFullSensorRecord,
-                SDR_TYPE_COMPACT_SENSOR_RECORD:
-                    SdrCompactSensorRecord,
-                SDR_TYPE_EVENT_ONLY_SENSOR_RECORD:
-                    SdrEventOnlySensorRecord,
-                SDR_TYPE_FRU_DEVICE_LOCATOR_RECORD:
-                    SdrFruDeviceLocator,
-                SDR_TYPE_MANAGEMENT_CONTROLLER_DEVICE_LOCATOR_RECORD:
-                    SdrManagementControllerDeviceLocator,
-                SDR_TYPE_OEM_SENSOR_RECORD:
-                    SdrOEMSensorRecord,
-            }[sdr_type]
-        except KeyError:
-            raise DecodingError('Unsupported SDR type(0x%02x)' % sdr_type)
+        cls = {
+            SDR_TYPE_FULL_SENSOR_RECORD:
+                SdrFullSensorRecord,
+            SDR_TYPE_COMPACT_SENSOR_RECORD:
+                SdrCompactSensorRecord,
+            SDR_TYPE_EVENT_ONLY_SENSOR_RECORD:
+                SdrEventOnlySensorRecord,
+            SDR_TYPE_FRU_DEVICE_LOCATOR_RECORD:
+                SdrFruDeviceLocator,
+            SDR_TYPE_MANAGEMENT_CONTROLLER_DEVICE_LOCATOR_RECORD:
+                SdrManagementControllerDeviceLocator,
+            SDR_TYPE_OEM_SENSOR_RECORD:
+                SdrOEMSensorRecord,
+        }.get(sdr_type, SdrUnknownSensorRecord)
 
         return cls(data, next_id)
 
@@ -627,3 +624,12 @@ class SdrOEMSensorRecord(SdrCommon):
 
         # record key bytes
         self._common_record_key(buffer.pop_slice(3))
+
+
+# Any SDR type not known or not implemented
+class SdrUnknownSensorRecord(SdrCommon):
+    def __init__(self, data=None, next_id=None):
+        super(SdrUnknownSensorRecord, self).__init__(data, next_id)
+
+    def __str__(self):
+        return 'Not supported yet.'
