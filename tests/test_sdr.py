@@ -6,7 +6,8 @@ from nose.tools import eq_, ok_, raises
 from pyipmi.errors import DecodingError
 from pyipmi.sdr import (SdrCommon, SdrFullSensorRecord, SdrCompactSensorRecord,
                         SdrEventOnlySensorRecord, SdrFruDeviceLocator,
-                        SdrManagementControllerDeviceLocator)
+                        SdrManagementControllerDeviceLocator,
+                        SdrUnknownSensorRecord)
 
 
 class TestSdrFullSensorRecord():
@@ -237,3 +238,9 @@ class TestSdrManagementControllerDeviceRecord():
                 0x30, 0x20]
         sdr = SdrManagementControllerDeviceLocator(data)
         eq_(sdr.device_id_string, b'A2:AM4220 ')
+
+
+def test_unknown_record_type():
+    data = [0x01, 0x0, 0x51, 0x0a, 0x0]
+    sdr = SdrCommon.from_data(data, 0xffff)
+    ok_(isinstance(sdr, SdrUnknownSensorRecord))
