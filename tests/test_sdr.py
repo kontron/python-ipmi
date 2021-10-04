@@ -170,7 +170,8 @@ class TestSdrFullSensorRecord():
                 0x8e, 0xa5, 0x04, 0x04, 0x00, 0x00, 0x00, 0xca,
                 0x41, 0x32, 0x3a, 0x56, 0x63, 0x63, 0x20, 0x31,
                 0x32, 0x56]
-        sdr = SdrFullSensorRecord(data)
+        sdr = SdrCommon.from_data(data)
+        ok_(isinstance(sdr, SdrFullSensorRecord))
         eq_(sdr.device_id_string, b'A2:Vcc 12V')
 
 
@@ -190,6 +191,7 @@ class TestSdrCommon():
 
 
 class TestSdrCompactSensorRecord():
+
     @raises(DecodingError)
     def test_invalid_length(self):
         data = (0, 0, 0, 0, 0)
@@ -202,7 +204,8 @@ class TestSdrCompactSensorRecord():
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xcd,
                 0x41, 0x34, 0x3a, 0x50, 0x72, 0x65, 0x73, 0x20,
                 0x53, 0x46, 0x50, 0x2d, 0x31]
-        SdrCompactSensorRecord(data)
+        sdr = SdrCommon.from_data(data)
+        ok_(isinstance(sdr, SdrCompactSensorRecord))
 
 
 @raises(DecodingError)
@@ -212,6 +215,7 @@ def test_sdreventonlysensorrecord():
 
 
 class TestSdrFruDeviceLocatorRecord():
+
     @raises(DecodingError)
     def test_invalid_length(self):
         data = (0, 0, 0, 0, 0)
@@ -222,10 +226,12 @@ class TestSdrFruDeviceLocatorRecord():
                 0x00, 0x00, 0x10, 0x02, 0xc2, 0x61, 0x00, 0xcc,
                 0x4b, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6e, 0x20,
                 0x4d, 0x43, 0x4d, 0x43]
-        SdrFruDeviceLocator(data)
+        sdr = SdrCommon.from_data(data)
+        ok_(isinstance(sdr, SdrFruDeviceLocator))
 
 
 class TestSdrManagementControllerDeviceRecord():
+
     @raises(DecodingError)
     def test_invalid_length(self):
         data = (0, 0, 0, 0, 0)
@@ -236,7 +242,8 @@ class TestSdrManagementControllerDeviceRecord():
                 0x12, 0x1b, 0x00, 0x01, 0x51, 0x12, 0x1b, 0xd0,
                 0x41, 0x32, 0x3a, 0x41, 0x4d, 0x34, 0x32, 0x32,
                 0x30, 0x20]
-        sdr = SdrManagementControllerDeviceLocator(data)
+        sdr = SdrCommon.from_data(data)
+        ok_(isinstance(sdr, SdrManagementControllerDeviceLocator))
         eq_(sdr.device_id_string, b'A2:AM4220 ')
 
 
