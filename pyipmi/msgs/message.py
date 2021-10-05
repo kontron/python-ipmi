@@ -23,6 +23,7 @@ from . import constants
 from ..utils import ByteBuffer
 from ..errors import (CompletionCodeError, EncodingError, DecodingError,
                       DescriptionError)
+from ..logger import log
 
 
 class BaseField(object):
@@ -306,6 +307,7 @@ class GroupExtensionIdentifier(UnsignedInt):
 
 class Message(object):
     RESERVED_FIELD_NAMES = ['cmdid', 'netfn', 'lun', 'group_extension']
+    _log_extra_bytes = False
 
     __default_lun__ = 0
     __group_extension__ = None
@@ -334,6 +336,10 @@ class Message(object):
         else:
             for (name, value) in kwargs.items():
                 self._set_field(name, value)
+
+    @classmethod
+    def log_when_extra_bytes(cls, enable):
+        cls._log_extra_bytes = enable
 
     def _set_field(self, name, value):
         raise NotImplementedError()
@@ -385,7 +391,11 @@ class Message(object):
                 break
 
         if (cc is None or cc == 0) and len(data) > 0:
-            raise DecodingError('Data has extra bytes')
+            msg = 'Data has extra bytes: {}'.format(list(data.array))
+            if self._log_extra_bytes:
+                log().warning(msg)
+            else:
+                raise DecodingError(msg)
 
     def _is_request(self):
         return self.__netfn__ & 1 == 0
