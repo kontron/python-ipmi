@@ -46,48 +46,54 @@ class Sel(object):
         clear_repository_helper(self.get_sel_reservation_id,
                                 self._clear_sel, retry)
 
+    def get_sel_entry(self, record_id, reservation=0):
+        ENTIRE_RECORD = 0xff
+        req = create_request_by_name('GetSelEntry')
+        req.reservation_id = reservation
+        req.record_id = record_id
+        req.offset = 0
+        self.max_req_len = ENTIRE_RECORD
+
+        record_data = ByteBuffer()
+
+        while True:
+            req.length = self.max_req_len
+            if (self.max_req_len != 0xff
+                    and (req.offset + req.length) > 16):
+                req.length = 16 - req.offset
+
+            rsp = self.send_message(req)
+            if rsp.completion_code == constants.CC_CANT_RET_NUM_REQ_BYTES:
+                if self.max_req_len == 0xff:
+                    self.max_req_len = 16
+                else:
+                    self.max_req_len -= 1
+                continue
+            else:
+                check_completion_code(rsp.completion_code)
+
+            record_data.extend(rsp.record_data)
+            req.offset = len(record_data)
+
+            if len(record_data) >= 16:
+                break
+
+        return (SelEntry(record_data), rsp.next_record_id)
+
     def sel_entries(self):
         """Generator which returns all SEL entries."""
-        ENTIRE_RECORD = 0xff
-        rsp = self.send_message_with_name('GetSelInfo')
-        if rsp.entries == 0:
+        START_SEL_RECORD_ID = 0
+        END_SEL_RECORD_ID = 0xffff
+        if self.get_sel_entries_count() == 0:
             return
+
         reservation_id = self.get_sel_reservation_id()
-        next_record_id = 0
+        next_record_id = START_SEL_RECORD_ID
         while True:
-            req = create_request_by_name('GetSelEntry')
-            req.reservation_id = reservation_id
-            req.record_id = next_record_id
-            req.offset = 0
-            self.max_req_len = ENTIRE_RECORD
-
-            record_data = ByteBuffer()
-            while True:
-                req.length = self.max_req_len
-                if (self.max_req_len != 0xff
-                        and (req.offset + req.length) > 16):
-                    req.length = 16 - req.offset
-
-                rsp = self.send_message(req)
-                if rsp.completion_code == constants.CC_CANT_RET_NUM_REQ_BYTES:
-                    if self.max_req_len == 0xff:
-                        self.max_req_len = 16
-                    else:
-                        self.max_req_len -= 1
-                    continue
-                else:
-                    check_completion_code(rsp.completion_code)
-
-                record_data.extend(rsp.record_data)
-                req.offset = len(record_data)
-
-                if len(record_data) >= 16:
-                    break
-
-            next_record_id = rsp.next_record_id
-
-            yield SelEntry(record_data)
-            if next_record_id == 0xffff:
+            (sel_entry, next_record_id) = self.get_sel_entry(next_record_id,
+                                                             reservation_id)
+            yield sel_entry
+            if next_record_id == END_SEL_RECORD_ID:
                 break
 
     def get_sel_entries(self):
