@@ -17,7 +17,7 @@
 
 from array import array
 
-from .errors import DecodingError
+from .errors import CompletionCodeError, DecodingError
 from .utils import check_completion_code, ByteBuffer
 from .msgs import create_request_by_name
 from .msgs import constants
@@ -45,6 +45,32 @@ class Sel(object):
     def clear_sel(self, retry=5):
         clear_repository_helper(self.get_sel_reservation_id,
                                 self._clear_sel, retry)
+
+    def delete_sel_entry(self, record_id, reservation=0):
+        rsp = self.send_message_with_name('DeleteSelEntry',
+                                          reservation_id=reservation,
+                                          record_id=record_id)
+        return rsp.record_id
+
+    def get_and_clear_sel_entry(self, record_id):
+        """Atomically gets and clears the specified SEL record"""
+        while True:
+            reservation = self.get_sel_reservation_id()
+            try:
+                sel_entry, _ = self.get_sel_entry(record_id, reservation)
+            except CompletionCodeError as e:
+                if e.cc == constants.CC_RES_CANCELED:
+                    continue
+                else:
+                    raise
+            try:
+                self.delete_sel_entry(record_id, reservation)
+            except CompletionCodeError as e:
+                if e.cc == constants.CC_RES_CANCELED:
+                    continue
+                else:
+                    raise
+            return sel_entry
 
     def get_sel_entry(self, record_id, reservation=0):
         ENTIRE_RECORD = 0xff
