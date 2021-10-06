@@ -179,6 +179,9 @@ class AsfPing(AsfMsg):
         if self.data:
             raise DecodingError('Data length is not zero')
 
+    def __str__(self):
+        return 'ping: ' + super(AsfMsg, self).__str__()
+
 
 class AsfPong(AsfMsg):
     DATA_FORMAT = '!IIBB6x'
