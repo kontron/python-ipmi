@@ -2,9 +2,37 @@
 # -*- coding: utf-8 -*-
 
 from nose.tools import eq_, ok_
+from mock import MagicMock
 
-from pyipmi.msgs.registry import create_response_by_name
+from pyipmi import interfaces, create_connection
+from pyipmi.msgs.registry import create_response_by_name, create_request_by_name
 from pyipmi.sel import SelEntry, SelInfo
+
+
+class TestSel(object):
+
+    def test_get_sel_entries(self):
+        rsps = list()
+        rsp = create_response_by_name('GetSelInfo')
+        rsp .entries = 1
+        rsps.append(rsp)
+        rsp = create_response_by_name('ReserveSel')
+        rsps.append(rsp)
+        rsp = create_response_by_name('GetSelEntry')
+        rsp.record_data = [0,0,SelEntry.TYPE_SYSTEM_EVENT,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        rsps.append(rsp)
+        rsp = create_response_by_name('GetSelEntry')
+        rsp.record_data = [0,0,SelEntry.TYPE_SYSTEM_EVENT,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        rsp.next_record_id = 0xffff
+        rsps.append(rsp)
+
+        mock_send_message = MagicMock(side_effect=rsps)
+        interface = interfaces.create_interface('mock')
+        ipmi = create_connection(interface)
+        ipmi.send_message = mock_send_message
+
+        entries = ipmi.get_sel_entries()
+        eq_(len(entries), 2)
 
 
 class TestSelInfo(object):
