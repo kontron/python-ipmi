@@ -339,6 +339,9 @@ class Message(object):
         raise NotImplementedError()
         # TODO walk along the properties..
 
+    def __str__(self):
+        return '{} [netfn={}, cmd={}, grp={}]'.format(type(self).__name__, self.netfn, self.cmdid, self.group_extension)
+
     def _create_fields(self):
         for field in self.__fields__:
             if field.name in self.RESERVED_FIELD_NAMES:
