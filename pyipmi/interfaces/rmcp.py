@@ -150,6 +150,23 @@ class AsfMsg(object):
             return ' '.join('%02x' % b for b in array('B', self.sdu))
         return ''
 
+    @staticmethod
+    def from_data(sdu):
+        asf = AsfMsg()
+        asf.unpack(sdu)
+
+        try:
+            cls = {
+                AsfMsg().ASF_TYPE_PRESENCE_PING: AsfPing,
+                AsfMsg().ASF_TYPE_PRESENCE_PONG: AsfPong,
+            }[asf.asf_type]
+        except KeyError:
+            raise DecodingError('Unsupported ASF type(0x%02x)' % asf.asf_type)
+
+        instance = cls()
+        instance.unpack(sdu)
+        return instance
+
 
 class AsfPing(AsfMsg):
     def __init__(self):
