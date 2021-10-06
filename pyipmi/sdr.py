@@ -195,8 +195,12 @@ class SdrCommon(object):
             self.next_id = next_id
 
     def __str__(self):
-        s = '["%-16s"] [%s]' % \
+        if hasattr(self, 'devide_id_string'):
+            s = '["%-16s"] [%s]' % \
             (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
+        else:
+            s = '[%s]' % \
+            (' '.join(['%02x' % b for b in self.data]))
         return s
 
     def _common_header(self, data):
