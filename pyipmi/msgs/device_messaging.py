@@ -180,6 +180,7 @@ class SendMessageReq(Message):
                  Bitfield.Bit('authenticated', 1, 0),
                  Bitfield.Bit('encrypted', 1, 0),
                  Bitfield.Bit('tracking', 2, 0),),
+        RemainingBytes('data'),
     )
 
 
