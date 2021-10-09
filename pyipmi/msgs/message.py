@@ -385,7 +385,11 @@ class Message(object):
                 break
 
         if (cc is None or cc == 0) and len(data) > 0:
-            raise DecodingError('Data has extra bytes')
+            self.on_extra_data()
+
+    def on_extra_data(self):
+        """What to do when not expected extra data is found in a message."""
+        raise DecodingError('Data has extra bytes')
 
     def _is_request(self):
         return self.__netfn__ & 1 == 0
