@@ -4,7 +4,7 @@
 from mock import MagicMock
 from nose.tools import eq_, raises
 
-from pyipmi.errors import IpmiTimeoutError
+from pyipmi.errors import IpmiTimeoutError, IpmiConnectionError
 from pyipmi.interfaces import Ipmitool
 from pyipmi import Session, Target
 from pyipmi.utils import py3_array_tobytes
@@ -176,4 +176,23 @@ class TestIpmitool:
                    b'Unable to send RAW command (channel=0x0 netfn=0x6 lun=0x0 cmd=0x1 rsp=0xcc): Ignore Me\n'
         cc, rsp = self._interface._parse_output(test_str)
         eq_(cc, 0xcc)
+        eq_(rsp, None)
+
+    @raises(IpmiConnectionError)
+    def test_parse_output_connection_error_rmcp_plus(self):
+        test_str = b'Error: Unable to establish IPMI v2 / RMCP+ session\n'
+        cc, rsp = self._interface._parse_output(test_str)
+        eq_(cc, 0xcc)
+        eq_(rsp, None)
+
+    @raises(IpmiConnectionError)
+    def test_parse_output_connection_error(self):
+        test_str = b'Error: Unable to establish LAN session'
+        cc, rsp = self._interface._parse_output(test_str)
+        eq_(rsp, None)
+
+    @raises(IpmiConnectionError)
+    def test_parse_output_connection_error_rmcp(self):
+        test_str = b'Error: Unable to establish IPMI v1.5 / RMCP session'
+        cc, rsp = self._interface._parse_output(test_str)
         eq_(rsp, None)

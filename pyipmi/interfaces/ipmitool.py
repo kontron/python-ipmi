@@ -21,7 +21,7 @@ from subprocess import Popen, PIPE
 from array import array
 
 from ..session import Session
-from ..errors import IpmiTimeoutError
+from ..errors import IpmiTimeoutError, IpmiConnectionError
 from ..logger import log
 from ..msgs import encode_message, decode_message, create_message
 from ..msgs.constants import CC_OK
@@ -53,6 +53,8 @@ class Ipmitool(object):
                 r"Unable to send RAW command \(.*rsp=(0x[0-9a-f]+)\)")
         self.re_timeout = re.compile(
                 r"Unable to send RAW command \(.*cmd=0x[0-9a-f]+\)")
+        self.re_unable_establish = re.compile(
+                r".*Unable to establish.*")
 
         self._session = None
 
@@ -103,6 +105,11 @@ class Ipmitool(object):
             # Check for timeout
             if self.re_timeout.match(line):
                 raise IpmiTimeoutError()
+
+            # Check for unable to establish session
+            if self.re_unable_establish.match(line):
+                raise IpmiConnectionError('ipmitool: {}'.format(line))
+
 
             # Check for completion code
             match_completion_code = self.re_completion_code.match(line)

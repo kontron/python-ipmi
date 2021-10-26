@@ -74,3 +74,12 @@ class DataNotFound(Exception):
 class HpmError(Exception):
     """HPM.1 error."""
     pass
+
+
+class IpmiConnectionError(Exception):
+    """Connection error."""
+    def __init__(self, msg=None):
+        self.msg = msg
+
+    def __str__(self):
+        return "{}".format(self.msg)
