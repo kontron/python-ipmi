@@ -110,7 +110,7 @@ ipmitool command:
 Compatibility
 -------------
 
-Python 2.7 and Python 3.x is currently supported.
+Both Python 2.7 and Python 3.x are currently supported.
 
 Contributing
 ------------
