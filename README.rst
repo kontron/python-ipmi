@@ -110,7 +110,7 @@ ipmitool command:
 Compatibility
 -------------
 
-Python 2.7 and Python 3.x is currently  supported.
+Python 2.7 and Python 3.x is currently supported.
 
 Contributing
 ------------
@@ -133,12 +133,12 @@ your option) any later version.
 
 This library is distributed in the hope that it will be useful, but WITHOUT
 ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
+FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public
 License for more details.
 
 You should have received a copy of the GNU Lesser General Public License
 along with this library; if not, write to the Free Software Foundation,
-Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 .. _Total Phase: http://www.totalphase.com
 .. _ipmitool: http://sourceforge.net/projects/ipmitool/
