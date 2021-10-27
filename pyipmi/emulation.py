@@ -242,9 +242,9 @@ def handle_ipmi_msg(config, sdu):
     group_id = _get_group_id(ipmi_sdu)
 
     try:
-        req = create_message(rx_header.netfn, rx_header.cmd_id, group_id)
+        req = create_message(rx_header.netfn, rx_header.cmdid, group_id)
     except KeyError:
-        log().debug('Cant create message: netfn 0x{:x} cmd: 0x{:x} group: {}'.format(rx_header.netfn, rx_header.cmd_id, group_id))
+        log().debug('Cant create message: netfn 0x{:x} cmd: 0x{:x} group: {}'.format(rx_header.netfn, rx_header.cmdid, group_id))
         # bytes are immutable ... so convert to change
         a = bytearray(ipmi_sdu)
         # set completion code . invalid command
@@ -271,7 +271,7 @@ def handle_ipmi_msg(config, sdu):
     tx_header.rq_seq = rx_header.rq_seq
     tx_header.rq_lun = rx_header.rs_lun
     tx_header.rq_sa = rx_header.rs_sa
-    tx_header.cmd_id = rsp.cmdid
+    tx_header.cmdid = rsp.cmdid
     tx_data = ipmb.encode_ipmb_msg(tx_header, data)
     log().debug('IPMI TX: {}: {:s}'.format(rsp,
             ' '.join('%02x' % b for b in array('B', tx_data))))
