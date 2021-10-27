@@ -47,7 +47,7 @@ class TestAardvark:
 #        header.rq_lun = 0
 #        header.rq_sa = 0x20
 #        header.netfn = 6
-#        header.cmd_id = 1
+#        header.cmdid = 1
 #
 #        rx_data = (0x1c, 0xc4, 0x72, 0x08, 0x1, 0x85)
 #

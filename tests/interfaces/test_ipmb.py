@@ -25,7 +25,7 @@ def test_header_req_encode():
     header.rq_lun = 1
     header.rq_sa = 0x20
     header.netfn = 6
-    header.cmd_id = 1
+    header.cmdid = 1
     data = header.encode()
     eq_(data, b'\x72\x18\x76\x20\x09\x01')
 
@@ -64,7 +64,7 @@ def test_encode_ipmb_msg():
     header.rq_lun = 0
     header.rq_sa = 0x20
     header.netfn = 6
-    header.cmd_id = 1
+    header.cmdid = 1
 
     eq_(encode_ipmb_msg(header, b'\xaa\xbb\xcc'),
         b'\x72\x18\x76\x20\x08\x01\xaa\xbb\xcc\xa6')
@@ -84,7 +84,7 @@ def test_encode_bridged_message():
     header.rs_lun = 0
     header.rq_seq = 0x11
     header.rq_lun = 0
-    header.cmd_id = 0xaa
+    header.cmdid = 0xaa
     data = encode_bridged_message(t.routing, header, payload, seq=0x22)
     eq_(data,
         b'\x20\x18\xc8\x81\x88\x34\x47\x72\x18\x76\x20\x44\xaa\xaa\xbb\x8d\x7c')
@@ -106,7 +106,7 @@ def test_rx_filter():
     header_req.rq_lun = 0
     header_req.rq_sa = 0x20
     header_req.netfn = 6
-    header_req.cmd_id = 1
+    header_req.cmdid = 1
 
     # requester and responder fields are twisted ... (sa and lun)
     header_rsp = IpmbHeaderReq()
@@ -116,7 +116,7 @@ def test_rx_filter():
     header_rsp.rq_lun = 1
     header_rsp.rq_sa = 0x72
     header_rsp.netfn = 6 + 1
-    header_rsp.cmd_id = 1
+    header_rsp.cmdid = 1
 
     rx_data = encode_ipmb_msg(header_rsp, b'\xaa\xbb\xcc')
 
