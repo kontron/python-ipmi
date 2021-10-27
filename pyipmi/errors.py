@@ -35,7 +35,7 @@ class IpmiTimeoutError(Exception):
 class CompletionCodeError(Exception):
     """IPMI completion code not OK."""
 
-    def __init__(self, cc, cmd_id=None):
+    def __init__(self, cc, cmdid=None):
         self.cc = cc
         self.cc_desc = self.find_cc_desc(cc)
 

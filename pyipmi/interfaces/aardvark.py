@@ -78,7 +78,7 @@ class Aardvark(object):
         header.rq_seq = self.next_sequence_number
         header.rq_lun = 0
         header.rq_sa = self.slave_address
-        header.cmd_id = 1
+        header.cmdid = 1
         self._send_raw(header, None)
         self._receive_raw(header)
         return True
@@ -151,7 +151,7 @@ class Aardvark(object):
         header.rq_seq = self.next_sequence_number
         header.rq_lun = 0
         header.rq_sa = self.slave_address
-        header.cmd_id = cmdid
+        header.cmdid = cmdid
 
         retries = 0
         while retries < self.max_retries:

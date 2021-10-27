@@ -35,14 +35,14 @@ class IpmbHeader(object):
     """Representation of the IPMI message header.
 
     Request:
-    *-------*--------------*----------*-------*---------------*--------*
-    | rs_sa | netfn/rs_lun | checksum | rq_sa | rq_seq/rq_lun | cmd_id |
-    *-------*--------------*----------*-------*---------------*--------*
+    *-------*--------------*----------*-------*---------------*-------*
+    | rs_sa | netfn/rs_lun | checksum | rq_sa | rq_seq/rq_lun | cmdid |
+    *-------*--------------*----------*-------*---------------*-------*
 
     Response:
-    *-------*--------------*----------*-------*---------------*--------*
-    | rq_sa | netfn/rq_lun | checksum | rs_sa | rq_seq/rs_lun | cmd_id |
-    *-------*--------------*----------*-------*---------------*--------*
+    *-------*--------------*----------*-------*---------------*-------*
+    | rq_sa | netfn/rq_lun | checksum | rs_sa | rq_seq/rs_lun | cmdid |
+    *-------*--------------*----------*-------*---------------*-------*
     """
 
     rs_sa = None
@@ -51,7 +51,7 @@ class IpmbHeader(object):
     rq_lun = None
     rq_seq = None
     netfn = None
-    cmd_id = None
+    cmdid = None
     checksum = None
 
 
@@ -66,7 +66,7 @@ class IpmbHeaderReq(IpmbHeader):
         data.append(checksum((self.rs_sa, data[1])))
         data.append(self.rq_sa)
         data.append(self.rq_seq << 2 | self.rq_lun)
-        data.append(self.cmd_id)
+        data.append(self.cmdid)
         return py3_array_tobytes(data)
 
     def decode(self, data):
@@ -80,7 +80,7 @@ class IpmbHeaderReq(IpmbHeader):
         self.rs_sa = msg[3]
         self.rq_seq = msg[4] >> 2
         self.rs_lun = msg[4] & 3
-        self.cmd_id = msg[5]
+        self.cmdid = msg[5]
 
 
 class IpmbHeaderRsp(IpmbHeader):
@@ -100,7 +100,7 @@ class IpmbHeaderRsp(IpmbHeader):
         self.rs_sa = data[3]
         self.rq_seq = data[4] >> 2
         self.rs_lun = data[4] & 3
-        self.cmd_id = data[5]
+        self.cmdid = data[5]
 
 
 def encode_ipmb_msg(header, data):
@@ -145,7 +145,7 @@ def encode_send_message(payload, rq_sa, rs_sa, channel, seq, tracking=1):
     header.rq_seq = seq
     header.rq_lun = 0
     header.rq_sa = rq_sa
-    header.cmd_id = req.__cmdid__
+    header.cmdid = req.__cmdid__
 
     return encode_ipmb_msg(header, data + payload)
 
@@ -221,7 +221,7 @@ def rx_filter(header, data):
         # rsp_header.rq_lun, header.rq_lun, 'request LUN mismatch'),
         (rsp_header.rs_lun, header.rs_lun, 'responder LUN mismatch'),
         (rsp_header.rq_seq, header.rq_seq, 'sequence number mismatch'),
-        (rsp_header.cmd_id, header.cmd_id, 'command id mismatch'),
+        (rsp_header.cmdid, header.cmdid, 'command id mismatch'),
     ]
 
     match = True
