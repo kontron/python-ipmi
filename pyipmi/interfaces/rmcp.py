@@ -545,7 +545,7 @@ class Rmcp(object):
         header.rq_seq = self.next_sequence_number
         header.rq_lun = 0
         header.rq_sa = self.slave_address
-        header.cmd_id = cmdid
+        header.cmdid = cmdid
 
         # Bridge message
         if target.routing:
