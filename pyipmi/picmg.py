@@ -235,7 +235,7 @@ class LinkDescriptor(State):
     STATE_ENABLE = picmg.LINK_STATE_ENABLE
 
     __properties__ = [
-        # (propery, description)
+        # (property, description)
         ('channel', ''),
         ('interface', ''),
         ('link_flags', ''),
@@ -339,7 +339,7 @@ class LedState(State):
     FUNCTION_LAMP_TEST = 4
 
     __properties__ = [
-        # (propery, description)
+        # (property, description)
         ('fru_id', ''),
         ('led_id', ''),
         ('local_state_available', ''),
@@ -450,7 +450,7 @@ class LedState(State):
 
 class GlobalStatus(State):
     __properties__ = [
-        # (propery, description)
+        # (property, description)
         ('role', ''),
         ('management_power_good', ''),
         ('payload_power_good', ''),
@@ -469,7 +469,7 @@ class GlobalStatus(State):
 
 class PowerChannelStatus(State):
     __properties__ = [
-        # (propery, description)
+        # (property, description)
         ('present', ''),
         ('management_power', ''),
         ('management_power_overcurrent', ''),
