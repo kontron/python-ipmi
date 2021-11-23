@@ -361,7 +361,7 @@ def cmd_picmg_get_portstate_all(ipmi, args):
                 (p, s) = ipmi.get_port_state(channel, interface)
                 print_link_state(p, s)
             except pyipmi.errors.CompletionCodeError as e:
-                if e.cc is 0xcc:
+                if e.cc == 0xcc:
                     continue
 
 
