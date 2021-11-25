@@ -14,14 +14,14 @@ class IPMBDev(object):
 
     NAME = 'ipmbdev'
 
-    def __init__(self, slave_address=0x20, port=0):
+    def __init__(self, slave_address=0x20, port='/dev/ipmb-0'):
         # TODO: slave address is currently not defined here
         self.slave_address = slave_address
         self.timeout = 0.25
         self.max_retries = 3
         self.next_sequence_number = 0
 
-        self._dev = os.open('/dev/ipmb-{}'.format(port), os.O_RDWR)
+        self._dev = os.open(port, os.O_RDWR)
 
     def raw_write(self, address, data):
         # self._dev.i2c_master_write(address, data)
