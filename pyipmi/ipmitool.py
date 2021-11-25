@@ -22,6 +22,7 @@ import sys
 import getopt
 import logging
 import traceback
+import pprint
 from array import array
 
 from collections import namedtuple
@@ -374,8 +375,21 @@ def cmd_picmg_get_portstate(ipmi, args):
     print_link_state(p, s)
 
 
+def cmd_picmg_getpower_channel_status(ipmi, args):
+    ret = ipmi.get_power_channel_status(int(args[0]))
+    pprint.pprint(vars(ret))
+
+
 def cmd_picmg_frucontrol_cold_reset(ipmi, args):
     ipmi.fru_control_cold_reset(0)
+
+
+def cmd_picmg_send_pm_heartbeat(ipmi, args):
+    ipmi.send_pm_heartbeat()
+
+
+def cmd_picmg_send_channel_power(ipmi, args):
+    ipmi.send_channel_power(int(args[0]))
 
 
 def usage(toplevel=False):
@@ -627,6 +641,9 @@ COMMANDS = (
         Command('picmg power get', cmd_picmg_get_power),
         Command('picmg portstate get', cmd_picmg_get_portstate),
         Command('picmg portstate getall', cmd_picmg_get_portstate_all),
+        Command('picmg channel status', cmd_picmg_getpower_channel_status),
+        Command('picmg send heartbeat', cmd_picmg_send_pm_heartbeat),
+        Command('picmg channel power', cmd_picmg_send_channel_power),
         Command('raw', cmd_raw),
         Command('hpm capabilities', cmd_hpm_capabilities),
         Command('hpm check', cmd_hpm_check_file),

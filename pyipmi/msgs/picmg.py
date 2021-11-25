@@ -694,6 +694,30 @@ class GetLocationInformationRsp(PicmgMessage):
 
 
 @register_message_class
+class SendPowerChannelControlReq(PicmgMessage):
+    __cmdid__ = constants.CMDID_POWER_CHANNEL_CONTROL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
+        UnsignedInt('channel', 1),
+        UnsignedInt('control', 1),
+        UnsignedInt('current_limit', 1),
+        UnsignedInt('primary_pm', 1),
+        UnsignedInt('backup_pm', 1),
+    )
+
+
+@register_message_class
+class SendPowerChannelControlRsp(PicmgMessage):
+    __cmdid__ = constants.CMDID_POWER_CHANNEL_CONTROL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
+    )
+
+
+@register_message_class
 class GetPowerChannelStatusReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_POWER_CHANNEL_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
@@ -719,6 +743,26 @@ class GetPowerChannelStatusRsp(PicmgMessage):
                  Bitfield.Bit('unidentified_fault', 1, 0),
                  Bitfield.ReservedBit(4),),
         RemainingBytes('data'),
+    )
+
+
+@register_message_class
+class SendPmHeartbeatReq(PicmgMessage):
+    __cmdid__ = constants.CMDID_PM_HEARTBEAT
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
+        UnsignedInt('timeout', 10),
+    )
+
+
+@register_message_class
+class SendPmHeartbeatRsp(PicmgMessage):
+    __cmdid__ = constants.CMDID_PM_HEARTBEAT
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
 
 
