@@ -23,10 +23,6 @@ class IpmbDev(object):
 
         self._dev = os.open(port, os.O_RDWR)
 
-    def raw_write(self, address, data):
-        # self._dev.i2c_master_write(address, data)
-        pass
-
     def establish_session(self, session):
         # just remember session parameters here
         self._session = session
