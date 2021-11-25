@@ -9,7 +9,7 @@ from ..logger import log
 from ..interfaces.ipmb import IpmbHeaderReq, checksum, rx_filter, encode_ipmb_msg
 
 
-class IPMBDev(object):
+class IpmbDev(object):
     """This interface uses ipmb-dev-int linux driver."""
 
     NAME = 'ipmbdev'
