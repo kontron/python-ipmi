@@ -493,6 +493,9 @@ def parse_interface_options(interface_name, options):
                 interface_options['interface_type'] = value
             else:
                 print('Warning: unknown option %s' % name)
+        elif interface_name == 'ipmbdev':
+            if name == 'port':
+                interface_options['port'] = value
 
     return interface_options
 
