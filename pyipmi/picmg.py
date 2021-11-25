@@ -178,6 +178,20 @@ class Picmg(object):
                                           power_channel_count=1)
         return PowerChannelStatus(rsp)
 
+    def send_channel_power(self, channel, enable, current_limit, primary_pm=1, backup_pm=0):
+        rsp = self.send_message_with_name('SendPowerChannelControl',
+                                          channel=channel,
+                                          control=5 if enable else 4,
+                                          current_limit=int(current_limit * 10),
+                                          primary_pm=primary_pm,
+                                          backup_pm=backup_pm
+                                          )
+        return rsp
+
+    def send_pm_heartbeat(self):
+        rsp = self.send_message_with_name('SendPmHeartbeat')
+        return rsp
+
     def set_signaling_class(self, interface, channel, signaling_class):
         req = create_request_by_name('SetSignalingClass')
         req.channel_info.channel_number = channel
