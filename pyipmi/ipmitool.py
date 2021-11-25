@@ -453,6 +453,9 @@ Aardvark interface options:
 
 Ipmitool interface options:
   interface_type    Set the interface type to be used (lan, lanplus, serial)
+
+Ipmbdev interface options:
+  port=<path>       Specify path to Linux IPMB device (/dev/ipmb-0 by default)
 '''[1:])
         print('Commands:')
 
