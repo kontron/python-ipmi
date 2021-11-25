@@ -7,7 +7,7 @@ Features
 --------
 * native RMCP interface
 * legacy RMCP interface (using ipmitool)
-* IPMB interface (using the `Total Phase`_ Aardvark)
+* IPMB interface (using the `Total Phase`_ Aardvark or ipmb-dev-int on Linux)
 
 Tested Devices
 --------------
@@ -22,6 +22,8 @@ Requirements
 ------------
 
 For IPMB interface a `Total Phase`_ Aardvark is needed.
+Another option is to use ipmb-dev-int driver on Linux with an I2C bus, driver of which supports slave mode:
+https://www.kernel.org/doc/html/latest/driver-api/ipmb.html
 
 Installation
 ------------
