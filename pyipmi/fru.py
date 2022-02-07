@@ -21,7 +21,7 @@ import os
 
 from .errors import DecodingError, CompletionCodeError
 from .msgs import constants
-from .utils import bcd_search, chunks
+from .utils import bcd_search, chunks, py3_array_tobytes
 
 codecs.register(bcd_search)
 
@@ -82,7 +82,7 @@ class Fru(object):
             data.extend(rsp.data)
             off += rsp.count
 
-        return data.tostring()
+        return py3_array_tobytes(data)
 
     def get_fru_inventory(self, fru_id=0):
         return FruInventory(self.read_fru_data(fru_id=fru_id))
