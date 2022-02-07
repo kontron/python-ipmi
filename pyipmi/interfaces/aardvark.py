@@ -21,6 +21,7 @@ from ..msgs import create_message, encode_message, decode_message
 from ..errors import IpmiTimeoutError
 from ..logger import log
 from ..interfaces.ipmb import IpmbHeaderReq, checksum, rx_filter, encode_ipmb_msg
+from ..utils import py3_array_tobytes
 
 try:
     import pyaardvark
@@ -170,7 +171,7 @@ class Aardvark(object):
         else:
             raise IpmiTimeoutError()
 
-        return rx_data.tostring()[5:-1]
+        return py3_array_tobytes(rx_data)[5:-1]
 
     def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
         """Interface function to send and receive raw message.
