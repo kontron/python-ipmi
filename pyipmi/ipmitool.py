@@ -28,6 +28,8 @@ from collections import namedtuple
 
 import pyipmi
 import pyipmi.interfaces
+from pyipmi.utils import py3_array_tobytes
+
 
 Command = namedtuple('Command', 'name fn')
 CommandHelp = namedtuple('CommandHelp', 'name arguments help')
@@ -292,7 +294,7 @@ def cmd_raw(ipmi, args):
 
     netfn = int(args[0], 0)
     raw_bytes = array('B', [int(d, 0) for d in args[1:]])
-    rsp = ipmi.raw_command(lun, netfn, raw_bytes.tostring())
+    rsp = ipmi.raw_command(lun, netfn, py3_array_tobytes(raw_bytes))
     print(' '.join('%02x' % d for d in array('B', rsp)))
 
 
