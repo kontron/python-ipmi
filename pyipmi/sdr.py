@@ -242,6 +242,8 @@ class SdrCommon(object):
                 SdrFruDeviceLocator,
             SDR_TYPE_MANAGEMENT_CONTROLLER_DEVICE_LOCATOR_RECORD:
                 SdrManagementControllerDeviceLocator,
+            SDR_TYPE_MANAGEMENT_CONTROLLER_CONFIRMATION_RECORD:
+                SdrManagementControllerConfirmationRecord,
             SDR_TYPE_OEM_SENSOR_RECORD:
                 SdrOEMSensorRecord,
         }.get(sdr_type, SdrUnknownSensorRecord)
@@ -599,6 +601,27 @@ class SdrManagementControllerDeviceLocator(SdrCommon):
         self._entity(buffer.pop_slice(2))
         self.oem = buffer.pop_unsigned_int(1)
         self._device_id_string(buffer)
+
+
+###
+# SDR type 0x13
+##################################################
+class SdrManagementControllerConfirmationRecord(SdrCommon):
+    def __init__(self, data=None, next_id=None):
+        super(SdrManagementControllerConfirmationRecord, self).__init__(
+                data, next_id)
+
+    def _from_data(self, data):
+        buffer = ByteBuffer(data[5:])
+        self.device_slave_address = buffer.pop_unsigned_int(1) >> 1
+        self.device_id = buffer.pop_unsigned_int(1)
+        self.channel_number = buffer.pop_unsigned_int(1)
+        self.firmware_revision_1 = buffer.pop_unsigned_int(1)
+        self.firmware_revision_2 = buffer.pop_unsigned_int(1)
+        self.ipmi_version = buffer.pop_unsigned_int(1)
+        self.manufacturer_id = buffer.pop_unsigned_int(3) & 0xfffff
+        self.product_id = buffer.pop_unsigned_int(2)
+        self.device_guid = buffer.pop_unsigned_int(16)
 
 
 ###

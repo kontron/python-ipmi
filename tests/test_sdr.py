@@ -7,6 +7,7 @@ from pyipmi.errors import DecodingError
 from pyipmi.sdr import (SdrCommon, SdrFullSensorRecord, SdrCompactSensorRecord,
                         SdrEventOnlySensorRecord, SdrFruDeviceLocator,
                         SdrManagementControllerDeviceLocator,
+                        SdrManagementControllerConfirmationRecord,
                         SdrUnknownSensorRecord)
 
 
@@ -245,6 +246,20 @@ class TestSdrManagementControllerDeviceRecord():
         sdr = SdrCommon.from_data(data)
         ok_(isinstance(sdr, SdrManagementControllerDeviceLocator))
         eq_(sdr.device_id_string, b'A2:AM4220 ')
+
+
+class TestSdrManagementControllerConfirmationRecord():
+        data = [0x45, 0x00, 0x51, 0x13, 0x1b, 0x20, 0x00, 0x01,
+                0x02, 0x01, 0x51, 0x4a, 0xc1, 0x62, 0x06, 0x80,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+        sdr = SdrCommon.from_data(data)
+        ok_(isinstance(sdr, SdrManagementControllerConfirmationRecord))
+        eq_(str(sdr), '[45 00 51 13 1b 20 00 01 02 01 51 4a c1 62 06 80 00 '
+                      '00 00 00 00 00 00 00 00 00 00 00 00 00 00 00]')
+        eq_(sdr.ipmi_version, 0x51)
+        eq_(sdr.manufacturer_id, 0x2c14a)
+        eq_(sdr.product_id, 0x8006)
 
 
 def test_unknown_record_type():
