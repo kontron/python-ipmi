@@ -195,7 +195,7 @@ class SdrCommon(object):
             self.next_id = next_id
 
     def __str__(self):
-        if hasattr(self, 'devide_id_string'):
+        if hasattr(self, 'device_id_string'):
             s = '["%-16s"] [%s]' % \
             (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
         else:
