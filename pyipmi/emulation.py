@@ -91,15 +91,20 @@ def handle_fru_inventory_are_info(config, req):
     try:
         fru_filename = config['fru'][req.fru_id]
     except KeyError:
-        log().debug('cannot find file for fru_id={} in config'.format(req.fru_id))
+        log().warning('cannot find frufile for fru_id={} in config'.format(req.fru_id))
         rsp.completion_code = constants.CC_PARAM_OUT_OF_RANGE
         return rsp
+    except TypeError:
+        log().warning('cannot find frufile for fru_id={} in config'.format(req.fru_id))
+        rsp.completion_code = constants.CC_REQ_DATA_NOT_PRESENT
+        return rsp
+
 
     try:
         statinfo = os.stat(fru_filename)
         rsp.area_size = statinfo.st_size
     except FileNotFoundError:
-        log().debug('cannot open file={} for fru_id={}'.format(fru_filename, req.fru_id))
+        log().warning('cannot open file={} for fru_id={}'.format(fru_filename, req.fru_id))
         rsp.completion_code = constants.CC_PARAM_OUT_OF_RANGE
         return rsp
 
@@ -156,6 +161,11 @@ def handle_clear_sdr_repositry(config, req):
 @register_message_handler("GetSdr")
 def handle_get_sdr(config, req):
     rsp = create_response_message(req)
+
+    if len(sdr_list) == 0:
+        log().warning('no SDR present')
+        rsp.completion_code = constants.CC_REQ_DATA_NOT_PRESENT
+        return rsp
 
     next_index = list(sdr_list.keys()).index(req.record_id) + 1
     try:
@@ -324,8 +334,8 @@ def main(args=None):
         with open(args.config, 'r') as stream:
             config = yaml.safe_load(stream)
 
-    if 'sdr' in config:
-        load_sdr_dump(config['sdr'])
+        if 'sdr' in config:
+            load_sdr_dump(config['sdr'])
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((UDP_IP, args.port))
