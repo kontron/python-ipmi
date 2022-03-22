@@ -201,7 +201,7 @@ def handle_ipmi_request_msg(config, req):
         fct = handler_registry[type(req)]
     except KeyError:
         rsp = create_response_message(req)
-        log().debug('no handler for: {}'.format(type(req)))
+        log().warning('no handler for: {}'.format(type(req)))
         rsp.completion_code = constants.CC_INV_CMD
         return rsp
 
@@ -244,7 +244,7 @@ def handle_ipmi_msg(config, sdu):
     try:
         req = create_message(rx_header.netfn, rx_header.cmdid, group_id)
     except KeyError:
-        log().debug('Cant create message: netfn 0x{:x} cmd: 0x{:x} group: {}'.format(rx_header.netfn, rx_header.cmdid, group_id))
+        log().warning('Cant create message: netfn 0x{:x} cmd: 0x{:x} group: {}'.format(rx_header.netfn, rx_header.cmdid, group_id))
         # bytes are immutable ... so convert to change
         a = bytearray(ipmi_sdu)
         # set completion code . invalid command
