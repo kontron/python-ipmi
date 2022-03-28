@@ -32,23 +32,44 @@ def test_header_req_encode():
 
 def test_header_req_decode():
     header = IpmbHeaderReq()
-    data = header.decode(b'\x72\x19\x76\x20\x08\x01')
+    header.decode(b'\x72\x19\x76\x20\x08\x01')
+    eq_(header.rs_sa, 0x72)
+    eq_(header.rs_lun, 1)
+    eq_(header.rq_sa, 0x20)
+    eq_(header.rq_lun, 0)
+    eq_(header.netfn, 6)
+
+    header = IpmbHeaderReq(data=b'\x72\x19\x76\x20\x08\x01')
+    eq_(header.rs_sa, 0x72)
+    eq_(header.rs_lun, 1)
+    eq_(header.rq_sa, 0x20)
+    eq_(header.rq_lun, 0)
+    eq_(header.netfn, 6)
+
+
+def test_header_rsp_encode():
+    header = IpmbHeaderRsp()
+    header.rs_lun = 0
+    header.rs_sa = 0x72
+    header.rq_seq = 2
+    header.rq_lun = 1
+    header.rq_sa = 0x20
+    header.netfn = 6
+    header.cmdid = 1
+    data = header.encode()
+    eq_(data, b'\x20\x19\xc7\x72\x08\x01')
+
+
+def test_header_rsp_decode():
+    header = IpmbHeaderRsp()
+    header.decode(b'\x72\x19\x76\x20\x08\x01')
     eq_(header.rq_sa, 0x72)
     eq_(header.rq_lun, 1)
     eq_(header.rs_sa, 0x20)
     eq_(header.rs_lun, 0)
     eq_(header.netfn, 6)
 
-
-@raises(NotImplementedError)
-def test_header_rsp_encode():
-    header = IpmbHeaderRsp()
-    data = header.encode()
-
-
-def test_header_rsp_decode():
-    header = IpmbHeaderRsp()
-    data = header.decode(b'\x72\x19\x76\x20\x08\x01')
+    header = IpmbHeaderRsp(data=b'\x72\x19\x76\x20\x08\x01')
     eq_(header.rq_sa, 0x72)
     eq_(header.rq_lun, 1)
     eq_(header.rs_sa, 0x20)

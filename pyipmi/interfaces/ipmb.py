@@ -45,6 +45,10 @@ class IpmbHeader(object):
     *-------*--------------*----------*-------*---------------*-------*
     """
 
+    def __init__(self, data=None):
+        if data:
+            self.decode(data)
+
     rs_sa = None
     rs_lun = None
     rq_sa = None
@@ -73,13 +77,13 @@ class IpmbHeaderReq(IpmbHeader):
         """Decode the header."""
         msg = array('B')
         py3_array_frombytes(msg, data)
-        self.rq_sa = msg[0]
+        self.rs_sa = msg[0]
         self.netfn = msg[1] >> 2
-        self.rq_lun = msg[1] & 3
+        self.rs_lun = msg[1] & 3
         self.checksum = msg[2]
-        self.rs_sa = msg[3]
+        self.rq_sa = msg[3]
         self.rq_seq = msg[4] >> 2
-        self.rs_lun = msg[4] & 3
+        self.rq_lun = msg[4] & 3
         self.cmdid = msg[5]
 
 
@@ -88,7 +92,14 @@ class IpmbHeaderRsp(IpmbHeader):
 
     def encode(self):
         """Encode the header."""
-        raise NotImplementedError()
+        data = array('B')
+        data.append(self.rq_sa)
+        data.append(self.netfn << 2 | self.rq_lun)
+        data.append(checksum((self.rq_sa, data[1])))
+        data.append(self.rs_sa)
+        data.append(self.rq_seq << 2 | self.rs_lun)
+        data.append(self.cmdid)
+        return py3_array_tobytes(data)
 
     def decode(self, data):
         """Decode the header."""
@@ -207,8 +218,7 @@ def rx_filter(header, data):
     header: the header to compare with
     data: the received message as bytestring
     """
-    rsp_header = IpmbHeaderRsp()
-    rsp_header.decode(data)
+    rsp_header = IpmbHeaderRsp(data=data)
 
     data = array('B', data)
 
