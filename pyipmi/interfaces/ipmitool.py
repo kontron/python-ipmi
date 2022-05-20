@@ -273,4 +273,7 @@ class Ipmitool(object):
                     child.returncode,
                     output)
 
+        if child.returncode == 127:
+            raise RuntimeError('ipmitool command not found')
+
         return output, child.returncode
