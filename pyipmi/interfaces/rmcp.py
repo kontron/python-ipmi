@@ -566,6 +566,9 @@ class Rmcp(object):
 
                 if array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE:
                     rx_data = decode_bridged_message(rx_data)
+                    if not rx_data:
+                        # the forwarded reply is expected in the next packet
+                        continue
 
                 received = rx_filter(header, rx_data)
 
