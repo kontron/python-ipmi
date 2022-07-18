@@ -184,6 +184,9 @@ class Ipmitool(object):
     @staticmethod
     def _build_ipmitool_target(target):
         cmd = ''
+        if target is None:
+            return ''
+        
         if target.routing is not None:
             # we have to do bridging here
             if len(target.routing) == 1:
