@@ -37,6 +37,11 @@ class TestIpmitool:
         cmd = self._interface._build_ipmitool_target(target)
         eq_(cmd, ' -T 0x82 -B 0 -t 0x72 -b 7')
 
+    def test_build_ipmitool_target_routing_4(self):
+        target = None
+        cmd = self._interface._build_ipmitool_target(target)
+        eq_(cmd, '')
+
     def test_send_and_receive(self):
         pass
 
