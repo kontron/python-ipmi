@@ -113,6 +113,15 @@ class IpmbHeaderRsp(IpmbHeader):
         self.rs_lun = data[4] & 3
         self.cmdid = data[5]
 
+    def from_req_header(self, req_header):
+        self.rs_lun = req_header.rq_lun
+        self.rs_sa = req_header.rq_sa
+        self.rq_seq = req_header.rq_seq
+        self.rq_lun = req_header.rs_lun
+        self.rq_sa = req_header.rs_sa
+        self.netfn = req_header.netfn
+        self.cmdid = req_header.cmdid
+
 
 def encode_ipmb_msg(header, data):
     """Encode an IPMB message.
