@@ -274,15 +274,10 @@ def handle_ipmi_msg(config, sdu):
     rsp = handle_ipmi_request_msg(config, req)
     data = encode_message(rsp)
 
-    tx_header = ipmb.IpmbHeaderReq()
-    tx_header.netfn = rsp.netfn
-    tx_header.rs_lun = rx_header.rq_lun
-    tx_header.rs_sa = rx_header.rq_sa
-    tx_header.rq_seq = rx_header.rq_seq
-    tx_header.rq_lun = rx_header.rs_lun
-    tx_header.rq_sa = rx_header.rs_sa
-    tx_header.cmdid = rsp.cmdid
-    tx_data = ipmb.encode_ipmb_msg(tx_header, data)
+    rsp_header = ipmb.IpmbHeaderRsp()
+    rsp_header.from_req_header(req_header)
+
+    tx_data = ipmb.encode_ipmb_msg(rsp_header, data)
     log().debug('IPMI TX: {}: {:s}'.format(rsp,
             ' '.join('%02x' % b for b in array('B', tx_data))))
 
