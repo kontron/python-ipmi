@@ -4,6 +4,7 @@ import os
 import random
 import socket
 import sys
+import threading
 import yaml
 
 from array import array
@@ -24,8 +25,6 @@ from pyipmi.utils import ByteBuffer
 UDP_IP = "127.0.0.1"
 UDP_PORT = 1623
 
-session = Session()
-
 sdr_list = OrderedDict()
 handler_registry = {}
 
@@ -39,7 +38,7 @@ def register_message_handler(msg_name):
 
 
 @register_message_handler("GetChannelAuthenticationCapabilities")
-def handle_channel_auth_caps(config, req):
+def handle_channel_auth_caps(context, req):
     rsp = create_response_message(req)
     rsp.support.straight = 1
     rsp.status.anonymous_login_enabled = 1
@@ -47,14 +46,16 @@ def handle_channel_auth_caps(config, req):
 
 
 @register_message_handler("GetSessionChallenge")
-def handle_get_session_challenge(config, req):
+def handle_get_session_challenge(context, req):
     rsp = create_response_message(req)
     rsp.temporary_session_id = random.randrange(1, 0xffffffff)
     return rsp
 
 
 @register_message_handler("ActivateSession")
-def handle_activate_session(config, req):
+def handle_activate_session(context, req):
+    session = context.session
+
     rsp = create_response_message(req)
     rsp.session_id = random.randrange(1, 0xffffffff)
     rsp.authentication.type = req.authentication.type
@@ -66,30 +67,32 @@ def handle_activate_session(config, req):
 
 
 @register_message_handler("CloseSession")
-def handle_close_session(config, req):
+def handle_close_session(context, req):
     rsp = create_response_message(req)
     return rsp
 
 
 @register_message_handler("SetSessionPrivilegeLevel")
-def handle_set_session_priv_level(config, req):
+def handle_set_session_priv_level(context, req):
     rsp = create_response_message(req)
     return rsp
 
 
 @register_message_handler("GetDeviceId")
-def handle_get_device_id(config, req):
+def handle_get_device_id(context, req):
     rsp = create_response_message(req)
     return rsp
 
 
 @register_message_handler("GetFruInventoryAreaInfo")
-def handle_fru_inventory_are_info(config, req):
+def handle_fru_inventory_are_info(context, req):
     rsp = create_response_message(req)
     fru_file_name = None
 
+    cfg = context.config
+
     try:
-        fru_filename = config['fru'][req.fru_id]
+        fru_filename = cfg['fru'][req.fru_id]
     except KeyError:
         log().warning('cannot find frufile for fru_id={} in config'.format(req.fru_id))
         rsp.completion_code = constants.CC_PARAM_OUT_OF_RANGE
@@ -112,12 +115,14 @@ def handle_fru_inventory_are_info(config, req):
 
 
 @register_message_handler("ReadFruData")
-def handle_fru_read(config, req):
+def handle_fru_read(context, req):
     rsp = create_response_message(req)
     fru_file_name = None
 
+    cfg = context.config
+
     try:
-        fru_filename = config['fru'][req.fru_id]
+        fru_filename = cfg['fru'][req.fru_id]
     except KeyError:
         rsp.completion_code = constants.CC_PARAM_OUT_OF_RANGE
         log().debug('cannot find file for fru_id={} in config'.format(req.fru_id))
@@ -139,27 +144,27 @@ def handle_fru_read(config, req):
 
 
 @register_message_handler("GetSdrRepositoryInfo")
-def handle_sdr_repository_info(config, req):
+def handle_sdr_repository_info(context, req):
     rsp = create_response_message(req)
     rsp.count = 0
     return rsp
 
 
 @register_message_handler("ReserveSdrRepository")
-def handle_reserve_sdr_repositry(config, req):
+def handle_reserve_sdr_repositry(context, req):
     rsp = create_response_message(req)
     return rsp
 
 
 @register_message_handler("ClearSdrRepository")
-def handle_clear_sdr_repositry(config, req):
+def handle_clear_sdr_repositry(context, req):
     rsp = create_response_message(req)
     rsp.status.erase_in_progress = constants.REPOSITORY_ERASURE_COMPLETED
     return rsp
 
 
 @register_message_handler("GetSdr")
-def handle_get_sdr(config, req):
+def handle_get_sdr(context, req):
     rsp = create_response_message(req)
 
     if len(sdr_list) == 0:
@@ -180,33 +185,32 @@ def handle_get_sdr(config, req):
 
 
 @register_message_handler("GetDeviceSdrInfo")
-def handle_device_sdr_info(config, req):
+def handle_device_sdr_info(context, req):
     rsp = create_response_message(req)
     rsp.number_of_sensors = 0
     return rsp
 
 
 @register_message_handler("ReserveDeviceSdrRepository")
-def handle_reserve_device_sdr_repository(config, req):
+def handle_reserve_device_sdr_repository(context, req):
     rsp = create_response_message(req)
     return rsp
 
 
 #@register_message_handler("GetDeviceSdr")
-#def handle_get_device_sdr(config, req):
+#def handle_get_device_sdr(config, session, req):
 #    rsp = create_response_message(req)
 #    return rsp
 
 @register_message_handler("SendMessage")
-def handle_send_message(config, req):
-    # tbd
+def handle_send_message(context, req):
     rsp = create_response_message(req)
     rsp.completion_code = constants.CC_PARAM_OUT_OF_RANGE
     return rsp
 
 
 
-def handle_ipmi_request_msg(config, req):
+def handle_ipmi_request_msg(context, req):
     try:
         fct = handler_registry[type(req)]
     except KeyError:
@@ -215,46 +219,38 @@ def handle_ipmi_request_msg(config, req):
         rsp.completion_code = constants.CC_INV_CMD
         return rsp
 
-    rsp = fct(config, req)
+    rsp = fct(context, req)
     return rsp
 
 
-def handle_asf_msg(sdu):
+def handle_rmcp_asf_msg(context, sdu):
     asf = rmcp.AsfMsg()
     asf.unpack(sdu)
     t = rmcp.AsfMsg().from_data(sdu)
     if asf.asf_type == rmcp.AsfMsg.ASF_TYPE_PRESENCE_PING:
-        log().debug('ASF RX: ping: {}'.format(asf))
+        log().debug(f'ASF RX: ping: {asf}')
     pong = rmcp.AsfPong()
     pdu = pong.pack()
-    log().debug('ASF TX: pong: {}'.format(asf))
+    log().debug(f'ASF TX: pong: {asf}')
     return pdu
 
 
-def handle_ipmi_msg(config, sdu):
+def handle_rmcp_ipmi_msg(context, sdu):
 
     def _get_group_id(ipmi_sdu):
         group_id = None
-        if rx_header.netfn == constants.NETFN_GROUP_EXTENSION:
+        if req_header.netfn == constants.NETFN_GROUP_EXTENSION:
             group_id = ipmi_sdu[6]
         return group_id
 
-    session.sequence_number += 1
-    if session.sequence_number > 255:
-        session.sequence_number = 0
-    # rmcp ipmi req msg
-    ipmi_rx = rmcp.IpmiMsg()
-    ipmi_sdu = ipmi_rx.unpack(sdu)
+    def _create_invalid_response(ipmi_sdu):
+        req_header = ipmb.IpmbHeaderReq(data=ipmi_sdu)
+        group_id = _get_group_id(ipmi_sdu)
 
-    rx_header = ipmb.IpmbHeaderReq()
-    rx_header.decode(ipmi_sdu)
+        log().warning('Cant create message: netfn 0x{:x} cmd: 0x{:x} group: {}'.format(req_header.netfn, req_header.cmdid, group_id))
+        log().debug('IPMI RX: {:s}'.format(
+            ' '.join('%02x' % b for b in array('B', ipmi_sdu))))
 
-    group_id = _get_group_id(ipmi_sdu)
-
-    try:
-        req = create_message(rx_header.netfn, rx_header.cmdid, group_id)
-    except KeyError:
-        log().warning('Cant create message: netfn 0x{:x} cmd: 0x{:x} group: {}'.format(rx_header.netfn, rx_header.cmdid, group_id))
         # bytes are immutable ... so convert to change
         a = bytearray(ipmi_sdu)
         # set completion code . invalid command
@@ -263,15 +259,33 @@ def handle_ipmi_msg(config, sdu):
         a[1] = a[1] | 0x4
         ipmi_sdu = bytes(a)
         # rmcp ipmi rsp msg
-        ipmi_tx = rmcp.IpmiMsg(session)
-        tx_data = ipmi_tx.pack(ipmi_sdu)
-        return tx_data
+        ipmi_tx = rmcp.IpmiMsg(context.session)
+        pdu = ipmi_tx.pack(ipmi_sdu)
+        return pdu
+
+    session = context.session
+
+    session.sequence_number += 1
+    if session.sequence_number > 255:
+        session.sequence_number = 0
+
+    # rmcp ipmi req msg
+    ipmi_rx = rmcp.IpmiMsg()
+    ipmi_sdu = ipmi_rx.unpack(sdu)
+
+    req_header = ipmb.IpmbHeaderReq(data=ipmi_sdu)
+    group_id = _get_group_id(ipmi_sdu)
+
+    try:
+        req = create_message(req_header.netfn, req_header.cmdid, group_id)
+    except KeyError:
+        return _create_invalid_response(ipmi_sdu)
 
     log().debug('IPMI RX: {}: {:s}'.format(req,
             ' '.join('%02x' % b for b in array('B', ipmi_sdu))))
     decode_message(req, ipmi_sdu[6:-1])
 
-    rsp = handle_ipmi_request_msg(config, req)
+    rsp = handle_ipmi_request_msg(context, req)
     data = encode_message(rsp)
 
     rsp_header = ipmb.IpmbHeaderRsp()
@@ -282,16 +296,17 @@ def handle_ipmi_msg(config, sdu):
             ' '.join('%02x' % b for b in array('B', tx_data))))
 
     # rmcp ipmi rsp msg
-    ipmi_tx = rmcp.IpmiMsg(session)
-    tx_data = ipmi_tx.pack(tx_data)
+    ipmi_tx = rmcp.IpmiMsg(context.session)
+    pdu = ipmi_tx.pack(tx_data)
 
     if type(req) == pyipmi.msgs.device_messaging.CloseSessionReq:
         session.session_id = None
         session._auth_type = Session.AUTH_TYPE_NONE
         session._auth_username = None
         session._auth_password = None
+        context.state = ConnectionContext.STATE_CLOSED
 
-    return tx_data
+    return pdu
 
 
 def load_sdr_dump(dump_file):
@@ -304,6 +319,38 @@ def load_sdr_dump(dump_file):
             b = f.read(t.length)
             sdr = pyipmi.sdr.SdrCommon().from_data(h + b)
             sdr_list[sdr.id] = sdr
+
+
+class ConnectionContext():
+    STATE_IDLE = 0
+    STATE_ACTIVE = 1
+    STATE_CLOSED = 2
+    state = STATE_IDLE
+
+    def __init__(self, config, sock, addr):
+        self.config = config
+        self.sock = sock
+        self.addr = addr
+        self.session = Session()
+
+
+def handle_thread(context, pdu):
+
+    msg = rmcp.RmcpMsg()
+    sdu = msg.unpack(pdu)
+
+    try:
+        handler = {
+                    rmcp.RMCP_CLASS_ASF: handle_rmcp_asf_msg,
+                    rmcp.RMCP_CLASS_IPMI: handle_rmcp_ipmi_msg,
+                  }[msg.class_of_msg]
+
+        tx_data = handler(context, sdu)
+        rmcp_msg = rmcp.RmcpMsg(msg.class_of_msg)
+        pdu = rmcp_msg.pack(tx_data, context.session.sequence_number)
+        context.sock.sendto(pdu, context.addr)
+    except IndexError:
+        print('unknown class_of_msg {}'.format(msg.class_of_msg))
 
 
 def main(args=None):
@@ -335,24 +382,26 @@ def main(args=None):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((UDP_IP, args.port))
 
+    connections = {}
 
     while True:
         pdu, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
-        msg = rmcp.RmcpMsg()
-        sdu = msg.unpack(pdu)
 
-        if msg.class_of_msg == rmcp.RMCP_CLASS_ASF:
-            tx_data = handle_asf_msg(sdu)
-            rmcp_msg = rmcp.RmcpMsg(rmcp.RMCP_CLASS_ASF)
-            pdu = rmcp_msg.pack(tx_data, session.sequence_number)
-            sock.sendto(pdu, addr)
-        elif msg.class_of_msg == rmcp.RMCP_CLASS_IPMI:
-            tx_data = handle_ipmi_msg(config, sdu)
-            rmcp_msg = rmcp.RmcpMsg(rmcp.RMCP_CLASS_IPMI)
-            pdu = rmcp_msg.pack(tx_data, session.sequence_number)
-            sock.sendto(pdu, addr)
-        else:
-            print('unknown class_of_msg {}'.format(msg.class_of_msg))
+        # create new connection
+        if addr not in connections:
+            connections[addr] = ConnectionContext(config, sock, addr)
+
+        # remove for closed connections from dict
+        connections = {
+            key: value
+            for key, value in connections.items()
+            if value.state != value.STATE_CLOSED
+        }
+
+        thread = threading.Thread(target=handle_thread,
+                                  args=(connections[addr], pdu))
+        thread.daemon = True
+        thread.start()
 
 
 if __name__ == '__main__':
