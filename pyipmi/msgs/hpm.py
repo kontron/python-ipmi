@@ -268,3 +268,33 @@ class InitiateManualRollbackRsp(PicmgMessage):
         CompletionCode(),
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
+
+
+@register_message_class
+class GetLanAttachCapabilitiesReq(PicmgMessage):
+    __cmdid__ = constants.CMDID_GET_LAN_ATTACH_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
+        Optional(UnsignedInt('optional', 1)),
+    )
+
+
+@register_message_class
+class GetLanAttachCapabilitiesRsp(PicmgMessage):
+    __cmdid__ = constants.CMDID_GET_LAN_ATTACH_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
+        UnsignedInt('hpm2_revision_identifier', 1),
+        UnsignedInt('lan_channel_mask', 2),
+        Optional(UnsignedInt('hpm2_capabilities', 1)),
+        Optional(UnsignedInt('hpm3_revision_identifier', 1)),
+        Optional(UnsignedInt('hpm2_oem_lan_params_start_location', 1)),
+        Optional(UnsignedInt('hpm2_oem_lan_params_blocks_revision_number', 1)),
+        Optional(UnsignedInt('hpm2_oem_sol_payload_instances_params_start_location', 1)),
+        Optional(UnsignedInt('hpm2_oem_sol_payload_instances_params_blocks_revision_number', 1)),
+        Optional(UnsignedInt('hpm3_oem_lan_params_start_location', 1)),
+        Optional(UnsignedInt('hpm3_oem_lan_params_blocks_revision_number', 1)),
+    )
