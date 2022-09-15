@@ -304,6 +304,11 @@ class GroupExtensionIdentifier(UnsignedInt):
         UnsignedInt.__init__(self, name, 1, value)
 
 
+class EventMessageRevision(UnsignedInt):
+    def __init__(self, value=None):
+        UnsignedInt.__init__(self, 'event_message_rev', 1, value)
+
+
 class Message(object):
     RESERVED_FIELD_NAMES = ['cmdid', 'netfn', 'lun', 'group_extension']
 

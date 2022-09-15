@@ -24,6 +24,7 @@ from . import Bitfield
 from . import CompletionCode
 from . import Optional
 from . import RemainingBytes
+from . import EventMessageRevision
 
 
 @register_message_class
@@ -298,4 +299,28 @@ class GetSensorReadingRsp(Message):
                      Bitfield.Bit('event_message_disabled', 1, 0),),
             Optional(UnsignedInt('states1', 1)),
             Optional(UnsignedInt('states2', 1)),
+    )
+
+
+@register_message_class
+class PlatformEventReq(Message):
+    __cmdid__ = constants.CMDID_PLATFORM_EVENT
+    __netfn__ = constants.NETFN_SENSOR_EVENT
+    __fields__ = (
+        EventMessageRevision(4),
+        UnsignedInt('sensor_type', 1),
+        UnsignedInt('sensor_number', 1),
+        Bitfield('event_type', 1,
+                 Bitfield.Bit('type', 7, 0),
+                 Bitfield.Bit('dir', 1, 0),),
+        RemainingBytes('event_data'),
+    )
+
+
+@register_message_class
+class PlatformEventRsp(Message):
+    __cmdid__ = constants.CMDID_PLATFORM_EVENT
+    __netfn__ = constants.NETFN_SENSOR_EVENT | 1
+    __fields__ = (
+            CompletionCode(),
     )
