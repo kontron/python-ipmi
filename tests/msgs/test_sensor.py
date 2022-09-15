@@ -262,3 +262,20 @@ def test_rearmsensorevents_decode_rsp():
     m = pyipmi.msgs.sensor.RearmSensorEventsRsp()
     decode_message(m, b'\x00')
     eq_(m.completion_code, 0x00)
+
+
+def test_platform_event_encode_req():
+    m = pyipmi.msgs.sensor.PlatformEventReq()
+    m.sensor_type = 0xf2
+    m.sensor_number = 0xab
+    m.event_type.type = 0x6f
+    m.event_type.dir = 0x0
+    m.event_data = [0x1, 0xff, 0xff]
+    data = encode_message(m)
+    eq_(data, b'\x04\xf2\xab\x6f\x01\xff\xff')
+
+
+def test_platform_event_decode_rsp():
+    m = pyipmi.msgs.sensor.PlatformEventRsp()
+    decode_message(m, b'\x00')
+    eq_(m.completion_code, 0x00)
