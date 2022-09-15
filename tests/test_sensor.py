@@ -5,7 +5,9 @@ from nose.tools import eq_
 from mock import MagicMock
 
 from pyipmi import interfaces, create_connection
-from pyipmi.msgs.sensor import SetSensorThresholdsRsp
+from pyipmi.msgs.sensor import SetSensorThresholdsRsp, PlatformEventRsp
+from pyipmi.sensor import (EVENT_READING_TYPE_SENSOR_SPECIFIC,
+                           SENSOR_TYPE_MODULE_HOT_SWAP)
 
 
 def test_set_sensor_thresholds():
@@ -58,3 +60,29 @@ def test_set_sensor_thresholds():
     eq_(req.threshold.lcr, 0)
     eq_(req.set_mask.lnr, 0)
     eq_(req.threshold.lnr, 0)
+
+
+def test_send_platform_event():
+
+    rsp = PlatformEventRsp()
+    rsp.completion_code = 0
+
+    mock_send_recv = MagicMock()
+    mock_send_recv.return_value = rsp
+
+    interface = interfaces.create_interface('mock')
+    ipmi = create_connection(interface)
+    ipmi.send_message = mock_send_recv
+
+    # Module handle closed event
+    ipmi.send_platform_event(SENSOR_TYPE_MODULE_HOT_SWAP, 1,
+                             EVENT_READING_TYPE_SENSOR_SPECIFIC, asserted=True,
+                             event_data=[0, 0xff, 0xff])
+    args, _ = mock_send_recv.call_args
+    req = args[0]
+    eq_(req.event_message_rev, 4)
+    eq_(req.sensor_type, 0xf2)
+    eq_(req.sensor_number, 1)
+    eq_(req.event_type.type, 0x6f)
+    eq_(req.event_type.dir, 0)
+    eq_(req.event_data, [0, 0xff, 0xff])
