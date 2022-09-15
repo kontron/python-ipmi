@@ -211,3 +211,14 @@ class Sensor(object):
                 if getattr(rsp.readable_mask, threshold):
                     thresholds[threshold] = getattr(rsp.threshold, threshold)
         return thresholds
+
+    def send_platform_event(self, sensor_type, sensor_number, event_type,
+                            asserted=True, event_data=None):
+        req = create_request_by_name('PlatformEvent')
+        req.sensor_type = sensor_type
+        req.sensor_number = sensor_number
+        req.event_type.type = event_type
+        req.event_type.dir = 0 if asserted else 1
+        req.event_data = [0] if event_data is None else event_data
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
