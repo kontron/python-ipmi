@@ -752,7 +752,11 @@ class SendPmHeartbeatReq(PicmgMessage):
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
-        UnsignedInt('timeout', 10),
+        UnsignedInt('timeout', 1),
+        Bitfield('ps1', 1,
+                 Bitfield.Bit('mch_1', 1, 0),
+                 Bitfield.Bit('mch_2', 1, 0),
+                 Bitfield.ReservedBit(6),),
     )
 
 
