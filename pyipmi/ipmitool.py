@@ -197,8 +197,9 @@ def cmd_sdr_list(ipmi, args):
                 (value, states) = ipmi.get_sensor_reading(s.number)
                 number = s.number
 
-            print_sdr_list_entry(s.id, number, s.device_id_string,
-                                 value, states)
+            id_string = getattr(s, 'device_id_string', None)
+
+            print_sdr_list_entry(s.id, number, id_string, value, states)
 
         except pyipmi.errors.CompletionCodeError as e:
             if s.type in (pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD,
