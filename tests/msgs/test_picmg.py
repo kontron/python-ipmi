@@ -161,3 +161,22 @@ def test_decode_rsp_only_lamp_test_mode():
     eq_(m.override_color, 2)
     eq_(m.led_states.lamp_test_en, 1)
     eq_(m.lamp_test_duration, 0x7f)
+
+def test_encode_req_pm_heartbeat():
+    m = pyipmi.msgs.picmg.SendPmHeartbeatReq()
+    m.timeout = 10
+    m.ps1.mch_1 = 1
+    data = encode_message(m)
+    eq_(data, b'\x00\n\x01')
+
+    m = pyipmi.msgs.picmg.SendPmHeartbeatReq()
+    m.timeout = 10
+    m.ps1.mch_2 = 1
+    data = encode_message(m)
+    eq_(data, b'\x00\n\x02')
+
+def test_decode_rsp_pm_heartbeat():
+    m = pyipmi.msgs.picmg.SendPmHeartbeatRsp()
+    decode_message(m, b'\x00\x00')
+    eq_(m.completion_code, 0x00)
+    eq_(m.picmg_identifier, 0x00)
