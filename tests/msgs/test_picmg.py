@@ -70,6 +70,20 @@ def test_get_shelf_address_info_rsp():
     eq_(m.shelf_address[1], 0x02)
 
 
+def test_encode_fru_control_req():
+    m = pyipmi.msgs.picmg.FruControlReq()
+    m.fru_id = 1
+    m.option = 2
+    data = encode_message(m)
+    eq_(data, b'\x00\x01\x02')
+
+
+def test_decode_fru_control_rsp():
+    m = pyipmi.msgs.picmg.FruControlRsp()
+    decode_message(m, b'\x00\x00\xaa')
+    eq_(m.rsp_data[0], 0xaa)
+
+
 def test_clear_activation_lock_req():
     m = pyipmi.msgs.picmg.SetFruActivationPolicyReq()
     m.fru_id = 1
