@@ -15,9 +15,11 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from __future__ import absolute_import
+from enum import Enum
+
 
 from .msgs import create_request_by_name
-from .utils import check_completion_code
+from .utils import check_completion_code, ByteBuffer
 from .state import State
 
 from .msgs.chassis import \
@@ -25,6 +27,116 @@ from .msgs.chassis import \
         CONTROL_HARD_RESET, CONTROL_DIAGNOSTIC_INTERRUPT, \
         CONTROL_SOFT_SHUTDOWN
 
+BOOT_PARAMETER_SET_IN_PROGRESS = 0
+BOOT_PARAMETER_SERVICE_PARTITION_SELECTOR = 1
+BOOT_PARAMETER_SERVICE_PARTITION_SCAN = 2
+BOOT_PARAMETER_BMC_BOOT_FLAG_VALID_BIT_CLEARING = 3
+BOOT_PARAMETER_BOOT_INFO_ACKNOWLEDGE = 4
+BOOT_PARAMETER_BOOT_FLAGS = 5
+BOOT_PARAMETER_BOOT_INITIATOR_INFO = 6
+BOOT_PARAMETER_BOOT_INITIATOR_MAILBOX = 7
+
+class BootDevice(str, Enum):
+    NO_OVERRIDE = "no override",
+    PXE = "pxe",
+    DEFAULT_HDD = "default hard drive",
+    DEFAULT_HDD_SAFE = "default hard drive safe mode",
+    DIAGNOSTIC = "diagnostic partition",
+    CD = "cd",
+    BIOS = "bios setup",
+    REMOTE_USB = "remote removable media",
+    PRIMARY_REMOTE = "primary remote media",
+    REMOTE_CD = "remote cd",
+    REMOTE_HDD = "remote hard drive",
+    PRIMARY_USB = "primary removable media (usb)"
+
+
+CONVERT_RAW_TO_BOOT_DEVICE = {
+    0:  BootDevice.NO_OVERRIDE,
+    1:  BootDevice.PXE,
+    2:  BootDevice.DEFAULT_HDD,
+    3:  BootDevice.DEFAULT_HDD_SAFE,
+    4:  BootDevice.DIAGNOSTIC,
+    5:  BootDevice.CD,
+    6:  BootDevice.BIOS,
+    7:  BootDevice.REMOTE_USB,
+    8:  BootDevice.PRIMARY_REMOTE,
+    9:  BootDevice.REMOTE_CD,
+    11: BootDevice.REMOTE_HDD,
+    15: BootDevice.PRIMARY_USB
+}
+
+CONVERT_BOOT_DEVICE_TO_RAW = {
+    BootDevice.NO_OVERRIDE:      0b0000,
+    BootDevice.PXE:              0b0001,
+    BootDevice.DEFAULT_HDD:      0b0010,
+    BootDevice.DEFAULT_HDD_SAFE: 0b0011,
+    BootDevice.DIAGNOSTIC:       0b0100,
+    BootDevice.CD:               0b0101,
+    BootDevice.BIOS:             0b0110,
+    BootDevice.REMOTE_USB:       0b0111,
+    BootDevice.PRIMARY_REMOTE:   0b1001,
+    BootDevice.REMOTE_CD:        0b1000,
+    BootDevice.REMOTE_HDD:       0b1011,
+    BootDevice.PRIMARY_USB:      0b1111
+}
+
+
+def data_to_boot_mode(data):
+    """
+    Convert a `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)` response data
+    into the string representation of the encoded boot mode.
+    """
+    boot_mode_raw = (data[0] >> 5) & 1
+    boot_mode = "legacy" if boot_mode_raw == 0 else "efi"
+    return boot_mode
+
+def data_to_boot_persistency(data):
+    """
+    Convert a `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)` response data
+    into the boolean representation of the encoded boot persistency.
+    """
+    boot_persistent_raw = (data[0] >> 6) & 1
+    return boot_persistent_raw == 1
+
+def data_to_boot_device(data):
+    """
+    Convert a `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)` response data
+    into the string representation of the encoded boot device.
+    """
+    boot_device_raw = (data[1] >> 2) & 0b1111
+    return CONVERT_RAW_TO_BOOT_DEVICE[boot_device_raw]
+
+def boot_options_to_data(boot_device, boot_mode, boot_persistency):
+    """
+    Convert a boot mode (string), boot device (string) and boot persistency (bool)
+    into a `SetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)` request data.
+    """
+    if not isinstance(boot_persistency, bool):
+        raise TypeError(f"Wrong type for boot_persistency argument: {type(boot_persistency)}, expected bool.")
+
+    # Construct the boot mode byte
+    if boot_mode == "efi":
+        boot_mode_raw = 0b100000
+    elif boot_mode == "legacy":
+        boot_mode_raw = 0
+    else:
+        raise ValueError(f"Unknown value for boot_mode argument: {boot_mode}. Possible values are : legacy, efi.")
+
+    # Construct the boot persistency + boot flags valid bits
+    if boot_persistency:
+        boot_persistent_raw = 0b11000000
+    else:
+        boot_persistent_raw = 0b10000000
+
+    # Construct the boot device byte
+    device_raw = CONVERT_BOOT_DEVICE_TO_RAW.get(boot_device, None)
+    if device_raw is None:
+        raise ValueError(f"Unknown value for boot_device argument: {boot_device}")
+
+    # Construct the final data bytearray
+    data = ByteBuffer([boot_mode_raw | boot_persistent_raw, device_raw << 2, 0, 0, 0])
+    return data
 
 class Chassis(object):
     def get_chassis_status(self):
@@ -53,6 +165,55 @@ class Chassis(object):
 
     def chassis_control_soft_shutdown(self):
         self.chassis_control(CONTROL_SOFT_SHUTDOWN)
+
+    def get_system_boot_options(self, parameter_selector=0,
+                                set_selector=0, block_selector=0):
+        req = create_request_by_name('GetSystemBootOptions')
+        req.parameter_selector.boot_option_parameter_selector = parameter_selector
+        req.set_selector = set_selector
+        req.block_selector = block_selector
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return rsp.data
+
+    def set_system_boot_options(self, parameter_selector, data,
+                                mark_parameter_invalid=0):
+        req = create_request_by_name('SetSystemBootOptions')
+        req.parameter_selector.parameter_validity = mark_parameter_invalid
+        req.parameter_selector.boot_option_parameter_selector = parameter_selector
+        req.data = data
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
+    def get_boot_mode(self):
+        """
+        Return a string corresponding to the device boot mode.
+
+        Possible values are: legacy, efi.
+        """
+        rsp = self.get_system_boot_options(BOOT_PARAMETER_BOOT_FLAGS)
+        return data_to_boot_mode(rsp)
+
+    def get_boot_persistency(self):
+        """
+        Return True if the boot configuration is to be applied to every future
+        boot, Fale if it only will applied to the next boot.
+        """
+        rsp = self.get_system_boot_options(BOOT_PARAMETER_BOOT_FLAGS)
+        return data_to_boot_persistency(rsp)
+
+    def get_boot_device(self):
+        """
+        Return a string corresponding to the target boot device.
+
+        Possible values are listed in the `BootDevice` class.
+        """
+        rsp = self.get_system_boot_options(BOOT_PARAMETER_BOOT_FLAGS)
+        return data_to_boot_device(rsp)
+
+    def set_boot_options(self, boot_device, boot_mode, boot_persistency):
+        data = boot_options_to_data(boot_device, boot_mode, boot_persistency)
+        self.set_system_boot_options(BOOT_PARAMETER_BOOT_FLAGS, data)
 
 
 class ChassisStatus(State):
