@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from array import array
 from nose.tools import eq_
 
 import pyipmi.msgs.chassis
@@ -52,3 +53,39 @@ def test_chassiscontrol_encode_valid_req():
     eq_(m.__netfn__, 0)
     eq_(m.__cmdid__, 2)
     eq_(data, b'\x01')
+
+
+def test_getsystembootoptions_encode_valid_req():
+    m = pyipmi.msgs.chassis.GetSystemBootOptionsReq()
+    m.parameter_selector.boot_option_parameter_selector = 5
+    data = encode_message(m)
+    eq_(m.__netfn__, 0)
+    eq_(m.__cmdid__, 9)
+    eq_(data, b'\x05\x00\x00')
+
+def test_getsystembootoptions_decode_valid_rsp():
+    m = pyipmi.msgs.chassis.GetSystemBootOptionsRsp()
+    decode_message(m, b'\x00\x01\x85\x00\x08\x00\x00\x00')
+
+    eq_(m.completion_code, 0x00)
+    eq_(m.parameter_version.parameter_version, 1)
+    eq_(m.parameter_valid.boot_option_parameter_selector, 5)
+    eq_(m.parameter_valid.parameter_validity, 1)
+    eq_(m.data, array('B', b'\x00\x08\x00\x00\x00'))
+
+def test_setsystembootoptions_encode_valid_req():
+    m = pyipmi.msgs.chassis.SetSystemBootOptionsReq()
+    m.parameter_selector.boot_option_parameter_selector = 5
+    m.parameter_selector.parameter_validity = 1
+    m.data = array('B', b'\x70\x08\x00\x00\x00')
+    data = encode_message(m)
+
+    eq_(m.__netfn__, 0)
+    eq_(m.__cmdid__, 8)
+    eq_(data, b'\x85\x70\x08\x00\x00\x00')
+
+def test_setsystembootoptions_decode_valid_rsp():
+    m = pyipmi.msgs.chassis.SetSystemBootOptionsRsp()
+    decode_message(m, b'\x00')
+
+    eq_(m.completion_code, 0x00)
