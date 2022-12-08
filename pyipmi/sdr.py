@@ -21,7 +21,7 @@ import math
 from . import errors
 
 from .errors import DecodingError
-from .utils import check_completion_code, ByteBuffer
+from .utils import check_completion_code, ByteBuffer, SdrTypeLengthString
 from .msgs import create_request_by_name
 
 from .helper import get_sdr_data_helper, clear_repository_helper
@@ -223,9 +223,12 @@ class SdrCommon(object):
         self.entity_instance = buffer.pop_unsigned_int(1)
 
     def _device_id_string(self, buffer):
-        self.device_id_string_type_length = buffer.pop_unsigned_int(1)
-        self.device_id_string = \
-            buffer.pop_string(self.device_id_string_type_length & 0x3f)
+        self.device_id_string_type = (buffer[0] & 0xc0) >> 4
+        self.device_id_string_length = buffer[0] & 0x3f
+        field = SdrTypeLengthString(data=buffer[0:1+self.device_id_string_length])
+        self.device_id_string = field.string
+#        self.device_id_string = \
+#            buffer.pop_string(self.device_id_string_length & 0x3f)
 
     @staticmethod
     def from_data(data, next_id=None):
