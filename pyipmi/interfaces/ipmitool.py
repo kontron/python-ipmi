@@ -55,6 +55,8 @@ class Ipmitool(object):
                 r"Unable to send RAW command \(.*cmd=0x[0-9a-f]+\)")
         self.re_unable_establish = re.compile(
                 r".*Unable to establish.*")
+        self.re_could_not_open = re.compile(
+                r".*Could not open device.*")
 
         self._session = None
 
@@ -116,6 +118,10 @@ class Ipmitool(object):
             if match_completion_code:
                 cc = int(match_completion_code.group(1), 16)
                 break
+
+            # Check for error opening ipmi device
+            if self.re_could_not_open.match(line):
+                raise RuntimeError('ipmitool failed: {}'.format(output))
 
             hexstr += line.replace('\r', '').strip() + ' '
 
