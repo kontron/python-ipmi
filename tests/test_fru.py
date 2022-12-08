@@ -44,10 +44,10 @@ def test_board_area():
     fru = get_fru_inventory_from_file(fru_file)
 
     board_area = fru.board_info_area
-    eq_(board_area.manufacturer.value, 'Kontron')
-    eq_(board_area.product_name.value, 'AM4010')
-    eq_(board_area.serial_number.value, '0023721003')
-    eq_(board_area.part_number.value, '35943')
+    eq_(board_area.manufacturer.string, 'Kontron')
+    eq_(board_area.product_name.string, 'AM4010')
+    eq_(board_area.serial_number.string, '0023721003')
+    eq_(board_area.part_number.string, '35943')
 
 
 def test_product_area():
@@ -58,10 +58,10 @@ def test_product_area():
     fru = get_fru_inventory_from_file(fru_file)
 
     product_area = fru.product_info_area
-    eq_(product_area.manufacturer.value, 'Kontron')
-    eq_(product_area.name.value, 'AM4010')
-    eq_(product_area.serial_number.value, '0000000000000000000000000')
-    eq_(product_area.part_number.value, '0012')
+    eq_(product_area.manufacturer.string, 'Kontron')
+    eq_(product_area.name.string, 'AM4010')
+    eq_(product_area.serial_number.string, '0000000000000000000000000')
+    eq_(product_area.part_number.string, '0012')
 
 
 def test_multirecord_with_power_module_capability_record():
