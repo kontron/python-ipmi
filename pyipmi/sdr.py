@@ -196,7 +196,7 @@ class SdrCommon(object):
 
     def __str__(self):
         if hasattr(self, 'device_id_string'):
-            s = '["%-16s"] [%s]' % \
+            s = '["%s"] [%s]' % \
             (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
         else:
             s = '[%s]' % \
@@ -267,7 +267,7 @@ class SdrFullSensorRecord(SdrCommon):
         super(SdrFullSensorRecord, self).__init__(data, next_id)
 
     def __str__(self):
-        s = '["%-16s"] [%s:%s] [%s]' \
+        s = '["%s"] [%s:%s] [%s]' \
                 % (self.device_id_string,
                    self.entity_id,
                    self.entity_instance,
@@ -493,7 +493,7 @@ class SdrCompactSensorRecord(SdrCommon):
         super(SdrCompactSensorRecord, self).__init__(data, next_id)
 
     def __str__(self):
-        s = '["%-16s"] [%s]' \
+        s = '["%s"] [%s]' \
             % (self.device_id_string,
                ' '.join(['%02x' % b for b in self.data]))
         return s
@@ -560,7 +560,7 @@ class SdrFruDeviceLocator(SdrCommon):
         super(SdrFruDeviceLocator, self).__init__(data, next_id)
 
     def __str__(self):
-        s = '["%-16s"] [%s]' \
+        s = '["%s"] [%s]' \
             % (self.device_id_string,
                ' '.join(['%02x' % b for b in self.data]))
         return s
@@ -588,7 +588,7 @@ class SdrManagementControllerDeviceLocator(SdrCommon):
                 data, next_id)
 
     def __str__(self):
-        s = '["%-16s"] [%s]' \
+        s = '["%s"] [%s]' \
             % (self.device_id_string,
                ' '.join(['%02x' % b for b in self.data]))
         return s
