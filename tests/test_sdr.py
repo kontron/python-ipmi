@@ -173,11 +173,11 @@ class TestSdrFullSensorRecord():
                 0x32, 0x56]
         sdr = SdrCommon.from_data(data)
         ok_(isinstance(sdr, SdrFullSensorRecord))
-        eq_(str(sdr), '["b\'A2:Vcc 12V\'   "] [1:53] [17 00 51 01 35 17 00 '
+        eq_(str(sdr), '["A2:Vcc 12V"] [1:53] [17 00 51 01 35 17 00 '
                       '51 01 35 17 00 51 01 35 32 85 32 1b 1b 00 04 00 00 '
                       '3b 01 00 01 00 d0 07 cc f4 a6 ff 00 00 fe f5 00 8e '
                       'a5 04 04 00 00 00 ca 41 32 3a 56 63 63 20 31 32 56]')
-        eq_(sdr.device_id_string, b'A2:Vcc 12V')
+        eq_(sdr.device_id_string, 'A2:Vcc 12V')
 
 
 class TestSdrCommon():
@@ -211,7 +211,7 @@ class TestSdrCompactSensorRecord():
                 0x53, 0x46, 0x50, 0x2d, 0x31]
         sdr = SdrCommon.from_data(data)
         ok_(isinstance(sdr, SdrCompactSensorRecord))
-        eq_(str(sdr), '["b\'A4:Pres SFP-1\'"] [d3 00 51 02 28 82 00 d3 c1 64 '
+        eq_(str(sdr), '["A4:Pres SFP-1"] [d3 00 51 02 28 82 00 d3 c1 64 '
                        '03 40 21 6f 00 00 00 00 03 00 c0 00 00 01 00 00 00 '
                        '00 00 00 00 cd 41 34 3a 50 72 65 73 20 53 46 50 2d 31]')
 
@@ -236,7 +236,7 @@ class TestSdrFruDeviceLocatorRecord():
                 0x4d, 0x43, 0x4d, 0x43]
         sdr = SdrCommon.from_data(data)
         ok_(isinstance(sdr, SdrFruDeviceLocator))
-        eq_(str(sdr), '["b\'Kontron MCMC\' "] [02 00 51 11 17 82 03 80 00 00 '
+        eq_(str(sdr), '["Kontron MCMC"] [02 00 51 11 17 82 03 80 00 00 '
                       '10 02 c2 61 00 cc 4b 6f 6e 74 72 6f 6e 20 4d 43 4d 43]')
 
 
@@ -248,15 +248,15 @@ class TestSdrManagementControllerDeviceRecord():
         SdrManagementControllerDeviceLocator(data)
 
     def test_decode(self):
-        data = [0x00, 0x01, 0x51, 0x12, 0x1b, 0x00, 0x01, 0x51,
-                0x12, 0x1b, 0x00, 0x01, 0x51, 0x12, 0x1b, 0xd0,
+        data = [0x00, 0x01, 0x51, 0x12, 0x19, 0x00, 0x01, 0x51,
+                0x12, 0x1b, 0x00, 0x01, 0x51, 0x12, 0x1b, 0xc9,
                 0x41, 0x32, 0x3a, 0x41, 0x4d, 0x34, 0x32, 0x32,
-                0x30, 0x20]
+                0x30]
         sdr = SdrCommon.from_data(data)
         ok_(isinstance(sdr, SdrManagementControllerDeviceLocator))
-        eq_(str(sdr), '["b\'A2:AM4220 \'   "] [00 01 51 12 1b 00 01 51 12 1b '
-                      '00 01 51 12 1b d0 41 32 3a 41 4d 34 32 32 30 20]')
-        eq_(sdr.device_id_string, b'A2:AM4220 ')
+        eq_(str(sdr), '["A2:AM4220"] [00 01 51 12 19 00 01 51 12 1b '
+                      '00 01 51 12 1b c9 41 32 3a 41 4d 34 32 32 30]')
+        eq_(sdr.device_id_string, 'A2:AM4220')
 
 
 class TestSdrManagementControllerConfirmationRecord():
