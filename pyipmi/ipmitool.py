@@ -469,7 +469,7 @@ Aardvark interface options:
   power=<on|off>    Enable/disable target power
 
 Ipmitool interface options:
-  interface_type    Set the interface type to be used (lan, lanplus, serial)
+  interface_type    Set the interface type to be used (lan, lanplus, serial, open)
 
 Ipmbdev interface options:
   port=<path>       Specify path to Linux IPMB device (/dev/ipmb-0 by default)
