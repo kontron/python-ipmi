@@ -6,7 +6,9 @@ Pure Python IPMI Library
 Features
 --------
 * native RMCP interface
-* legacy RMCP interface (using ipmitool)
+* legacy RMCP interface (using ipmitool as backend)
+* RMCP+ interface (using ipmitool as backend)
+* system (KCS) interface (using ipmitool as backend)
 * IPMB interface using the `Total Phase`_ Aardvark
 * IPMB interface using ipmb-dev driver on Linux
 
@@ -25,6 +27,9 @@ Requirements
 For IPMB interface a `Total Phase`_ Aardvark is needed.
 Another option is to use ipmb-dev driver on Linux with an I2C bus, driver of which supports slave mode:
 https://www.kernel.org/doc/html/latest/driver-api/ipmb.html
+
+For legacy RMCP, RMCP+ and system interface (KCS) the installtion of ipmitool
+is required.
 
 Installation
 ------------
