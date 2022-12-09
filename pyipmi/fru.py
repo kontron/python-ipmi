@@ -84,8 +84,80 @@ class Fru(object):
 
         return py3_array_tobytes(data)
 
+    def read_fru_data_full(self, fru_id=0):
+        return self.read_fru_data(fru_id=fru_id)
+
+    def get_fru_inventory_header(self, fru_id=0):
+        data = self.read_fru_data(offset=0, count=8, fru_id=fru_id)
+        return InventoryCommonHeader(data)
+
+    def _read_fru_area(self, offset, fru_id=0):
+        # read the area header
+        data = self.read_fru_data(offset=offset, count=5, fru_id=fru_id)
+        # get the whole area data
+        count = data[1] * 8
+        return self.read_fru_data(offset=offset, count=count, fru_id=fru_id)
+
+    def get_fru_chassis_area(self, fru_id=0):
+        header = self.get_fru_inventory_header(fru_id=fru_id)
+        data = self._read_fru_area(offset=header.chassis_info_area_offset,
+                                   fru_id=fru_id)
+        return InventoryChassisInfoArea(data)
+
+    def get_fru_board_area(self, fru_id=0):
+        header = self.get_fru_inventory_header(fru_id=fru_id)
+        data = self._read_fru_area(offset=header.board_info_area_offset,
+                                   fru_id=fru_id)
+        return InventoryBoardInfoArea(data)
+
+    def get_fru_product_area(self, fru_id=0):
+        header = self.get_fru_inventory_header(fru_id=fru_id)
+        data = self._read_fru_area(offset=header.product_info_area_offset,
+                                   fru_id=fru_id)
+        return InventoryProductInfoArea(data)
+
+    def get_fru_multirecord_area(self, fru_id=0):
+        header = self.get_fru_inventory_header(fru_id=fru_id)
+
+        # we have to determine the length of the area first
+        offset = header.multirecord_area_offset
+        count = 0
+
+        while True:
+            # read the header
+            data = self.read_fru_data(offset=offset, count=5)
+            end_of_list = bool(data[1] & 0x80)
+            length = data[2]
+            count += length + 5
+            offset += length + 5
+            if end_of_list:
+                break
+
+        # now read the full area
+        offset = header.multirecord_area_offset
+        data = self.read_fru_data(offset=offset, count=count)
+        return InventoryMultiRecordArea(data)
+
     def get_fru_inventory(self, fru_id=0):
-        return FruInventory(self.read_fru_data(fru_id=fru_id))
+        """
+        Get the full parsed FRU inventory data.
+        """
+        fru = FruInventory()
+        header = self.get_fru_inventory_header(fru_id=fru_id)
+
+        if header.chassis_info_area_offset:
+            fru.chassis_info_area = self.get_fru_chassis_area(fru_id=fru_id)
+
+        if header.board_info_area_offset:
+            fru.board_info_area = self.get_fru_board_area(fru_id=fru_id)
+
+        if header.product_info_area_offset:
+            fru.product_info_area = self.get_fru_product_area(fru_id=fru_id)
+
+        if header.multirecord_area_offset:
+            fru.multirecord_area = self.get_fru_multirecord_area(fru_id=fru_id)
+
+        return fru
 
 
 def get_fru_inventory_from_file(filename):
