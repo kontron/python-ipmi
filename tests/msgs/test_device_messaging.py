@@ -378,6 +378,25 @@ def test_get_username_req():
     eq_(m.userid.userid, 2)
 
 
+def test_set_user_password_req():
+    m = pyipmi.msgs.device_messaging.SetUserPasswordReq()
+    m.userid.userid = 2
+    m.operation.operation = 0b10
+    m.password = "password".ljust(16, '\x00')
+    data = encode_message(m)
+    eq_(m.cmdid, 0x47)
+    eq_(m.netfn, 6)
+    eq_(data, b'\x02\x02password\x00\x00\x00\x00\x00\x00\x00\x00')
+
+
+def test_set_user_password_rsp():
+    m = pyipmi.msgs.device_messaging.SetUserPasswordRsp()
+    decode_message(m, b'\x00')
+    eq_(m.cmdid, 0x47)
+    eq_(m.netfn, 7)
+    eq_(m.completion_code, 0x00)
+
+
 def test_get_user_access_req():
     m = pyipmi.msgs.device_messaging.GetUserAccessReq()
     m.channel.channel_number = 1
