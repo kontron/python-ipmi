@@ -376,3 +376,51 @@ def test_get_username_req():
     eq_(m.cmdid, 0x46)
     eq_(m.netfn, 6)
     eq_(m.userid.userid, 2)
+
+
+def test_get_user_access_req():
+    m = pyipmi.msgs.device_messaging.GetUserAccessReq()
+    m.channel.channel_number = 1
+    m.userid.userid = 2
+    data = encode_message(m)
+    eq_(m.cmdid, 0x44)
+    eq_(m.netfn, 6)
+    eq_(data, b'\x01\x02')
+
+
+def test_get_user_access_rsp():
+    m = pyipmi.msgs.device_messaging.GetUserAccessRsp()
+    decode_message(m, b'\x00\x0a\x42\x01\x13')
+    eq_(m.cmdid, 0x44)
+    eq_(m.netfn, 7)
+    eq_(m.max_user.max_user, 10)
+    eq_(m.enabled_user.count, 2)
+    eq_(m.enabled_user.status, 1)
+    eq_(m.fixed_names.count, 1)
+    eq_(m.channel_access.privilege, 3)
+    eq_(m.channel_access.ipmi_msg, 1)
+    eq_(m.channel_access.link_auth, 0)
+    eq_(m.channel_access.callback, 0)
+
+
+def test_set_user_access_req():
+    m = pyipmi.msgs.device_messaging.SetUserAccessReq()
+    m.channel_access.channel_number = 1
+    m.channel_access.ipmi_msg = 1
+    m.channel_access.link_auth = 0
+    m.channel_access.callback = 0
+    m.channel_access.enable_change = 1
+    m.userid.userid = 2
+    m.privilege.privilege_level = 3
+    data = encode_message(m)
+    eq_(m.cmdid, 0x43)
+    eq_(m.netfn, 6)
+    eq_(data, b'\x91\x02\x03')
+
+
+def test_user_access_rsp():
+    m = pyipmi.msgs.device_messaging.SetUserAccessRsp()
+    decode_message(m, b'\x00')
+    eq_(m.cmdid, 0x43)
+    eq_(m.netfn, 7)
+    eq_(m.completion_code, 0x00)
