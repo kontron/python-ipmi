@@ -424,6 +424,29 @@ class GetUserNameRsp(Message):
     )
 
 @register_message_class
+class SetUserPasswordReq(Message):
+    __cmdid__ = constants.CMDID_SET_USER_PASSWORD
+    __netfn__ = constants.NETFN_APP
+    __fields__ = (
+        Bitfield('userid', 1,
+                 Bitfield.Bit('userid', 6, 0),
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('password_size', 1, 0)),
+        Bitfield('operation', 1,
+                 Bitfield.Bit('operation', 2, 0),
+                 Bitfield.ReservedBit(6, 0)),
+        String('password', 16, '\x00' * 16)
+    )
+
+@register_message_class
+class SetUserPasswordRsp(Message):
+    __cmdid__ = constants.CMDID_SET_USER_PASSWORD
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
+    )
+
+@register_message_class
 class GetUserAccessReq(Message):
     __cmdid__ = constants.CMDID_GET_USER_ACCESS
     __netfn__ = constants.NETFN_APP

@@ -21,6 +21,13 @@ from .msgs import create_request_by_name
 from .utils import check_completion_code
 from .state import State
 
+class PasswordOperation(int, Enum):
+    DISABLE = 0b00
+    ENABLE = 0b01
+    SET_PASSWORD = 0b10
+    TEST_PASSWORD = 0b11
+
+
 class UserPrivilegeLevel(str, Enum):
     RESERVED = "reserved"
     CALLBACK = "callback"
@@ -94,6 +101,30 @@ class Messaging(object):
         req.userid.userid = userid
         req.privilege.privilege_level = CONVERT_USER_PRIVILEGE_TO_RAW.get(
             priv_level, 0x0F)
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
+    def set_user_password(self, userid, password=''):
+        if len(password) > 16:
+            raise ValueError("Password length cannot be greater than 20.")
+        req = create_request_by_name('SetUserPassword')
+        req.userid.userid = userid
+        req.operation.operation = PasswordOperation.SET_PASSWORD
+        req.password = password.ljust(16, '\x00')
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
+    def enable_user(self, userid):
+        req = create_request_by_name('SetUserPassword')
+        req.userid.userid = userid
+        req.operation.operation = PasswordOperation.ENABLE
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
+    def disable_user(self, userid):
+        req = create_request_by_name('SetUserPassword')
+        req.userid.userid = userid
+        req.operation.operation = PasswordOperation.DISABLE
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
