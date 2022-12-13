@@ -14,12 +14,42 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from enum import Enum
 
 from .session import Session
 from .msgs import create_request_by_name
 from .utils import check_completion_code
 from .state import State
 
+class UserPrivilegeLevel(str, Enum):
+    RESERVED = "reserved"
+    CALLBACK = "callback"
+    USER = "user"
+    OPERATOR = "operator"
+    ADMINISTRATOR = "administrator"
+    OEM = "oem"
+    NO_ACCESS = "no access"
+
+
+CONVERT_RAW_TO_USER_PRIVILEGE = {
+    0x00: UserPrivilegeLevel.RESERVED,
+    0x01: UserPrivilegeLevel.CALLBACK,
+    0x02: UserPrivilegeLevel.USER,
+    0x03: UserPrivilegeLevel.OPERATOR,
+    0x04: UserPrivilegeLevel.ADMINISTRATOR,
+    0x05: UserPrivilegeLevel.OEM,
+    0x0F: UserPrivilegeLevel.NO_ACCESS
+}
+
+CONVERT_USER_PRIVILEGE_TO_RAW = {
+    UserPrivilegeLevel.RESERVED:      0x00,
+    UserPrivilegeLevel.CALLBACK:      0x01,
+    UserPrivilegeLevel.USER:          0x02,
+    UserPrivilegeLevel.OPERATOR:      0x03,
+    UserPrivilegeLevel.ADMINISTRATOR: 0x04,
+    UserPrivilegeLevel.OEM:           0x05,
+    UserPrivilegeLevel.NO_ACCESS:     0x0F
+}
 
 class Messaging(object):
     def get_channel_authentication_capabilities(self, channel, priv_lvl):
@@ -45,6 +75,27 @@ class Messaging(object):
         check_completion_code(rsp.completion_code)
         return rsp.user_name
 
+    def get_user_access(self, userid=0, channel=0):
+        req = create_request_by_name('GetUserAccess')
+        req.userid.userid = userid
+        req.channel.channel_number = channel
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return UserAccess(rsp)
+
+    def set_user_access(self, userid, ipmi_msg, link_auth, callback_only,
+                        priv_level, channel=0, enable_change=1):
+        req = create_request_by_name('SetUserAccess')
+        req.channel_access.channel_number = channel
+        req.channel_access.ipmi_msg = ipmi_msg
+        req.channel_access.link_auth = link_auth
+        req.channel_access.callback = callback_only
+        req.channel_access.enable_change = enable_change
+        req.userid.userid = userid
+        req.privilege.privilege_level = CONVERT_USER_PRIVILEGE_TO_RAW.get(
+            priv_level, 0x0F)
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
 class ChannelAuthenticationCapabilities(State):
 
@@ -86,3 +137,26 @@ class ChannelAuthenticationCapabilities(State):
         s += '  Auth. types: %s\n' % ' '.join(self.auth_types)
         s += '  Max Auth. type: %s\n' % self.get_max_auth_type()
         return s
+
+class UserAccess(State):
+
+    def _from_response(self, rsp):
+        self.user_count = rsp.max_user.max_user
+        self.enabled_user_count = rsp.enabled_user.count
+        self.enabled_status = rsp.enabled_user.status
+        self.fixed_name_user_count = rsp.fixed_names.count
+        self.privilege_level = CONVERT_RAW_TO_USER_PRIVILEGE.get(rsp.channel_access.privilege, UserPrivilegeLevel.RESERVED)
+        self.ipmi_messaging = rsp.channel_access.ipmi_msg == 1
+        self.link_auth = rsp.channel_access.link_auth == 1
+        self.callback_only = rsp.channel_access.callback == 1
+
+    def __str__(self):
+        s = 'User Access:\n'
+        s += '  Max user number: %i\n' % self.user_count
+        s += '  Enabled user: %i\n' % self.enabled_user_count
+        s += '  Enabled status: %i\n' % self.enabled_status
+        s += '  Fixed name user: %i\n' % self.fixed_name_user_count
+        s += '  Privilege level: %s\n' % self.privilege_level
+        s += '  IPMI messaging: %s\n' % self.ipmi_messaging
+        s += '  Link Auth.: %s\n' % self.link_auth
+        s += '  Callback only: %s' % self.callback_only

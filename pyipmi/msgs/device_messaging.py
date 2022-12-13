@@ -19,6 +19,7 @@ from . import register_message_class
 from . import Message
 from . import UnsignedInt
 from . import Bitfield
+from . import Optional
 from . import String
 from . import CompletionCode
 from . import RemainingBytes
@@ -420,4 +421,72 @@ class GetUserNameRsp(Message):
     __fields__ = (
         CompletionCode(),
         String('user_name', 16, '\x00' * 16),
+    )
+
+@register_message_class
+class GetUserAccessReq(Message):
+    __cmdid__ = constants.CMDID_GET_USER_ACCESS
+    __netfn__ = constants.NETFN_APP
+    __fields__ = (
+        Bitfield('channel', 1,
+                 Bitfield.Bit('channel_number', 4, 0),
+                 Bitfield.ReservedBit(4, 0)),
+        Bitfield('userid', 1,
+                 Bitfield.Bit('userid', 6, 0),
+                 Bitfield.ReservedBit(2, 0))
+    )
+
+@register_message_class
+class GetUserAccessRsp(Message):
+    __cmdid__ = constants.CMDID_GET_USER_ACCESS
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
+        Bitfield('max_user', 1,
+                 Bitfield.Bit('max_user', 6, 0),
+                 Bitfield.ReservedBit(2, 0)),
+        Bitfield('enabled_user', 1,
+                 Bitfield.Bit('count', 6, 0),
+                 Bitfield.Bit('status', 2, 0)),
+        Bitfield('fixed_names', 1,
+                 Bitfield.Bit('count', 6, 0),
+                 Bitfield.ReservedBit(2, 0)),
+        Bitfield('channel_access', 1,
+                 Bitfield.Bit('privilege', 4, 0),
+                 Bitfield.Bit('ipmi_msg', 1, 0),
+                 Bitfield.Bit('link_auth', 1, 0),
+                 Bitfield.Bit('callback', 1, 0),
+                 Bitfield.ReservedBit(1, 0))
+    )
+
+@register_message_class
+class SetUserAccessReq(Message):
+    __cmdid__ = constants.CMDID_SET_USER_ACCESS
+    __netfn__ = constants.NETFN_APP
+    __fields__ = (
+        Bitfield('channel_access', 1,
+                 Bitfield.Bit('channel_number', 4, 0),
+                 Bitfield.Bit('ipmi_msg', 1, 0),
+                 Bitfield.Bit('link_auth', 1, 0),
+                 Bitfield.Bit('callback', 1, 0),
+                 Bitfield.Bit('enable_change', 1, 0)),
+        Bitfield('userid', 1,
+                 Bitfield.Bit('userid', 6, 0),
+                 Bitfield.ReservedBit(2, 0)),
+        Bitfield('privilege', 1,
+                 Bitfield.Bit('privilege_level', 4, 0x0f),
+                 Bitfield.ReservedBit(4, 0)),
+        Optional(
+            Bitfield('session_limit', 1,
+                     Bitfield.Bit('simultaneous_session_limit', 4, 1),
+                     Bitfield.ReservedBit(4, 0))
+        )
+    )
+
+@register_message_class
+class SetUserAccessRsp(Message):
+    __cmdid__ = constants.CMDID_SET_USER_ACCESS
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
     )
