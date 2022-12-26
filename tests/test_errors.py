@@ -1,48 +1,48 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from nose.tools import raises
+import pytest
 
 from pyipmi.errors import (DecodingError, EncodingError, CompletionCodeError,
                            NotSupportedError, DescriptionError, RetryError,
                            DataNotFound, HpmError)
 
 
-@raises(DecodingError)
 def test_DecodingError():
-    raise DecodingError()
+    with pytest.raises(DecodingError):
+        raise DecodingError()
 
 
-@raises(EncodingError)
 def test_EncodingError():
-    raise EncodingError()
+    with pytest.raises(EncodingError):
+        raise EncodingError()
 
 
-@raises(CompletionCodeError)
 def test_CompletionCodeError():
-    raise CompletionCodeError(cc=0x09)
+    with pytest.raises(CompletionCodeError):
+        raise CompletionCodeError(cc=0x09)
 
 
-@raises(NotSupportedError)
 def test_NotSupportedError():
-    raise NotSupportedError()
+    with pytest.raises(NotSupportedError):
+        raise NotSupportedError()
 
 
-@raises(DescriptionError)
 def test_DescriptionError():
-    raise DescriptionError()
+    with pytest.raises(DescriptionError):
+        raise DescriptionError()
 
 
-@raises(RetryError)
 def test_RetryError():
-    raise RetryError()
+    with pytest.raises(RetryError):
+        raise RetryError()
 
 
-@raises(DataNotFound)
 def test_DataNotFound():
-    raise DataNotFound()
+    with pytest.raises(DataNotFound):
+        raise DataNotFound()
 
 
-@raises(HpmError)
 def test_HpmError_no_msg():
-    raise HpmError()
+    with pytest.raises(HpmError):
+        raise HpmError()

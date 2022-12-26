@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from nose.tools import eq_
 from mock import MagicMock
 
 from pyipmi import interfaces, create_connection
@@ -25,41 +24,41 @@ def test_set_sensor_thresholds():
     ipmi.set_sensor_thresholds(sensor_number=5, lun=1)
     args, _ = mock_send_recv.call_args
     req = args[0]
-    eq_(req.lun, 1)
-    eq_(req.sensor_number, 5)
+    assert req.lun == 1
+    assert req.sensor_number == 5
 
     ipmi.set_sensor_thresholds(sensor_number=0, unr=10)
     args, _ = mock_send_recv.call_args
     req = args[0]
-    eq_(req.set_mask.unr, 1)
-    eq_(req.threshold.unr, 10)
-    eq_(req.set_mask.ucr, 0)
-    eq_(req.threshold.ucr, 0)
-    eq_(req.set_mask.unc, 0)
-    eq_(req.threshold.unc, 0)
-    eq_(req.set_mask.lnc, 0)
-    eq_(req.threshold.lnc, 0)
-    eq_(req.set_mask.lcr, 0)
-    eq_(req.threshold.lcr, 0)
-    eq_(req.set_mask.lnr, 0)
-    eq_(req.threshold.lnr, 0)
+    assert req.set_mask.unr == 1
+    assert req.threshold.unr == 10
+    assert req.set_mask.ucr == 0
+    assert req.threshold.ucr == 0
+    assert req.set_mask.unc == 0
+    assert req.threshold.unc == 0
+    assert req.set_mask.lnc == 0
+    assert req.threshold.lnc == 0
+    assert req.set_mask.lcr == 0
+    assert req.threshold.lcr == 0
+    assert req.set_mask.lnr == 0
+    assert req.threshold.lnr == 0
 
     ipmi.set_sensor_thresholds(sensor_number=5, ucr=11)
     args, _ = mock_send_recv.call_args
     req = args[0]
-    eq_(req.lun, 0)
-    eq_(req.set_mask.unr, 0)
-    eq_(req.threshold.unr, 0)
-    eq_(req.set_mask.ucr, 1)
-    eq_(req.threshold.ucr, 11)
-    eq_(req.set_mask.unc, 0)
-    eq_(req.threshold.unc, 0)
-    eq_(req.set_mask.lnc, 0)
-    eq_(req.threshold.lnc, 0)
-    eq_(req.set_mask.lcr, 0)
-    eq_(req.threshold.lcr, 0)
-    eq_(req.set_mask.lnr, 0)
-    eq_(req.threshold.lnr, 0)
+    assert req.lun == 0
+    assert req.set_mask.unr == 0
+    assert req.threshold.unr == 0
+    assert req.set_mask.ucr == 1
+    assert req.threshold.ucr == 11
+    assert req.set_mask.unc == 0
+    assert req.threshold.unc == 0
+    assert req.set_mask.lnc == 0
+    assert req.threshold.lnc == 0
+    assert req.set_mask.lcr == 0
+    assert req.threshold.lcr == 0
+    assert req.set_mask.lnr == 0
+    assert req.threshold.lnr == 0
 
 
 def test_send_platform_event():
@@ -80,9 +79,9 @@ def test_send_platform_event():
                              event_data=[0, 0xff, 0xff])
     args, _ = mock_send_recv.call_args
     req = args[0]
-    eq_(req.event_message_rev, 4)
-    eq_(req.sensor_type, 0xf2)
-    eq_(req.sensor_number, 1)
-    eq_(req.event_type.type, 0x6f)
-    eq_(req.event_type.dir, 0)
-    eq_(req.event_data, [0, 0xff, 0xff])
+    assert req.event_message_rev == 4
+    assert req.sensor_type == 0xf2
+    assert req.sensor_number == 1
+    assert req.event_type.type == 0x6f
+    assert req.event_type.dir == 0
+    assert req.event_data == [0, 0xff, 0xff]

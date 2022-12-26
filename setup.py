@@ -70,7 +70,7 @@ setup(name=name,
       },
       test_suite='tests',
       tests_require=[
-          'nose',
+          'pytest',
           'mock',
       ],
       install_requires=[

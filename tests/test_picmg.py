@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-from nose.tools import eq_
 from pyipmi.picmg import LedState
-
 from pyipmi.msgs.picmg import SetFruLedStateReq
 
 
@@ -12,11 +10,11 @@ def test_to_request():
                    function=LedState.FUNCTION_ON)
     led.to_request(req)
 
-    eq_(req.fru_id, 1)
-    eq_(req.led_id, 2)
-    eq_(req.color, led.COLOR_GREEN)
-    eq_(req.led_function, 0xff)
-    eq_(req.on_duration, 0)
+    assert req.fru_id == 1
+    assert req.led_id == 2
+    assert req.color == led.COLOR_GREEN
+    assert req.led_function == 0xff
+    assert req.on_duration == 0
 
 
 def test_to_request_function_on():
@@ -25,9 +23,9 @@ def test_to_request_function_on():
     led.override_function = led.FUNCTION_ON
     led.to_request(req)
 
-    eq_(req.color, LedState.COLOR_RED)
-    eq_(req.led_function, 0xff)
-    eq_(req.on_duration, 0)
+    assert req.color == LedState.COLOR_RED
+    assert req.led_function == 0xff
+    assert req.on_duration == 0
 
 
 def test_to_request_function_off():
@@ -36,9 +34,9 @@ def test_to_request_function_off():
     led.override_function = led.FUNCTION_OFF
     led.to_request(req)
 
-    eq_(req.color, LedState.COLOR_RED)
-    eq_(req.led_function, 0)
-    eq_(req.on_duration, 0)
+    assert req.color == LedState.COLOR_RED
+    assert req.led_function == 0
+    assert req.on_duration == 0
 
 
 def test_to_request_function_blinking():
@@ -49,9 +47,9 @@ def test_to_request_function_blinking():
     led.override_on_duration = 4
     led.to_request(req)
 
-    eq_(req.color, LedState.COLOR_RED)
-    eq_(req.led_function, 3)
-    eq_(req.on_duration, 4)
+    assert req.color == LedState.COLOR_RED
+    assert req.led_function == 3
+    assert req.on_duration == 4
 
 
 def test_to_request_function_lamp_test():
@@ -61,6 +59,6 @@ def test_to_request_function_lamp_test():
     led.lamp_test_duration = 3
     led.to_request(req)
 
-    eq_(req.color, LedState.COLOR_RED)
-    eq_(req.led_function, 0xfb)
-    eq_(req.on_duration, 3)
+    assert req.color == LedState.COLOR_RED
+    assert req.led_function == 0xfb
+    assert req.on_duration == 3
