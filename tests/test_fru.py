@@ -2,25 +2,22 @@
 # -*- coding: utf-8 -*-
 import os
 
-import nose
-from nose.tools import eq_, ok_
-
 from pyipmi.fru import (FruData, FruPicmgPowerModuleCapabilityRecord,
                         InventoryCommonHeader, get_fru_inventory_from_file)
 
 
 def test_frudata_object():
     fru_field = FruData((0, 1, 2, 3))
-    eq_(fru_field.data[0], 0)
-    eq_(fru_field.data[1], 1)
-    eq_(fru_field.data[2], 2)
-    eq_(fru_field.data[3], 3)
+    assert fru_field.data[0] == 0
+    assert fru_field.data[1] == 1
+    assert fru_field.data[2] == 2
+    assert fru_field.data[3] == 3
 
     fru_field = FruData('\x00\x01\x02\x03')
-    eq_(fru_field.data[0], 0)
-    eq_(fru_field.data[1], 1)
-    eq_(fru_field.data[2], 2)
-    eq_(fru_field.data[3], 3)
+    assert fru_field.data[0] == 0
+    assert fru_field.data[1] == 1
+    assert fru_field.data[2] == 2
+    assert fru_field.data[3] == 3
 
 
 def test_commonheader_object():
@@ -33,7 +30,7 @@ def test_fru_inventory_from_file():
     if not os.path.isfile(fru_file):
         raise nose.SkipTest("FRU file '%s' is missing." % (fru_file))
     fru = get_fru_inventory_from_file(fru_file)
-    eq_(fru.chassis_info_area, None)
+    assert fru.chassis_info_area == None
 
 
 def test_board_area():
@@ -44,10 +41,10 @@ def test_board_area():
     fru = get_fru_inventory_from_file(fru_file)
 
     board_area = fru.board_info_area
-    eq_(board_area.manufacturer.string, 'Kontron')
-    eq_(board_area.product_name.string, 'AM4010')
-    eq_(board_area.serial_number.string, '0023721003')
-    eq_(board_area.part_number.string, '35943')
+    assert board_area.manufacturer.string == 'Kontron'
+    assert board_area.product_name.string == 'AM4010'
+    assert board_area.serial_number.string == '0023721003'
+    assert board_area.part_number.string == '35943'
 
 
 def test_product_area():
@@ -58,10 +55,10 @@ def test_product_area():
     fru = get_fru_inventory_from_file(fru_file)
 
     product_area = fru.product_info_area
-    eq_(product_area.manufacturer.string, 'Kontron')
-    eq_(product_area.name.string, 'AM4010')
-    eq_(product_area.serial_number.string, '0000000000000000000000000')
-    eq_(product_area.part_number.string, '0012')
+    assert product_area.manufacturer.string == 'Kontron'
+    assert product_area.name.string == 'AM4010'
+    assert product_area.serial_number.string == '0000000000000000000000000'
+    assert product_area.part_number.string == '0012'
 
 
 def test_multirecord_with_power_module_capability_record():
@@ -70,7 +67,7 @@ def test_multirecord_with_power_module_capability_record():
     if not os.path.isfile(fru_file):
         raise nose.SkipTest("FRU file '%s' is missing." % (fru_file))
     fru = get_fru_inventory_from_file(fru_file)
-    eq_(len(fru.multirecord_area.records), 1)
+    assert len(fru.multirecord_area.records) == 1
     record = fru.multirecord_area.records[0]
-    ok_(isinstance(record, FruPicmgPowerModuleCapabilityRecord))
-    eq_(record.maximum_current_output, 42.0)
+    assert isinstance(record, FruPicmgPowerModuleCapabilityRecord)
+    assert record.maximum_current_output == 42.0

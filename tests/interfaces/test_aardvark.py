@@ -2,7 +2,6 @@
 #-*- coding: utf-8 -*-
 
 from mock import MagicMock, patch
-from nose.tools import eq_, ok_
 
 from pyipmi.interfaces.ipmb import IpmbHeader
 

@@ -2,8 +2,6 @@
 
 from array import array
 
-from nose.tools import eq_
-
 import pyipmi.msgs.device_messaging
 
 from pyipmi.msgs import encode_message
@@ -20,7 +18,7 @@ def test_setbmcglobalenables_encode_all_disabled_req():
     m.enables.event_message_buffer_full_interrupt = 0
     m.enables.receive_message_queue_interrupt = 0
     data = encode_message(m)
-    eq_(data, b'\x00')
+    assert data == b'\x00'
 
 
 def test_setbmcglobalenables_encode_enable_oem_2_req():
@@ -33,7 +31,7 @@ def test_setbmcglobalenables_encode_enable_oem_2_req():
     m.enables.event_message_buffer_full_interrupt = 0
     m.enables.receive_message_queue_interrupt = 0
     data = encode_message(m)
-    eq_(data, b'\x80')
+    assert data == b'\x80'
 
 
 def test_setbmcglobalenables_encode_enable_oem_1_req():
@@ -46,7 +44,7 @@ def test_setbmcglobalenables_encode_enable_oem_1_req():
     m.enables.event_message_buffer_full_interrupt = 0
     m.enables.receive_message_queue_interrupt = 0
     data = encode_message(m)
-    eq_(data, b'\x40')
+    assert data == b'\x40'
 
 
 def test_setbmcglobalenables_encode_enable_oem_0_req():
@@ -59,7 +57,7 @@ def test_setbmcglobalenables_encode_enable_oem_0_req():
     m.enables.event_message_buffer_full_interrupt = 0
     m.enables.receive_message_queue_interrupt = 0
     data = encode_message(m)
-    eq_(data, b'\x20')
+    assert data == b'\x20'
 
 
 def test_setbmcglobalenables_encode_enable_receive_queue_interrupt_req():
@@ -72,46 +70,46 @@ def test_setbmcglobalenables_encode_enable_receive_queue_interrupt_req():
     m.enables.event_message_buffer_full_interrupt = 0
     m.enables.receive_message_queue_interrupt = 1
     data = encode_message(m)
-    eq_(data, b'\x01')
+    assert data == b'\x01'
 
 
 def test_getbmcglobalenables_decode_all_disabled_rsp():
     m = pyipmi.msgs.device_messaging.GetBmcGlobalEnablesRsp()
     decode_message(m, b'\x00\x00')
-    eq_(m.completion_code, 0x00)
-    eq_(m.enables.oem_2, 0)
-    eq_(m.enables.oem_1, 0)
-    eq_(m.enables.oem_0, 0)
-    eq_(m.enables.system_event_logging, 0)
-    eq_(m.enables.event_message_buffer, 0)
-    eq_(m.enables.event_message_buffer_full_interrupt, 0)
-    eq_(m.enables.receive_message_queue_interrupt, 0)
+    assert m.completion_code == 0x00
+    assert m.enables.oem_2 == 0
+    assert m.enables.oem_1 == 0
+    assert m.enables.oem_0 == 0
+    assert m.enables.system_event_logging == 0
+    assert m.enables.event_message_buffer == 0
+    assert m.enables.event_message_buffer_full_interrupt == 0
+    assert m.enables.receive_message_queue_interrupt == 0
 
 
 def test_getbmcglobalenables_decode_oem_2_enabled_rsp():
     m = pyipmi.msgs.device_messaging.GetBmcGlobalEnablesRsp()
     decode_message(m, b'\x00\x80')
-    eq_(m.completion_code, 0x00)
-    eq_(m.enables.oem_2, 1)
-    eq_(m.enables.oem_1, 0)
-    eq_(m.enables.oem_0, 0)
-    eq_(m.enables.system_event_logging, 0)
-    eq_(m.enables.event_message_buffer, 0)
-    eq_(m.enables.event_message_buffer_full_interrupt, 0)
-    eq_(m.enables.receive_message_queue_interrupt, 0)
+    assert m.completion_code == 0x00
+    assert m.enables.oem_2 == 1
+    assert m.enables.oem_1 == 0
+    assert m.enables.oem_0 == 0
+    assert m.enables.system_event_logging == 0
+    assert m.enables.event_message_buffer == 0
+    assert m.enables.event_message_buffer_full_interrupt == 0
+    assert m.enables.receive_message_queue_interrupt == 0
 
 
 def test_getbmcglobalenables_decode_oem_0_enabled_rsp():
     m = pyipmi.msgs.device_messaging.GetBmcGlobalEnablesRsp()
     decode_message(m, b'\x00\x20')
-    eq_(m.completion_code, 0x00)
-    eq_(m.enables.oem_2, 0)
-    eq_(m.enables.oem_1, 0)
-    eq_(m.enables.oem_0, 1)
-    eq_(m.enables.system_event_logging, 0)
-    eq_(m.enables.event_message_buffer, 0)
-    eq_(m.enables.event_message_buffer_full_interrupt, 0)
-    eq_(m.enables.receive_message_queue_interrupt, 0)
+    assert m.completion_code == 0x00
+    assert m.enables.oem_2 == 0
+    assert m.enables.oem_1 == 0
+    assert m.enables.oem_0 == 1
+    assert m.enables.system_event_logging == 0
+    assert m.enables.event_message_buffer == 0
+    assert m.enables.event_message_buffer_full_interrupt == 0
+    assert m.enables.receive_message_queue_interrupt == 0
 
 
 def test_clearmessageflags_encode_clear_none_req():
@@ -123,7 +121,7 @@ def test_clearmessageflags_encode_clear_none_req():
     m.clear.event_message_buffer = 0
     m.clear.receive_message_queue = 0
     data = encode_message(m)
-    eq_(data, b'\x00')
+    assert data == b'\x00'
 
 
 def test_clearmessageflags_encode_clear_oem_2_req():
@@ -135,7 +133,7 @@ def test_clearmessageflags_encode_clear_oem_2_req():
     m.clear.event_message_buffer = 0
     m.clear.receive_message_queue = 0
     data = encode_message(m)
-    eq_(data, b'\x80')
+    assert data == b'\x80'
 
 
 def test_clearmessageflags_encode_clear_oem_0_req():
@@ -147,7 +145,7 @@ def test_clearmessageflags_encode_clear_oem_0_req():
     m.clear.event_message_buffer = 0
     m.clear.receive_message_queue = 0
     data = encode_message(m)
-    eq_(data, b'\x20')
+    assert data == b'\x20'
 
 
 def test_clearmessageflags_encode_clear_receive_message_queue_req():
@@ -159,43 +157,43 @@ def test_clearmessageflags_encode_clear_receive_message_queue_req():
     m.clear.event_message_buffer = 0
     m.clear.receive_message_queue = 1
     data = encode_message(m)
-    eq_(data, b'\x01')
+    assert data == b'\x01'
 
 
 def test_getmessageflags_decode_not_flag_set_rsp():
     m = pyipmi.msgs.device_messaging.GetMessageFlagsRsp()
     decode_message(m, b'\x00\x00')
-    eq_(m.completion_code, 0x00)
-    eq_(m.flag.oem_2, 0)
-    eq_(m.flag.oem_1, 0)
-    eq_(m.flag.oem_0, 0)
-    eq_(m.flag.watchdog_pretimeout_interrupt_occurred, 0)
-    eq_(m.flag.event_message_buffer_full, 0)
-    eq_(m.flag.receive_message_available, 0)
+    assert m.completion_code == 0x00
+    assert m.flag.oem_2 == 0
+    assert m.flag.oem_1 == 0
+    assert m.flag.oem_0 == 0
+    assert m.flag.watchdog_pretimeout_interrupt_occurred == 0
+    assert m.flag.event_message_buffer_full == 0
+    assert m.flag.receive_message_available == 0
 
 
 def test_getmessageflags_decode_oem_2_set_rsp():
     m = pyipmi.msgs.device_messaging.GetMessageFlagsRsp()
     decode_message(m, b'\x00\x80')
-    eq_(m.completion_code, 0x00)
-    eq_(m.flag.oem_2, 1)
-    eq_(m.flag.oem_1, 0)
-    eq_(m.flag.oem_0, 0)
-    eq_(m.flag.watchdog_pretimeout_interrupt_occurred, 0)
-    eq_(m.flag.event_message_buffer_full, 0)
-    eq_(m.flag.receive_message_available, 0)
+    assert m.completion_code == 0x00
+    assert m.flag.oem_2 == 1
+    assert m.flag.oem_1 == 0
+    assert m.flag.oem_0 == 0
+    assert m.flag.watchdog_pretimeout_interrupt_occurred == 0
+    assert m.flag.event_message_buffer_full == 0
+    assert m.flag.receive_message_available == 0
 
 
 def test_getmessageflags_decode_event_message_full_set_rsp():
     m = pyipmi.msgs.device_messaging.GetMessageFlagsRsp()
     decode_message(m, b'\x00\x02')
-    eq_(m.completion_code, 0x00)
-    eq_(m.flag.oem_2, 0)
-    eq_(m.flag.oem_1, 0)
-    eq_(m.flag.oem_0, 0)
-    eq_(m.flag.watchdog_pretimeout_interrupt_occurred, 0)
-    eq_(m.flag.event_message_buffer_full, 1)
-    eq_(m.flag.receive_message_available, 0)
+    assert m.completion_code == 0x00
+    assert m.flag.oem_2 == 0
+    assert m.flag.oem_1 == 0
+    assert m.flag.oem_0 == 0
+    assert m.flag.watchdog_pretimeout_interrupt_occurred == 0
+    assert m.flag.event_message_buffer_full == 1
+    assert m.flag.receive_message_available == 0
 
 
 def test_enablemessagechannelreceive_encode_all_off_req():
@@ -203,7 +201,7 @@ def test_enablemessagechannelreceive_encode_all_off_req():
     m.channel.number = 0
     m.channel.state = 0
     data = encode_message(m)
-    eq_(data, b'\x00\x00')
+    assert data == b'\x00\x00'
 
 
 def test_enablemessagechannelreceive_encode_channel1_enable_req():
@@ -211,7 +209,7 @@ def test_enablemessagechannelreceive_encode_channel1_enable_req():
     m.channel.number = 1
     m.channel.state = 1
     data = encode_message(m)
-    eq_(data, b'\x01\x01')
+    assert data == b'\x01\x01'
 
 
 def test_enablemessagechannelreceive_encode_channel2_enable_req():
@@ -219,41 +217,41 @@ def test_enablemessagechannelreceive_encode_channel2_enable_req():
     m.channel.number = 2
     m.channel.state = 1
     data = encode_message(m)
-    eq_(data, b'\x02\x01')
+    assert data == b'\x02\x01'
 
 
 def test_enablemessagechannelreceive_decode_channel1_enabled_rsp():
     m = pyipmi.msgs.device_messaging.EnableMessageChannelReceiveRsp()
     decode_message(m, b'\x00\x01\x01')
-    eq_(m.completion_code, 0x00)
-    eq_(m.channel.number, 1)
-    eq_(m.channel.state, 1)
+    assert m.completion_code == 0x00
+    assert m.channel.number == 1
+    assert m.channel.state == 1
 
 
 def test_getmessage_decode_no_data_rsp():
     m = pyipmi.msgs.device_messaging.GetMessageRsp()
     decode_message(m, b'\x00\x21')
-    eq_(m.completion_code, 0x00)
-    eq_(m.channel.number, 1)
-    eq_(m.channel.privilege_level, 2)
+    assert m.completion_code == 0x00
+    assert m.channel.number == 1
+    assert m.channel.privilege_level == 2
 
 
 def test_getmessage_decode_with_data_rsp():
     m = pyipmi.msgs.device_messaging.GetMessageRsp()
     decode_message(m, b'\x00\x21\xaa\xff\xff\xee')
-    eq_(m.completion_code, 0x00)
-    eq_(m.channel.number, 1)
-    eq_(m.channel.privilege_level, 2)
-    eq_(m.data, array('B', [0xaa, 0xff, 0xff, 0xee]))
+    assert m.completion_code == 0x00
+    assert m.channel.number == 1
+    assert m.channel.privilege_level == 2
+    assert m.data == array('B', [0xaa, 0xff, 0xff, 0xee])
 
 
 def test_readeventmessagebuffer_decode_rsp():
     m = pyipmi.msgs.device_messaging.ReadEventMessageBufferRsp()
     decode_message(m, b'\x00\x00\x01\x02\x03\x04\x05\x06\x07'
                    b'\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f')
-    eq_(m.completion_code, 0x00)
-    eq_(m.event_data, array('B', b'\x00\x01\x02\x03\x04'
-        b'\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'))
+    assert m.completion_code == 0x00
+    assert m.event_data == array('B', b'\x00\x01\x02\x03\x04' \
+        b'\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f')
 
 
 def test_masterwriteread_encode_req_all_zero_read():
@@ -264,7 +262,7 @@ def test_masterwriteread_encode_req_all_zero_read():
     m.bus_id.slave_address = 0
     m.read_count = 0
     data = encode_message(m)
-    eq_(data, b'\x00\x00\x00')
+    assert data == b'\x00\x00\x00'
 
 
 def test_masterwriteread_encode_req_for_read():
@@ -275,7 +273,7 @@ def test_masterwriteread_encode_req_for_read():
     m.bus_id.slave_address = 0x3a
     m.read_count = 5
     data = encode_message(m)
-    eq_(data, b'\x45\x74\x05')
+    assert data == b'\x45\x74\x05'
 
 
 def test_masterwriteread_encode_req_for_write():
@@ -287,14 +285,14 @@ def test_masterwriteread_encode_req_for_write():
     m.read_count = 0
     m.data = [1, 0x23, 0x45]
     data = encode_message(m)
-    eq_(data, b'\x00\x00\x00\x01\x23\x45')
+    assert data == b'\x00\x00\x00\x01\x23\x45'
 
 
 def test_masterwriteread_decode_rsp():
     m = pyipmi.msgs.device_messaging.MasterWriteReadRsp()
     decode_message(m, b'\x00\x11\x22\x33\x44')
-    eq_(m.completion_code, 0x00)
-    eq_(m.data, array('B', [0x11, 0x22, 0x33, 0x44]))
+    assert m.completion_code == 0x00
+    assert m.data == array('B', [0x11, 0x22, 0x33, 0x44])
 
 
 def test_get_channel_authentication_capabilities_req():
@@ -303,29 +301,29 @@ def test_get_channel_authentication_capabilities_req():
     m.channel.type = 1
     m.privilege_level.requested = 5
     data = encode_message(m)
-    eq_(m.cmdid, 0x38)
-    eq_(m.netfn, 6)
-    eq_(data, b'\x86\x05')
+    assert m.cmdid == 0x38
+    assert m.netfn == 6
+    assert data == b'\x86\x05'
 
 
 def test_get_channel_authentication_capabilities_rsp():
     m = pyipmi.msgs.device_messaging.GetChannelAuthenticationCapabilitiesRsp()
     decode_message(m, b'\x00\x01\x15\x19\x44\x55\x66\x77\x88')
-    eq_(m.cmdid, 0x38)
-    eq_(m.netfn, 7)
-    eq_(m.completion_code, 0x00)
-    eq_(m.channel_number, 1)
-    eq_(m.support.none, 1)
-    eq_(m.support.md2, 0)
-    eq_(m.support.md5, 1)
-    eq_(m.support.straight, 1)
-    eq_(m.support.oem_proprietary, 0)
-    eq_(m.status.anonymous_login_enabled, 1)
-    eq_(m.status.anonymous_login_null_user, 0)
-    eq_(m.status.anonymous_login_non_null, 0)
-    eq_(m.status.user_level, 1)
-    eq_(m.status.per_message, 1)
-    eq_(m.status.kg, 0)
+    assert m.cmdid == 0x38
+    assert m.netfn == 7
+    assert m.completion_code == 0x00
+    assert m.channel_number == 1
+    assert m.support.none == 1
+    assert m.support.md2 == 0
+    assert m.support.md5 == 1
+    assert m.support.straight == 1
+    assert m.support.oem_proprietary == 0
+    assert m.status.anonymous_login_enabled == 1
+    assert m.status.anonymous_login_null_user == 0
+    assert m.status.anonymous_login_non_null == 0
+    assert m.status.user_level == 1
+    assert m.status.per_message == 1
+    assert m.status.kg == 0
 
 
 def test_get_session_challenge_rsp():
@@ -339,7 +337,7 @@ def test_get_session_challenge_rsp_cc_not_ok():
     m.temporary_session_id = 0x11121314
     m.challenge_string = '0123456789abcdef'
     data = encode_message(m)
-    eq_(data, b'\xc1\x14\x13\x12\x110123456789abcdef')
+    assert data == b'\xc1\x14\x13\x12\x110123456789abcdef'
 
 
 def test_get_session_challenge_req():
@@ -347,35 +345,35 @@ def test_get_session_challenge_req():
     m.authentication.type = 1
 #    m.user_name = "helloworld"
     data = encode_message(m)
-    eq_(m.cmdid, 0x39)
-    eq_(m.netfn, 6)
-    eq_(data,
-        b'\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+    assert m.cmdid == 0x39
+    assert m.netfn == 6
+    assert data, \
+        b'\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
 
     m.authentication.type = 1
     m.user_name = '0123456789abcdef'
     data = encode_message(m)
-    eq_(m.cmdid, 0x39)
-    eq_(m.netfn, 6)
-    eq_(data, b'\x010123456789abcdef')
+    assert m.cmdid == 0x39
+    assert m.netfn == 6
+    assert data == b'\x010123456789abcdef'
 
 
 def test_get_username_rsp():
     m = pyipmi.msgs.device_messaging.GetUserNameRsp()
     decode_message(m, b'\x00\x72\x6f\x6f\x74\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
-    eq_(m.cmdid, 0x46)
-    eq_(m.netfn, 7)
-    eq_(m.completion_code, 0x00)
-    eq_(m.user_name, b'root\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+    assert m.cmdid == 0x46
+    assert m.netfn == 7
+    assert m.completion_code == 0x00
+    assert m.user_name == b'root\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
 
 
 def test_get_username_req():
     m = pyipmi.msgs.device_messaging.GetUserNameReq()
     m.userid.userid = 2
     data = encode_message(m)
-    eq_(m.cmdid, 0x46)
-    eq_(m.netfn, 6)
-    eq_(m.userid.userid, 2)
+    assert m.cmdid == 0x46
+    assert m.netfn == 6
+    assert m.userid.userid == 2
 
 
 def test_set_user_password_req():
@@ -384,17 +382,17 @@ def test_set_user_password_req():
     m.operation.operation = 0b10
     m.password = "password".ljust(16, '\x00')
     data = encode_message(m)
-    eq_(m.cmdid, 0x47)
-    eq_(m.netfn, 6)
-    eq_(data, b'\x02\x02password\x00\x00\x00\x00\x00\x00\x00\x00')
+    assert m.cmdid == 0x47
+    assert m.netfn == 6
+    assert data == b'\x02\x02password\x00\x00\x00\x00\x00\x00\x00\x00'
 
 
 def test_set_user_password_rsp():
     m = pyipmi.msgs.device_messaging.SetUserPasswordRsp()
     decode_message(m, b'\x00')
-    eq_(m.cmdid, 0x47)
-    eq_(m.netfn, 7)
-    eq_(m.completion_code, 0x00)
+    assert m.cmdid == 0x47
+    assert m.netfn == 7
+    assert m.completion_code == 0x00
 
 
 def test_get_user_access_req():
@@ -402,24 +400,24 @@ def test_get_user_access_req():
     m.channel.channel_number = 1
     m.userid.userid = 2
     data = encode_message(m)
-    eq_(m.cmdid, 0x44)
-    eq_(m.netfn, 6)
-    eq_(data, b'\x01\x02')
+    assert m.cmdid == 0x44
+    assert m.netfn == 6
+    assert data == b'\x01\x02'
 
 
 def test_get_user_access_rsp():
     m = pyipmi.msgs.device_messaging.GetUserAccessRsp()
     decode_message(m, b'\x00\x0a\x42\x01\x13')
-    eq_(m.cmdid, 0x44)
-    eq_(m.netfn, 7)
-    eq_(m.max_user.max_user, 10)
-    eq_(m.enabled_user.count, 2)
-    eq_(m.enabled_user.status, 1)
-    eq_(m.fixed_names.count, 1)
-    eq_(m.channel_access.privilege, 3)
-    eq_(m.channel_access.ipmi_msg, 1)
-    eq_(m.channel_access.link_auth, 0)
-    eq_(m.channel_access.callback, 0)
+    assert m.cmdid == 0x44
+    assert m.netfn == 7
+    assert m.max_user.max_user == 10
+    assert m.enabled_user.count == 2
+    assert m.enabled_user.status == 1
+    assert m.fixed_names.count == 1
+    assert m.channel_access.privilege == 3
+    assert m.channel_access.ipmi_msg == 1
+    assert m.channel_access.link_auth == 0
+    assert m.channel_access.callback == 0
 
 
 def test_set_user_access_req():
@@ -432,14 +430,14 @@ def test_set_user_access_req():
     m.userid.userid = 2
     m.privilege.privilege_level = 3
     data = encode_message(m)
-    eq_(m.cmdid, 0x43)
-    eq_(m.netfn, 6)
-    eq_(data, b'\x91\x02\x03')
+    assert m.cmdid == 0x43
+    assert m.netfn == 6
+    assert data == b'\x91\x02\x03'
 
 
 def test_user_access_rsp():
     m = pyipmi.msgs.device_messaging.SetUserAccessRsp()
     decode_message(m, b'\x00')
-    eq_(m.cmdid, 0x43)
-    eq_(m.netfn, 7)
-    eq_(m.completion_code, 0x00)
+    assert m.cmdid == 0x43
+    assert m.netfn == 7
+    assert m.completion_code == 0x00

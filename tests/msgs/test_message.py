@@ -1,15 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from nose.tools import eq_
-
 from array import array
 from pyipmi.utils import ByteBuffer
 from pyipmi.msgs.message import (Bitfield, Message, UnsignedInt,
                                  RemainingBytes, String)
 
 
-class TestMessage(object):
+class TMessage(object):
     def __init__(self, field):
         setattr(self, field.name, field.create())
         self.field = field
@@ -25,53 +23,53 @@ class TestMessage(object):
 
 
 def test_bitfield_encode():
-    t = TestMessage(Bitfield('status', 1,
+    t = TMessage(Bitfield('status', 1,
                              Bitfield.Bit('erase_in_progress', 4),
                              Bitfield.ReservedBit(4, 0),))
     t.status.erase_in_progress = 1
     byte_buffer = t.encode()
-    eq_(byte_buffer.array, array('B', [0x1]))
+    assert byte_buffer.array == array('B', [0x1])
 
 
 def test_unsignedint_encode():
-    t = TestMessage(UnsignedInt('test', 4))
+    t = TMessage(UnsignedInt('test', 4))
     t.test = 0x12345678
     byte_buffer = t.encode()
-    eq_(byte_buffer.array, array('B', [0x78, 0x56, 0x34, 0x12]))
+    assert byte_buffer.array == array('B', [0x78, 0x56, 0x34, 0x12])
 
-    t = TestMessage(UnsignedInt('test', 8))
+    t = TMessage(UnsignedInt('test', 8))
     t.test = 0x12345678
     byte_buffer = t.encode()
-    eq_(byte_buffer.array, array('B', [0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0]))
+    assert byte_buffer.array == array('B', [0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0])
 
 
 def test_unsignedint_decode():
-    t = TestMessage(UnsignedInt('test', 1))
+    t = TMessage(UnsignedInt('test', 1))
     t.decode(b'\x12')
-    eq_(t.test, 0x12)
+    assert t.test == 0x12
 
     t.decode(b'\xd7')
-    eq_(t.test, 0xd7)
+    assert t.test == 0xd7
 
 
 def test_string_encode():
-    t = TestMessage(String('test', 10))
+    t = TMessage(String('test', 10))
     t.test = '1234'
     byte_buffer = t.encode()
-    eq_(byte_buffer.array, array('B', [0x31, 0x32, 0x33, 0x34]))
+    assert byte_buffer.array == array('B', [0x31, 0x32, 0x33, 0x34])
 
 
 def test_string_decode():
-    t = TestMessage(String('test', 10))
+    t = TMessage(String('test', 10))
     t.decode(b'abcdef')
-    eq_(t.test, b'abcdef')
+    assert t.test == b'abcdef'
 
 
 def test_remainingbytes_encode():
-    t = TestMessage(RemainingBytes('test'))
+    t = TMessage(RemainingBytes('test'))
     t.test = [0xb4, 1]
     byte_buffer = t.encode()
-    eq_(byte_buffer.array, array('B', [0xb4, 0x01]))
+    assert byte_buffer.array == array('B', [0xb4, 0x01])
 
 
 def test_message():
@@ -79,6 +77,6 @@ def test_message():
     msg.__netfn__ = 0x1
     msg.__cmdid__ = 0x2
 
-    eq_(msg.lun, 0)
-    eq_(msg.netfn, 1)
-    eq_(msg.cmdid, 2)
+    assert msg.lun == 0
+    assert msg.netfn == 1
+    assert msg.cmdid == 2

@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from mock import MagicMock, call
-from nose.tools import eq_
 
 from pyipmi.helper import clear_repository_helper
 from pyipmi.msgs.constants import (REPOSITORY_ERASURE_COMPLETED,
@@ -30,4 +29,4 @@ def test_clear_repository_helper():
         call(REPOSITORY_GET_ERASE_STATUS, 0x1234),
     ]
     clear_fn.assert_has_calls(clear_calls)
-    eq_(clear_fn.call_count, 3)
+    assert clear_fn.call_count == 3
