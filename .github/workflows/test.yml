@@ -19,10 +19,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: pip install python-coveralls coverage pytest future mock
+        run: pip install python-coveralls coverage pytest future mock flake8
 
         #      - name: Setup and run tests
         #        run: python setup.py test
+
+      - name: Lint with flake8
+        run: |
+          flake8 pyipmi/ tests/ --count --show-source --statistics
+
       - name: Test with pytest
         run: |
           pytest
