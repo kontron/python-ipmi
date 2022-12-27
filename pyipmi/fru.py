@@ -21,7 +21,8 @@ import os
 
 from .errors import DecodingError, CompletionCodeError
 from .msgs import constants
-from .utils import bcd_search, chunks, py3_array_tobytes, FruTypeLengthString
+from .utils import bcd_search, chunks, py3_array_tobytes
+from .fields import FruTypeLengthString
 
 codecs.register(bcd_search)
 
@@ -173,38 +174,6 @@ def get_fru_inventory_from_file(filename):
     data = array.array('B', file_data)
     file.close()
     return FruInventory(data)
-
-
-#class FruTypeLengthString(object):
-#    TYPE_BINARY = 0
-#    TYPE_BCD_PLUS = 1
-#    TYPE_6BIT_ASCII = 2
-#    TYPE_ASCII_OR_UTF16 = 3
-#
-#    def __init__(self, data=None, offset=0, force_lang_english=False):
-#        if data:
-#            self._from_data(data, offset, force_lang_english)
-#
-#    def __str__(self):
-#        if self.field_type is FruTypeLengthString.TYPE_BINARY:
-#            return ' '.join('%02x' % b for b in self.raw)
-#        else:
-#            return self.value.replace('\x00', '')
-#
-#    def _from_data(self, data, offset=0, force_lang_english=False):
-#        self.offset = offset
-#        self.field_type = data[offset] >> 6 & 0x3
-#        self.length = data[offset] & 0x3f
-#
-#        self.raw = data[offset+1:offset+1+self.length]
-#
-#        chr_data = ''.join([chr(c) for c in self.raw])
-#        if self.field_type == self.TYPE_BCD_PLUS:
-#            self.value = chr_data.decode('bcd+')
-#        elif self.field_type == self.TYPE_6BIT_ASCII:
-#            self.value = chr_data.decode('6bitascii')
-#        else:
-#            self.value = chr_data
 
 
 CUSTOM_FIELD_END = 0xc1

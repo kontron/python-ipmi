@@ -21,7 +21,8 @@ import math
 from . import errors
 
 from .errors import DecodingError
-from .utils import check_completion_code, ByteBuffer, SdrTypeLengthString
+from .fields import SdrTypeLengthString
+from .utils import check_completion_code, ByteBuffer
 from .msgs import create_request_by_name
 
 from .helper import get_sdr_data_helper, clear_repository_helper
