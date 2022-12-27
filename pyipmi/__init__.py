@@ -35,7 +35,7 @@ from . import sensor
 from . import msgs
 
 from .errors import IpmiTimeoutError, CompletionCodeError, RetryError
-from .msgs.registry import create_request_by_name, create_message
+from .msgs.registry import create_request_by_name
 from .session import Session
 from .utils import check_completion_code, is_string
 

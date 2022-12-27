@@ -24,8 +24,6 @@ from . import UnsignedIntMask
 from . import Bitfield
 from . import CompletionCode
 from . import Conditional
-from . import RemainingBytes
-from . import Optional
 from . import GroupExtensionIdentifier
 
 
@@ -57,8 +55,8 @@ class GetVsoCapabilitiesRsp(VitaMessage):
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('vita_identifier', VITA_IDENTIFIER),
-#        UnsignedInt('unknown', 1),
-#        UnsignedInt('unknown', 1),
-#        UnsignedInt('vso_standard_revision', 1),
-#        UnsignedInt('vita_spec_revision', 1),
+        # UnsignedInt('unknown', 1),
+        # UnsignedInt('unknown', 1),
+        # UnsignedInt('vso_standard_revision', 1),
+        # UnsignedInt('vita_spec_revision', 1),
     )

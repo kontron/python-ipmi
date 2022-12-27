@@ -138,6 +138,7 @@ class GetPohCounterRsp(Message):
         UnsignedInt('counter_reading', 4),
     )
 
+
 @register_message_class
 class GetSystemBootOptionsReq(Message):
     __cmdid__ = constants.CMDID_GET_SYSTEM_BOOT_OPTIONS
@@ -149,6 +150,7 @@ class GetSystemBootOptionsReq(Message):
         UnsignedInt('set_selector', 1, 0),
         UnsignedInt('block_selector', 1, 0)
     )
+
 
 @register_message_class
 class GetSystemBootOptionsRsp(Message):
@@ -165,6 +167,7 @@ class GetSystemBootOptionsRsp(Message):
         RemainingBytes('data'),
     )
 
+
 @register_message_class
 class SetSystemBootOptionsReq(Message):
     __cmdid__ = constants.CMDID_SET_SYSTEM_BOOT_OPTIONS
@@ -175,6 +178,7 @@ class SetSystemBootOptionsReq(Message):
                  Bitfield.Bit('parameter_validity', 1, default=0)),
         RemainingBytes('data')
     )
+
 
 @register_message_class
 class SetSystemBootOptionsRsp(Message):

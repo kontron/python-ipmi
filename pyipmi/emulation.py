@@ -3,7 +3,6 @@ import logging
 import os
 import random
 import socket
-import sys
 import threading
 import yaml
 
@@ -20,7 +19,6 @@ from pyipmi.msgs import (create_message, decode_message, encode_message,
                          create_response_message, create_request_by_name)
 from pyipmi.msgs import constants
 from pyipmi.session import Session
-from pyipmi.utils import ByteBuffer
 
 UDP_IP = "127.0.0.1"
 UDP_PORT = 1623
@@ -87,8 +85,6 @@ def handle_get_device_id(context, req):
 @register_message_handler("GetFruInventoryAreaInfo")
 def handle_fru_inventory_are_info(context, req):
     rsp = create_response_message(req)
-    fru_file_name = None
-
     cfg = context.config
 
     try:
@@ -101,7 +97,6 @@ def handle_fru_inventory_are_info(context, req):
         log().warning('cannot find frufile for fru_id={} in config'.format(req.fru_id))
         rsp.completion_code = constants.CC_REQ_DATA_NOT_PRESENT
         return rsp
-
 
     try:
         statinfo = os.stat(fru_filename)
@@ -117,8 +112,6 @@ def handle_fru_inventory_are_info(context, req):
 @register_message_handler("ReadFruData")
 def handle_fru_read(context, req):
     rsp = create_response_message(req)
-    fru_file_name = None
-
     cfg = context.config
 
     try:
@@ -197,17 +190,11 @@ def handle_reserve_device_sdr_repository(context, req):
     return rsp
 
 
-#@register_message_handler("GetDeviceSdr")
-#def handle_get_device_sdr(config, session, req):
-#    rsp = create_response_message(req)
-#    return rsp
-
 @register_message_handler("SendMessage")
 def handle_send_message(context, req):
     rsp = create_response_message(req)
     rsp.completion_code = constants.CC_PARAM_OUT_OF_RANGE
     return rsp
-
 
 
 def handle_ipmi_request_msg(context, req):
@@ -293,7 +280,7 @@ def handle_rmcp_ipmi_msg(context, sdu):
 
     tx_data = ipmb.encode_ipmb_msg(rsp_header, data)
     log().debug('IPMI TX: {}: {:s}'.format(rsp,
-            ' '.join('%02x' % b for b in array('B', tx_data))))
+                ' '.join('%02x' % b for b in array('B', tx_data))))
 
     # rmcp ipmi rsp msg
     ipmi_tx = rmcp.IpmiMsg(context.session)
@@ -385,7 +372,7 @@ def main(args=None):
     connections = {}
 
     while True:
-        pdu, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
+        pdu, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
 
         # create new connection
         if addr not in connections:

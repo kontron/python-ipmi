@@ -423,6 +423,7 @@ class GetUserNameRsp(Message):
         String('user_name', 16, '\x00' * 16),
     )
 
+
 @register_message_class
 class SetUserPasswordReq(Message):
     __cmdid__ = constants.CMDID_SET_USER_PASSWORD
@@ -438,6 +439,7 @@ class SetUserPasswordReq(Message):
         String('password', 16, '\x00' * 16)
     )
 
+
 @register_message_class
 class SetUserPasswordRsp(Message):
     __cmdid__ = constants.CMDID_SET_USER_PASSWORD
@@ -445,6 +447,7 @@ class SetUserPasswordRsp(Message):
     __fields__ = (
         CompletionCode(),
     )
+
 
 @register_message_class
 class GetUserAccessReq(Message):
@@ -458,6 +461,7 @@ class GetUserAccessReq(Message):
                  Bitfield.Bit('userid', 6, 0),
                  Bitfield.ReservedBit(2, 0))
     )
+
 
 @register_message_class
 class GetUserAccessRsp(Message):
@@ -482,6 +486,7 @@ class GetUserAccessRsp(Message):
                  Bitfield.ReservedBit(1, 0))
     )
 
+
 @register_message_class
 class SetUserAccessReq(Message):
     __cmdid__ = constants.CMDID_SET_USER_ACCESS
@@ -505,6 +510,7 @@ class SetUserAccessReq(Message):
                      Bitfield.ReservedBit(4, 0))
         )
     )
+
 
 @register_message_class
 class SetUserAccessRsp(Message):

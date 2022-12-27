@@ -107,7 +107,7 @@ class IpmbHeaderRsp(IpmbHeader):
         self.rq_sa = data[0]
         self.netfn = data[1] >> 2
         self.rq_lun = data[1] & 3
-        self.checksum =  data[2]
+        self.checksum = data[2]
         self.rs_sa = data[3]
         self.rq_seq = data[4] >> 2
         self.rs_lun = data[4] & 3

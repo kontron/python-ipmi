@@ -112,7 +112,6 @@ class Ipmitool(object):
             if self.re_unable_establish.match(line):
                 raise IpmiConnectionError('ipmitool: {}'.format(line))
 
-
             # Check for completion code
             match_completion_code = self.re_completion_code.match(line)
             if match_completion_code:
@@ -267,7 +266,6 @@ class Ipmitool(object):
         cmd += (' 2>&1')
 
         return cmd
-
 
     @staticmethod
     def _run_ipmitool(cmd):

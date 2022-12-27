@@ -619,12 +619,12 @@ def main():
         if verbose:
             traceback.print_exc()
         sys.exit(1)
-    except pyipmi.errors.IpmiTimeoutError as e:
+    except pyipmi.errors.IpmiTimeoutError:
         print('Command timed out')
         if verbose:
             traceback.print_exc()
         sys.exit(1)
-    except KeyboardInterrupt as e:
+    except KeyboardInterrupt:
         if verbose:
             traceback.print_exc()
         sys.exit(1)
