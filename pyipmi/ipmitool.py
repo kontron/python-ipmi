@@ -563,7 +563,6 @@ def main():
             interface_name = a
         elif o == '-o':
             interface_options = a
-            #interface_options = a.split(',')
         else:
             assert False, 'unhandled option'
 

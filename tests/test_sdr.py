@@ -122,7 +122,7 @@ class TestSdrFullSensorRecord():
 
     def test_convert_sensor_raw_to_value(self):
         sdr = SdrFullSensorRecord()
-        assert sdr.convert_sensor_raw_to_value(None) == None
+        assert sdr.convert_sensor_raw_to_value(None) is None
 
         sdr.analog_data_format = sdr.DATA_FMT_UNSIGNED
         sdr.m = 1
@@ -139,7 +139,7 @@ class TestSdrFullSensorRecord():
         sdr.k1 = 0
         sdr.k2 = 0
         sdr.linearization = 0
-        assert sdr.convert_sensor_raw_to_value(1) ==10
+        assert sdr.convert_sensor_raw_to_value(1) == 10
         assert sdr.convert_sensor_raw_to_value(255) == 2550
 
         sdr.analog_data_format = sdr.DATA_FMT_1S_COMPLEMENT
@@ -174,9 +174,9 @@ class TestSdrFullSensorRecord():
         sdr = SdrCommon.from_data(data)
         assert isinstance(sdr, SdrFullSensorRecord)
         assert str(sdr) == '["A2:Vcc 12V"] [1:53] [17 00 51 01 35 17 00 ' \
-                      '51 01 35 17 00 51 01 35 32 85 32 1b 1b 00 04 00 00 ' \
-                      '3b 01 00 01 00 d0 07 cc f4 a6 ff 00 00 fe f5 00 8e ' \
-                      'a5 04 04 00 00 00 ca 41 32 3a 56 63 63 20 31 32 56]'
+                           '51 01 35 17 00 51 01 35 32 85 32 1b 1b 00 04 00 00 ' \
+                           '3b 01 00 01 00 d0 07 cc f4 a6 ff 00 00 fe f5 00 8e ' \
+                           'a5 04 04 00 00 00 ca 41 32 3a 56 63 63 20 31 32 56]'
         assert sdr.device_id_string == 'A2:Vcc 12V'
 
 
@@ -212,8 +212,8 @@ class TestSdrCompactSensorRecord():
         sdr = SdrCommon.from_data(data)
         assert isinstance(sdr, SdrCompactSensorRecord)
         assert str(sdr) == '["A4:Pres SFP-1"] [d3 00 51 02 28 82 00 d3 c1 64 ' \
-                       '03 40 21 6f 00 00 00 00 03 00 c0 00 00 01 00 00 00 ' \
-                       '00 00 00 00 cd 41 34 3a 50 72 65 73 20 53 46 50 2d 31]'
+                           '03 40 21 6f 00 00 00 00 03 00 c0 00 00 01 00 00 00 ' \
+                           '00 00 00 00 cd 41 34 3a 50 72 65 73 20 53 46 50 2d 31]'
 
 
 def test_sdreventonlysensorrecord():
@@ -237,7 +237,7 @@ class TestSdrFruDeviceLocatorRecord():
         sdr = SdrCommon.from_data(data)
         assert isinstance(sdr, SdrFruDeviceLocator)
         assert str(sdr) == '["Kontron MCMC"] [02 00 51 11 17 82 03 80 00 00 ' \
-                      '10 02 c2 61 00 cc 4b 6f 6e 74 72 6f 6e 20 4d 43 4d 43]'
+                           '10 02 c2 61 00 cc 4b 6f 6e 74 72 6f 6e 20 4d 43 4d 43]'
 
 
 class TestSdrManagementControllerDeviceRecord():
@@ -255,7 +255,7 @@ class TestSdrManagementControllerDeviceRecord():
         sdr = SdrCommon.from_data(data)
         assert isinstance(sdr, SdrManagementControllerDeviceLocator)
         assert str(sdr) == '["A2:AM4220"] [00 01 51 12 19 00 01 51 12 1b ' \
-                      '00 01 51 12 1b c9 41 32 3a 41 4d 34 32 32 30]'
+                           '00 01 51 12 1b c9 41 32 3a 41 4d 34 32 32 30]'
         assert sdr.device_id_string == 'A2:AM4220'
 
 
@@ -267,8 +267,8 @@ class TestSdrManagementControllerConfirmationRecord():
         sdr = SdrCommon.from_data(data)
         assert isinstance(sdr, SdrManagementControllerConfirmationRecord)
         assert str(sdr) == '[45 00 51 13 1b 20 00 01 02 01 51 4a c1 62 06 80 00 ' \
-                      '00 00 00 00 00 00 00 00 00 00 00 00 00 00 00]'
-        assert sdr.ipmi_version ==0x51
+                           '00 00 00 00 00 00 00 00 00 00 00 00 00 00 00]'
+        assert sdr.ipmi_version == 0x51
         assert sdr.manufacturer_id == 0x2c14a
         assert sdr.product_id == 0x8006
 

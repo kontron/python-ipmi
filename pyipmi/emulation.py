@@ -213,7 +213,7 @@ def handle_ipmi_request_msg(context, req):
 def handle_rmcp_asf_msg(context, sdu):
     asf = rmcp.AsfMsg()
     asf.unpack(sdu)
-    t = rmcp.AsfMsg().from_data(sdu)
+    # t = rmcp.AsfMsg().from_data(sdu)
     if asf.asf_type == rmcp.AsfMsg.ASF_TYPE_PRESENCE_PING:
         log().debug(f'ASF RX: ping: {asf}')
     pong = rmcp.AsfPong()
@@ -269,7 +269,7 @@ def handle_rmcp_ipmi_msg(context, sdu):
         return _create_invalid_response(ipmi_sdu)
 
     log().debug('IPMI RX: {}: {:s}'.format(req,
-            ' '.join('%02x' % b for b in array('B', ipmi_sdu))))
+                ' '.join('%02x' % b for b in array('B', ipmi_sdu))))
     decode_message(req, ipmi_sdu[6:-1])
 
     rsp = handle_ipmi_request_msg(context, req)

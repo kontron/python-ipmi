@@ -30,13 +30,13 @@ def test_deviceid_object():
     dev = DeviceId(rsp)
     assert dev.device_id == 18
     assert dev.revision == 4
-    assert dev.provides_sdrs == True
+    assert dev.provides_sdrs
     assert str(dev.fw_revision) == '5.67'
     assert str(dev.ipmi_version) == '1.5'
     assert dev.manufacturer_id == 5649426
     assert dev.product_id == 21828
 
-    assert dev.aux == None
+    assert dev.aux is None
 
 
 def test_deviceid_object_with_aux():

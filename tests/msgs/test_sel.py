@@ -28,7 +28,7 @@ def test_getselentry_decode_valid_rsp():
     decode_message(m, b'\x00\x02\x01\x01\x02\x03\x04')
     assert m.completion_code == 0x00
     assert m.next_record_id == 0x0102
-    assert m.record_data == array('B', [1,2,3,4])
+    assert m.record_data == array('B', [1, 2, 3, 4])
 
 
 def test_getselentry_encode_valid_rsp():

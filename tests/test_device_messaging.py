@@ -5,6 +5,7 @@ from pyipmi.messaging import UserAccess, UserPrivilegeLevel
 import pyipmi.msgs.device_messaging
 from pyipmi.msgs import decode_message
 
+
 def test_useraccess_object():
     msg = pyipmi.msgs.device_messaging.GetUserAccessRsp()
     decode_message(msg, b'\x00\x0a\x42\x01\x13')

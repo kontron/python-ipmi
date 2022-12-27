@@ -95,7 +95,8 @@ class FruTypeLengthString(TypeLengthString):
 
     def __init__(self, data=None, offset=0, force_lang_eng=False):
         super(FruTypeLengthString, self).__init__(data, offset,
-                                               force_lang_eng, sdr=False)
+                                                  force_lang_eng,
+                                                  sdr=False)
 
 
 class SdrTypeLengthString(TypeLengthString):

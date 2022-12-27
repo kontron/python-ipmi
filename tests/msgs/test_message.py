@@ -24,8 +24,8 @@ class TMessage(object):
 
 def test_bitfield_encode():
     t = TMessage(Bitfield('status', 1,
-                             Bitfield.Bit('erase_in_progress', 4),
-                             Bitfield.ReservedBit(4, 0),))
+                          Bitfield.Bit('erase_in_progress', 4),
+                          Bitfield.ReservedBit(4, 0),))
     t.status.erase_in_progress = 1
     byte_buffer = t.encode()
     assert byte_buffer.array == array('B', [0x1])

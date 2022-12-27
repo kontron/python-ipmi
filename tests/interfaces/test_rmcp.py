@@ -3,13 +3,8 @@
 
 import array
 
-from mock import MagicMock
-
-from pyipmi import Target
-
 from pyipmi.session import Session
-from pyipmi.interfaces.rmcp import (AsfMsg, AsfPing, AsfPong, IpmiMsg,
-                                    Rmcp, RmcpMsg)
+from pyipmi.interfaces.rmcp import (AsfMsg, AsfPing, AsfPong, IpmiMsg, RmcpMsg)
 from pyipmi.utils import py3_array_tobytes
 
 
@@ -124,28 +119,29 @@ class TestIpmiMsg:
         assert m.auth_type == 1
         assert m.sequence_number == 0x11223344
         assert m.session_id == 0x55667788
-        assert m.auth_code ==  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+        assert m.auth_code == [1, 2, 3, 4, 5, 6, 7, 8,
+                               9, 10, 11, 12, 13, 14, 15, 16]
 
 
 class TestRmcp:
-#    def test_send_and_receive_raw(self):
-#        mock_send = MagicMock()
-#        mock_recv = MagicMock()
-#        mock_recv.return_value = (b'\x06\x00\xee\x07\x00\x00\x00\x00\x00\x00'
-#                                  b'\x00\x00\x00\x06'
-#                                  b'\x01\x02\x03\x04\x05\x06', 0)
-#
-#        target = Target()
-#        target.ipmb_address = 0x20
-#        rmcp = Rmcp()
-#        rmcp.host = '10.10.10.10'
-#        rmcp.port = 637
-#
-#        rmcp._sock.sendto = mock_send
-#        rmcp._sock.recvfrom = mock_recv
-#
-#        rmcp.send_and_receive_raw(target, 0, 0, b'\x00')
-#        rmcp._send_ipmi_msg.assert_called_with(1)
+    # def test_send_and_receive_raw(self):
+    #     mock_send = MagicMock()
+    #     mock_recv = MagicMock()
+    #     mock_recv.return_value = (b'\x06\x00\xee\x07\x00\x00\x00\x00\x00\x00'
+    #                               b'\x00\x00\x00\x06'
+    #                               b'\x01\x02\x03\x04\x05\x06', 0)
+
+    #     target = Target()
+    #     target.ipmb_address = 0x20
+    #     rmcp = Rmcp()
+    #     rmcp.host = '10.10.10.10'
+    #     rmcp.port = 637
+
+    #     rmcp._sock.sendto = mock_send
+    #     rmcp._sock.recvfrom = mock_recv
+
+    #     rmcp.send_and_receive_raw(target, 0, 0, b'\x00')
+    #     rmcp._send_ipmi_msg.assert_called_with(1)
 
     def test_send_and_receive(self):
         pass
