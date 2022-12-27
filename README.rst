@@ -113,7 +113,7 @@ ipmitool command:
 Compatibility
 -------------
 
-Both Python 2.7 and Python 3.x are currently supported.
+Python > 3.6 is currently supported. Python 2.x is deprecated.
 
 Contributing
 ------------
