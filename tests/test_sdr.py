@@ -59,66 +59,66 @@ class TestSdrFullSensorRecord():
         with pytest.raises(DecodingError):
             sdr = SdrFullSensorRecord(None)
             sdr.linearization = 12
-            sdr.l(1)
+            sdr.lin(1)
 
     def test_linearization(self):
         sdr = SdrFullSensorRecord(None)
 
         # linear
         sdr.linearization = 0
-        assert sdr.l(1) == 1
-        assert sdr.l(10) == 10
+        assert sdr.lin(1) == 1
+        assert sdr.lin(10) == 10
 
         # ln
         sdr.linearization = 1
-        assert sdr.l(1) == 0
+        assert sdr.lin(1) == 0
 
         # log
         sdr.linearization = 2
-        assert sdr.l(10) == 1
-        assert sdr.l(100) == 2
+        assert sdr.lin(10) == 1
+        assert sdr.lin(100) == 2
 
         # log
         sdr.linearization = 3
-        assert sdr.l(8) == 3
-        assert sdr.l(16) == 4
+        assert sdr.lin(8) == 3
+        assert sdr.lin(16) == 4
 
         # e
         sdr.linearization = 4
-        assert sdr.l(1) == 2.718281828459045
+        assert sdr.lin(1) == 2.718281828459045
 
         # exp10
         sdr.linearization = 5
-        assert sdr.l(1) == 10
-        assert sdr.l(2) == 100
+        assert sdr.lin(1) == 10
+        assert sdr.lin(2) == 100
 
         # exp2
         sdr.linearization = 6
-        assert sdr.l(3) == 8
-        assert sdr.l(4) == 16
+        assert sdr.lin(3) == 8
+        assert sdr.lin(4) == 16
 
         # 1/x
         sdr.linearization = 7
-        assert sdr.l(2) == 0.5
-        assert sdr.l(4) == 0.25
+        assert sdr.lin(2) == 0.5
+        assert sdr.lin(4) == 0.25
 
         # sqr
         sdr.linearization = 8
-        assert sdr.l(2) == 4
+        assert sdr.lin(2) == 4
 
         # cube
         sdr.linearization = 9
-        assert sdr.l(2) == 8
-        assert sdr.l(3) == 27
+        assert sdr.lin(2) == 8
+        assert sdr.lin(3) == 27
 
         # sqrt
         sdr.linearization = 10
-        assert sdr.l(16) == 4
+        assert sdr.lin(16) == 4
 
         # cubert
         sdr.linearization = 11
-        assert sdr.l(8) == 2
-        assert sdr.l(27) == 3
+        assert sdr.lin(8) == 2
+        assert sdr.lin(27) == 3
 
     def test_convert_sensor_raw_to_value(self):
         sdr = SdrFullSensorRecord()
