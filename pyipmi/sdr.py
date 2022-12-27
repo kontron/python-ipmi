@@ -288,7 +288,7 @@ class SdrFullSensorRecord(SdrCommon):
                 raw = -((raw & 0x7f) ^ 0x7f) - 1
         raw = float(raw)
 
-        return self.l((self.m * raw + (self.b * 10**self.k1)) * 10**self.k2)
+        return self.lin((self.m * raw + (self.b * 10**self.k1)) * 10**self.k2)
 
     def convert_sensor_value_to_raw(self, value):
         linearization = self.linearization & 0x7f
@@ -314,7 +314,7 @@ class SdrFullSensorRecord(SdrCommon):
         return raw
 
     @property
-    def l(self):  # noqa:E743
+    def lin(self):
         try:
             return {
                 L_LN: math.log,
