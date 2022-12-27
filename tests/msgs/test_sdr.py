@@ -17,10 +17,10 @@ def test_getsdrrepositoryinfo_encode_req():
 def test_getsdrrepositoryinfo_decode_rsp():
     m = pyipmi.msgs.sdr.GetSdrRepositoryInfoRsp()
     decode_message(m, b'\x00\x51\x00\x11\x55\xaa\x11\x22\x33\x44\x55\x66\x77\x88\xaa')
-    assert m.completion_code ==  0x00
-    assert m.sdr_version ==  0x51
-    assert m.record_count ==  0x1100
-    assert m.free_space ==  0xaa55
+    assert m.completion_code == 0x00
+    assert m.sdr_version == 0x51
+    assert m.record_count == 0x1100
+    assert m.free_space == 0xaa55
     assert m.most_recent_addition == 0x44332211
     assert m.most_recent_erase == 0x88776655
     assert m.support.get_allocation_info == 0

@@ -33,7 +33,7 @@ def test_activatefirmwarereq_decode_valid_req_wo_optional():
     m = pyipmi.msgs.hpm.ActivateFirmwareReq()
     decode_message(m, b'\x00')
     assert m.picmg_identifier == 0
-    assert m.rollback_override_policy == None
+    assert m.rollback_override_policy is None
 
 
 def test_activatefirmwarereq_encode_valid_req_wo_optional():

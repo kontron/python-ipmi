@@ -4,7 +4,7 @@
 from mock import MagicMock
 
 from pyipmi import interfaces, create_connection
-from pyipmi.msgs.registry import create_response_by_name, create_request_by_name
+from pyipmi.msgs.registry import create_response_by_name
 from pyipmi.sel import SelEntry, SelInfo
 
 
@@ -18,10 +18,12 @@ class TestSel(object):
         rsp = create_response_by_name('ReserveSel')
         rsps.append(rsp)
         rsp = create_response_by_name('GetSelEntry')
-        rsp.record_data = [0,0,SelEntry.TYPE_SYSTEM_EVENT,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        rsp.record_data = [0, 0, SelEntry.TYPE_SYSTEM_EVENT, 0, 0, 0,
+                           0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         rsps.append(rsp)
         rsp = create_response_by_name('GetSelEntry')
-        rsp.record_data = [0,0,SelEntry.TYPE_SYSTEM_EVENT,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        rsp.record_data = [0, 0, SelEntry.TYPE_SYSTEM_EVENT, 0, 0,
+                           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         rsp.next_record_id = 0xffff
         rsps.append(rsp)
 
@@ -146,7 +148,7 @@ class TestSelEnty(object):
         assert entry.event_data[2] == 0x33
 
     def test_type_to_string(self):
-        assert SelEntry.type_to_string(0) == None
+        assert SelEntry.type_to_string(0) is None
         assert SelEntry.type_to_string(0x02) == 'System Event'
         assert SelEntry.type_to_string(0xc0) == 'OEM timestamped (0xc0)'
         assert SelEntry.type_to_string(0xe0) == 'OEM non-timestamped (0xe0)'

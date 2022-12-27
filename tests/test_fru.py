@@ -27,17 +27,13 @@ def test_commonheader_object():
 def test_fru_inventory_from_file():
     path = os.path.dirname(os.path.abspath(__file__))
     fru_file = os.path.join(path, 'fru_bin/kontron_am4010.bin')
-    if not os.path.isfile(fru_file):
-        raise nose.SkipTest("FRU file '%s' is missing." % (fru_file))
     fru = get_fru_inventory_from_file(fru_file)
-    assert fru.chassis_info_area == None
+    assert fru.chassis_info_area is None
 
 
 def test_board_area():
     path = os.path.dirname(os.path.abspath(__file__))
     fru_file = os.path.join(path, 'fru_bin/kontron_am4010.bin')
-    if not os.path.isfile(fru_file):
-        raise nose.SkipTest("FRU file '%s' is missing." % (fru_file))
     fru = get_fru_inventory_from_file(fru_file)
 
     board_area = fru.board_info_area
@@ -50,8 +46,6 @@ def test_board_area():
 def test_product_area():
     path = os.path.dirname(os.path.abspath(__file__))
     fru_file = os.path.join(path, 'fru_bin/kontron_am4010.bin')
-    if not os.path.isfile(fru_file):
-        raise nose.SkipTest("FRU file '%s' is missing." % (fru_file))
     fru = get_fru_inventory_from_file(fru_file)
 
     product_area = fru.product_info_area
@@ -64,8 +58,6 @@ def test_product_area():
 def test_multirecord_with_power_module_capability_record():
     path = os.path.dirname(os.path.abspath(__file__))
     fru_file = os.path.join(path, 'fru_bin/vadatech_utc017.bin')
-    if not os.path.isfile(fru_file):
-        raise nose.SkipTest("FRU file '%s' is missing." % (fru_file))
     fru = get_fru_inventory_from_file(fru_file)
     assert len(fru.multirecord_area.records) == 1
     record = fru.multirecord_area.records[0]

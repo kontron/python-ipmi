@@ -19,20 +19,11 @@ from __future__ import absolute_import
 from . import constants
 from . import register_message_class
 from . import Message
-from . import UnsignedInt
-from . import UnsignedIntMask
-from . import Bitfield
 from . import CompletionCode
-from . import Conditional
 from . import GroupExtensionIdentifier
 
 
 VITA_IDENTIFIER = 0x03
-
-
-#class VitaIdentifier(UnsignedInt):
-#    def __init__(self, name='picmg_identifier'):
-#        super(PicmgIdentifier, self).__init__(name, 1, VITA_IDENTIFIER)
 
 
 class VitaMessage(Message):
@@ -55,8 +46,4 @@ class GetVsoCapabilitiesRsp(VitaMessage):
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('vita_identifier', VITA_IDENTIFIER),
-        # UnsignedInt('unknown', 1),
-        # UnsignedInt('unknown', 1),
-        # UnsignedInt('vso_standard_revision', 1),
-        # UnsignedInt('vita_spec_revision', 1),
     )

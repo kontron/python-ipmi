@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 import pytest
 from mock import MagicMock
@@ -13,16 +13,16 @@ from pyipmi.msgs.constants import CC_NODE_BUSY
 
 def test_target():
     target = Target()
-    assert target.ipmb_address == None
-    assert target.routing == None
+    assert target.ipmb_address is None
+    assert target.routing is None
 
     target = Target(0xa0)
     assert target.ipmb_address == 0xa0
-    assert target.routing == None
+    assert target.routing is None
 
     target = Target(ipmb_address=0xb0)
     assert target.ipmb_address == 0xb0
-    assert target.routing == None
+    assert target.routing is None
 
 
 def test_target_routing():

@@ -198,10 +198,11 @@ class SdrCommon(object):
     def __str__(self):
         if hasattr(self, 'device_id_string'):
             s = '["%s"] [%s]' % \
-            (self.device_id_string, ' '.join(['%02x' % b for b in self.data]))
+                 (self.device_id_string,
+                  ' '.join(['%02x' % b for b in self.data]))
         else:
             s = '[%s]' % \
-            (' '.join(['%02x' % b for b in self.data]))
+                 (' '.join(['%02x' % b for b in self.data]))
         return s
 
     def _common_header(self, data):
@@ -211,7 +212,7 @@ class SdrCommon(object):
             self.version = buffer.pop_unsigned_int(1)
             self.type = buffer.pop_unsigned_int(1)
             self.length = buffer.pop_unsigned_int(1)
-        except:
+        except IndexError:
             raise DecodingError('Invalid SDR length (%d)' % len(data))
 
     def _common_record_key(self, buffer):
@@ -313,7 +314,7 @@ class SdrFullSensorRecord(SdrCommon):
         return raw
 
     @property
-    def l(self):
+    def l(self):  # noqa:E743
         try:
             return {
                 L_LN: math.log,

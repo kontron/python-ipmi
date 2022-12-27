@@ -23,7 +23,7 @@ class TestComponentProperty(object):
         assert type(prop) == ComponentPropertyGeneral
 
         prop = ComponentProperty().from_data(PROPERTY_GENERAL_PROPERTIES, (0xaa,))
-        assert type(prop) ==ComponentPropertyGeneral
+        assert type(prop) == ComponentPropertyGeneral
 
     def test_currentversion(self):
         prop = ComponentProperty().from_data(PROPERTY_CURRENT_VERSION, b'\x01\x99')
@@ -89,8 +89,6 @@ def test_upgradeactionrecord_create_from_data():
 def test_upgrade_image():
     path = os.path.dirname(os.path.abspath(__file__))
     hpm_file = os.path.join(path, 'hpm_bin/firmware.hpm')
-    if not os.path.isfile(hpm_file):
-        raise nose.SkipTest("HPM binary file '%s' is missing." % (hpm_file))
     image = UpgradeImage(hpm_file)
     assert isinstance(image.actions[0], UpgradeActionRecordPrepare)
     assert isinstance(image.actions[1], UpgradeActionRecordUploadForUpgrade)

@@ -62,6 +62,7 @@ def test_getsystembootoptions_encode_valid_req():
     assert m.__cmdid__ == 9
     assert data == b'\x05\x00\x00'
 
+
 def test_getsystembootoptions_decode_valid_rsp():
     m = pyipmi.msgs.chassis.GetSystemBootOptionsRsp()
     decode_message(m, b'\x00\x01\x85\x00\x08\x00\x00\x00')
@@ -71,6 +72,7 @@ def test_getsystembootoptions_decode_valid_rsp():
     assert m.parameter_valid.boot_option_parameter_selector == 5
     assert m.parameter_valid.parameter_validity == 1
     assert m.data == array('B', b'\x00\x08\x00\x00\x00')
+
 
 def test_setsystembootoptions_encode_valid_req():
     m = pyipmi.msgs.chassis.SetSystemBootOptionsReq()
@@ -82,6 +84,7 @@ def test_setsystembootoptions_encode_valid_req():
     assert m.__netfn__ == 0
     assert m.__cmdid__ == 8
     assert data == b'\x85\x70\x08\x00\x00\x00'
+
 
 def test_setsystembootoptions_decode_valid_rsp():
     m = pyipmi.msgs.chassis.SetSystemBootOptionsRsp()

@@ -61,8 +61,8 @@ def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
 
     header = ByteBuffer(data)
     record_id = header.pop_unsigned_int(2)
-    record_version = header.pop_unsigned_int(1)
-    record_type = header.pop_unsigned_int(1)
+    record_version = header.pop_unsigned_int(1)  # noqa:F841
+    record_type = header.pop_unsigned_int(1)  # noqa:F841
     record_payload_length = header.pop_unsigned_int(1)
     record_length = record_payload_length + 5
     record_data = ByteBuffer(data)

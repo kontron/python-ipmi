@@ -25,4 +25,4 @@ def test_versionfield_invalid():
 
 def test_versionfield_decoding_error():
     with pytest.raises(DecodingError):
-        version = VersionField('\x00\x9a')
+        version = VersionField('\x00\x9a')  # noqa:F841

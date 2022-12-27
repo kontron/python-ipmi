@@ -250,8 +250,8 @@ def test_readeventmessagebuffer_decode_rsp():
     decode_message(m, b'\x00\x00\x01\x02\x03\x04\x05\x06\x07'
                    b'\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f')
     assert m.completion_code == 0x00
-    assert m.event_data == array('B', b'\x00\x01\x02\x03\x04' \
-        b'\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f')
+    assert m.event_data == array('B', b'\x00\x01\x02\x03\x04\x05\x06\x07'
+                                      b'\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f')
 
 
 def test_masterwriteread_encode_req_all_zero_read():
@@ -329,6 +329,8 @@ def test_get_channel_authentication_capabilities_rsp():
 def test_get_session_challenge_rsp():
     m = pyipmi.msgs.device_messaging.GetSessionChallengeRsp()
     data = encode_message(m)
+    assert data == b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+                   b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
 
 
 def test_get_session_challenge_rsp_cc_not_ok():
@@ -347,7 +349,7 @@ def test_get_session_challenge_req():
     data = encode_message(m)
     assert m.cmdid == 0x39
     assert m.netfn == 6
-    assert data, \
+    assert data == \
         b'\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
 
     m.authentication.type = 1
@@ -371,6 +373,7 @@ def test_get_username_req():
     m = pyipmi.msgs.device_messaging.GetUserNameReq()
     m.userid.userid = 2
     data = encode_message(m)
+    assert data == b'\x02'
     assert m.cmdid == 0x46
     assert m.netfn == 6
     assert m.userid.userid == 2

@@ -242,7 +242,7 @@ class ChassisStatus(State):
         self.control_fault = bool(rsp.current_power_state.power_control_fault)
         self.restore_policy = rsp.current_power_state.power_restore_policy
         self.id_cmd_state_info_support = \
-                bool(rsp.misc_chassis_state.id_cmd_state_info_support)
+                bool(rsp.misc_chassis_state.id_cmd_state_info_support)  # noqa:E127
         self.chassis_id_state = rsp.misc_chassis_state.chassis_id_state
         if rsp.front_panel_button_capabilities is not None:
             self.front_panel_button_capabilities = \

@@ -25,10 +25,10 @@ def test_get_address_info_picmg_2_9_rsp():
     assert m.hardware_address == 0x01
     assert m.ipmb_0_address == 0x02
     assert m.ipmb_1_address == 0x03
-    assert m.fru_id == None
-    assert m.site_id == None
-    assert m.site_type == None
-    assert m.carrier_number == None
+    assert m.fru_id is None
+    assert m.site_id is None
+    assert m.site_type is None
+    assert m.carrier_number is None
 
 
 def test_get_address_info_picmg_3_0_rsp():
@@ -42,7 +42,7 @@ def test_get_address_info_picmg_3_0_rsp():
     assert m.fru_id == 0x04
     assert m.site_id == 0x05
     assert m.site_type == 0x06
-    assert m.carrier_number == None
+    assert m.carrier_number is None
 
 
 def test_get_address_info_mtca_rsp():
@@ -174,6 +174,7 @@ def test_decode_rsp_only_lamp_test_mode():
     assert m.led_states.lamp_test_en == 1
     assert m.lamp_test_duration == 0x7f
 
+
 def test_encode_req_pm_heartbeat():
     m = pyipmi.msgs.picmg.SendPmHeartbeatReq()
     m.timeout = 10
@@ -186,6 +187,7 @@ def test_encode_req_pm_heartbeat():
     m.ps1.mch_2 = 1
     data = encode_message(m)
     assert data == b'\x00\n\x02'
+
 
 def test_decode_rsp_pm_heartbeat():
     m = pyipmi.msgs.picmg.SendPmHeartbeatRsp()
