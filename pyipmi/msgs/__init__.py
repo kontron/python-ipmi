@@ -15,40 +15,40 @@ from __future__ import absolute_import
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-from .registry import register_message_class
-from .registry import create_request_by_name
-from .registry import create_response_by_name
-from .registry import create_message
-from .registry import create_response_message
+from .registry import register_message_class  # noqa:F401
+from .registry import create_request_by_name  # noqa:F401
+from .registry import create_response_by_name  # noqa:F401
+from .registry import create_message  # noqa:F401
+from .registry import create_response_message  # noqa:F401
 
-from .message import Message
-from .message import ByteArray
-from .message import VariableByteArray
-from .message import UnsignedInt
-from .message import UnsignedIntMask
-from .message import Timestamp
-from .message import Bitfield
-from .message import CompletionCode
-from .message import Conditional
-from .message import Optional
-from .message import RemainingBytes
-from .message import String
-from .message import EventMessageRevision
-from .message import GroupExtensionIdentifier
-from .message import encode_message
-from .message import decode_message
-from .message import pack_message
+from .message import Message  # noqa:F401
+from .message import ByteArray  # noqa:F401
+from .message import VariableByteArray  # noqa:F401
+from .message import UnsignedInt  # noqa:F401
+from .message import UnsignedIntMask  # noqa:F401
+from .message import Timestamp  # noqa:F401
+from .message import Bitfield  # noqa:F401
+from .message import CompletionCode  # noqa:F401
+from .message import Conditional  # noqa:F401
+from .message import Optional  # noqa:F401
+from .message import RemainingBytes  # noqa:F401
+from .message import String  # noqa:F401
+from .message import EventMessageRevision  # noqa:F401
+from .message import GroupExtensionIdentifier  # noqa:F401
+from .message import encode_message  # noqa:F401
+from .message import decode_message  # noqa:F401
+from .message import pack_message  # noqa:F401
 
-from . import bmc
-from . import chassis
-from . import dcmi
-from . import device_messaging
-from . import fru
-from . import hpm
-from . import picmg
-from . import sdr
-from . import sel
-from . import sensor
-from . import event
-from . import lan
-from . import vita
+from . import bmc  # noqa:F401
+from . import chassis  # noqa:F401
+from . import dcmi  # noqa:F401
+from . import device_messaging  # noqa:F401
+from . import fru  # noqa:F401
+from . import hpm  # noqa:F401
+from . import picmg  # noqa:F401
+from . import sdr  # noqa:F401
+from . import sel  # noqa:F401
+from . import sensor  # noqa:F401
+from . import event  # noqa:F401
+from . import lan  # noqa:F401
+from . import vita  # noqa:F401
