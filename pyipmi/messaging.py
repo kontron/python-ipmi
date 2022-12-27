@@ -21,6 +21,7 @@ from .msgs import create_request_by_name
 from .utils import check_completion_code
 from .state import State
 
+
 class PasswordOperation(int, Enum):
     DISABLE = 0b00
     ENABLE = 0b01
@@ -57,6 +58,7 @@ CONVERT_USER_PRIVILEGE_TO_RAW = {
     UserPrivilegeLevel.OEM:           0x05,
     UserPrivilegeLevel.NO_ACCESS:     0x0F
 }
+
 
 class Messaging(object):
     def get_channel_authentication_capabilities(self, channel, priv_lvl):
@@ -128,6 +130,7 @@ class Messaging(object):
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
+
 class ChannelAuthenticationCapabilities(State):
 
     _functions = {
@@ -139,7 +142,7 @@ class ChannelAuthenticationCapabilities(State):
     }
 
     def _from_response(self, rsp):
-        self.channel= rsp.channel_number
+        self.channel = rsp.channel_number
         self.auth_types = []
 
         self.ipmi_1_5 = False
@@ -168,6 +171,7 @@ class ChannelAuthenticationCapabilities(State):
         s += '  Auth. types: %s\n' % ' '.join(self.auth_types)
         s += '  Max Auth. type: %s\n' % self.get_max_auth_type()
         return s
+
 
 class UserAccess(State):
 

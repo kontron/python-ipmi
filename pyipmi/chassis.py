@@ -36,6 +36,7 @@ BOOT_PARAMETER_BOOT_FLAGS = 5
 BOOT_PARAMETER_BOOT_INITIATOR_INFO = 6
 BOOT_PARAMETER_BOOT_INITIATOR_MAILBOX = 7
 
+
 class BootDevice(str, Enum):
     NO_OVERRIDE = "no override",
     PXE = "pxe",
@@ -91,6 +92,7 @@ def data_to_boot_mode(data):
     boot_mode = "legacy" if boot_mode_raw == 0 else "efi"
     return boot_mode
 
+
 def data_to_boot_persistency(data):
     """
     Convert a `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)` response data
@@ -99,6 +101,7 @@ def data_to_boot_persistency(data):
     boot_persistent_raw = (data[0] >> 6) & 1
     return boot_persistent_raw == 1
 
+
 def data_to_boot_device(data):
     """
     Convert a `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)` response data
@@ -106,6 +109,7 @@ def data_to_boot_device(data):
     """
     boot_device_raw = (data[1] >> 2) & 0b1111
     return CONVERT_RAW_TO_BOOT_DEVICE[boot_device_raw]
+
 
 def boot_options_to_data(boot_device, boot_mode, boot_persistency):
     """
@@ -137,6 +141,7 @@ def boot_options_to_data(boot_device, boot_mode, boot_persistency):
     # Construct the final data bytearray
     data = ByteBuffer([boot_mode_raw | boot_persistent_raw, device_raw << 2, 0, 0, 0])
     return data
+
 
 class Chassis(object):
     def get_chassis_status(self):
@@ -223,9 +228,9 @@ class ChassisStatus(State):
     fault = None
     control_fault = None
     restore_policy = None
-    id_cmd_state_info_support=None
-    chassis_id_state=None
-    front_panel_button_capabilities=None
+    id_cmd_state_info_support = None
+    chassis_id_state = None
+    front_panel_button_capabilities = None
     last_event = []
     chassis_state = []
 
@@ -236,10 +241,12 @@ class ChassisStatus(State):
         self.fault = bool(rsp.current_power_state.power_fault)
         self.control_fault = bool(rsp.current_power_state.power_control_fault)
         self.restore_policy = rsp.current_power_state.power_restore_policy
-        self.id_cmd_state_info_support=bool(rsp.misc_chassis_state.id_cmd_state_info_support)
-        self.chassis_id_state=rsp.misc_chassis_state.chassis_id_state
+        self.id_cmd_state_info_support = \
+                bool(rsp.misc_chassis_state.id_cmd_state_info_support)
+        self.chassis_id_state = rsp.misc_chassis_state.chassis_id_state
         if rsp.front_panel_button_capabilities is not None:
-            self.front_panel_button_capabilities=rsp.front_panel_button_capabilities
+            self.front_panel_button_capabilities = \
+                    rsp.front_panel_button_capabilities
 
         if rsp.last_power_event.ac_failed:
             self.last_event.append('ac_failed')

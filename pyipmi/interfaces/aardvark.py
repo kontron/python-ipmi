@@ -25,9 +25,9 @@ from ..utils import py3_array_tobytes
 
 try:
     import pyaardvark
-except ImportError: # python 2
+except ImportError:  # python 2
     pyaardvark = None
-except RuntimeError: # python 3
+except RuntimeError:  # python 3
     pyaardvark = None
 
 

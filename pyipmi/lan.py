@@ -68,12 +68,14 @@ def data_to_ip_address(data):
     """
     return '.'.join(map(str, data))
 
+
 def ip_address_to_data(ip_address):
     """
     Convert an ip address (string) into a
     `SetLanConfigurationParameters(LAN_PARAMETER_IP_ADDRESS)` request data.
     """
     return ByteBuffer(map(int, ip_address.split('.')))
+
 
 def data_to_ip_source(data):
     """
@@ -82,6 +84,7 @@ def data_to_ip_source(data):
     """
     # The ip source is encoded in the last 4 bits of the response
     return CONVERT_RAW_TO_IP_SRC[data[0] & 0b1111]
+
 
 def ip_source_to_data(ip_source):
     """
@@ -96,6 +99,7 @@ def ip_source_to_data(ip_source):
         raise ValueError(f"Unknown value for ip_source argument: {ip_source}. Possible values are: dhcp, static.")
     return data
 
+
 def data_to_mac_address(data):
     """
     Convert a `GetLanConfigurationParameters(LAN_PARAMETER_MAC_ADDRESS)` response
@@ -103,6 +107,7 @@ def data_to_mac_address(data):
     in format aa:bb:cc:dd:ee:ff .
     """
     return ':'.join([f"{i:02x}" for i in data])
+
 
 def data_to_vlan(data):
     """
@@ -125,6 +130,7 @@ def data_to_vlan(data):
     # By rearranging the bits order, we get the VLAN value :
     #       0 0 0 0  0 0 0 1  1 0 0 0  1 0 1 0 = 394
     return ((data[1] & 0b1111) << 8) | data[0]
+
 
 def vlan_to_data(vlan):
     """

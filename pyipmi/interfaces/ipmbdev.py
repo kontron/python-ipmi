@@ -73,7 +73,7 @@ class IpmbDev(object):
                 raise IpmiTimeoutError()
 
             r, w, e = select.select([self._dev], [], [], timeout)
-            if not self._dev in r:
+            if self._dev not in r:
                 poll_returned_no_data = True
                 continue
 
