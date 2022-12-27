@@ -406,6 +406,13 @@ class Message(object):
     group_extension = property(lambda s: s.__group_extension__)
 
 
-encode_message = lambda m: m._encode()
-decode_message = lambda m, d: m._decode(d)
-pack_message = lambda m: m._pack()
+def encode_message(msg):
+    return msg._encode()
+
+
+def decode_message(msg, data):
+    return msg._decode(data)
+
+
+def pack_message(msg):
+    return msg._pack()
