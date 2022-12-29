@@ -19,7 +19,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: pip install python-coveralls coverage pytest future mock flake8
+        run: pip install python-coveralls coverage pytest pytest-cov future mock flake8
 
         #      - name: Setup and run tests
         #        run: python setup.py test
@@ -30,4 +30,22 @@ jobs:
 
       - name: Test with pytest
         run: |
-          pytest
+          pytest --cov=pyipmi --cov-report=lcov
+
+      - name: Coveralls Parallel
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.github_token }}
+          flag-name: run-${{ matrix.test_number }}
+          parallel: true
+          path-to-lcov: coverage.lcov
+
+  finish:
+    needs: tests
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Coveralls Finished
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.github_token }}
+        parallel-finished: true
