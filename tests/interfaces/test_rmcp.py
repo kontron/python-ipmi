@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import array
+import pytest
 
 from pyipmi.session import Session
 from pyipmi.interfaces.rmcp import (AsfMsg, AsfPing, AsfPong, IpmiMsg, RmcpMsg)
 from pyipmi.utils import py3_array_tobytes
+from pyipmi.errors import DecodingError
 
 
 class TestRmcpMsg:
@@ -121,6 +123,40 @@ class TestIpmiMsg:
         assert m.session_id == 0x55667788
         assert m.auth_code == [1, 2, 3, 4, 5, 6, 7, 8,
                                9, 10, 11, 12, 13, 14, 15, 16]
+
+    def test_ipmimsg_unpack_check_sdu_length(self):
+        pdu = b'\x01\x11\x22\x33\x44\x55\x66\x77\x88\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x02\x00\x00\x00'
+        m = IpmiMsg()
+        with pytest.raises(DecodingError):
+            # data len is 2 ( byte 25 = \x02) but actual payload length is 3
+            # (\x00\x00\x00) so we have len(pdu) != header_len + data_len
+            m.unpack(pdu)
+
+    def test_ipmimsg_unpack_no_check_sdu_length(self):
+        pdu = b'\x01\x11\x22\x33\x44\x55\x66\x77\x88\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x02\x00\x00\x00'
+        m = IpmiMsg(ignore_sdu_length=True)
+        # Same PDU here, we have len(pdu) != header_len + data_len
+        sdu = m.unpack(pdu)
+
+        assert m.auth_type == 1
+        assert m.sequence_number == 0x11223344
+        assert m.session_id == 0x55667788
+        assert m.auth_code == [1, 2, 3, 4, 5, 6, 7, 8,
+                               9, 10, 11, 12, 13, 14, 15, 16]
+        assert sdu == b'\x00\x00\x00'
+
+    def tests_ipmimsg_unpack_no_check_sdu_length_empty_sdu(self):
+        pdu = b'\x01\x11\x22\x33\x44\x55\x66\x77\x88\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x02'
+        m = IpmiMsg(ignore_sdu_length=True)
+        # We have len(pdu) != header_len + data_len
+        sdu = m.unpack(pdu)
+
+        assert m.auth_type == 1
+        assert m.sequence_number == 0x11223344
+        assert m.session_id == 0x55667788
+        assert m.auth_code == [1, 2, 3, 4, 5, 6, 7, 8,
+                               9, 10, 11, 12, 13, 14, 15, 16]
+        assert sdu is None
 
 
 class TestRmcp:
