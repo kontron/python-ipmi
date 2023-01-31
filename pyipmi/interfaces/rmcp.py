@@ -227,8 +227,9 @@ class IpmiMsg(object):
     HEADER_FORMAT_NO_AUTH = '!BIIB'
     HEADER_FORMAT_AUTH = '!BII16BB'
 
-    def __init__(self, session=None):
+    def __init__(self, session=None, ignore_sdu_length=False):
         self.session = session
+        self.ignore_sdu_length = ignore_sdu_length
 
     def _pack_session_id(self):
         if self.session is not None:
@@ -321,19 +322,28 @@ class IpmiMsg(object):
             (self.auth_type, self.sequence_number, self.session_id,
                 data_len) = struct.unpack(self.HEADER_FORMAT_NO_AUTH, header)
 
-        if len(pdu) < header_len + data_len:
-            raise DecodingError('short SDU')
-        elif len(pdu) > header_len + data_len:
-            raise DecodingError('SDU has extra bytes ({:d},{:d},{:d} )'.format(
-                len(pdu), header_len, data_len))
+        if not self.ignore_sdu_length:
+            if len(pdu) < header_len + data_len:
+                raise DecodingError('short SDU')
+            elif len(pdu) > header_len + data_len:
+                raise DecodingError(
+                    'SDU has extra bytes ({:d},{:d},{:d} )'.format(
+                        len(pdu), header_len, data_len))
 
         if hasattr(self, 'check_header'):
             self.check_header()
 
-        if data_len != 0:
-            sdu = pdu[header_len:header_len + data_len]
+        if not self.ignore_sdu_length:
+            if data_len != 0:
+                sdu = pdu[header_len:header_len + data_len]
+            else:
+                sdu = None
         else:
-            sdu = None
+            try:
+                sdu = pdu[header_len:]
+                sdu = None if sdu == b'' else sdu
+            except IndexError:
+                sdu = None
 
         return sdu
 
@@ -350,7 +360,26 @@ class Rmcp(object):
     _session = None
 
     def __init__(self, slave_address=0x81, host_target_address=0x20,
-                 keep_alive_interval=1):
+                 keep_alive_interval=1, quirks_cfg=dict()):
+        """Native RMCP interface constructor
+
+        Parameter `quirks_cfg`: a dict of additional configuration parameters
+        for the RMCP object. Supported keys/values are :
+
+        - `rmcp_ignore_sdu_length: bool` whether or not to verify the SDU length
+        of a received IPMI message. If absent or `False` (default), an exception
+        will be raised if there is a mismatch between the received SDU length
+        and the value stored in `payload_length` field of the PDU header. If
+        `True`, ignore the header field `payload_length` and unpack the PDU
+        anyway.
+
+            Example:
+
+            interfaces.create_interface(
+                interface="rmcp",
+                quirks_cfg={'rmcp_ignore_sdu_length': True}
+            )
+        """
         self.host = None
         self.port = None
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -363,6 +392,8 @@ class Rmcp(object):
         self._stop_keep_alive = None
         self._q = Queue()
         self.transaction_lock = threading.Lock()
+        self.quirks_cfg = quirks_cfg
+        self.ignore_sdu_length = quirks_cfg.get('rmcp_ignore_sdu_length', False)
 
     def _send_rmcp_msg(self, sdu, class_of_msg):
         rmcp = RmcpMsg(class_of_msg)
@@ -387,11 +418,11 @@ class Rmcp(object):
         tx_data = ipmi.pack(data)
         self._send_rmcp_msg(tx_data, RMCP_CLASS_IPMI)
 
-    def _receive_ipmi_msg(self):
+    def _receive_ipmi_msg(self, ignore_sdu_length=False):
         (_, class_of_msg, pdu) = self._receive_rmcp_msg()
         if class_of_msg != RMCP_CLASS_IPMI:
             raise DecodingError('invalid class field in ASF message')
-        msg = IpmiMsg()
+        msg = IpmiMsg(ignore_sdu_length=ignore_sdu_length)
         data = msg.unpack(pdu)
         log().debug('IPMI RX: {:s}'.format(
             ' '.join('%02x' % b for b in array('B', data))))
@@ -562,7 +593,7 @@ class Rmcp(object):
                 if not self._q.empty():
                     rx_data = self._q.get()
                 else:
-                    rx_data = self._receive_ipmi_msg()
+                    rx_data = self._receive_ipmi_msg(self.ignore_sdu_length)
 
                 if array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE:
                     rx_data = decode_bridged_message(rx_data)
