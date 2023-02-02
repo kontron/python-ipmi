@@ -46,7 +46,7 @@ setup(name=name,
       download_url='https://github.com/kontron/python-ipmi/tarball/' + version,
       author='Michael Walle, Heiko Thiery',
       author_email='michael.walle@kontron.com, heiko.thiery@kontron.com',
-      packages=find_packages(exclude="test"),
+      packages=find_packages(exclude=['tests*']),
       license='LGPLv2+',
       platforms=["any"],
       classifiers=[
