@@ -64,8 +64,8 @@ class TestIpmitool:
         self._interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 '
-                                     '-U "admin" -P "secret" -t 0x20 -l 0 '
-                                     'raw 0x06 0x01 2>&1')
+                                     '-L ADMINISTRATOR -U "admin" -P "secret" '
+                                     '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
     def test_send_and_receive_raw_lanplus(self):
         interface = Ipmitool(interface_type='lanplus')
@@ -79,8 +79,8 @@ class TestIpmitool:
         interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         mock.assert_called_once_with('ipmitool -I lanplus -H 10.0.1.1 -p 623 '
-                                     '-U "admin" -P "secret" -t 0x20 -l 0 '
-                                     'raw 0x06 0x01 2>&1')
+                                     '-L ADMINISTRATOR -U "admin" -P "secret" '
+                                     '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
     def test_send_and_receive_raw_no_auth(self):
         mock = MagicMock()
@@ -93,7 +93,8 @@ class TestIpmitool:
         self._interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 '
-                                     '-P "" -t 0x20 -l 0 raw 0x06 0x01 2>&1')
+                                     '-L ADMINISTRATOR -P "" '
+                                     '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
     def test_send_and_receive_raw_return_value(self):
         mock = MagicMock()

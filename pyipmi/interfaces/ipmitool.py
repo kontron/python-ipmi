@@ -213,6 +213,15 @@ class Ipmitool(object):
 
         return cmd
 
+    def _build_ipmitool_priv_level(self, level):
+        LEVELS = {
+                   Session.PRIV_LEVEL_USER: 'USER',
+                   Session.PRIV_LEVEL_OPERATOR: 'OPERATOR',
+                   Session.PRIV_LEVEL_ADMINISTRATOR: 'ADMINISTRATOR'
+                 }
+
+        return (' -L %s' % LEVELS[level])
+
     def _build_ipmitool_cmd(self, target, lun, netfn, raw_bytes):
         if not hasattr(self, '_session'):
             raise RuntimeError('Session needs to be set')
@@ -221,6 +230,8 @@ class Ipmitool(object):
         cmd += (' -I %s' % self._interface_type)
         cmd += (' -H %s' % self._session.rmcp_host)
         cmd += (' -p %s' % self._session.rmcp_port)
+
+        cmd += self._build_ipmitool_priv_level(self._session.priv_level)
 
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += ' -P ""'
