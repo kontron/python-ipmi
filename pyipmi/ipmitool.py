@@ -458,6 +458,7 @@ Options:
   -I <interface>   Set interface (available: rmcp, aardvark, ipmitool, ipmbdev)
   -H <host>        Set RMCP host
   -U <user>        Set RMCP user
+  -L <level>       Set RMCP priviledge level
   -P <password>    Set RMCP password
   -o <options>     Set interface specific options (name=value, separated
                    by commas, see below for available options).
@@ -527,7 +528,7 @@ def parse_interface_options(interface_name, options):
 
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:o:b:p:r:')
+        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:L:o:b:p:r:')
     except getopt.GetoptError as err:
         print(str(err))
         usage()
@@ -540,6 +541,7 @@ def main():
     rmcp_port = 623
     rmcp_user = ''
     rmcp_password = ''
+    rmcp_priv_level = None
     interface_options = list()
     for o, a in opts:
         if o == '-v':
@@ -564,6 +566,8 @@ def main():
             rmcp_user = a
         elif o == '-P':
             rmcp_password = a
+        elif o == '-L':
+            rmcp_priv_level = a
         elif o == '-I':
             interface_name = a
         elif o == '-o':
@@ -614,6 +618,10 @@ def main():
     if rmcp_host is not None:
         ipmi.session.set_session_type_rmcp(rmcp_host, rmcp_port)
         ipmi.session.set_auth_type_user(rmcp_user, rmcp_password)
+
+        if rmcp_priv_level is not None:
+            ipmi.session.set_priv_level(rmcp_priv_level)
+
         ipmi.session.establish()
 
     try:

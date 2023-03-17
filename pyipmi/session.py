@@ -29,6 +29,7 @@ class Session(object):
 
     session_id = None
     _interface = None
+    _priv_level = PRIV_LEVEL_ADMINISTRATOR
     _auth_type = AUTH_TYPE_NONE
     _auth_username = None
     _auth_password = None
@@ -80,6 +81,18 @@ class Session(object):
     @property
     def serial_baudrate(self):
         return self._serial_baudrate
+
+    @property
+    def priv_level(self):
+        return self._priv_level
+
+    def set_priv_level(self, level):
+        LEVELS = {
+                   'user': self.PRIV_LEVEL_USER,
+                   'operator': self.PRIV_LEVEL_OPERATOR,
+                   'administrator': self.PRIV_LEVEL_ADMINISTRATOR,
+                 }
+        self._priv_level = LEVELS[level.lower()]
 
     def _set_auth_type(self, auth_type):
         self._auth_type = auth_type

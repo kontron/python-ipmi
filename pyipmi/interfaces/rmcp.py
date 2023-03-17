@@ -448,13 +448,13 @@ class Rmcp(object):
         self._send_asf_msg(ping)
         self._receive_asf_msg(AsfPong)
 
-    def _get_channel_auth_cap(self):
+    def _get_channel_auth_cap(self, session):
         CHANNEL_NUMBER_FOR_THIS = 0xe
         # get channel auth cap
         req = create_request_by_name('GetChannelAuthenticationCapabilities')
         req.target = self.host_target
         req.channel.number = CHANNEL_NUMBER_FOR_THIS
-        req.privilege_level.requested = Session.PRIV_LEVEL_ADMINISTRATOR
+        req.privilege_level.requested = session.priv_level
         rsp = self.send_and_receive(req)
         check_completion_code(rsp.completion_code)
         caps = ChannelAuthenticationCapabilities(rsp)
@@ -509,7 +509,7 @@ class Rmcp(object):
 
         # 1 - Get Channel Authentication Capabilities
         log().debug('Get Channel Authentication Capabilities')
-        caps = self._get_channel_auth_cap()
+        caps = self._get_channel_auth_cap(session)
         log().debug('%s' % caps)
 
         # 2 - Get Session Challenge
@@ -518,6 +518,7 @@ class Rmcp(object):
         rsp = self._get_session_challenge(session)
         session_challenge = rsp.challenge_string
         session.sid = rsp.temporary_session_id
+
         self._session = session
 
         # 3 - Activate Session
@@ -529,7 +530,7 @@ class Rmcp(object):
 
         log().debug('Set Session Privilege Level')
         # 4 - Set Session Privilege Level
-        self._set_session_privilege_level(Session.PRIV_LEVEL_ADMINISTRATOR)
+        self._set_session_privilege_level(session.priv_level)
 
         log().debug('Session opened')
 
