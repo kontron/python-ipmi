@@ -1,6 +1,9 @@
 name: Publish Python Package on PYPI
 
-on: push
+on:
+  push:
+    tags:
+      - '*'
 
 jobs:
   deploy:
