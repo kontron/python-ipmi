@@ -280,15 +280,28 @@ def test_VitaSetFruLedStateRsp_encode():
 
 
 def test_VitaSetIpmbStateReq_decode():
-    m = pyipmi.msgs.vita.VitaSetIpmbStateRsp()
-    decode_message(m, b'\x03')
+    m = pyipmi.msgs.vita.VitaSetIpmbStateReq()
+    decode_message(m, b'\x03\x0f\x0f\x00')
     assert m.vita_identifier == 3
+    assert m.ipmb_a.state == 1
+    assert m.ipmb_a.identification == 7
+    assert m.ipmb_b.state == 1
+    assert m.ipmb_b.identification == 7
+    assert m.speed.ipmb_a == 0
+    assert m.speed.ipmb_b == 0
 
 
 def test_VitaSetIpmbStateReq_encode():
     m = pyipmi.msgs.vita.VitaSetIpmbStateReq()
+    m.ipmb_a.state = 1
+    m.ipmb_a.identification = 7
+    m.ipmb_b.state = 1
+    m.ipmb_b.identification = 7
+    m.speed.ipmb_a = 1
+    m.speed.ipmb_b = 1
+
     data = encode_message(m)
-    assert data == b'\x03'
+    assert data == b'\x03\x0f\x0f\x05'
 
 
 def test_VitaSetIpmbStateRsp_decode():

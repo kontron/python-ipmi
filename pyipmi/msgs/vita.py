@@ -317,6 +317,16 @@ class VitaSetIpmbStateReq(VitaMessage):
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        Bitfield('ipmb_a', 1,
+                 Bitfield.Bit('state', 1, default=0),
+                 Bitfield.Bit('identification', 7, default=0)),
+        Bitfield('ipmb_b', 1,
+                 Bitfield.Bit('state', 1, default=0),
+                 Bitfield.Bit('identification', 7, default=0)),
+        Bitfield('speed', 1,
+                 Bitfield.Bit('ipmb_a', 2, default=0),
+                 Bitfield.Bit('ipmb_b', 2, default=0),
+                 Bitfield.ReservedBit(4, 0)),
     )
 
 
