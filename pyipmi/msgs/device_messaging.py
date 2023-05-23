@@ -19,7 +19,6 @@ from . import register_message_class
 from . import Message
 from . import UnsignedInt
 from . import Bitfield
-from . import Optional
 from . import String
 from . import CompletionCode
 from . import RemainingBytes
@@ -504,11 +503,9 @@ class SetUserAccessReq(Message):
         Bitfield('privilege', 1,
                  Bitfield.Bit('privilege_level', 4, 0x0f),
                  Bitfield.ReservedBit(4, 0)),
-        Optional(
-            Bitfield('session_limit', 1,
-                     Bitfield.Bit('simultaneous_session_limit', 4, 1),
-                     Bitfield.ReservedBit(4, 0))
-        )
+        Bitfield('session_limit', 1,
+                 Bitfield.Bit('simultaneous_session_limit', 4, 0),
+                 Bitfield.ReservedBit(4, 0))
     )
 
 

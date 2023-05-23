@@ -93,7 +93,7 @@ class Messaging(object):
         return UserAccess(rsp)
 
     def set_user_access(self, userid, ipmi_msg, link_auth, callback_only,
-                        priv_level, channel=0, enable_change=1):
+                        priv_level, channel=0, enable_change=1, user_session_limit=0):
         req = create_request_by_name('SetUserAccess')
         req.channel_access.channel_number = channel
         req.channel_access.ipmi_msg = ipmi_msg
@@ -103,6 +103,7 @@ class Messaging(object):
         req.userid.userid = userid
         req.privilege.privilege_level = CONVERT_USER_PRIVILEGE_TO_RAW.get(
             priv_level, 0x0F)
+        req.session_limit.simultaneous_session_limit = user_session_limit
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
