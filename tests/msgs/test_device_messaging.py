@@ -435,7 +435,7 @@ def test_set_user_access_req():
     data = encode_message(m)
     assert m.cmdid == 0x43
     assert m.netfn == 6
-    assert data == b'\x91\x02\x03'
+    assert data == b'\x91\x02\x03\x00'
 
 
 def test_user_access_rsp():
