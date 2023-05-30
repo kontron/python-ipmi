@@ -467,6 +467,7 @@ Aardvark interface options:
   serial=<SN>       Serial number of the device
   pullups=<on|off>  Enable/disable pullups
   power=<on|off>    Enable/disable target power
+  fastmode=<on|off> Enable/disable 400kHz I2C bitrate (Default 100kHz)
 
 Ipmitool interface options:
   interface_type    Set the interface type to be used (lan, lanplus, serial, open)
@@ -506,6 +507,10 @@ def parse_interface_options(interface_name, options):
                 interface_options['enable_target_power'] = True
             elif (name, value) == ('power', 'off'):
                 interface_options['enable_target_power'] = False
+            elif (name, value) == ('fastmode', 'on'):
+                interface_options['enable_fastmode'] = True
+            elif (name, value) == ('fastmode', 'off'):
+                interface_options['enable_fastmode'] = False
             else:
                 print('Warning: unknown option %s' % name)
         elif interface_name == 'ipmitool':
