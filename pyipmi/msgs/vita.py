@@ -99,6 +99,7 @@ class VitaGetFruAddressInfoReq(VitaMessage):
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_id', 1),
     )
 
 
