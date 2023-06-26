@@ -67,14 +67,16 @@ def test_VitaGetChassisAddressTableInfoRsp_encode():
 
 def test_VitaGetFruAddressInfoReq_decode():
     m = pyipmi.msgs.vita.VitaGetFruAddressInfoReq()
-    decode_message(m, b'\x03')
+    decode_message(m, b'\x03\x05')
     assert m.vita_identifier == 3
+    assert m.fru_id == 5
 
 
 def test_VitaGetFruAddressInfoReq_encode():
     m = pyipmi.msgs.vita.VitaGetFruAddressInfoReq()
+    m.fru_id = 0x5
     data = encode_message(m)
-    assert data == b'\x03'
+    assert data == b'\x03\x05'
 
 
 def test_VitaGetFruAddressInfoRsp_decode():
