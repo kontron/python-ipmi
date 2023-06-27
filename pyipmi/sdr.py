@@ -299,15 +299,16 @@ class SdrFullSensorRecord(SdrCommon):
         raw = ((float(value) * 10**(-1 * self.k2))
                / self.m) - (self.b * 10**self.k1)
 
+        raw = int(round(raw))
+
         fmt = self.analog_data_format
         if (fmt == self.DATA_FMT_1S_COMPLEMENT):
             if value < 0:
-                raise NotImplementedError()
+                raw = (-raw ^ 0x7f) | 0x80
         elif (fmt == self.DATA_FMT_2S_COMPLEMENT):
             if value < 0:
-                raise NotImplementedError()
+                raw = (-(raw + 1) ^ 0x7f) | 0x80
 
-        raw = int(round(raw))
         if raw > 0xff:
             raise ValueError()
 

@@ -162,6 +162,47 @@ class TestSdrFullSensorRecord():
         assert sdr.convert_sensor_raw_to_value(128) == -128
         assert sdr.convert_sensor_raw_to_value(255) == -1
 
+    def test_convert_sensor_value_to_raw(self):
+        sdr = SdrFullSensorRecord()
+
+        sdr.analog_data_format = sdr.DATA_FMT_UNSIGNED
+        sdr.m = 1
+        sdr.b = 0
+        sdr.k1 = 0
+        sdr.k2 = 0
+        sdr.linearization = 0
+        assert sdr.convert_sensor_value_to_raw(1) == 1
+        assert sdr.convert_sensor_value_to_raw(255) == 255
+
+        sdr.analog_data_format = sdr.DATA_FMT_UNSIGNED
+        sdr.m = 10
+        sdr.b = 0
+        sdr.k1 = 0
+        sdr.k2 = 0
+        sdr.linearization = 0
+        assert sdr.convert_sensor_value_to_raw(10) == 1
+        assert sdr.convert_sensor_value_to_raw(2550) == 255
+
+        sdr.analog_data_format = sdr.DATA_FMT_1S_COMPLEMENT
+        sdr.m = 1
+        sdr.b = 0
+        sdr.k1 = 0
+        sdr.k2 = 0
+        sdr.linearization = 0
+        assert sdr.convert_sensor_value_to_raw(1) == 1
+        assert sdr.convert_sensor_value_to_raw(-1) == 254
+        assert sdr.convert_sensor_value_to_raw(-127) == 128
+
+        sdr.analog_data_format = sdr.DATA_FMT_2S_COMPLEMENT
+        sdr.m = 1
+        sdr.b = 0
+        sdr.k1 = 0
+        sdr.k2 = 0
+        sdr.linearization = 0
+        assert sdr.convert_sensor_value_to_raw(1) == 1
+        assert sdr.convert_sensor_value_to_raw(-1) == 255
+        assert sdr.convert_sensor_value_to_raw(-127) == 129
+
     def test_decocde(self):
         data = [0x17, 0x00, 0x51, 0x01, 0x35, 0x17, 0x00, 0x51,
                 0x01, 0x35, 0x17, 0x00, 0x51, 0x01, 0x35, 0x32,
