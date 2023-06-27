@@ -103,6 +103,7 @@ SENSOR_TYPE_VITA_PAYLOAD_TEST = 0xf4
 SENSOR_TYPE_VITA_PAYLOAD_TEST_STATUS = 0xf5
 SENSOR_TYPE_VITA_PAYLOAD_MODE = 0xf7
 
+
 class Sensor(object):
     def reserve_device_sdr_repository(self):
         rsp = self.send_message_with_name('ReserveDeviceSdrRepository')
