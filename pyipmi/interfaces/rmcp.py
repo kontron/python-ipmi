@@ -32,7 +32,8 @@ from ..logger import log
 from ..interfaces.ipmb import (IpmbHeaderReq, encode_ipmb_msg,
                                encode_bridged_message, decode_bridged_message,
                                rx_filter)
-from ..utils import check_completion_code, py3_array_tobytes
+from ..utils import (check_completion_code, check_rsp_completion_code,
+                     py3_array_tobytes)
 
 
 CLASS_NORMAL_MSG = 0x00
@@ -467,7 +468,7 @@ class Rmcp(object):
         if session._auth_username:
             req.user_name = session._auth_username.ljust(16, '\x00')
         rsp = self.send_and_receive(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         return rsp
 
     def _activate_session(self, session, challenge):
@@ -481,7 +482,7 @@ class Rmcp(object):
         req.session_id = self._session.sid
         req.initial_outbound_sequence_number = random.randrange(1, 0xffffffff)
         rsp = self.send_and_receive(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         return rsp
 
     def _set_session_privilege_level(self, level):
@@ -489,7 +490,7 @@ class Rmcp(object):
         req.target = self.host_target
         req.privilege_level.requested = level
         rsp = self.send_and_receive(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         return rsp
 
     def _get_device_id(self):

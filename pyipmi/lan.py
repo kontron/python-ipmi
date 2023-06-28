@@ -15,7 +15,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from .msgs import create_request_by_name
-from .utils import check_completion_code, ByteBuffer
+from .utils import check_rsp_completion_code, ByteBuffer
 
 LAN_PARAMETER_SET_IN_PROGRESS = 0
 LAN_PARAMETER_AUTHENTICATION_TYPE_SUPPORT = 1
@@ -169,7 +169,7 @@ class Lan(object):
             req.set_selector = set_selector
             req.block_selector = block_selector
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         return rsp.data
 
     def set_lan_config_param(self, channel,
@@ -179,7 +179,7 @@ class Lan(object):
         req.parameter_selector = parameter_selector
         req.data = data
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def get_ip_address(self, channel=0):
         """

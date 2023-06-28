@@ -18,7 +18,7 @@ from enum import Enum
 
 from .session import Session
 from .msgs import create_request_by_name
-from .utils import check_completion_code
+from .utils import check_completion_code, check_rsp_completion_code
 from .state import State
 
 
@@ -115,7 +115,7 @@ class Messaging(object):
         req.operation.operation = PasswordOperation.SET_PASSWORD
         req.password = password.ljust(16, '\x00')
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def enable_user(self, userid):
         req = create_request_by_name('SetUserPassword')

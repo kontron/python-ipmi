@@ -57,6 +57,25 @@ def check_completion_code(cc):
         raise CompletionCodeError(cc)
 
 
+def check_rsp_completion_code(rsp):
+    """
+    Check the completion code of a specific response and raise
+    CompletionCodeError in case there's an error.
+
+    This method allows to pass more metadata than the `check_completion_code`
+    method to try to interpret command-specific completion codes description in
+    case there is an error.
+
+    `rsp` should be a subclass of `Message` here.
+    """
+    if rsp.completion_code != constants.CC_OK:
+        raise CompletionCodeError(
+            rsp.completion_code,
+            cmdid=rsp.cmdid,
+            netfn=rsp.netfn & 0xfe,  # Get the request NetFn from response NetFn
+            group_extension=rsp.group_extension)
+
+
 def chunks(data, count):
     for i in range(0, len(data), count):
         yield data[i:i+count]
