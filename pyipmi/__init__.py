@@ -37,7 +37,7 @@ from . import msgs
 from .errors import IpmiTimeoutError, CompletionCodeError, RetryError
 from .msgs.registry import create_request_by_name
 from .session import Session
-from .utils import check_completion_code, is_string
+from .utils import check_rsp_completion_code, is_string
 
 try:
     from version import __version__
@@ -210,7 +210,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
             setattr(req, key, value)
 
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         return rsp
 
     def raw_command(self, lun, netfn, raw_bytes):

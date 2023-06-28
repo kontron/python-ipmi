@@ -366,13 +366,15 @@ CMDID_SET_ASSET_TAG = 0x08
 CMDID_GET_MANAGEMENT_CONTROLLER_ID_STRING = 0x09
 CMDID_SET_MANAGEMENT_CONTROLLER_ID_STRING = 0x0a
 
-cc_err_cmd_specific_desc = {
-    CMDID_GET_SESSION_CHALLENGE: {
+# Command-specific completion codes. The key in this dictionary is a tuple
+# (NetFn, Command ID, Group extension).
+# The operation NetFn | 1 is here because it's the NetFn of an IPMI response.
+CC_ERR_CMD_SPECIFIC_DESC = {
+    (NETFN_APP, CMDID_GET_SESSION_CHALLENGE, None): {
         0x81: 'invalid user name',
         0x82: 'null user name (User 1) not enabled',
     },
-
-    CMDID_ACTIVATE_SESSION: {
+    (NETFN_APP, CMDID_ACTIVATE_SESSION, None): {
         0x81: 'No session slot available (BMC cannot accept any more'
               ' sessions)',
         0x82: 'No slot available for given user',
@@ -383,6 +385,48 @@ cc_err_cmd_specific_desc = {
         0x86: 'requested maximum privilege level exceeds user and/or channel'
               ' privilege limit',
     },
+    (NETFN_APP, CMDID_SET_SESSION_PRIVILEGE_LEVEL, None): {
+        0x80: "Requested level not available for this user",
+        0x81: "Requested level exceeds Channel and/or User Privilege Limit",
+        0x82: "Cannot disable User Level authentication",
+    },
+    (NETFN_APP, CMDID_SET_CHANNEL_ACCESS, None): {
+        0x82: "set not supported on selected channel (e.g. channel is session-"
+              "less.)",
+        0x83: "access mode not supported"
+    },
+    (NETFN_APP, CMDID_GET_CHANNEL_ACCESS, None): {
+        0x82: "Command not supported for selected channel (e.g. channel is"
+              "session-less.)"
+    },
+    (NETFN_APP, CMDID_SET_USER_PASSWORD, None): {
+        0x80: "password test failed. Password size correct, but"
+              "password data does not match stored value.",
+        0x81: "password test failed. Wrong password size was used."
+    },
+    (NETFN_TRANSPORT, CMDID_SET_LAN_CONFIGURATION_PARAMETERS, None): {
+        0x80: "parameter not supported.",
+        0x81: "attempt to set the 'set in progress' value (in parameter #0)"
+              "when not in the 'set complete' state. (This completion code"
+              "provides a way to recognize that another party has already"
+              "'claimed' the parameters)",
+        0x82: "attempt to write read-only parameter",
+        0x83: "attempt to read write-only parameter"
+    },
+    (NETFN_TRANSPORT, CMDID_GET_LAN_CONFIGURATION_PARAMETERS, None): {
+        0x80: "parameter not supported."
+    },
+    (NETFN_CHASSIS, CMDID_SET_SYSTEM_BOOT_OPTIONS, None): {
+        0x80: "parameter not supported.",
+        0x81: "attempt to set the 'set in progress' value (in parameter #0)"
+              "when not in the 'set complete' state. (This completion code"
+              "provides a way to recognize that another party has already"
+              "'claimed' the parameters)",
+        0x82: "attempt to write read-only parameter"
+    },
+    (NETFN_CHASSIS, CMDID_GET_SYSTEM_BOOT_OPTIONS, None): {
+        0x80: "parameter not supported:"
+    }
 }
 
 REPOSITORY_INITIATE_ERASE = 0xaa

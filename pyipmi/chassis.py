@@ -19,7 +19,7 @@ from enum import Enum
 
 
 from .msgs import create_request_by_name
-from .utils import check_completion_code, ByteBuffer
+from .utils import check_completion_code, check_rsp_completion_code, ByteBuffer
 from .state import State
 
 from .msgs.chassis import \
@@ -178,7 +178,7 @@ class Chassis(object):
         req.set_selector = set_selector
         req.block_selector = block_selector
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         return rsp.data
 
     def set_system_boot_options(self, parameter_selector, data,
@@ -188,7 +188,7 @@ class Chassis(object):
         req.parameter_selector.boot_option_parameter_selector = parameter_selector
         req.data = data
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def get_boot_mode(self):
         """
