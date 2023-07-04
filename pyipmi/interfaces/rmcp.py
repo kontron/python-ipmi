@@ -360,7 +360,7 @@ class Rmcp(object):
     _session = None
 
     def __init__(self, slave_address=0x81, host_target_address=0x20,
-                 keep_alive_interval=1, quirks_cfg=dict()):
+                 keep_alive_interval=1, max_retries=0, quirks_cfg=dict()):
         """Native RMCP interface constructor
 
         Parameter `quirks_cfg`: a dict of additional configuration parameters
@@ -386,6 +386,7 @@ class Rmcp(object):
         self.seq_number = 0xff
         self.slave_address = slave_address
         self.host_target = Target(host_target_address)
+        self.max_retries = max_retries
         self.set_timeout(2.0)
         self.next_sequence_number = 0
         self.keep_alive_interval = keep_alive_interval
@@ -586,25 +587,32 @@ class Rmcp(object):
             tx_data = encode_ipmb_msg(header, payload)
 
         with self.transaction_lock:
-            self._send_ipmi_msg(tx_data)
+            retry = 0
+            while retry <= self.max_retries:
+                try:
+                    self._send_ipmi_msg(tx_data)
 
-            received = False
-            while received is False:
-                if not self._q.empty():
-                    rx_data = self._q.get()
-                else:
-                    rx_data = self._receive_ipmi_msg(self.ignore_sdu_length)
+                    received = False
+                    while received is False:
+                        if not self._q.empty():
+                            rx_data = self._q.get()
+                        else:
+                            rx_data = self._receive_ipmi_msg(self.ignore_sdu_length)
 
-                if array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE:
-                    rx_data = decode_bridged_message(rx_data)
-                    if not rx_data:
-                        # the forwarded reply is expected in the next packet
-                        continue
+                        if array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE:
+                            rx_data = decode_bridged_message(rx_data)
+                            if not rx_data:
+                                # the forwarded reply is expected in the next packet
+                                continue
 
-                received = rx_filter(header, rx_data)
+                        received = rx_filter(header, rx_data)
 
-                if not received:
-                    self._q.put(rx_data)
+                        if not received:
+                            self._q.put(rx_data)
+                    break
+
+                except socket.timeout:
+                    retry += 1
 
         return rx_data[6:-1]
 
