@@ -466,3 +466,121 @@ class VitaFruControlCapabilitiesRsp(VitaMessage):
                  Bitfield.Bit('controlling_payload_power', 1, default=0),
                  Bitfield.ReservedBit(3, 0),)
     )
+
+
+@register_message_class
+class VitaGetMandatorySensorNumbersReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_MANDATORY_SENSOR_NUMBERS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_id', 1),
+    )
+
+
+@register_message_class
+class VitaGetMandatorySensorNumbersRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_MANDATORY_SENSOR_NUMBERS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_state_sensor', 1),
+        UnsignedInt('fru_health_sensor', 1),
+        UnsignedInt('fru_voltage_sensor', 1),
+        UnsignedInt('fru_temperature_sensor', 1),
+        UnsignedInt('test_result_sensor', 1),
+        UnsignedInt('test_status_sensor', 1),
+        UnsignedInt('reserved_9', 1),
+        UnsignedInt('payload_mode_sensor', 1),
+    )
+
+
+@register_message_class
+class VitaGetFruHashReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_FRU_HASH
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_id', 1),
+    )
+
+
+@register_message_class
+class VitaGetFruHashRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_FRU_HASH
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_hash', 4),
+    )
+
+
+@register_message_class
+class VitaGetPayloadModeCapabilitiesReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_PAYLOAD_MODE_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_id', 1),
+    )
+
+
+@register_message_class
+class VitaGetPayloadModeCapabilitiesRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_PAYLOAD_MODE_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('supported_modes_lsb', 1),
+        Optional(
+             UnsignedInt('supported_modes_msb', 1),
+        ),
+    )
+
+
+@register_message_class
+class VitaSetPayloadModeReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_SET_PAYLOAD_MODE
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_id', 1),
+        UnsignedInt('mode', 1),
+    )
+
+
+@register_message_class
+class VitaSetPayloadModeRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_SET_PAYLOAD_MODE
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        Optional(
+            UnsignedInt('oem_response_3', 1),
+        ),
+        Optional(
+            UnsignedInt('oem_response_4', 1),
+        ),
+        Optional(
+            UnsignedInt('oem_response_5', 1),
+        ),
+        Optional(
+            UnsignedInt('oem_response_6', 1),
+        ),
+        Optional(
+            UnsignedInt('oem_response_7', 1),
+        ),
+        Optional(
+            UnsignedInt('oem_response_8', 1),
+        ),
+        Optional(
+            UnsignedInt('oem_response_9', 1),
+        ),
+        Optional(
+            UnsignedInt('oem_response_10', 1),
+        ),
+    )

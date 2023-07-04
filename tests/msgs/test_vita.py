@@ -421,3 +421,145 @@ def test_VitaFruControlCapabilitiesRsp_encode():
     m = pyipmi.msgs.vita.VitaFruControlCapabilitiesRsp()
     data = encode_message(m)
     assert data == b'\x00\x03\x00'
+
+
+def test_VitaGetMandatorySensorNumbersReq_decode():
+    m = pyipmi.msgs.vita.VitaGetMandatorySensorNumbersReq()
+    decode_message(m, b'\x03\x00')
+    assert m.vita_identifier == 3
+
+
+def test_VitaGetMandatorySensorNumbersReq_encode():
+    m = pyipmi.msgs.vita.VitaGetMandatorySensorNumbersReq()
+    data = encode_message(m)
+    assert data == b'\x03\x00'
+
+
+def test_VitaGetMandatorySensorNumbersRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetMandatorySensorNumbersRsp()
+    decode_message(m, b'\x00\x03\x00\x02\x03\x04\x05\x06\xff\x07')
+    assert m.completion_code == 0
+    assert m.vita_identifier == 3
+    assert m.fru_state_sensor == 0
+    assert m.fru_health_sensor == 2
+    assert m.fru_voltage_sensor == 3
+    assert m.fru_temperature_sensor == 4
+    assert m.test_result_sensor == 5
+    assert m.test_status_sensor == 6
+    assert m.payload_mode_sensor == 7
+
+
+def test_VitaGetMandatorySensorNumbersRsp_encode():
+    m = pyipmi.msgs.vita.VitaGetMandatorySensorNumbersRsp()
+    data = encode_message(m)
+    assert data == b'\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00'
+
+
+def test_VitaGetFruHashReq_decode():
+    m = pyipmi.msgs.vita.VitaGetFruHashReq()
+    decode_message(m, b'\x03\x00')
+    assert m.vita_identifier == 3
+
+
+def test_VitaGetFruHashReq_encode():
+    m = pyipmi.msgs.vita.VitaGetFruHashReq()
+    data = encode_message(m)
+    assert data == b'\x03\x00'
+
+
+def test_VitaGetFruHashRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetFruHashRsp()
+    decode_message(m, b'\x00\x03\x01\x02\x03\x04')
+    assert m.completion_code == 0
+    assert m.vita_identifier == 3
+    assert m.fru_hash == 0x04030201
+
+
+def test_VitaGetFruHashRsp_encode():
+    m = pyipmi.msgs.vita.VitaGetFruHashRsp()
+    data = encode_message(m)
+    assert data == b'\x00\x03\x00\x00\x00\x00'
+
+
+def test_VitaGetPayloadModeCapabilitiesReq_decode():
+    m = pyipmi.msgs.vita.VitaGetPayloadModeCapabilitiesReq()
+    decode_message(m, b'\x03\x00')
+    assert m.vita_identifier == 3
+
+
+def test_VitaGetPayloadModeCapabilitiesReq_encode():
+    m = pyipmi.msgs.vita.VitaGetPayloadModeCapabilitiesReq()
+    data = encode_message(m)
+    assert data == b'\x03\x00'
+
+
+def test_VitaGetPayloadModeCapabilitiesRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetPayloadModeCapabilitiesRsp()
+    decode_message(m, b'\x00\x03\x55')
+    assert m.completion_code == 0
+    assert m.vita_identifier == 3
+    assert m.supported_modes_lsb == 0x55
+    assert m.supported_modes_msb is None
+
+    # optional
+    m = pyipmi.msgs.vita.VitaGetPayloadModeCapabilitiesRsp()
+    decode_message(m, b'\x00\x03\x12\x34')
+    assert m.completion_code == 0
+    assert m.vita_identifier == 3
+    assert m.supported_modes_lsb == 0x12
+    assert m.supported_modes_msb == 0x34
+
+
+def test_VitaGetPayloadModeCapabilitiesRsp_encode():
+    m = pyipmi.msgs.vita.VitaGetPayloadModeCapabilitiesRsp()
+    data = encode_message(m)
+    assert data == b'\x00\x03\x00'
+
+    # optional
+    m = pyipmi.msgs.vita.VitaGetPayloadModeCapabilitiesRsp()
+    m.supported_modes_lsb = 1
+    m.supported_modes_msb = 1
+    data = encode_message(m)
+    assert data == b'\x00\x03\x01\x01'
+
+
+def test_VitaSetPayloadModeReq_decode():
+    m = pyipmi.msgs.vita.VitaSetPayloadModeReq()
+    decode_message(m, b'\x03\x00\x01')
+    assert m.vita_identifier == 3
+    assert m.mode == 1
+
+
+def test_VitaSetPayloadModeReq_encode():
+    m = pyipmi.msgs.vita.VitaSetPayloadModeReq()
+    data = encode_message(m)
+    assert data == b'\x03\x00\x00'
+
+
+def test_VitaSetPayloadModeRsp_decode():
+    m = pyipmi.msgs.vita.VitaSetPayloadModeRsp()
+    decode_message(m, b'\x00\x03')
+    assert m.completion_code == 0
+    assert m.vita_identifier == 3
+    assert m.oem_response_3 is None
+
+    # optional
+    m = pyipmi.msgs.vita.VitaSetPayloadModeRsp()
+    decode_message(m, b'\x00\x03\xaa\x55')
+    assert m.completion_code == 0
+    assert m.vita_identifier == 3
+    assert m.oem_response_3  == 0xaa
+    assert m.oem_response_4  == 0x55
+
+
+def test_VitaSetPayloadModeRsp_encode():
+    m = pyipmi.msgs.vita.VitaSetPayloadModeRsp()
+    data = encode_message(m)
+    assert data == b'\x00\x03'
+
+    # optional
+    m = pyipmi.msgs.vita.VitaSetPayloadModeRsp()
+    m.oem_response_3 = 1
+    data = encode_message(m)
+    assert data == b'\x00\x03\x01'
+
