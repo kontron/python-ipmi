@@ -548,8 +548,8 @@ def test_VitaSetPayloadModeRsp_decode():
     decode_message(m, b'\x00\x03\xaa\x55')
     assert m.completion_code == 0
     assert m.vita_identifier == 3
-    assert m.oem_response_3  == 0xaa
-    assert m.oem_response_4  == 0x55
+    assert m.oem_response_3 == 0xaa
+    assert m.oem_response_4 == 0x55
 
 
 def test_VitaSetPayloadModeRsp_encode():
@@ -562,4 +562,3 @@ def test_VitaSetPayloadModeRsp_encode():
     m.oem_response_3 = 1
     data = encode_message(m)
     assert data == b'\x00\x03\x01'
-
