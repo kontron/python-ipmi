@@ -50,6 +50,18 @@ class VersionField(object):
         return ''.join("%s.%s" % (self.major, self.minor))
 
 
+def _unpack6bitascii(data):
+    """Unpack the 6bit ascii encoded string."""
+    string = ''
+    for i in range(0, len(data), 3):
+        d = data[i:i+3]
+        string += chr(0x20 + (d[0] & 0x3f))
+        string += chr(0x20 + (((d[0] & 0xc0) >> 6) | ((d[1] & 0xf) << 2)))
+        string += chr(0x20 + (((d[1] & 0xf0) >> 4) | ((d[2] & 0x3) << 4)))
+        string += chr(0x20 + ((d[2] & 0xfc) >> 2))
+    return string
+
+
 class TypeLengthString(object):
     """
     This is the TYPE/LENGTH BYTE FORMAT field represenation according the
@@ -82,12 +94,12 @@ class TypeLengthString(object):
 
         self.raw = data[offset+1:offset+1+self.length]
 
-        chr_data = ''.join([chr(c) for c in self.raw])
         if self.field_type == self.TYPE_BCD_PLUS:
-            self.string = chr_data.decode('bcd+')
+            self.string = self.raw.decode('bcd+')
         elif self.field_type == self.TYPE_6BIT_ASCII:
-            self.string = chr_data.decode('6bitascii')
+            self.string = _unpack6bitascii(self.raw)
         else:
+            chr_data = ''.join([chr(c) for c in self.raw])
             self.string = chr_data
 
 
