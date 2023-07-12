@@ -3,7 +3,8 @@
 import os
 
 from pyipmi.fru import (FruData, FruPicmgPowerModuleCapabilityRecord,
-                        InventoryCommonHeader, get_fru_inventory_from_file)
+                        InventoryCommonHeader, InventoryBoardInfoArea,
+                        get_fru_inventory_from_file)
 
 
 def test_frudata_object():
@@ -63,3 +64,11 @@ def test_multirecord_with_power_module_capability_record():
     record = fru.multirecord_area.records[0]
     assert isinstance(record, FruPicmgPowerModuleCapabilityRecord)
     assert record.maximum_current_output == 42.0
+
+
+def test_BoardInfoArea():
+    area = InventoryBoardInfoArea(b'\x01\t\x00\x00\x00\x00\x83d\xc9\xb2\xdePowerEdge R515                \xceCN717033AI0058\xc90RMRF7A05A\x03\xc1\x00\x00*')
+    assert area.manufacturer.string == 'DELL'
+    assert area.product_name.string == 'PowerEdge R515                '
+    assert area.serial_number.string == 'CN717033AI0058'
+    assert area.part_number.string == '0RMRF7A05'
