@@ -139,7 +139,9 @@ class Hpm(object):
                 raise HpmError('initiate_upgrade_action CC=0x%02x' % e.cc)
 
     def upload_firmware_block(self, block_number, data):
-        data = [ord(c) for c in data]
+        if isinstance(data, str):
+            data = [ord(c) for c in data]
+
         self.send_message_with_name('UploadFirmwareBlock', number=block_number,
                                     data=data)
 
