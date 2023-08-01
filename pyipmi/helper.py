@@ -31,8 +31,8 @@ def get_sdr_chunk_helper(send_fn, req, reserve_fn, retry=5):
         if rsp.completion_code == constants.CC_OK:
             break
         elif rsp.completion_code == constants.CC_RES_CANCELED:
+            time.sleep(1)
             req.reservation_id = reserve_fn()
-            time.sleep(0.1)
             continue
         elif rsp.completion_code == constants.CC_TIMEOUT:
             time.sleep(0.1)
