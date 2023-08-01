@@ -286,7 +286,7 @@ def handle_rmcp_ipmi_msg(context, sdu):
     ipmi_tx = rmcp.IpmiMsg(context.session)
     pdu = ipmi_tx.pack(tx_data)
 
-    if type(req) == pyipmi.msgs.device_messaging.CloseSessionReq:
+    if type(req) is pyipmi.msgs.device_messaging.CloseSessionReq:
         session.session_id = None
         session._auth_type = Session.AUTH_TYPE_NONE
         session._auth_username = None

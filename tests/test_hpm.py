@@ -20,55 +20,55 @@ from pyipmi.hpm import (ComponentProperty, ComponentPropertyDescriptionString,
 class TestComponentProperty(object):
     def test_general(self):
         prop = ComponentProperty().from_data(PROPERTY_GENERAL_PROPERTIES, b'\xaa')
-        assert type(prop) == ComponentPropertyGeneral
+        assert type(prop) is ComponentPropertyGeneral
 
         prop = ComponentProperty().from_data(PROPERTY_GENERAL_PROPERTIES, (0xaa,))
-        assert type(prop) == ComponentPropertyGeneral
+        assert type(prop) is ComponentPropertyGeneral
 
     def test_currentversion(self):
         prop = ComponentProperty().from_data(PROPERTY_CURRENT_VERSION, b'\x01\x99')
-        assert type(prop) == ComponentPropertyCurrentVersion
+        assert type(prop) is ComponentPropertyCurrentVersion
 
         prop = ComponentProperty().from_data(
             PROPERTY_CURRENT_VERSION, (0x01, 0x99))
-        assert type(prop) == ComponentPropertyCurrentVersion
+        assert type(prop) is ComponentPropertyCurrentVersion
 
     def test_descriptionstring(self):
         prop = ComponentProperty().from_data(PROPERTY_DESCRIPTION_STRING,
                                              b'\x30\x31\x32')
-        assert type(prop) == ComponentPropertyDescriptionString
+        assert type(prop) is ComponentPropertyDescriptionString
         assert prop.description == '012'
 
         prop = ComponentProperty().from_data(
             PROPERTY_DESCRIPTION_STRING, (0x33, 0x34, 0x35))
-        assert type(prop) == ComponentPropertyDescriptionString
+        assert type(prop) is ComponentPropertyDescriptionString
         assert prop.description == '345'
 
     def test_descriptionstring_with_trailinge_zeros(self):
         prop = ComponentProperty().from_data(PROPERTY_DESCRIPTION_STRING,
                                              b'\x36\x37\x38\x00\x00')
-        assert type(prop) == ComponentPropertyDescriptionString
+        assert type(prop) is ComponentPropertyDescriptionString
         assert prop.description == '678'
 
     def test_rollbackversion(self):
         prop = ComponentProperty().from_data(
             PROPERTY_ROLLBACK_VERSION, (0x2, 0x88))
-        assert type(prop) == ComponentPropertyRollbackVersion
+        assert type(prop) is ComponentPropertyRollbackVersion
 
     def test_deferredversion(self):
         prop = ComponentProperty().from_data(
             PROPERTY_DEFERRED_VERSION, (0x3, 0x77))
-        assert type(prop) == ComponentPropertyDeferredVersion
+        assert type(prop) is ComponentPropertyDeferredVersion
 
 
 def test_upgradeactionrecord_create_from_data():
     record = UpgradeActionRecord.create_from_data(b'\x00\x08\x02')
     assert record.action == 0
-    assert type(record) == UpgradeActionRecordBackup
+    assert type(record) is UpgradeActionRecordBackup
 
     record = UpgradeActionRecord.create_from_data(b'\x01\x08\x02')
     assert record.action == 1
-    assert type(record) == UpgradeActionRecordPrepare
+    assert type(record) is UpgradeActionRecordPrepare
 
     record = \
         UpgradeActionRecord.create_from_data(
@@ -83,7 +83,7 @@ def test_upgradeactionrecord_create_from_data():
 
     record = UpgradeActionRecord.create_from_data(b'\x03\x08\x02')
     assert record.action == 3
-    assert type(record) == UpgradeActionRecordUploadForCompare
+    assert type(record) is UpgradeActionRecordUploadForCompare
 
 
 def test_upgrade_image():
