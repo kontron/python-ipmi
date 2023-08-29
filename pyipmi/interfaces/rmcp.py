@@ -27,7 +27,7 @@ from ..session import Session
 from ..msgs import (create_message, create_request_by_name,
                     encode_message, decode_message, constants)
 from ..messaging import ChannelAuthenticationCapabilities
-from ..errors import DecodingError, NotSupportedError
+from ..errors import DecodingError, NotSupportedError, RetryError
 from ..logger import log
 from ..interfaces.ipmb import (IpmbHeaderReq, encode_ipmb_msg,
                                encode_bridged_message, decode_bridged_message,
@@ -594,7 +594,8 @@ class Rmcp(object):
                     self._send_ipmi_msg(tx_data)
 
                     received = False
-                    while received is False:
+                    received_retry = 0
+                    while received is False and received_retry <= self.max_retries:
                         if not self._q.empty():
                             rx_data = self._q.get()
                         else:
@@ -604,16 +605,29 @@ class Rmcp(object):
                             rx_data = decode_bridged_message(rx_data)
                             if not rx_data:
                                 # the forwarded reply is expected in the next packet
+                                # so we do not increment the retry counter as
+                                # it's not really a retry
                                 continue
 
                         received = rx_filter(header, rx_data)
 
                         if not received:
                             self._q.put(rx_data)
+
+                        received_retry += 1
+
+                    if not received:
+                        raise RetryError("Max retry while checking received"
+                                         "data against request header for rmcp"
+                                         f"host {self.host}")
                     break
 
                 except socket.timeout:
                     retry += 1
+
+        if retry > self.max_retries:
+            raise RetryError("Max retry while sending and/or receiving ipmi"
+                             f"message for rmcp host {self.host}")
 
         return rx_data[6:-1]
 
