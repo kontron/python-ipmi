@@ -45,6 +45,12 @@ def test_datatovlan():
     assert data_to_vlan(array('B', [19, 128])) == 19
 
 
+def test_datatovlan_deactivated():
+    # Check if the data_to_vlan method returns 0 when a vlan data contains
+    # non-null vlan ID but the "vlan activate" bit is set to 0
+    assert data_to_vlan(array('B', [138, 1])) == 0
+
+
 def test_vlantodata():
     assert vlan_to_data(394).array == array('B', [138, 129])
     assert vlan_to_data(0).array == array('B', [0, 0])
