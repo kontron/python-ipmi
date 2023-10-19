@@ -113,7 +113,14 @@ def data_to_vlan(data):
     """
     Convert a `GetLanConfigurationParameters(LAN_PARAMETER_802_1Q_VLAN_ID)` response
     data into an integer representation of the encoded vlan.
+
+    A disabled VLAN will return a VLAN ID = 0
     """
+    # Check if the vlan is enabled. We return vlan = 0 for a disabled vlan as a
+    # convention.
+    if data[1] >> 7 == 0:
+        return 0
+
     # The vlan ID must be extracted from the response, according to IPMI
     # specification.
     #
