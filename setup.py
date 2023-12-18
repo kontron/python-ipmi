@@ -74,6 +74,5 @@ setup(name=name,
           'mock',
       ],
       install_requires=[
-          'future',
       ],
       )
