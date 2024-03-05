@@ -20,6 +20,7 @@ from __future__ import print_function
 
 import sys
 import getopt
+import json
 import logging
 import traceback
 import pprint
@@ -31,6 +32,7 @@ import pyipmi
 import pyipmi.interfaces
 from pyipmi.utils import py3_array_tobytes
 
+json_output = False
 
 Command = namedtuple('Command', 'name fn')
 CommandHelp = namedtuple('CommandHelp', 'name arguments help')
@@ -329,7 +331,21 @@ def cmd_hpm_install(ipmi, args):
 
 def cmd_chassis_status(ipmi, args):
     status = ipmi.get_chassis_status()
-    print('''
+
+    if json_output:
+        status = {
+                  'power_on': status.power_on,
+                  'overload': status.overload,
+                  'interlock': status.interlock,
+                  'fault': status.fault,
+                  'ctrl_fault': status.control_fault,
+                  'restore_policy': status.restore_policy
+                 }
+        print(json.dumps(status))
+        pass
+    else:
+
+        print('''
 Power ON:          %(power_on)s
 Overload:          %(overload)s
 Interlock:         %(interlock)s
@@ -338,10 +354,10 @@ Ctrl Fault:        %(control_fault)s
 Restore Policy:    %(restore_policy)s
 '''[1:-1] % status.__dict__)
 
-    for event in status.last_event:
-        print(event)
-    for state in status.chassis_state:
-        print(state)
+        for event in status.last_event:
+            print(event)
+        for state in status.chassis_state:
+            print(state)
 
 
 def cmd_picmg_get_power(ipmi, args):
@@ -528,7 +544,7 @@ def parse_interface_options(interface_name, options):
 
 def main():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:L:o:b:p:r:')
+        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:L:o:b:p:r:J')
     except getopt.GetoptError as err:
         print(str(err))
         usage()
@@ -572,6 +588,9 @@ def main():
             interface_name = a
         elif o == '-o':
             interface_options = a
+        elif o == '-J':
+            global json_output
+            json_output = True
         else:
             assert False, 'unhandled option'
 
