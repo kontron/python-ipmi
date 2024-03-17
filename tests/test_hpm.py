@@ -17,7 +17,7 @@ from pyipmi.hpm import (ComponentProperty, ComponentPropertyDescriptionString,
                         PROPERTY_DEFERRED_VERSION)
 
 
-class TestComponentProperty(object):
+class TestComponentProperty:
     def test_general(self):
         prop = ComponentProperty().from_data(PROPERTY_GENERAL_PROPERTIES, b'\xaa')
         assert type(prop) is ComponentPropertyGeneral

@@ -72,7 +72,6 @@ setup(name=name,
       test_suite='tests',
       tests_require=[
           'pytest',
-          'mock',
       ],
       install_requires=[
       ],

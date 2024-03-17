@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from mock import MagicMock, call
+from unittest.mock import MagicMock, call
 
 from pyipmi.helper import clear_repository_helper
 from pyipmi.msgs.constants import (REPOSITORY_ERASURE_COMPLETED,
