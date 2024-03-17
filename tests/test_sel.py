@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from mock import MagicMock
+from unittest.mock import MagicMock
 
 from pyipmi import interfaces, create_connection
 from pyipmi.msgs.registry import create_response_by_name
 from pyipmi.sel import SelEntry, SelInfo
 
 
-class TestSel(object):
+class TestSel:
 
     def test_get_sel_entries(self):
         rsps = list()
@@ -36,7 +36,7 @@ class TestSel(object):
         assert len(entries) == 2
 
 
-class TestSelInfo(object):
+class TestSelInfo:
     rsp = create_response_by_name('GetSelInfo')
     rsp.version = 1
     rsp.entries = 1023
@@ -108,7 +108,7 @@ class TestSelInfo(object):
     assert 'overflow_flag' in info.operation_support
 
 
-class TestSelEnty(object):
+class TestSelEnty:
 
     def test_from_data(self):
         data = [0xff, 0x03, 0x02, 0xf7, 0x61, 0xef, 0x52, 0x7e,

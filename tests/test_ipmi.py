@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from unittest.mock import MagicMock
+
 import pytest
-from mock import MagicMock
 
 from pyipmi import interfaces, create_connection, Target, Routing
 from pyipmi.errors import CompletionCodeError, RetryError

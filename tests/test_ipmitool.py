@@ -3,7 +3,7 @@
 from pyipmi.ipmitool import parse_interface_options
 
 
-class TestParseInterfaceOptions(object):
+class TestParseInterfaceOptions:
     def test_options_aardvark(self):
         options = parse_interface_options('aardvark', 'serial=1234')
         assert options['serial_number'] == '1234'

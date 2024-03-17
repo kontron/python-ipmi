@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from unittest.mock import MagicMock
+
 import pytest
-from mock import MagicMock
 
 from pyipmi.errors import IpmiTimeoutError, IpmiConnectionError
 from pyipmi.interfaces import Ipmitool

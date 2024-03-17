@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from mock import MagicMock
+from unittest.mock import MagicMock
 
 from pyipmi import interfaces, create_connection
 from pyipmi.msgs.sensor import (SetSensorThresholdsRsp, GetSensorThresholdsRsp,
@@ -10,7 +10,7 @@ from pyipmi.sensor import (EVENT_READING_TYPE_SENSOR_SPECIFIC,
                            SENSOR_TYPE_MODULE_HOT_SWAP)
 
 
-class TestSensor(object):
+class TestSensor:
 
     def setup_method(self):
         self.mock_send_recv = MagicMock()
