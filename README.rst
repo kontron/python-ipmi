@@ -79,6 +79,7 @@ Example with lan interface:
 
     connection.session.set_session_type_rmcp('10.0.0.1', port=623)
     connection.session.set_auth_type_user('admin', 'admin')
+    connection.session.set_priv_level("ADMINISTRATOR")
     connection.session.establish()
 
     connection.get_device_id()
@@ -87,7 +88,7 @@ ipmitool command:
 
 .. code:: shell
 
-    ipmitool -I lan -H 10.0.0.1 -p 623 -U "admin" -P "admin" -t 0x82 -b 0 -l 0 raw 0x06 0x01
+    ipmitool -I lan -H 10.0.0.1 -p 623 -L "ADMINISTRATOR" -U "admin" -P "admin" -t 0x82 -b 0 -l 0 raw 0x06 0x01
 
 
 Example with serial interface:
