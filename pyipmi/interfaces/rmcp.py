@@ -476,8 +476,7 @@ class Rmcp(object):
         req = create_request_by_name('ActivateSession')
         req.target = self.host_target
         req.authentication.type = session.auth_type
-        req.privilege_level.maximum_requested =\
-            Session.PRIV_LEVEL_ADMINISTRATOR
+        req.privilege_level.maximum_requested = session.priv_level
         req.challenge_string = challenge
         req.session_id = self._session.sid
         req.initial_outbound_sequence_number = random.randrange(1, 0xffffffff)
