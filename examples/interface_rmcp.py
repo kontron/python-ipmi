@@ -11,6 +11,7 @@ interface = pyipmi.interfaces.create_interface('rmcp',
 ipmi = pyipmi.create_connection(interface)
 ipmi.session.set_session_type_rmcp('10.0.114.199', 623)
 ipmi.session.set_auth_type_user('admin', 'admin')
+ipmi.session.set_priv_level("ADMINISTRATOR")
 ipmi.session.establish()
 ipmi.target = pyipmi.Target(ipmb_address=0x20)
 
