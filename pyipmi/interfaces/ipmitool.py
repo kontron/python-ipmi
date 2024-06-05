@@ -42,12 +42,17 @@ class Ipmitool(object):
     IPMITOOL_PATH = 'ipmitool'
     supported_interfaces = ['lan', 'lanplus', 'serial-terminal', 'open']
 
-    def __init__(self, interface_type='lan'):
+    def __init__(self, interface_type='lan', cipher=None):
         if interface_type in self.supported_interfaces:
             self._interface_type = interface_type
         else:
             raise RuntimeError('interface type %s not supported' %
                                interface_type)
+        if cipher is not None and cipher not in range(0,255):
+            raise RuntimeError('cipher %s not in allowed range [0-255]' %
+                               cipher)
+        else:
+            self._cipher = cipher
 
         self.re_completion_code = re.compile(
                 r"Unable to send RAW command \(.*rsp=(0x[0-9a-f]+)\)")
@@ -233,6 +238,8 @@ class Ipmitool(object):
 
         cmd += self._build_ipmitool_priv_level(self._session.priv_level)
 
+        if self._cipher:
+            cmd += (' -C %s' % self._cipher)
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += ' -P ""'
         elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
