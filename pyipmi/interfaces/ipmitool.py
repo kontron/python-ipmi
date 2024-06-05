@@ -48,7 +48,7 @@ class Ipmitool(object):
         else:
             raise RuntimeError('interface type %s not supported' %
                                interface_type)
-        if cipher is not None and cipher not in range(0,255):
+        if cipher is not None and int(cipher) not in range(0,255):
             raise RuntimeError('cipher %s not in allowed range [0-255]' %
                                cipher)
         else:

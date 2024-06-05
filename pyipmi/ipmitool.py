@@ -488,6 +488,7 @@ Aardvark interface options:
 
 Ipmitool interface options:
   interface_type    Set the interface type to be used (lan, lanplus, serial, open)
+  cipher            Set the cipher to be used (0-255)
 
 Ipmbdev interface options:
   port=<path>       Specify path to Linux IPMB device (/dev/ipmb-0 by default)
@@ -533,6 +534,8 @@ def parse_interface_options(interface_name, options):
         elif interface_name == 'ipmitool':
             if name == 'interface_type':
                 interface_options['interface_type'] = value
+            elif name == 'cipher':
+                interface_options['cipher'] = value
             else:
                 print('Warning: unknown option %s' % name)
         elif interface_name == 'ipmbdev':
