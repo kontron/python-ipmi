@@ -24,6 +24,9 @@ class Bmc(object):
     def get_device_id(self):
         return DeviceId(self.send_message_with_name('GetDeviceId'))
 
+    def get_device_guid(self):
+        return DeviceGuid(self.send_message_with_name('GetDeviceGuid'))
+
     def cold_reset(self):
         self.send_message_with_name('ColdReset')
 
@@ -165,3 +168,12 @@ class DeviceId(State):
         self.aux = None
         if rsp.auxiliary is not None:
             self.aux = list(rsp.auxiliary)
+
+
+class DeviceGuid(State):
+    def __str__(self):
+        return 'Device GUID: %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-' \
+           '%02x%02x%02x%02x%02x%02x' % tuple(reversed(self.device_guid))
+
+    def _from_response(self, rsp):
+        self.device_guid = rsp.device_guid

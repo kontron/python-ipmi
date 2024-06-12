@@ -174,17 +174,19 @@ class GetAcpiPowerStateRsp(Message):
 
 
 @register_message_class
-class GetDeviceGuideReq(Message):
+class GetDeviceGuidReq(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_GUID
     __netfn__ = constants.NETFN_APP
-    __not_implemented__ = True
 
 
 @register_message_class
-class GetDeviceGuideRsp(Message):
+class GetDeviceGuidRsp(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_GUID
     __netfn__ = constants.NETFN_APP | 1
-    __not_implemented__ = True
+    __fields__ = (
+        CompletionCode(),
+        ByteArray('device_guid', 16),
+    )
 
 
 @register_message_class
