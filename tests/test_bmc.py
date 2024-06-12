@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from pyipmi.bmc import DeviceId, Watchdog
+from pyipmi.bmc import DeviceId, DeviceGuid, Watchdog
 import pyipmi.msgs.bmc
 from pyipmi.msgs import decode_message
 
@@ -47,3 +47,11 @@ def test_deviceid_object_with_aux():
 
     device_id = DeviceId(msg)
     assert device_id.aux == [1, 2, 3, 4]
+
+
+def test_deviceguid_object():
+    m = pyipmi.msgs.bmc.GetDeviceGuidRsp()
+    decode_message(m, b'\x00\xff\xee\xdd\xcc\xbb\xaa'
+                      b'\x99\x88\x77\x66\x55\x44\x33\x22\x11\x00')
+    guid = DeviceGuid(m)
+    assert guid.device_guid_string == '00112233-4455-6677-8899-aabbccddeeff'
