@@ -73,7 +73,7 @@ class ByteArray(BaseField):
         if self.default is not None:
             return array('B', self.default)
         else:
-            return array('B', self.length * '\x00')
+            return array('B', self.length * b'\x00')
 
 
 class VariableByteArray(ByteArray):
