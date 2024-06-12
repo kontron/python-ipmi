@@ -121,6 +121,7 @@ class DeviceId(State):
         string += ' ipmi: %s' % self.ipmi_version
         string += ' manufacturer: %d' % self.manufacturer_id
         string += ' product: %d' % self.product_id
+        string += ' functions: %s' % ','.join(self.supported_functions)
         return string
 
     def supports_function(self, name):
