@@ -67,6 +67,21 @@ def test_getdeviceid_decode_valid_rsp_wo_aux():
     assert m.product_id == 5310
 
 
+def test_getdeviceguid_decode_req():
+    m = pyipmi.msgs.bmc.GetDeviceGuidReq()
+    decode_message(m, b'')
+
+
+def test_getdeviceguid_decode_valid_rsp():
+    m = pyipmi.msgs.bmc.GetDeviceGuidRsp()
+    decode_message(m, b'\x00\xff\xee\xdd\xcc\xbb\xaa'
+                      b'\x99\x88\x77\x66\x55\x44\x33\x22\x11\x00')
+    assert m.completion_code == 0x00
+    assert m.device_guid == array('B', [0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa,
+                                        0x99, 0x88, 0x77, 0x66, 0x55, 0x44,
+                                        0x33, 0x22, 0x11, 0x00])
+
+
 def test_getselftestresults_decode_test_passed_rsp():
     m = pyipmi.msgs.bmc.GetSelftestResultsRsp()
     decode_message(m, b'\x00\x55\x00')

@@ -172,8 +172,10 @@ class DeviceId(State):
 
 class DeviceGuid(State):
     def __str__(self):
-        return 'Device GUID: %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-' \
-           '%02x%02x%02x%02x%02x%02x' % tuple(reversed(self.device_guid))
+        return 'Device GUID: %s' % self.device_guid_string
 
     def _from_response(self, rsp):
         self.device_guid = rsp.device_guid
+        self.device_guid_string = \
+            '%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-' \
+            '%02x%02x%02x%02x%02x%02x' % tuple(reversed(self.device_guid))
