@@ -27,8 +27,9 @@ class TestParseInterfaceOptions:
         assert options['enable_fastmode'] is False
 
     def test_options_ipmitool(self):
-        options = parse_interface_options('ipmitool', 'interface_type=abcd')
+        options = parse_interface_options('ipmitool', 'interface_type=abcd,cipher=55')
         assert options['interface_type'] == 'abcd'
+        assert options['cipher'] == '55'
 
     def test_options_ipmbdev(self):
         options = parse_interface_options('ipmbdev', 'port=/dev/ipmb0')
