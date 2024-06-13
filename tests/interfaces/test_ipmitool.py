@@ -83,6 +83,22 @@ class TestIpmitool:
                                      '-L ADMINISTRATOR -U "admin" -P "secret" '
                                      '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
+    def test_send_and_receive_raw_cipher(self):
+        interface = Ipmitool(cipher='7')
+        interface.establish_session(self.session)
+
+        mock = MagicMock()
+        mock.return_value = (b'', 0)
+        interface._run_ipmitool = mock
+
+        target = Target(0x20)
+        interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
+
+        mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 '
+                                     '-L ADMINISTRATOR -C 7 '
+                                     '-U "admin" -P "secret" '
+                                     '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
+
     def test_send_and_receive_raw_no_auth(self):
         mock = MagicMock()
         mock.return_value = (b'', 0)
@@ -158,6 +174,10 @@ class TestIpmitool:
         mock.assert_called_once_with('ipmitool -I serial-terminal '
                                      '-D /dev/tty2:115200 -t 0x20 -l 0 '
                                      'raw 0x06 0x01')
+
+    def test_ipmitool_cipher_out_of_range(self):
+        with pytest.raises(RuntimeError):
+            Ipmitool(cipher='666')
 
     def test_parse_output_rsp(self):
         test_str = b' 12 34 56 78 \r\n d0 0f af fe de ad be ef\naa 55\r\nbb    \n'
