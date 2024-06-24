@@ -45,10 +45,6 @@ class IpmbHeader(object):
     *-------*--------------*----------*-------*---------------*-------*
     """
 
-    def __init__(self, data=None):
-        if data:
-            self.decode(data)
-
     rs_sa = None
     rs_lun = None
     rq_sa = None
@@ -57,6 +53,17 @@ class IpmbHeader(object):
     netfn = None
     cmdid = None
     checksum = None
+
+    def __init__(self, data=None):
+        if data:
+            self.decode(data)
+
+    def __str__(self):
+        return f'rs_sa=0x{self.rs_sa:02x}, rs_lun={self.rs_lun}, ' \
+               f'rq_sa=0x{self.rq_sa:02x}, rq_lun={self.rq_lun}, ' \
+               f'rq_seq={self.rq_seq}, ' \
+               f'netfn=0x{self.netfn:02x}, ' \
+               f'cmdid=0x{self.cmdid:02x}'
 
 
 class IpmbHeaderReq(IpmbHeader):
