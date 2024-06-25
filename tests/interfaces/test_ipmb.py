@@ -139,3 +139,74 @@ def test_rx_filter():
     rx_data = encode_ipmb_msg(header_rsp, b'\xaa\xbb\xcc')
 
     assert rx_filter(header_req, rx_data)
+
+
+def test_rx_filter_config_filter():
+    header_req = IpmbHeaderReq()
+    header_req.rs_lun = 1
+    header_req.rs_sa = 0x72
+    header_req.rq_seq = 2
+    header_req.rq_lun = 0
+    header_req.rq_sa = 0x20
+    header_req.netfn = 6
+    header_req.cmdid = 1
+
+    # requester and responder fields are twisted ... (sa and lun)
+    header_rsp = IpmbHeaderReq()
+    header_rsp.rs_lun = 0
+    header_rsp.rs_sa = 0x20
+    header_rsp.rq_seq = 3
+    header_rsp.rq_lun = 1
+    header_rsp.rq_sa = 0x72
+    header_rsp.netfn = 6 + 1
+    header_rsp.cmdid = 1
+
+    rx_data = encode_ipmb_msg(header_rsp, b'\xaa\xbb\xcc')
+
+    assert rx_filter(header_req, rx_data, rq_seq=False)
+
+    header_req = IpmbHeaderReq()
+    header_req.rs_lun = 1
+    header_req.rs_sa = 0x72
+    header_req.rq_seq = 2
+    header_req.rq_lun = 0
+    header_req.rq_sa = 0x20
+    header_req.netfn = 6
+    header_req.cmdid = 1
+
+    # requester and responder fields are twisted ... (sa and lun)
+    header_rsp = IpmbHeaderReq()
+    header_rsp.rs_lun = 0
+    header_rsp.rs_sa = 0x20
+    header_rsp.rq_seq = 2
+    header_rsp.rq_lun = 0
+    header_rsp.rq_sa = 0x72
+    header_rsp.netfn = 6 + 1
+    header_rsp.cmdid = 1
+
+    rx_data = encode_ipmb_msg(header_rsp, b'\xaa\xbb\xcc')
+
+    assert not rx_filter(header_req, rx_data, rq_lun=True)
+
+    header_req = IpmbHeaderReq()
+    header_req.rs_lun = 1
+    header_req.rs_sa = 0x70
+    header_req.rq_seq = 2
+    header_req.rq_lun = 0
+    header_req.rq_sa = 0x20
+    header_req.netfn = 6
+    header_req.cmdid = 1
+
+    # requester and responder fields are twisted ... (sa and lun)
+    header_rsp = IpmbHeaderReq()
+    header_rsp.rs_lun = 0
+    header_rsp.rs_sa = 0x20
+    header_rsp.rq_seq = 2
+    header_rsp.rq_lun = 1
+    header_rsp.rq_sa = 0x72
+    header_rsp.netfn = 6 + 1
+    header_rsp.cmdid = 1
+
+    rx_data = encode_ipmb_msg(header_rsp, b'\xaa\xbb\xcc')
+
+    assert not rx_filter(header_req, rx_data, rs_sa=True)
