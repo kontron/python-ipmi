@@ -221,7 +221,8 @@ def decode_bridged_message(rx_data):
     return rx_data
 
 
-def rx_filter(header, data):
+def rx_filter(header, data, rq_sa=False, rs_sa=False, rq_lun=False,
+              rs_lun=True, rq_seq=True):
     """Check if the message in rx_data matches to the information in header.
 
     The following checks are done:
@@ -241,14 +242,25 @@ def rx_filter(header, data):
     checks = [
         (checksum(data[0:3]), 0, 'Header checksum failed'),
         (checksum(data[3:]), 0, 'payload checksum failed'),
-        # rsp_header.rq_sa, header.rq_sa, 'slave address mismatch'),
         (rsp_header.netfn, header.netfn | 1, 'NetFn mismatch'),
-        # rsp_header.rs_sa, header.rs_sa, 'target address mismatch'),
-        # rsp_header.rq_lun, header.rq_lun, 'request LUN mismatch'),
-        (rsp_header.rs_lun, header.rs_lun, 'responder LUN mismatch'),
-        (rsp_header.rq_seq, header.rq_seq, 'sequence number mismatch'),
         (rsp_header.cmdid, header.cmdid, 'command id mismatch'),
     ]
+
+    # optional checks
+    if rq_sa:
+        checks.append((rsp_header.rq_sa, header.rq_sa, 'slave address mismatch'))
+
+    if rs_sa:
+        checks.append((rsp_header.rs_sa, header.rs_sa, 'target address mismatch'))
+
+    if rq_lun:
+        checks.append((rsp_header.rq_lun, header.rq_lun, 'request LUN mismatch'))
+
+    if rs_lun:
+        checks.append((rsp_header.rs_lun, header.rs_lun, 'responder LUN mismatch'))
+
+    if rq_seq:
+        checks.append((rsp_header.rq_seq, header.rq_seq, 'sequence number mismatch'))
 
     match = True
 
