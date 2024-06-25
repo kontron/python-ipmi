@@ -380,6 +380,16 @@ class Rmcp(object):
                 interface="rmcp",
                 quirks_cfg={'rmcp_ignore_sdu_length': True}
             )
+
+        - `rmcp_ignore_rq_seq: bool` wheater or not to verify the req_seq field
+        for rx_filter. The default value is `False`.
+
+            Example:
+
+            interfaces.create_interface(
+                interface="rmcp",
+                quirks_cfg={'rmcp_ignore_rq_seq': True}
+            )
         """
         self.host = None
         self.port = None
@@ -396,6 +406,7 @@ class Rmcp(object):
         self.transaction_lock = threading.Lock()
         self.quirks_cfg = quirks_cfg
         self.ignore_sdu_length = quirks_cfg.get('rmcp_ignore_sdu_length', False)
+        self.ignore_rq_seq = quirks_cfg.get('rmcp_ignore_rq_seq', False)
 
     def _send_rmcp_msg(self, sdu, class_of_msg):
         rmcp = RmcpMsg(class_of_msg)
@@ -609,7 +620,8 @@ class Rmcp(object):
                                 # it's not really a retry
                                 continue
 
-                        received = rx_filter(header, rx_data)
+                        received = rx_filter(header, rx_data,
+                                             rq_seq=not self.ignore_rq_seq)
 
                         if not received:
                             self._q.put(rx_data)
