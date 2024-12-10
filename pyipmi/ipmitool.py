@@ -474,7 +474,7 @@ Options:
   -I <interface>   Set interface (available: rmcp, aardvark, ipmitool, ipmbdev)
   -H <host>        Set RMCP host
   -U <user>        Set RMCP user
-  -L <level>       Set RMCP priviledge level
+  -L <level>       Set RMCP privilege level
   -P <password>    Set RMCP password
   -o <options>     Set interface specific options (name=value, separated
                    by commas, see below for available options).

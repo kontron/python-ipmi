@@ -89,7 +89,7 @@ class Watchdog(State):
     TIMEOUT_ACTION_POWER_CYCLE = 3
 
     __properties__ = [
-        # (propery, description)
+        # (property, description)
         ('timer_use', ''),
         ('dont_stop', ''),
         ('is_running', ''),

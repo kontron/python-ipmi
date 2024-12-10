@@ -314,7 +314,7 @@ class Hpm(object):
         # tbd check version
 
         ####################################################
-        # compare current revision with upgrade image earlist comp rev
+        # compare current revision with upgrade image earliest comp rev
         targetCap = self.get_target_upgrade_capabilities()
         # tbd check version
 

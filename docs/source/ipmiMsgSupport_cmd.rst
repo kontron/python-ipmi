@@ -84,13 +84,13 @@ This is not equivalent with a single IPMI command, but represents a high level A
 | **establish()**              |
 +------------------------------+
 
-creates and activates a session of the ``ipmi.session`` instance with the given authentication and privilige level. Multiple IPMI commands are used to establish the session. The following steps are done during the session establishment for an RMCP interface:
+creates and activates a session of the ``ipmi.session`` instance with the given authentication and privilege level. Multiple IPMI commands are used to establish the session. The following steps are done during the session establishment for an RMCP interface:
 
   - ping the **Target** IP address
   - issue a **"Get Channel Authentication Capabilities"** command
   - issue a **"Get Session Challenge"** command
   - issue an **"Activate Session"** command
-  - issue a **"Set Session Privilege Level"** command (privilige is set always to ADMINISTRATOR level)
+  - issue a **"Set Session Privilege Level"** command (privilege is set always to ADMINISTRATOR level)
 
 If ``keep_alive_interval`` argument for the interface instantiation was set to a nonzero value then the channel is kept alive by regularly sending the **"Get Device ID"** IPMI command.
 
@@ -109,7 +109,7 @@ This command is used to retrieve capability information about a particular chann
 | **get_channel_authentication_capabilities(channel, priv_lvl)**  |
 +-----------------------------------------------------------------+
 
-You should pass the channel number to ``channel``, and the requested maximum privilige level to ``priv_lvl``.
+You should pass the channel number to ``channel``, and the requested maximum privilege level to ``priv_lvl``.
 
 Example:
 
@@ -121,7 +121,7 @@ Example:
 Master Write-Read Command
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This command can be used for low level |I2C|/SMBus write, read, or write-read accesses to the IPMB or private busses behind a management controller. The command can also be used for providing low-level access to devices that provide an SMBus slave interface.
+This command can be used for low level |I2C|/SMBus write, read, or write-read accesses to the IPMB or private buses behind a management controller. The command can also be used for providing low-level access to devices that provide an SMBus slave interface.
 
 +---------------------------------------------------------------------------+
 | **i2c_write_read(bus_type, bus_id, channel, address, count, data=None)**  |

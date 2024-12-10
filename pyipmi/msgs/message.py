@@ -54,7 +54,7 @@ class ByteArray(BaseField):
     def encode(self, obj, data):
         a = getattr(obj, self.name)
         if len(a) != self._length(obj):
-            raise EncodingError('Array must be exaclty %d bytes long '
+            raise EncodingError('Array must be exactly %d bytes long '
                                 '(but is %d long)' %
                                 (self._length(obj), len(a)))
         for i in range(self._length(obj)):
@@ -320,7 +320,7 @@ class Message(object):
 
         buf -- option message buffer to decode
 
-        Optional keyword arguments corresponts to members to set (matching
+        Optional keyword arguments corresponds to members to set (matching
         fields in self.__fields__, or 'data').
         """
         # create message fields
