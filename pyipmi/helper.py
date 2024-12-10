@@ -85,7 +85,7 @@ def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
             (next_id, data) = get_fn(reservation_id, record_id, offset, length)
         except CompletionCodeError as e:
             if e.cc == constants.CC_CANT_RET_NUM_REQ_BYTES:
-                # reduce max lenght
+                # reduce max length
                 max_req_len -= 4
                 if max_req_len <= 0:
                     retry = 0

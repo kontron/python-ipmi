@@ -102,7 +102,7 @@ For example:
 Cold Reset Command
 ~~~~~~~~~~~~~~~~~~
 
-This command directs the **Target** to perform a 'Cold Reset' of itself. The device reinitalizes its event, communcation, and sensor funtioncs. Self Test, if implemented, will be also run.
+This command directs the **Target** to perform a 'Cold Reset' of itself. The device reinitalizes its event, communication, and sensor funtioncs. Self Test, if implemented, will be also run.
 
 +------------------------------+
 | **cold_reset()**             |

@@ -23,7 +23,7 @@ Before establishing the session the interface type shall be defined. There are 4
   * **'aardvark'** - :abbr:`IPMB (Intelligent Platform Management Bus)` interface (using the `Total Phase`_ Aardvark)
   * **'mock'** - This interface uses the ipmitool raw command to "emulate" an :abbr:`RMCP (Remote Management Control Protocol)` session. It uses the session information to assemble the correct ipmitool parameters. Therefore, a session must be established before any request can be sent.
 
-Then you create an instance of the ``pyipmi.Ipmi`` object using the ``interface`` instance just created, and set also the required parameteres of the interface type. You should also set the :abbr:`IPMI (Intelligent Platform Management Interface)` **Target**, otherwise different runtime errors shall be expected later on when invoking methods of this library. Finally, you can try to establish a session. If there is a connection problem (no response), then you get the following error during session establishment: 
+Then you create an instance of the ``pyipmi.Ipmi`` object using the ``interface`` instance just created, and set also the required parameters of the interface type. You should also set the :abbr:`IPMI (Intelligent Platform Management Interface)` **Target**, otherwise different runtime errors shall be expected later on when invoking methods of this library. Finally, you can try to establish a session. If there is a connection problem (no response), then you get the following error during session establishment: 
 
 .. error::
 
@@ -261,7 +261,7 @@ ipmitool command:
 IPMB with Aardvark
 ******************
 
-For :abbr:`IPMB (Intelligent Platform Management Bus)` interface with Aardvark tool you should use the followig code:
+For :abbr:`IPMB (Intelligent Platform Management Bus)` interface with Aardvark tool you should use the following code:
 
 .. code:: python
 
@@ -345,7 +345,7 @@ in which case debug, info and warning messages are all recorded in the **'ipmi_d
 
 .. note::
 
-  It is assumed in all code examples that the instantiation of the ``pyipmi.Ipmi`` object is called **ipmi**, thus **ipmi** will preceed all the methods and attributes of the ``pyipmi.Ipmi`` object.
+  It is assumed in all code examples that the instantiation of the ``pyipmi.Ipmi`` object is called **ipmi**, thus **ipmi** will proceed all the methods and attributes of the ``pyipmi.Ipmi`` object.
 
 .. _Total Phase: http://www.totalphase.com
 .. _ipmitool: http://sourceforge.net/projects/ipmitool/

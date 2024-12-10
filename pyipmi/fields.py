@@ -64,7 +64,7 @@ def _unpack6bitascii(data):
 
 class TypeLengthString(object):
     """
-    This is the TYPE/LENGTH BYTE FORMAT field represenation according the
+    This is the TYPE/LENGTH BYTE FORMAT field representation according the
     Platform Management FRU Information Storage Definition v1.0.
 
     In addition the difference to the 'FRU Information Storage Definition' to

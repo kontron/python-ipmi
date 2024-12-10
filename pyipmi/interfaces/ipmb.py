@@ -149,7 +149,7 @@ def encode_ipmb_msg(header, data):
 
 
 def encode_send_message(payload, rq_sa, rs_sa, channel, seq, tracking=1):
-    """Encode a send message command and embedd the message to be send.
+    """Encode a send message command and embed the message to be send.
 
     payload: the message to be send as bytestring
     rq_sa: the requester source address
@@ -178,7 +178,7 @@ def encode_send_message(payload, rq_sa, rs_sa, channel, seq, tracking=1):
 
 
 def encode_bridged_message(routing, header, payload, seq):
-    """Encode a (multi-)bridged command and embedd the message to be send.
+    """Encode a (multi-)bridged command and embed the message to be send.
 
     routing:
     payload: the message to be send as bytestring

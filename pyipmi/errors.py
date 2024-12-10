@@ -69,7 +69,7 @@ class DescriptionError(Exception):
 
 
 class RetryError(Exception):
-    """Maxium number of retries exceeded."""
+    """Maximum number of retries exceeded."""
     pass
 
 

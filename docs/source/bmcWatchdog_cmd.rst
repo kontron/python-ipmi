@@ -49,7 +49,7 @@ For example:
 
    ipmi.set_watchdog_timer(watchdog_timer)
 
-where the ``watchdog_timer`` has the attributes shown bellow for the next command.
+where the ``watchdog_timer`` has the attributes shown below for the next command.
 
 Get Watchdog Timer Command
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
