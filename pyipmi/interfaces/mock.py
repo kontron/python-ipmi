@@ -6,6 +6,12 @@ class Mock(object):
     def __init__(self):
         pass
 
+    def open(self):
+        pass
+
+    def close(self):
+        pass
+
     def establish_session(self, session):
         pass
 

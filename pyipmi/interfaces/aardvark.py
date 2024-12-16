@@ -61,6 +61,12 @@ class Aardvark(object):
         else:
             self.enable_fastmode(False)
 
+    def open(self):
+        pass
+
+    def close(self):
+        pass
+
     def enable_pullups(self, enabled):
         self._dev.i2c_pullups = enabled
 

@@ -65,6 +65,12 @@ class Ipmitool(object):
 
         self._session = None
 
+    def open(self):
+        pass
+
+    def close(self):
+        pass
+
     def establish_session(self, session):
         # just remember session parameters here
         self._session = session

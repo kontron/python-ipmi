@@ -408,6 +408,12 @@ class Rmcp(object):
         self.ignore_sdu_length = quirks_cfg.get('rmcp_ignore_sdu_length', False)
         self.ignore_rq_seq = quirks_cfg.get('rmcp_ignore_rq_seq', False)
 
+    def open(self):
+        pass
+
+    def close(self):
+        pass
+
     def _send_rmcp_msg(self, sdu, class_of_msg):
         rmcp = RmcpMsg(class_of_msg)
         pdu = rmcp.pack(sdu, self.seq_number)
