@@ -172,6 +172,14 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         for base in Ipmi.__bases__:
             base.__init__(self)
 
+    def open(self):
+        self.interface.open()
+        self.session.establish()
+
+    def close(self):
+        self.session.close()
+        self.interface.close()
+
     def is_ipmc_accessible(self):
         return self.interface.is_ipmc_accessible(self.target)
 

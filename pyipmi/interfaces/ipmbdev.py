@@ -23,6 +23,12 @@ class IpmbDev(object):
 
         self._dev = os.open(port, os.O_RDWR)
 
+    def open(self):
+        pass
+
+    def close(self):
+        pass
+
     def establish_session(self, session):
         # just remember session parameters here
         self._session = session
