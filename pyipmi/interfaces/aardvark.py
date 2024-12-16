@@ -44,28 +44,31 @@ class Aardvark(object):
                                'use this interface.')
 
         self.slave_address = slave_address
+        self.port = port
+        self.serial_number = serial_number
+        self.i2c_pullups = enable_i2c_pullups
+        self.target_power = enable_target_power
+        self.fastmode = enable_fastmode
         self.timeout = 0.25
         self.max_retries = 3
         self.next_sequence_number = 0
 
-        self._dev = pyaardvark.open(port, serial_number)
+    def open(self):
+        self._dev = pyaardvark.open(self.port, self.serial_number)
         self._dev.enable_i2c_slave(self.slave_address >> 1)
 
-        if enable_i2c_pullups:
-            self.enable_pullups(enable_i2c_pullups)
-        if enable_target_power:
-            self.enable_target_power(enable_target_power)
+        if self.i2c_pullups:
+            self.enable_pullups(self.i2c_pullups)
+        if self.target_power:
+            self.enable_target_power(self.target_power)
 
-        if enable_fastmode is not None:
-            self.enable_fastmode(enable_fastmode)
+        if self.fastmode is not None:
+            self.enable_fastmode(self.fastmode)
         else:
             self.enable_fastmode(False)
 
-    def open(self):
-        pass
-
     def close(self):
-        pass
+        self._dev.close()
 
     def enable_pullups(self, enabled):
         self._dev.i2c_pullups = enabled
@@ -83,11 +86,10 @@ class Aardvark(object):
         self._dev.i2c_master_write(address, data)
 
     def establish_session(self, session):
-        # just remember session parameters here
-        self._session = session
+        pass
 
     def close_session(self):
-        self._dev.close()
+        pass
 
     def is_ipmc_accessible(self, target):
         header = IpmbHeaderReq()
