@@ -171,6 +171,12 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         for base in Ipmi.__bases__:
             base.__init__(self)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        return False
+
     def open(self):
         self.interface.open()
         self.session.establish()
