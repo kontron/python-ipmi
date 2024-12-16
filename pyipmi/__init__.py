@@ -48,10 +48,7 @@ except ImportError:
 def create_connection(interface):
     session = Session()
     session.interface = interface
-    ipmi = Ipmi()
-    ipmi.interface = interface
-    ipmi.session = session
-    ipmi.requester = NullRequester()
+    ipmi = Ipmi(interface=interface, session=session)
     return ipmi
 
 
@@ -164,10 +161,12 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
            sdr.Sdr, sensor.Sensor, event.Event, sel.Sel, lan.Lan,
            messaging.Messaging):
 
-    def __init__(self):
-        self._interface = None
-        self._session = None
-        self._target = None
+    def __init__(self, interface=None, session=None, target=None,
+                 requester=NullRequester()):
+        self._interface = interface
+        self._session = session
+        self._target = target
+        self.requester = requester
 
         for base in Ipmi.__bases__:
             base.__init__(self)
