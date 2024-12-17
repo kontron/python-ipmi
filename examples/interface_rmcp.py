@@ -4,20 +4,25 @@ import pyipmi
 import pyipmi.interfaces
 
 
-interface = pyipmi.interfaces.create_interface('rmcp',
+intf = pyipmi.interfaces.create_interface('rmcp',
                                                slave_address=0x81,
                                                host_target_address=0x20,
                                                keep_alive_interval=0)
-ipmi = pyipmi.create_connection(interface)
-ipmi.session.set_session_type_rmcp('10.0.114.199', 623)
-ipmi.session.set_auth_type_user('admin', 'admin')
-ipmi.session.set_priv_level("ADMINISTRATOR")
-ipmi.session.establish()
-ipmi.target = pyipmi.Target(ipmb_address=0x20)
+sess = pyipmi.Session()
+sess.set_session_type_rmcp('10.0.114.116', 623)
+sess.set_auth_type_user('admin', 'admin')
+sess.set_priv_level("ADMINISTRATOR")
+target = pyipmi.Target(ipmb_address=0x20)
 
+# (1) The device connection can either be opened and closed
+ipmi = pyipmi.Ipmi(interface=intf, session=sess, target=target)
+ipmi.open()
 device_id = ipmi.get_device_id()
+ipmi.close()
 
-ipmi.session.close()
+# (2) or the 'with' statement can be used
+with pyipmi.Ipmi(interface=intf, session=sess, target=target) as ipmi:
+    device_id = ipmi.get_device_id()
 
 print('''
 Device ID:          %(device_id)s

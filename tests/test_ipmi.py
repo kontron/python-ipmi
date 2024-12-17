@@ -5,7 +5,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from pyipmi import interfaces, create_connection, Target, Routing
+from pyipmi import (Ipmi, interfaces, create_connection, NullRequester, Routing,
+                    Session, Target)
 from pyipmi.errors import CompletionCodeError, RetryError
 from pyipmi.msgs.bmc import GetDeviceIdReq, GetDeviceIdRsp
 from pyipmi.msgs.sensor import GetSensorReadingReq, GetSensorReadingRsp
@@ -86,6 +87,40 @@ def test_target_set_routing_from_string():
     assert target.routing[1].rq_sa == 0x21
     assert target.routing[1].rs_sa == 0x22
     assert target.routing[1].channel == 0x23
+
+
+def test_create_connection():
+    interface = interfaces.create_interface('mock')
+
+    ipmi = create_connection(interface)
+    assert ipmi.interface is not None
+    assert isinstance(ipmi.interface, interfaces.mock.Mock)
+    assert isinstance(ipmi.session, Session)
+    assert isinstance(ipmi.session.interface, interfaces.mock.Mock)
+    assert isinstance(ipmi.requester, NullRequester)
+
+
+def test_ipmi():
+    ipmi = Ipmi()
+    assert ipmi.interface is None
+    assert isinstance(ipmi.session, Session)
+    assert isinstance(ipmi.requester, NullRequester)
+
+    interface = interfaces.create_interface('mock')
+    ipmi = Ipmi(interface=interface)
+    assert isinstance(ipmi.interface, interfaces.mock.Mock)
+    assert isinstance(ipmi.session, Session)
+    assert isinstance(ipmi.session.interface, interfaces.mock.Mock)
+    assert isinstance(ipmi.requester, NullRequester)
+
+
+def test_ipmi_with_statemetn():
+    interface = interfaces.create_interface('mock')
+
+    with Ipmi(interface=interface) as ipmi:
+        assert ipmi.interface is not None
+        assert isinstance(ipmi.session, Session)
+        assert isinstance(ipmi.requester, NullRequester)
 
 
 def test_ipmi_send_message_retry():
