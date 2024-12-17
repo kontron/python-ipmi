@@ -17,24 +17,22 @@ class IpmbDev(object):
     def __init__(self, slave_address=0x20, port='/dev/ipmb-0'):
         # TODO: slave address is currently not defined here
         self.slave_address = slave_address
+        self.port = port
         self.timeout = 0.25
         self.max_retries = 3
         self.next_sequence_number = 0
 
-        self._dev = os.open(port, os.O_RDWR)
-
     def open(self):
-        pass
+        self._dev = os.open(self.port, os.O_RDWR)
 
     def close(self):
-        pass
+        os.close(self._dev)
 
     def establish_session(self, session):
-        # just remember session parameters here
-        self._session = session
+        pass
 
     def close_session(self):
-        os.close(self._dev)
+        pass
 
     def is_ipmc_accessible(self, target):
         header = IpmbHeaderReq()
