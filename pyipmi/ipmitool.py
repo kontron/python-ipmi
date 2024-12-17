@@ -644,9 +644,8 @@ def main():
         if rmcp_priv_level is not None:
             ipmi.session.set_priv_level(rmcp_priv_level)
 
-        ipmi.session.establish()
-
     try:
+        ipmi.open()  # this will open interface and session
         cmd(ipmi, args)
     except pyipmi.errors.CompletionCodeError as e:
         print('Command returned with completion code 0x%02x' % e.cc)
@@ -664,8 +663,7 @@ def main():
         sys.exit(1)
 
     finally:
-        if rmcp_host is not None:
-            ipmi.session.close()
+        ipmi.close()  # this will close interface and session
 
 
 COMMANDS = (
