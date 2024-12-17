@@ -7,10 +7,17 @@ import pyipmi.interfaces
 interface = pyipmi.interfaces.create_interface('aardvark',
                                                slave_address=0x20,
                                                serial_number='2237-523145')
-ipmi = pyipmi.create_connection(interface)
-ipmi.target = pyipmi.Target(ipmb_address=0xb4)
-device_id = ipmi.get_device_id()
+target = pyipmi.Target(ipmb_address=0xb4)
 
+# (1) The device connection can either be opened and closed
+ipmi = pyipmi.Ipmi(interface=interface, target=target)
+ipmi.open()
+device_id = ipmi.get_device_id()
+ipmi.close()
+
+# (2) or the 'with' statement can be used
+with pyipmi.Ipmi(interface=interface, target=target) as ipmi:
+    device_id = ipmi.get_device_id()
 
 print('''
 Device ID:          %(device_id)s

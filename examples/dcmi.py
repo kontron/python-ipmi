@@ -21,8 +21,8 @@ def main():
     ipmi = pyipmi.create_connection(interface)
     ipmi.session.set_session_type_rmcp(host, 623)
     ipmi.session.set_auth_type_user(user, password)
-    ipmi.session.establish()
     ipmi.target = pyipmi.Target(ipmb_address=0x20)
+    ipmi.open()
 
     for selector in range(1, 6):
         caps = ipmi.get_dcmi_capabilities(selector)
@@ -41,6 +41,8 @@ def main():
     print('  timestamp: {}'.format(rsp.timestamp))
     print('  period:    {}'.format(rsp.period))
     print('  state:     {}'.format(rsp.reading_state))
+
+    ipmi.close()
 
 
 if __name__ == '__main__':
