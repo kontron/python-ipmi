@@ -72,8 +72,10 @@ class Ipmitool(object):
         pass
 
     def establish_session(self, session):
-        # just remember session parameters here
         self._session = session
+
+    def close_session(self):
+        pass
 
     def rmcp_ping(self):
 
