@@ -393,12 +393,10 @@ class Rmcp(object):
         """
         self.host = None
         self.port = None
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.seq_number = 0xff
         self.slave_address = slave_address
         self.host_target = Target(host_target_address)
         self.max_retries = max_retries
-        self.set_timeout(2.0)
         self.next_sequence_number = 0
         self.keep_alive_interval = keep_alive_interval
         self._stop_keep_alive = None
@@ -409,7 +407,8 @@ class Rmcp(object):
         self.ignore_rq_seq = quirks_cfg.get('rmcp_ignore_rq_seq', False)
 
     def open(self):
-        pass
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.set_timeout(2.0)
 
     def close(self):
         pass
