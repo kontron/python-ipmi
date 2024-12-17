@@ -163,7 +163,14 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
     def __init__(self, interface=None, target=None, session=Session(),
                  requester=NullRequester()):
         self._interface = interface
+
+        # we need a session, set if not passed
+        if session is None:
+            session = Session()
         self._session = session
+        # session needs an interface
+        self._session.interface = interface
+
         self._target = target
         self.requester = requester
 
