@@ -117,6 +117,9 @@ class Ipmitool(object):
             # Don't try to parse ipmitool error messages
             if 'failed' in line:
                 continue
+            # Don't try to parse spurious ipmitool output
+            if 'Received a response with unexpected ID' in line:
+                continue
 
             # Check for timeout
             if self.re_timeout.match(line):
