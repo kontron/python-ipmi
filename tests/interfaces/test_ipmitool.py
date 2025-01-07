@@ -192,6 +192,13 @@ class TestIpmitool:
         assert cc is None
         assert py3_array_tobytes(rsp) == b'\x12\x34\x56\x78\xd0\x0f\xaf\xfe\xde\xad\xbe\xef\xaa\x55\xbb'
 
+    def test_parse_output_rsp_suppressed_unexpected_id(self):
+        test_str = b'Received a response with unexpected ID 0 vs. 1\n'\
+                   b' 12 34 56 78 \r\n d0 0f af fe de ad be ef\naa 55\r\nbb    \n'
+        cc, rsp = self._interface._parse_output(test_str)
+        assert cc is None
+        assert py3_array_tobytes(rsp) == b'\x12\x34\x56\x78\xd0\x0f\xaf\xfe\xde\xad\xbe\xef\xaa\x55\xbb'
+
     def test_parse_output_cc(self):
         test_str = b'Unable to send RAW command (channel=0x0 netfn=0x6 lun=0x0 cmd=0x1 rsp=0xcc): Ignore Me\n'
         cc, rsp = self._interface._parse_output(test_str)
