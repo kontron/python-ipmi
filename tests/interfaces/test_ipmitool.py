@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from pyipmi.errors import IpmiTimeoutError, IpmiConnectionError
+from pyipmi.errors import IpmiTimeoutError, IpmiConnectionError, IpmiLongPasswordError
 from pyipmi.interfaces import Ipmitool
 from pyipmi import Session, Target
 from pyipmi.utils import py3_array_tobytes
@@ -221,5 +221,11 @@ class TestIpmitool:
     def test_parse_output_connection_error_rmcp(self):
         test_str = b'Error: Unable to establish IPMI v1.5 / RMCP session'
         with pytest.raises(IpmiConnectionError):
+            cc, rsp = self._interface._parse_output(test_str)
+            assert rsp is None
+
+    def test_parse_long_password_error(self):
+        test_str = b'lanplus: password is longer than 20 bytes.'
+        with pytest.raises(IpmiLongPasswordError):
             cc, rsp = self._interface._parse_output(test_str)
             assert rsp is None
