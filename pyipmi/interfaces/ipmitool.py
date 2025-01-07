@@ -21,7 +21,7 @@ from subprocess import Popen, PIPE
 from array import array
 
 from ..session import Session
-from ..errors import IpmiTimeoutError, IpmiConnectionError
+from ..errors import IpmiTimeoutError, IpmiConnectionError, IpmiLongPasswordError
 from ..logger import log
 from ..msgs import encode_message, decode_message, create_message
 from ..msgs.constants import CC_OK
@@ -62,7 +62,8 @@ class Ipmitool(object):
                 r".*Unable to establish.*")
         self.re_could_not_open = re.compile(
                 r".*Could not open device.*")
-
+        self.re_long_password = re.compile(
+                r".*password is longer than.*")
         self._session = None
 
     def open(self):
@@ -134,6 +135,9 @@ class Ipmitool(object):
             # Check for error opening ipmi device
             if self.re_could_not_open.match(line):
                 raise RuntimeError('ipmitool failed: {}'.format(output))
+
+            if self.re_long_password.match(line):
+                raise IpmiLongPasswordError(line)
 
             hexstr += line.replace('\r', '').strip() + ' '
 

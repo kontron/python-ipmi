@@ -90,3 +90,12 @@ class IpmiConnectionError(Exception):
 
     def __str__(self):
         return "{}".format(self.msg)
+
+
+class IpmiLongPasswordError(Exception):
+    """Password longer than 20 bytes."""
+    def __init__(self, msg=None):
+        self.msg = msg
+
+    def __str__(self):
+        return "{}".format(self.msg)
