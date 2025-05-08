@@ -107,11 +107,18 @@ class Session(object):
 
     @property
     def auth_username(self):
-        return self._auth_username
+        return self._escape_dollar_sign(self._auth_username)
 
     @property
     def auth_password(self):
-        return self._auth_password
+        return self._escape_dollar_sign(self._auth_password)
+
+    def _escape_dollar_sign(self, password):
+        """Escape string with dollar sign in ipmitool."""
+        # The IPMI command is built and executed in a shell using Popen.
+        # The '$_' combination has its own behavior in shell and it gets
+        # replaced in the string.
+        return password.replace('$', '\\$')
 
     def establish(self):
         if hasattr(self.interface, 'establish_session'):
