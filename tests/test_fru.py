@@ -7,6 +7,8 @@ from pyipmi.fru import (FruData, FruPicmgPowerModuleCapabilityRecord,
                         get_fru_inventory_from_file)
 
 
+this_file_path = os.path.dirname(os.path.abspath(__file__))
+
 def test_frudata_object():
     fru_field = FruData((0, 1, 2, 3))
     assert fru_field.data[0] == 0
@@ -26,15 +28,13 @@ def test_commonheader_object():
 
 
 def test_fru_inventory_from_file():
-    path = os.path.dirname(os.path.abspath(__file__))
-    fru_file = os.path.join(path, 'fru_bin/kontron_am4010.bin')
+    fru_file = os.path.join(this_file_path, 'fru_bin/kontron_am4010.bin')
     fru = get_fru_inventory_from_file(fru_file)
     assert fru.chassis_info_area is None
 
 
 def test_board_area():
-    path = os.path.dirname(os.path.abspath(__file__))
-    fru_file = os.path.join(path, 'fru_bin/kontron_am4010.bin')
+    fru_file = os.path.join(this_file_path, 'fru_bin/kontron_am4010.bin')
     fru = get_fru_inventory_from_file(fru_file)
 
     board_area = fru.board_info_area
@@ -45,8 +45,7 @@ def test_board_area():
 
 
 def test_product_area():
-    path = os.path.dirname(os.path.abspath(__file__))
-    fru_file = os.path.join(path, 'fru_bin/kontron_am4010.bin')
+    fru_file = os.path.join(this_file_path, 'fru_bin/kontron_am4010.bin')
     fru = get_fru_inventory_from_file(fru_file)
 
     product_area = fru.product_info_area
@@ -57,8 +56,7 @@ def test_product_area():
 
 
 def test_multirecord_with_power_module_capability_record():
-    path = os.path.dirname(os.path.abspath(__file__))
-    fru_file = os.path.join(path, 'fru_bin/vadatech_utc017.bin')
+    fru_file = os.path.join(this_file_path, 'fru_bin/vadatech_utc017.bin')
     fru = get_fru_inventory_from_file(fru_file)
     assert len(fru.multirecord_area.records) == 1
     record = fru.multirecord_area.records[0]
