@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
+import pytest
 
-from pyipmi.fru import (FruData, FruPicmgPowerModuleCapabilityRecord,
+from pyipmi.errors import (DecodingError)
+
+from pyipmi.fru import (FruData, FruInventory,
+                        FruPicmgPowerModuleCapabilityRecord,
                         InventoryCommonHeader, InventoryBoardInfoArea,
                         get_fru_inventory_from_file)
 
 
 this_file_path = os.path.dirname(os.path.abspath(__file__))
+
 
 def test_frudata_object():
     fru_field = FruData((0, 1, 2, 3))
@@ -25,6 +30,13 @@ def test_frudata_object():
 
 def test_commonheader_object():
     InventoryCommonHeader((0, 1, 2, 3, 4, 5, 6, 235))
+
+
+def test_commonheader_object_invalid_checksum():
+    with pytest.raises(DecodingError):
+        InventoryCommonHeader((0, 1, 2, 3, 4, 5, 6, 0))
+
+    InventoryCommonHeader((0, 1, 2, 3, 4, 5, 6, 0), ignore_checksum=True)
 
 
 def test_fru_inventory_from_file():
@@ -70,3 +82,15 @@ def test_BoardInfoArea():
     assert area.product_name.string == 'PowerEdge R515                '
     assert area.serial_number.string == 'CN717033AI0058'
     assert area.part_number.string == '0RMRF7A05'
+
+
+def test_FruInventory_ignore_checksum_error():
+    data = b'\x01\x00\x00\x01\x04\x00\x00\xfa\x01\x03\x00vq\xb4\xcaASRockRack\xc0\xc0\xc0\xc0\xc1\x00\x1b\x01\x03\x00\xcaASRockRack\xc0\xc0\xc0\xc0\xc0\xc0\xc1\x00\x00M\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+
+    with pytest.raises(DecodingError):
+        FruInventory(data, ignore_checksum=False)
+
+    inv = FruInventory(data, ignore_checksum=True)
+
+    assert inv.board_info_area.manufacturer.string == 'ASRockRack'
+    assert inv.product_info_area.manufacturer.string == 'ASRockRack'

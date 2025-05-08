@@ -88,9 +88,9 @@ class Fru(object):
     def read_fru_data_full(self, fru_id=0):
         return self.read_fru_data(fru_id=fru_id)
 
-    def get_fru_inventory_header(self, fru_id=0):
+    def get_fru_inventory_header(self, fru_id=0, ignore_checksum=False):
         data = self.read_fru_data(offset=0, count=8, fru_id=fru_id)
-        return InventoryCommonHeader(data)
+        return InventoryCommonHeader(data, ignore_checksum=ignore_checksum)
 
     def _read_fru_area(self, offset, fru_id=0):
         # read the area header
@@ -99,26 +99,30 @@ class Fru(object):
         count = data[1] * 8
         return self.read_fru_data(offset=offset, count=count, fru_id=fru_id)
 
-    def get_fru_chassis_area(self, fru_id=0):
-        header = self.get_fru_inventory_header(fru_id=fru_id)
+    def get_fru_chassis_area(self, fru_id=0, ignore_checksum=False):
+        header = self.get_fru_inventory_header(fru_id=fru_id,
+                                               ignore_checksum=ignore_checksum)
         data = self._read_fru_area(offset=header.chassis_info_area_offset,
                                    fru_id=fru_id)
-        return InventoryChassisInfoArea(data)
+        return InventoryChassisInfoArea(data, ignore_checksum=ignore_checksum)
 
-    def get_fru_board_area(self, fru_id=0):
-        header = self.get_fru_inventory_header(fru_id=fru_id)
+    def get_fru_board_area(self, fru_id=0, ignore_checksum=False):
+        header = self.get_fru_inventory_header(fru_id=fru_id,
+                                               ignore_checksum=ignore_checksum)
         data = self._read_fru_area(offset=header.board_info_area_offset,
                                    fru_id=fru_id)
-        return InventoryBoardInfoArea(data)
+        return InventoryBoardInfoArea(data, ignore_checksum=ignore_checksum)
 
-    def get_fru_product_area(self, fru_id=0):
-        header = self.get_fru_inventory_header(fru_id=fru_id)
+    def get_fru_product_area(self, fru_id=0, ignore_checksum=False):
+        header = self.get_fru_inventory_header(fru_id=fru_id,
+                                               ignore_checksum=ignore_checksum)
         data = self._read_fru_area(offset=header.product_info_area_offset,
                                    fru_id=fru_id)
-        return InventoryProductInfoArea(data)
+        return InventoryProductInfoArea(data, ignore_checksum=ignore_checksum)
 
-    def get_fru_multirecord_area(self, fru_id=0):
-        header = self.get_fru_inventory_header(fru_id=fru_id)
+    def get_fru_multirecord_area(self, fru_id=0, ignore_checksum=False):
+        header = self.get_fru_inventory_header(fru_id=fru_id,
+                                               ignore_checksum=ignore_checksum)
 
         # we have to determine the length of the area first
         offset = header.multirecord_area_offset
@@ -137,9 +141,9 @@ class Fru(object):
         # now read the full area
         offset = header.multirecord_area_offset
         data = self.read_fru_data(offset=offset, count=count)
-        return InventoryMultiRecordArea(data)
+        return InventoryMultiRecordArea(data, ignore_checksum=ignore_checksum)
 
-    def get_fru_inventory(self, fru_id=0):
+    def get_fru_inventory(self, fru_id=0, ignore_checksum=False):
         """
         Get the full parsed FRU inventory data.
         """
@@ -161,7 +165,7 @@ class Fru(object):
         return fru
 
 
-def get_fru_inventory_from_file(filename):
+def get_fru_inventory_from_file(filename, ignore_checksum=False):
     try:
         file = open(filename, "rb")
     except IOError:
@@ -173,7 +177,7 @@ def get_fru_inventory_from_file(filename):
     file_data = file.read(file_size)
     data = array.array('B', file_data)
     file.close()
-    return FruInventory(data)
+    return FruInventory(data, ignore_checksum=ignore_checksum)
 
 
 CUSTOM_FIELD_END = 0xc1
@@ -190,18 +194,18 @@ def _decode_custom_fields(data):
 
 
 class FruData(object):
-    def __init__(self, data=None):
+    def __init__(self, data=None, ignore_checksum=False):
         if data:
             if isinstance(data, str):
                 data = [ord(c) for c in data]
             self.data = data
             if hasattr(self, '_from_data'):
-                self._from_data(data)
+                self._from_data(data, ignore_checksum=ignore_checksum)
 
 
 class InventoryCommonHeader(FruData):
-    def _from_data(self, data):
-        if len(data) != 8:
+    def _from_data(self, data, ignore_checksum=False):
+        if len(data) < 8:
             raise DecodingError('InventoryCommonHeader length != 8')
         self.format_version = data[0] & 0x0f
         self.internal_use_area_offset = data[1] * 8 or None
@@ -209,18 +213,18 @@ class InventoryCommonHeader(FruData):
         self.board_info_area_offset = data[3] * 8 or None
         self.product_info_area_offset = data[4] * 8 or None
         self.multirecord_area_offset = data[5] * 8 or None
-        if sum(data) % 256 != 0:
-            raise DecodingError('InventoryCommonHeader checksum failed')
+        if sum(data[:8]) % 256 != 0 and ignore_checksum is False:
+            raise DecodingError(f'InventoryCommonHeader checksum failed {sum(data) % 0x10}')
 
 
 class CommonInfoArea(FruData):
-    def _from_data(self, data):
+    def _from_data(self, data, ignore_checksum=False):
         self.format_version = data[0] & 0x0f
         if self.format_version != 1:
             raise DecodingError('unsupported format version (%d)' %
                                 self.format_version)
         self.length = data[1] * 8
-        if sum(data[:self.length]) % 256 != 0:
+        if sum(data[:self.length]) % 256 != 0 and ignore_checksum is False:
             raise DecodingError('checksum failed')
 
 
@@ -249,7 +253,7 @@ class InventoryChassisInfoArea(CommonInfoArea):
     TYPE_RAID_CHASSIS = 22
     TYPE_RACK_MOUNT_CHASSIS = 23
 
-    def _from_data(self, data):
+    def _from_data(self, data, ignore_checksum=False):
         CommonInfoArea._from_data(self, data)
         self.type = data[2]
         offset = 3
@@ -261,8 +265,8 @@ class InventoryChassisInfoArea(CommonInfoArea):
 
 
 class InventoryBoardInfoArea(CommonInfoArea):
-    def _from_data(self, data):
-        CommonInfoArea._from_data(self, data)
+    def _from_data(self, data, ignore_checksum=False):
+        CommonInfoArea._from_data(self, data, ignore_checksum=ignore_checksum)
         self.language_code = data[2]
         minutes = data[5] << 16 | data[4] << 8 | data[3]
         self.mfg_date = (datetime.datetime(1996, 1, 1)
@@ -282,7 +286,7 @@ class InventoryBoardInfoArea(CommonInfoArea):
 
 
 class InventoryProductInfoArea(CommonInfoArea):
-    def _from_data(self, data):
+    def _from_data(self, data, ignore_checksum=False):
         CommonInfoArea._from_data(self, data)
         self.language_code = data[2]
         offset = 3
@@ -318,17 +322,17 @@ class FruDataMultiRecord(FruData):
         return '%02x: %s' % (self.record_type_id,
                              ' '.join('%02x' % b for b in self.raw))
 
-    def _from_data(self, data):
+    def _from_data(self, data, ignore_checksum=False):
         if len(data) < 5:
             raise DecodingError('data too short')
         self.record_type_id = data[0]
         self.format_version = data[1] & 0x0f
         self.end_of_list = bool(data[1] & 0x80)
         self.length = data[2]
-        if sum(data[:5]) % 256 != 0:
+        if sum(data[:5]) % 256 != 0 and ignore_checksum is False:
             raise DecodingError('FruDataMultiRecord header checksum failed')
         self.raw = data[5:5+self.length]
-        if (sum(self.raw) + data[3]) % 256 != 0:
+        if (sum(self.raw) + data[3]) % 256 != 0 and ignore_checksum is False:
             raise DecodingError('FruDataMultiRecord record checksum failed')
 
     @staticmethod
@@ -386,11 +390,11 @@ class FruPicmgRecord(FruDataMultiRecord):
 
         return FruPicmgRecord(data)
 
-    def _from_data(self, data):
+    def _from_data(self, data, ignore_checksum=False):
         if len(data) < 10:
             raise DecodingError('data too short')
         data = array.array('B', data)
-        FruDataMultiRecord._from_data(self, data)
+        FruDataMultiRecord._from_data(self, data, ignore_checksum=ignore_checksum)
         self.manufacturer_id = \
             data[5] | data[6] << 8 | data[7] << 16
         self.picmg_record_type_id = data[8]
@@ -398,7 +402,7 @@ class FruPicmgRecord(FruDataMultiRecord):
 
 
 class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
-    def _from_data(self, data):
+    def _from_data(self, data, ignore_checksum=False):
         if len(data) < 12:
             raise DecodingError('data too short')
         FruPicmgRecord._from_data(self, data)
@@ -407,11 +411,11 @@ class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
 
 
 class InventoryMultiRecordArea(object):
-    def __init__(self, data):
+    def __init__(self, data, ignore_checksum=False):
         if data:
             self._from_data(data)
 
-    def _from_data(self, data):
+    def _from_data(self, data, ignore_checksum=False):
         self.records = list()
         offset = 0
         while True:
@@ -423,31 +427,35 @@ class InventoryMultiRecordArea(object):
 
 
 class FruInventory(object):
-    def __init__(self, data=None):
+    def __init__(self, data=None, ignore_checksum=False):
         self.chassis_info_area = None
         self.board_info_area = None
         self.product_info_area = None
         self.multirecord_area = None
 
         if data:
-            self._from_data(data)
+            self._from_data(data, ignore_checksum=ignore_checksum)
 
-    def _from_data(self, data):
+    def _from_data(self, data, ignore_checksum=False):
         self.raw = data
         self.common_header = InventoryCommonHeader(data[:8])
 
         if self.common_header.chassis_info_area_offset:
             self.chassis_info_area = InventoryChassisInfoArea(
-                data[self.common_header.chassis_info_area_offset:])
+                data[self.common_header.chassis_info_area_offset:],
+                ignore_checksum=ignore_checksum)
 
         if self.common_header.board_info_area_offset:
             self.board_info_area = InventoryBoardInfoArea(
-                data[self.common_header.board_info_area_offset:])
+                data[self.common_header.board_info_area_offset:],
+                ignore_checksum=ignore_checksum)
 
         if self.common_header.product_info_area_offset:
             self.product_info_area = InventoryProductInfoArea(
-                data[self.common_header.product_info_area_offset:])
+                data[self.common_header.product_info_area_offset:],
+                ignore_checksum=ignore_checksum)
 
         if self.common_header.multirecord_area_offset:
             self.multirecord_area = InventoryMultiRecordArea(
-                data[self.common_header.multirecord_area_offset:])
+                data[self.common_header.multirecord_area_offset:],
+                ignore_checksum=ignore_checksum)
