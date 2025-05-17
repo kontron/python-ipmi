@@ -75,5 +75,6 @@ setup(name=name,
           'pytest',
       ],
       install_requires=[
+          'cryptography'
       ],
       )

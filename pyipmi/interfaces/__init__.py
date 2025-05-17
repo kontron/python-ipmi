@@ -18,7 +18,7 @@ from .ipmitool import Ipmitool
 from .aardvark import Aardvark
 from .ipmbdev import IpmbDev
 from .mock import Mock
-from .rmcp import Rmcp
+from .rmcp import (Rmcp, RmcpPlus)
 
 INTERFACES = [
     Ipmitool,
@@ -26,6 +26,7 @@ INTERFACES = [
     IpmbDev,
     Mock,
     Rmcp,
+    RmcpPlus,
 ]
 
 

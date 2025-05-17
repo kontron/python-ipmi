@@ -14,7 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-from .msgs.constants import COMPLETION_CODE_DESCR, CC_ERR_CMD_SPECIFIC_DESC
+from .msgs.constants import (COMPLETION_CODE_DESCR, CC_ERR_CMD_SPECIFIC_DESC,
+                             MESSAGE_STATUS_CODE_DESCR)
 
 
 class DecodingError(Exception):
@@ -51,6 +52,7 @@ class CompletionCodeError(Exception):
                 return cc[1]
         # Then search in command specific completion codes
         if cmdid is not None:
+            print(netfn, cmdid, group_extension)
             command_cc = CC_ERR_CMD_SPECIFIC_DESC.get((netfn, cmdid, group_extension), {})
             descr = command_cc.get(error_cc, "Unknown error description")
             return descr
@@ -99,3 +101,22 @@ class IpmiLongPasswordError(Exception):
 
     def __str__(self):
         return "{}".format(self.msg)
+
+
+class MessageStatusCodeError(Exception):
+    """IPMI Message Status code not OK."""
+
+    def __init__(self, msc):
+        self.msc = msc
+        self.msc_desc = self.find_msc_desc(msc)
+
+    def __str__(self):
+        return "%s cc=0x%02x desc=%s" \
+            % (self.__class__.__name__, self.msc, self.msc_desc)
+
+    @staticmethod
+    def find_msc_desc(error_msc):
+        for msc in MESSAGE_STATUS_CODE_DESCR:
+            if error_msc == msc[0]:
+                return msc[1]
+        return "Unknown error description"

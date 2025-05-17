@@ -388,6 +388,10 @@ CC_ERR_CMD_SPECIFIC_DESC = {
         0x86: 'requested maximum privilege level exceeds user and/or channel'
               ' privilege limit',
     },
+    (NETFN_APP, CMDID_CLOSE_SESSION, None): {
+        0x87: "invalid Session ID in request",
+        0x88: "invalid Session Handle in request",
+    },
     (NETFN_APP, CMDID_SET_SESSION_PRIVILEGE_LEVEL, None): {
         0x80: "Requested level not available for this user",
         0x81: "Requested level exceeds Channel and/or User Privilege Limit",
@@ -437,3 +441,71 @@ REPOSITORY_GET_ERASE_STATUS = 0x00
 
 REPOSITORY_ERASURE_IN_PROGRESS = 0x0
 REPOSITORY_ERASURE_COMPLETED = 0x1
+
+AUTH_ALGO_RAKP_NONE = 0x00
+AUTH_ALGO_RAKP_HMAC_SHA1 = 0x01
+AUTH_ALGO_RAKP_HMAC_MD5 = 0x02
+AUTH_ALGO_RAKP_HMAC_SHA256 = 0x03
+
+INTEGRITY_ALGO_NONE = 0x00
+INTEGRITY_ALGO_HMAC_SHA1_96 = 0x01
+INTEGRITY_ALGO_HMAC_MD5_128 = 0x02
+INTEGRITY_ALGO_MD5_128 = 0x03
+INTEGRITY_ALGO_HMAC_SHA256_128 = 0x04
+
+CONFIDENTIALITY_ALGO_NONE = 0x00
+CONFIDENTIALITY_ALGO_AES_CBC_128 = 0x01
+
+PAYLOAD_TYPE_IPMI = 0x00
+PAYLOAD_TYPE_SOL = 0x01
+PAYLOAD_TYPE_OPEN_SESSION_REQUEST = 0x10
+PAYLOAD_TYPE_OPEN_SESSION_RESPONSE = 0x11
+PAYLOAD_TYPE_RAKP_MESSAGE_1 = 0x12
+PAYLOAD_TYPE_RAKP_MESSAGE_2 = 0x13
+PAYLOAD_TYPE_RAKP_MESSAGE_3 = 0x14
+PAYLOAD_TYPE_RAKP_MESSAGE_4 = 0x15
+
+# RMCP+ and RAKP Message Status Codes
+MSC_OK = 0x00
+MSC_INSUFFICIENT_RESOURCES = 0x01
+MSC_INVALID_SESSION_ID = 0x02
+MSC_INVALID_PAYLOAD_TYPE = 0x03
+MSC_INVALID_AUTH_ALGO = 0x04
+MSC_INVALID_INTEGRITY_ALGO = 0x05
+MSC_NO_MATCHING_AUTH_PAYLOAD = 0x06
+MSC_NO_MATCHING_INTEGRITY_PAYLOAD = 0x07
+MSC_INACTIVE_SESSION_ID = 0x08
+MSC_INVALID_ROLE = 0x09
+MSC_UNAUTHORIZED_ROLE = 0x0a
+MSC_INSUFFICIENT_RESOURCES_ROLE = 0x0b
+MSC_INVALID_NAME_LENGTH = 0x0c
+MSC_UNAUTHORIZED_NAME = 0x0d
+MSC_UNAUTHORIZED_GUID = 0x0e
+MSC_INVALID_INTEGRITY_CHECK_VALUE = 0x0f
+MSC_INVALID_CONFIDENTIALITY_ALGO = 0x10
+MSC_NO_CIPHER_SUITE_MATCH = 0x11
+MSC_ILLEGAL_PARAM = 0x12
+MSC_UNSPECIFIED_ERROR = 0xff
+
+MESSAGE_STATUS_CODE_DESCR = (
+    (MSC_OK, "No errors"),
+    (MSC_INSUFFICIENT_RESOURCES, "Insufficient resources to create a session"),
+    (MSC_INVALID_SESSION_ID, "Invalid Session ID"),
+    (MSC_INVALID_PAYLOAD_TYPE, "Invalid payload type"),
+    (MSC_INVALID_AUTH_ALGO, "Invalid authentication algorithm"),
+    (MSC_INVALID_INTEGRITY_ALGO, "Invalid integrity algorithm"),
+    (MSC_NO_MATCHING_AUTH_PAYLOAD, "No matching authentication payload"),
+    (MSC_NO_MATCHING_INTEGRITY_PAYLOAD, "No matching integrity payload"),
+    (MSC_INACTIVE_SESSION_ID, "Inactive Session ID"),
+    (MSC_INVALID_ROLE, "Invalid role"),
+    (MSC_UNAUTHORIZED_ROLE, "Unauthorized role or privilege level requested"),
+    (MSC_INSUFFICIENT_RESOURCES_ROLE, "Insufficient resources to create a session at the requested role"),
+    (MSC_INVALID_NAME_LENGTH, "Invalid name length"),
+    (MSC_UNAUTHORIZED_NAME, "Unauthorized name"),
+    (MSC_UNAUTHORIZED_GUID, "Unauthorized GUID (GUID that BMC submitted in RAKP Message 2 was not accepted by remote console)"),
+    (MSC_INVALID_INTEGRITY_CHECK_VALUE, "Invalid integrity check value"),
+    (MSC_INVALID_CONFIDENTIALITY_ALGO, "Invalid confidentiality algorithm"),
+    (MSC_NO_CIPHER_SUITE_MATCH, "No Cipher Suite match with proposed security algorithms"),
+    (MSC_ILLEGAL_PARAM, "Illegal or unrecognized parameter"),
+    (MSC_UNSPECIFIED_ERROR, "Unspecified error"),
+)

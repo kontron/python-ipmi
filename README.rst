@@ -6,6 +6,7 @@ Pure Python IPMI Library
 Features
 --------
 * native RMCP interface
+* native RMCP+ interface (beta)
 * legacy RMCP interface (using ipmitool as backend)
 * RMCP+ interface (using ipmitool as backend)
 * system (KCS) interface (using ipmitool as backend)

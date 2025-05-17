@@ -140,6 +140,7 @@ class ChannelAuthenticationCapabilities(State):
         'md5': Session.AUTH_TYPE_MD5,
         'straight': Session.AUTH_TYPE_PASSWORD,
         'oem_proprietary': Session.AUTH_TYPE_OEM,
+        'rmcp_plus': Session.AUTH_TYPE_RMCP_PLUS
     }
 
     def _from_response(self, rsp):
@@ -160,6 +161,8 @@ class ChannelAuthenticationCapabilities(State):
                     self.auth_types.append(function)
 
     def get_max_auth_type(self):
+        if self.ipmi_2_0 is True:
+            return self._functions["rmcp_plus"]
         for auth_type in ('md5', 'md2', 'straight', 'oem_proprietary', 'none'):
             if auth_type in self.auth_types:
                 return self._functions[auth_type]

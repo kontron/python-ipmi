@@ -14,6 +14,9 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+import hashlib
+import hmac
+
 
 class Session(object):
     AUTH_TYPE_NONE = 0x00
@@ -21,6 +24,7 @@ class Session(object):
     AUTH_TYPE_MD5 = 0x02
     AUTH_TYPE_PASSWORD = 0x04
     AUTH_TYPE_OEM = 0x05
+    AUTH_TYPE_RMCP_PLUS = 0x06
 
     PRIV_LEVEL_USER = 2
     PRIV_LEVEL_OPERATOR = 3
@@ -124,6 +128,39 @@ class Session(object):
     def rmcp_ping(self):
         if hasattr(self.interface, 'rmcp_ping'):
             self.interface.rmcp_ping()
+
+    def _set_is_encrypted(self, is_encrypted):
+        self._is_encrypted = is_encrypted
+
+    def _get_is_encrypted(self):
+        return self._is_encrypted
+
+    def _set_is_authenticated(self, is_authenticated):
+        self._is_authenticated = is_authenticated
+
+    def _get_is_authenticated(self):
+        return self._is_authenticated
+
+    def _get_integrity_algorithm(self):
+        return self._integrity_algorithm
+
+    def _set_integrity_algorithm(self, algo):
+        self._integrity_algorithm = algo
+
+    def _get_confidentiality_algorithm(self):
+        return self._confidentiality_algorithm
+
+    def _set_confidentiality_algorithm(self, algo):
+        self._confidentiality_algorithm = algo
+
+    @property
+    def additional_encryption_keys(self):
+        return self._additional_encryption_keys
+
+    def generate_additional_encryption_keys(self, sik):
+        k_1 = hmac.new(sik, b'\x01' * 20, hashlib.sha1).digest()
+        k_2 = hmac.new(sik, b'\x02' * 20, hashlib.sha1).digest()
+        self._additional_encryption_keys = [k_1, k_2]
 
     def __str__(self):
         string = 'Session:\n'
