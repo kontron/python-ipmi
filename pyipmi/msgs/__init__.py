@@ -16,6 +16,7 @@ from __future__ import absolute_import
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from .registry import register_message_class  # noqa:F401
+from .registry import register_ipmiv20_message_class  # noqa:F401
 from .registry import create_request_by_name  # noqa:F401
 from .registry import create_response_by_name  # noqa:F401
 from .registry import create_message  # noqa:F401
@@ -30,6 +31,7 @@ from .message import Timestamp  # noqa:F401
 from .message import Bitfield  # noqa:F401
 from .message import CompletionCode  # noqa:F401
 from .message import Conditional  # noqa:F401
+from .message import MessageStatusCode  # noqa:F401
 from .message import Optional  # noqa:F401
 from .message import RemainingBytes  # noqa:F401
 from .message import String  # noqa:F401
@@ -52,3 +54,4 @@ from . import sensor  # noqa:F401
 from . import event  # noqa:F401
 from . import lan  # noqa:F401
 from . import vita  # noqa:F401
+from . import ipmiv20  # noqa:F401

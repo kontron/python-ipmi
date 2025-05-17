@@ -58,6 +58,17 @@ class MessageRegistry(object):
         # register
         return cls
 
+    def register_ipmiv20_class(self, cls):
+        # (1) class name has to end in Req or Rsp
+        if cls.__name__[-3:] not in ('Req', 'Rsp'):
+            raise DescriptionError('Class name has to end in Req or Rsp')
+
+        # register name
+        self.registry[cls.__name__] = cls
+
+        # register
+        return cls
+
     def create(self, netfn, cmdid, group_extension, *args, **kwargs):
         return self.registry[(netfn, cmdid, group_extension)](*args, **kwargs)
 
@@ -74,6 +85,8 @@ class MessageRegistry(object):
 DEFAULT_REGISTRY = MessageRegistry()
 register_message_class = partial(MessageRegistry.register_class,
                                  DEFAULT_REGISTRY)
+register_ipmiv20_message_class = partial(MessageRegistry.register_ipmiv20_class,
+                                         DEFAULT_REGISTRY)
 create_message = partial(MessageRegistry.create, DEFAULT_REGISTRY)
 create_response_message = partial(MessageRegistry.create_response,
                                   DEFAULT_REGISTRY)

@@ -19,7 +19,7 @@ from array import array
 from . import constants
 from ..utils import ByteBuffer
 from ..errors import (CompletionCodeError, EncodingError, DecodingError,
-                      DescriptionError)
+                      DescriptionError, MessageStatusCodeError)
 
 
 class BaseField(object):
@@ -104,6 +104,17 @@ class UnsignedInt(BaseField):
             return self.default
         else:
             return 0
+
+
+class MessageStatusCode(UnsignedInt):
+    def __init__(self, name="message_status_code"):
+        UnsignedInt.__init__(self, name, 1, None)
+
+    def decode(self, obj, data):
+        UnsignedInt.decode(self, obj, data)
+        msc = getattr(obj, self.name)
+        if msc != constants.MSC_OK:
+            raise MessageStatusCodeError(msc)
 
 
 class String(BaseField):
