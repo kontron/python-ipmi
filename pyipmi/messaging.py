@@ -196,3 +196,4 @@ class UserAccess(State):
         s += '  IPMI messaging: %s\n' % self.ipmi_messaging
         s += '  Link Auth.: %s\n' % self.link_auth
         s += '  Callback only: %s' % self.callback_only
+        return s
