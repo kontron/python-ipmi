@@ -99,3 +99,12 @@ class IpmiLongPasswordError(Exception):
 
     def __str__(self):
         return "{}".format(self.msg)
+
+
+class AuthenticationError(Exception):
+    """Authentication error."""
+    def __init__(self, msg=None):
+        self.msg = msg
+
+    def __str__(self):
+        return "{}".format(self.msg)
