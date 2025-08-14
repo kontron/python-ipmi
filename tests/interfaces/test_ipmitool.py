@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from pyipmi.errors import IpmiTimeoutError, IpmiConnectionError, IpmiLongPasswordError
+from pyipmi.errors import IpmiTimeoutError, IpmiConnectionError, IpmiLongPasswordError, AuthenticationError
 from pyipmi.interfaces import Ipmitool
 from pyipmi import Session, Target
 from pyipmi.utils import py3_array_tobytes
@@ -53,7 +53,7 @@ class TestIpmitool:
 
         self._interface.rmcp_ping()
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 '
-                                     '-U "admin" -P "secret" '
+                                     '-v -U "admin" -P "secret" '
                                      'session info all')
 
     def test_send_and_receive_raw_valid(self):
@@ -65,7 +65,7 @@ class TestIpmitool:
         self._interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 '
-                                     '-L ADMINISTRATOR -U "admin" -P "secret" '
+                                     '-v -L ADMINISTRATOR -U "admin" -P "secret" '
                                      '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
     def test_send_and_receive_raw_lanplus(self):
@@ -80,7 +80,7 @@ class TestIpmitool:
         interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         mock.assert_called_once_with('ipmitool -I lanplus -H 10.0.1.1 -p 623 '
-                                     '-L ADMINISTRATOR -U "admin" -P "secret" '
+                                     '-v -L ADMINISTRATOR -U "admin" -P "secret" '
                                      '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
     def test_send_and_receive_raw_cipher(self):
@@ -95,7 +95,7 @@ class TestIpmitool:
         interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 '
-                                     '-L ADMINISTRATOR -C 7 '
+                                     '-v -L ADMINISTRATOR -C 7 '
                                      '-U "admin" -P "secret" '
                                      '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
@@ -110,7 +110,7 @@ class TestIpmitool:
         self._interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 '
-                                     '-L ADMINISTRATOR -P "" '
+                                     '-v -L ADMINISTRATOR -P "" '
                                      '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
     def test_send_and_receive_raw_return_value(self):
@@ -234,5 +234,11 @@ class TestIpmitool:
     def test_parse_long_password_error(self):
         test_str = b'lanplus: password is longer than 20 bytes.'
         with pytest.raises(IpmiLongPasswordError):
+            cc, rsp = self._interface._parse_output(test_str)
+            assert rsp is None
+
+    def test_parse_output_authentication_error(self):
+        test_str = b'Loading ...\nUsing ...\n> RAKP 2 HMAC is invalid\nError:'
+        with pytest.raises(AuthenticationError):
             cc, rsp = self._interface._parse_output(test_str)
             assert rsp is None
