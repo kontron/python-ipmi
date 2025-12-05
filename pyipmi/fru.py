@@ -148,19 +148,35 @@ class Fru(object):
         Get the full parsed FRU inventory data.
         """
         fru = FruInventory()
-        header = self.get_fru_inventory_header(fru_id=fru_id)
+        header = self.get_fru_inventory_header(fru_id=fru_id,
+                                               ignore_checksum=ignore_checksum)
 
-        if header.chassis_info_area_offset:
-            fru.chassis_info_area = self.get_fru_chassis_area(fru_id=fru_id)
+        areas = [
+                    {   'offset': header.chassis_info_area_offset,
+                        'target': fru.chassis_info_area,
+                        'getter': self.get_fru_chassis_area
+                    },
+                    {
+                        'offset': header.board_info_area_offset,
+                        'target': fru.board_info_area,
+                        'getter': self.get_fru_board_area
+                    },
+                    {
+                        'offset': header.product_info_area_offset,
+                        'target': fru.product_info_area,
+                        'getter': self.get_fru_product_area
+                    },
+                    {
+                        'offset': header.multirecord_area_offset,
+                        'target': fru.multirecord_area,
+                        'getter': self.get_fru_multirecord_area
+                    },
+                ]
 
-        if header.board_info_area_offset:
-            fru.board_info_area = self.get_fru_board_area(fru_id=fru_id)
-
-        if header.product_info_area_offset:
-            fru.product_info_area = self.get_fru_product_area(fru_id=fru_id)
-
-        if header.multirecord_area_offset:
-            fru.multirecord_area = self.get_fru_multirecord_area(fru_id=fru_id)
+        for area in areas:
+            if area['offset']:
+                area['target'] = area['getter'](fru_id=fru_id,
+                                                ignore_checksum=ignore_checksum)
 
         return fru
 
