@@ -156,6 +156,7 @@ class ChannelAuthenticationCapabilities(State):
             self.ipmi_1_5 = True
 
         for function in self._functions.keys():
+            print(rsp.support)
             if hasattr(rsp.support, function):
                 if getattr(rsp.support, function):
                     self.auth_types.append(function)

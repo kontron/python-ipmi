@@ -22,7 +22,7 @@ import hashlib
 import random
 import threading
 from array import array
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.ciphers import (algorithms, Cipher, modes)
 from queue import Queue
 
 from .. import Target
@@ -30,12 +30,12 @@ from ..session import Session
 from ..msgs import (create_message, create_request_by_name, create_response_by_name,
                     encode_message, decode_message, constants)
 from ..messaging import ChannelAuthenticationCapabilities
-from ..errors import DecodingError, NotSupportedError, RetryError
+from ..errors import (DecodingError, NotSupportedError, RetryError)
 from ..logger import log
 from ..interfaces.ipmb import (IpmbHeaderReq, encode_ipmb_msg,
                                encode_bridged_message, decode_bridged_message,
                                rx_filter)
-from ..utils import (check_rsp_completion_code, py3_array_tobytes)
+from ..utils import check_rsp_completion_code
 
 
 CLASS_NORMAL_MSG = 0x00
@@ -300,7 +300,7 @@ class IpmiMsg(object):
         else:
             raise NotSupportedError('authentication type %s' % auth_type)
 
-        pdu += py3_array_tobytes(array('B', [data_len]))
+        pdu += array('B', [data_len]).tobytes()
 
         if sdu is not None:
             pdu += sdu
@@ -410,11 +410,11 @@ class Ipmi20Msg(object):
                           )
 
         if sdu is None:
-            pdu += py3_array_tobytes(array('B', list(data_len.to_bytes(2, 'little'))))
+            pdu += array('B', list(data_len.to_bytes(2, 'little'))).tobytes()
             return pdu
 
         if self.session is None or self.session.is_encrypted is False:
-            pdu += py3_array_tobytes(array('B', list(data_len.to_bytes(2, 'little'))))
+            pdu += array('B', list(data_len.to_bytes(2, 'little'))).tobytes()
             pdu += sdu
             return pdu
 
@@ -443,7 +443,7 @@ class Ipmi20Msg(object):
         ct = encryptor.update(sdu) + encryptor.finalize()
 
         data_len = len(initialization_vector + ct)
-        pdu += py3_array_tobytes(array('B', list(data_len.to_bytes(2, 'little'))))
+        pdu += array('B', list(data_len.to_bytes(2, 'little'))).tobytes()
         pdu += initialization_vector + ct
 
         # Now add the Session trailer
@@ -610,12 +610,12 @@ class Rmcp(object):
 
     def ping(self):
         ping = AsfPing()
-        self._send_asf_msg(ping)
-        self._receive_asf_msg(AsfPong)
+        with self.transaction_lock:
+            self._send_asf_msg(ping)
+            self._receive_asf_msg(AsfPong)
 
     def _get_channel_auth_cap(self, session):
         CHANNEL_NUMBER_FOR_THIS = 0xe
-        # get channel auth cap
         req = create_request_by_name('GetChannelAuthenticationCapabilities')
         req.target = self.host_target
         req.channel.number = CHANNEL_NUMBER_FOR_THIS
@@ -984,6 +984,10 @@ class RmcpPlus(Rmcp):
         session.generate_additional_encryption_keys(sik)
         self._session = session
         log().debug("Session Opened")
+
+        if self.keep_alive_interval:
+            self._stop_keep_alive = call_repeatedly(
+                    self.keep_alive_interval, self._get_device_id)
 
     def _send_and_receive(self, target, lun, netfn, cmdid, payload):
         self._inc_sequence_number()

@@ -169,7 +169,7 @@ class Session(object):
         string += '  Host: %s:%s\n' % (self._rmcp_host, self._rmcp_port)
         string += '  Auth.: %s\n' % self.auth_type
         string += '  User: %s\n' % self._auth_username
-        string += '  Password: %s\n' % self._auth_password
+        string += '  Password: %s\n' % '*******'
         string += '\n'
         return string
 

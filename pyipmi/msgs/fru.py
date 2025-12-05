@@ -33,6 +33,11 @@ class GetFruInventoryAreaInfoReq(Message):
         UnsignedInt('fru_id', 1, 0),
     )
 
+    def __str__(self):
+        s = super().__str__()
+        s = s + f'[fru_id={self.fru_id}]'
+        return s
+
 
 @register_message_class
 class GetFruInventoryAreaInfoRsp(Message):
@@ -56,6 +61,11 @@ class ReadFruDataReq(Message):
         UnsignedInt('offset', 2),
         UnsignedInt('count', 1),
     )
+
+    def __str__(self):
+        s = super().__str__()
+        s = s + f'[fru_id={self.fru_id}, offset={self.offset}, count={self.count}]'
+        return s
 
 
 @register_message_class

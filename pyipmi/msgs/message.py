@@ -353,7 +353,7 @@ class Message(object):
         # TODO walk along the properties..
 
     def __str__(self):
-        return '{} [netfn={}, cmd={}, grp={}]'.format(type(self).__name__, self.netfn, self.cmdid, self.group_extension)
+        return f'{type(self).__name__} [netfn={self.netfn}, cmd={self.cmdid}, grp={self.group_extension}]'
 
     def _create_fields(self):
         for field in self.__fields__:

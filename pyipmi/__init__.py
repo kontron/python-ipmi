@@ -35,6 +35,7 @@ from . import sensor
 from . import msgs
 
 from .errors import IpmiTimeoutError, CompletionCodeError, RetryError
+from .logger import log
 from .msgs.registry import create_request_by_name
 from .session import Session
 from .utils import check_rsp_completion_code, is_string
@@ -213,6 +214,8 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         req.requester = self.requester
         rsp = None
 
+        log().debug(f'>> Msg Req: {req}')
+
         while retry > 0:
             retry -= 1
             try:
@@ -223,6 +226,8 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
                     continue
         else:
             raise RetryError()
+
+        log().debug(f'<< Msg Rsp: {rsp}')
 
         return rsp
 
