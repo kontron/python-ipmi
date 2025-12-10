@@ -148,19 +148,35 @@ class Fru(object):
         Get the full parsed FRU inventory data.
         """
         fru = FruInventory()
-        header = self.get_fru_inventory_header(fru_id=fru_id)
+
+        header = self.get_fru_inventory_header(
+            fru_id=fru_id,
+            ignore_checksum=ignore_checksum
+        )
 
         if header.chassis_info_area_offset:
-            fru.chassis_info_area = self.get_fru_chassis_area(fru_id=fru_id)
+            fru.chassis_info_area = self.get_fru_chassis_area(
+                fru_id=fru_id,
+                ignore_checksum=ignore_checksum
+            )
 
         if header.board_info_area_offset:
-            fru.board_info_area = self.get_fru_board_area(fru_id=fru_id)
+            fru.board_info_area = self.get_fru_board_area(
+                fru_id=fru_id,
+                ignore_checksum=ignore_checksum
+            )
 
         if header.product_info_area_offset:
-            fru.product_info_area = self.get_fru_product_area(fru_id=fru_id)
+            fru.product_info_area = self.get_fru_product_area(
+                fru_id=fru_id,
+                ignore_checksum=ignore_checksum
+            )
 
         if header.multirecord_area_offset:
-            fru.multirecord_area = self.get_fru_multirecord_area(fru_id=fru_id)
+            fru.multirecord_area = self.get_fru_multirecord_area(
+                fru_id=fru_id,
+                ignore_checksum=ignore_checksum
+            )
 
         return fru
 
