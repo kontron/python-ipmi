@@ -199,6 +199,27 @@ class TestIpmitool:
         assert cc is None
         assert py3_array_tobytes(rsp) == b'\x12\x34\x56\x78\xd0\x0f\xaf\xfe\xde\xad\xbe\xef\xaa\x55\xbb'
 
+    def test_parse_output_rsp_verbose_mixed_with_debug_text(self):
+        # With "-v" ipmitool interleaves plain-text debug lines with the
+        # actual hex response line. A single non-hex debug line must not
+        # discard the response bytes already found on other lines.
+        test_str = (
+            b'Loading IANA PEN Registry...\n'
+            b'Using best available cipher suite 3\n'
+            b'Running Get VSO Capabilities\n'
+            b'my_addr 0x20, transit 0, target 0x20\n'
+            b'Invalid completion code received: Invalid command\n'
+            b'Discovered IPMB address 0x0\n'
+            b'RAW REQ (channel=0x0 netfn=0x6 lun=0x0 cmd=0x1 data_len=0)\n'
+            b'RAW RSP (15 bytes)\n'
+            b' 20 01 04 00 02 bf 7c 2a 00 69 09 00 00 00 00\n'
+        )
+        cc, rsp = self._interface._parse_output(test_str)
+        assert cc is None
+        assert py3_array_tobytes(rsp) == (
+            b'\x20\x01\x04\x00\x02\xbf\x7c\x2a\x00\x69\x09\x00\x00\x00\x00'
+        )
+
     def test_parse_output_cc(self):
         test_str = b'Unable to send RAW command (channel=0x0 netfn=0x6 lun=0x0 cmd=0x1 rsp=0xcc): Ignore Me\n'
         cc, rsp = self._interface._parse_output(test_str)

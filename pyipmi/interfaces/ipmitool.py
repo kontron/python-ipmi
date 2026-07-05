@@ -119,7 +119,7 @@ class Ipmitool(object):
 
     def _parse_output(self, output):
         cc, rsp = None, None
-        hexstr = ''
+        values = []
 
         for line in py3dec_unic_bytes_fix(output).split('\n'):
             # Don't try to parse ipmitool error messages
@@ -153,16 +153,26 @@ class Ipmitool(object):
             if self.re_authentication_error.match(line):
                 raise AuthenticationError('Authentication error')
 
-            hexstr += line.replace('\r', '').strip() + ' '
+            line = line.replace('\r', '').strip()
+            if not line:
+                continue
 
-        hexstr = hexstr.strip()
-        if len(hexstr):
+            # With "-v" ipmitool interleaves plain-text debug lines
+            # (e.g. "RAW REQ (...)", "Discovered IPMB address 0x0")
+            # with the actual hex response line. Parse hex per-line
+            # so one non-hex debug line doesn't discard already
+            # parsed response bytes from other lines.
             try:
-                rsp = array('B', [
-                    int(value, 16) for value in hexstr.split(' ')
-                ])
+                line_values = [int(value, 16) for value in line.split()]
             except ValueError:
-                pass
+                continue
+            if any(value > 0xff for value in line_values):
+                continue
+
+            values.extend(line_values)
+
+        if values:
+            rsp = array('B', values)
 
         return cc, rsp
 
