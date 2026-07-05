@@ -43,6 +43,18 @@ def test_fru_inventory_from_file():
     fru_file = os.path.join(this_file_path, 'fru_bin/kontron_am4010.bin')
     fru = get_fru_inventory_from_file(fru_file)
     assert fru.chassis_info_area is None
+    assert fru.board_info_area is not None
+    assert fru.product_info_area is not None
+    assert fru.multirecord_area is not None
+
+
+def test_fru_inventory_from_file_2():
+    fru_file = os.path.join(this_file_path, 'fru_bin/fru_supermicro_x11scz-f.bin')
+    fru = get_fru_inventory_from_file(fru_file)
+    assert fru.chassis_info_area is None
+    assert fru.board_info_area is not None
+    assert fru.product_info_area is not None
+    assert fru.multirecord_area is None
 
 
 def test_board_area():
