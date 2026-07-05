@@ -319,6 +319,7 @@ class ConnectionContext():
         self.sock = sock
         self.addr = addr
         self.session = Session()
+        self.lock = threading.Lock()
 
 
 def handle_thread(context, pdu):
@@ -326,18 +327,19 @@ def handle_thread(context, pdu):
     msg = rmcp.RmcpMsg()
     sdu = msg.unpack(pdu)
 
-    try:
-        handler = {
-                    rmcp.RMCP_CLASS_ASF: handle_rmcp_asf_msg,
-                    rmcp.RMCP_CLASS_IPMI: handle_rmcp_ipmi_msg,
-                  }[msg.class_of_msg]
+    with context.lock:
+        try:
+            handler = {
+                        rmcp.RMCP_CLASS_ASF: handle_rmcp_asf_msg,
+                        rmcp.RMCP_CLASS_IPMI: handle_rmcp_ipmi_msg,
+                      }[msg.class_of_msg]
 
-        tx_data = handler(context, sdu)
-        rmcp_msg = rmcp.RmcpMsg(msg.class_of_msg)
-        pdu = rmcp_msg.pack(tx_data, context.session.sequence_number)
-        context.sock.sendto(pdu, context.addr)
-    except IndexError:
-        print('unknown class_of_msg {}'.format(msg.class_of_msg))
+            tx_data = handler(context, sdu)
+            rmcp_msg = rmcp.RmcpMsg(msg.class_of_msg)
+            pdu = rmcp_msg.pack(tx_data, context.session.sequence_number)
+            context.sock.sendto(pdu, context.addr)
+        except IndexError:
+            print('unknown class_of_msg {}'.format(msg.class_of_msg))
 
 
 def main(args=None):
