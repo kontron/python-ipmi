@@ -15,11 +15,14 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
+
 from array import array
+from typing import Generator
 
 from .errors import CompletionCodeError, DecodingError
 from .utils import check_completion_code, ByteBuffer
-from .msgs import create_request_by_name
+from .msgs import create_request_by_name, Message
 from .msgs import constants
 from .event import EVENT_ASSERTION, EVENT_DEASSERTION
 
@@ -28,31 +31,31 @@ from .state import State
 
 
 class Sel(object):
-    def get_sel_entries_count(self):
+    def get_sel_entries_count(self) -> int:
         info = SelInfo(self.send_message_with_name('GetSelInfo'))
         return info.entries
 
-    def get_sel_reservation_id(self):
+    def get_sel_reservation_id(self) -> int:
         rsp = self.send_message_with_name('ReserveSel')
         return rsp.reservation_id
 
-    def _clear_sel(self, cmd, reservation):
+    def _clear_sel(self, cmd: int, reservation: int) -> int:
         rsp = self.send_message_with_name('ClearSel',
                                           reservation_id=reservation,
                                           cmd=cmd)
         return rsp.status.erase_in_progress
 
-    def clear_sel(self, retry=5):
+    def clear_sel(self, retry: int = 5) -> None:
         clear_repository_helper(self.get_sel_reservation_id,
                                 self._clear_sel, retry)
 
-    def delete_sel_entry(self, record_id, reservation=0):
+    def delete_sel_entry(self, record_id: int, reservation: int = 0) -> int:
         rsp = self.send_message_with_name('DeleteSelEntry',
                                           reservation_id=reservation,
                                           record_id=record_id)
         return rsp.record_id
 
-    def get_and_clear_sel_entry(self, record_id):
+    def get_and_clear_sel_entry(self, record_id: int) -> SelEntry:
         """Atomically gets and clears the specified SEL record"""
         while True:
             reservation = self.get_sel_reservation_id()
@@ -72,7 +75,8 @@ class Sel(object):
                     raise
             return sel_entry
 
-    def get_sel_entry(self, record_id, reservation=0):
+    def get_sel_entry(self, record_id: int,
+                      reservation: int = 0) -> tuple[SelEntry, int]:
         ENTIRE_RECORD = 0xff
         req = create_request_by_name('GetSelEntry')
         req.reservation_id = reservation
@@ -106,7 +110,7 @@ class Sel(object):
 
         return (SelEntry(record_data), rsp.next_record_id)
 
-    def sel_entries(self):
+    def sel_entries(self) -> Generator[SelEntry, None, None]:
         """Generator which returns all SEL entries."""
         START_SEL_RECORD_ID = 0
         END_SEL_RECORD_ID = 0xffff
@@ -122,14 +126,14 @@ class Sel(object):
             if next_record_id == END_SEL_RECORD_ID:
                 break
 
-    def get_sel_entries(self):
+    def get_sel_entries(self) -> list[SelEntry]:
         """Return all SEL entries as a list."""
         return list(self.sel_entries())
 
 
 class SelInfo(State):
 
-    def _from_response(self, rsp):
+    def _from_response(self, rsp: Message) -> None:
         self.version = rsp.version
         self.entries = rsp.entries
         self.free_bytes = rsp.free_bytes
@@ -153,7 +157,7 @@ class SelEntry(State):
     TYPE_OEM_TIMESTAMPED_RANGE = list(range(0xc0, 0xe0))
     TYPE_OEM_NON_TIMESTAMPED_RANGE = list(range(0xe0, 0x100))
 
-    def __str__(self):
+    def __str__(self) -> str:
         raw = '[%s]' % (' '.join(['0x%02x' % b for b in self.data]))
         string = []
         string.append('SEL Record ID 0x%04x' % self.record_id)
@@ -170,7 +174,7 @@ class SelEntry(State):
         return "\n".join(string)
 
     @staticmethod
-    def type_to_string(entry_type):
+    def type_to_string(entry_type: int) -> str | None:
         string = None
         if entry_type == SelEntry.TYPE_SYSTEM_EVENT:
             string = 'System Event'
@@ -180,7 +184,7 @@ class SelEntry(State):
             string = 'OEM non-timestamped (0x%02x)' % entry_type
         return string
 
-    def _from_response(self, data):
+    def _from_response(self, data: ByteBuffer) -> None:
         if len(data) != 16:
             raise DecodingError('Invalid SEL record length (%d)' % len(data))
 

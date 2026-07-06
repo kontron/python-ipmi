@@ -14,8 +14,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-from array import array
+from __future__ import annotations
 
+from array import array
+from typing import Iterable
+
+from .. import Routing
 from ..logger import log
 from ..msgs import (create_message, create_request_by_name,
                     encode_message, decode_message, constants)
@@ -23,7 +27,7 @@ from ..utils import check_completion_code
 from ..utils import py3_array_tobytes, py3_array_frombytes
 
 
-def checksum(data):
+def checksum(data: Iterable[int]) -> int:
     """Calculate the checksum."""
     csum = 0
     for b in data:
@@ -54,11 +58,11 @@ class IpmbHeader(object):
     cmdid = None
     checksum = None
 
-    def __init__(self, data=None):
+    def __init__(self, data: bytes | None = None) -> None:
         if data:
             self.decode(data)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'rs_sa=0x{self.rs_sa:02x}, rs_lun={self.rs_lun}, ' \
                f'rq_sa=0x{self.rq_sa:02x}, rq_lun={self.rq_lun}, ' \
                f'rq_seq={self.rq_seq}, ' \
@@ -69,7 +73,7 @@ class IpmbHeader(object):
 class IpmbHeaderReq(IpmbHeader):
     """Representation of the IPMI request message header."""
 
-    def encode(self):
+    def encode(self) -> bytes:
         """Encode the header."""
         data = array('B')
         data.append(self.rs_sa)
@@ -80,7 +84,7 @@ class IpmbHeaderReq(IpmbHeader):
         data.append(self.cmdid)
         return py3_array_tobytes(data)
 
-    def decode(self, data):
+    def decode(self, data: bytes) -> None:
         """Decode the header."""
         msg = array('B')
         py3_array_frombytes(msg, data)
@@ -97,7 +101,7 @@ class IpmbHeaderReq(IpmbHeader):
 class IpmbHeaderRsp(IpmbHeader):
     """Representation of the IPMI response message header."""
 
-    def encode(self):
+    def encode(self) -> bytes:
         """Encode the header."""
         data = array('B')
         data.append(self.rq_sa)
@@ -108,7 +112,7 @@ class IpmbHeaderRsp(IpmbHeader):
         data.append(self.cmdid)
         return py3_array_tobytes(data)
 
-    def decode(self, data):
+    def decode(self, data: bytes) -> None:
         """Decode the header."""
         data = array('B', data)
         self.rq_sa = data[0]
@@ -120,7 +124,7 @@ class IpmbHeaderRsp(IpmbHeader):
         self.rs_lun = data[4] & 3
         self.cmdid = data[5]
 
-    def from_req_header(self, req_header):
+    def from_req_header(self, req_header: IpmbHeaderReq) -> None:
         self.rs_lun = req_header.rq_lun
         self.rs_sa = req_header.rq_sa
         self.rq_seq = req_header.rq_seq
@@ -130,7 +134,8 @@ class IpmbHeaderRsp(IpmbHeader):
         self.cmdid = req_header.cmdid
 
 
-def encode_ipmb_msg(header, data):
+def encode_ipmb_msg(header: IpmbHeaderReq | IpmbHeaderRsp,
+                    data: bytes | None) -> bytes:
     """Encode an IPMB message.
 
     header: IPMB header object
@@ -148,7 +153,8 @@ def encode_ipmb_msg(header, data):
     return py3_array_tobytes(msg)
 
 
-def encode_send_message(payload, rq_sa, rs_sa, channel, seq, tracking=1):
+def encode_send_message(payload: bytes, rq_sa: int, rs_sa: int, channel: int,
+                        seq: int, tracking: int = 1) -> bytes:
     """Encode a send message command and embed the message to be send.
 
     payload: the message to be send as bytestring
@@ -177,7 +183,8 @@ def encode_send_message(payload, rq_sa, rs_sa, channel, seq, tracking=1):
     return encode_ipmb_msg(header, data + payload)
 
 
-def encode_bridged_message(routing, header, payload, seq):
+def encode_bridged_message(routing: list[Routing], header: IpmbHeaderReq,
+                           payload: bytes, seq: int) -> bytes:
     """Encode a (multi-)bridged command and embed the message to be send.
 
     routing:
@@ -202,7 +209,7 @@ def encode_bridged_message(routing, header, payload, seq):
     return tx_data
 
 
-def decode_bridged_message(rx_data):
+def decode_bridged_message(rx_data: bytes) -> bytes:
     """Decode a (multi-)bridged command.
 
     rx_data: the received message as bytestring
@@ -221,8 +228,9 @@ def decode_bridged_message(rx_data):
     return rx_data
 
 
-def rx_filter(header, data, rq_sa=False, rs_sa=False, rq_lun=False,
-              rs_lun=True, rq_seq=True):
+def rx_filter(header: IpmbHeaderReq, data: bytes | array, rq_sa: bool = False,
+              rs_sa: bool = False, rq_lun: bool = False,
+              rs_lun: bool = True, rq_seq: bool = True) -> bool:
     """Check if the message in rx_data matches to the information in header.
 
     The following checks are done:

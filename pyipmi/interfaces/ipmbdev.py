@@ -1,12 +1,16 @@
+from __future__ import annotations
+
 import os
 import select
 import time
 from array import array
 
-from ..msgs import create_message, encode_message, decode_message
+from .. import Target
+from ..msgs import create_message, encode_message, decode_message, Message
 from ..errors import IpmiTimeoutError
 from ..logger import log
 from ..interfaces.ipmb import IpmbHeaderReq, checksum, rx_filter, encode_ipmb_msg
+from ..session import Session
 
 
 class IpmbDev(object):
@@ -14,7 +18,8 @@ class IpmbDev(object):
 
     NAME = 'ipmbdev'
 
-    def __init__(self, slave_address=0x20, port='/dev/ipmb-0'):
+    def __init__(self, slave_address: int = 0x20,
+                port: str = '/dev/ipmb-0') -> None:
         # TODO: slave address is currently not defined here
         self.slave_address = slave_address
         self.port = port
@@ -22,19 +27,19 @@ class IpmbDev(object):
         self.max_retries = 3
         self.next_sequence_number = 0
 
-    def open(self):
+    def open(self) -> None:
         self._dev = os.open(self.port, os.O_RDWR)
 
-    def close(self):
+    def close(self) -> None:
         os.close(self._dev)
 
-    def establish_session(self, session):
+    def establish_session(self, session: Session) -> None:
         pass
 
-    def close_session(self):
+    def close_session(self) -> None:
         pass
 
-    def is_ipmc_accessible(self, target):
+    def is_ipmc_accessible(self, target: Target) -> bool:
         header = IpmbHeaderReq()
         header.netfn = 6
         header.rs_lun = 0
@@ -47,18 +52,19 @@ class IpmbDev(object):
         self._receive_raw(header)
         return True
 
-    def _inc_sequence_number(self):
+    def _inc_sequence_number(self) -> None:
         self.next_sequence_number = (self.next_sequence_number + 1) % 64
 
     @staticmethod
-    def _encode_ipmb_msg_req(header, cmd_data):
+    def _encode_ipmb_msg_req(header: IpmbHeaderReq, cmd_data: bytes) -> array:
         data = header.encode()
         data.extend(cmd_data)
         data.append(checksum(data[2:]))
 
         return data
 
-    def _send_raw(self, header, raw_bytes):
+    def _send_raw(self, header: IpmbHeaderReq,
+                  raw_bytes: bytes | None) -> None:
         raw_bytes = encode_ipmb_msg(header, raw_bytes)
         i2c_addr = header.rs_sa >> 1
 
@@ -66,7 +72,7 @@ class IpmbDev(object):
                     ' '.join(['%02x' % b for b in raw_bytes]))
         os.write(self._dev, bytes([len(raw_bytes)]) + raw_bytes)
 
-    def _receive_raw(self, header):
+    def _receive_raw(self, header: IpmbHeaderReq) -> array:
         start_time = time.time()
         rsp_received = False
         poll_returned_no_data = False
@@ -95,7 +101,8 @@ class IpmbDev(object):
 
         return rx_data
 
-    def _send_and_receive(self, target, lun, netfn, cmdid, payload):
+    def _send_and_receive(self, target: Target, lun: int, netfn: int,
+                          cmdid: int, payload: bytes) -> array:
         """Send and receive data using ipmb-dev-int interface.
 
         target:
@@ -137,7 +144,8 @@ class IpmbDev(object):
 
         return rx_data[5:-1]
 
-    def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
+    def send_and_receive_raw(self, target: Target, lun: int, netfn: int,
+                             raw_bytes: bytes) -> array:
         """Interface function to send and receive raw message.
 
         target: IPMI target
@@ -153,7 +161,7 @@ class IpmbDev(object):
                                       cmdid=array('B', raw_bytes)[0],
                                       payload=raw_bytes[1:])
 
-    def send_and_receive(self, req):
+    def send_and_receive(self, req: Message) -> Message:
         """Interface function to send and receive an IPMI message.
 
         target: IPMI target

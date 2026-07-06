@@ -16,6 +16,7 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
 from __future__ import print_function
 
 import sys
@@ -27,6 +28,7 @@ import pprint
 from array import array
 
 from collections import namedtuple
+from typing import Callable
 
 import pyipmi
 import pyipmi.interfaces
@@ -38,18 +40,18 @@ Command = namedtuple('Command', 'name fn')
 CommandHelp = namedtuple('CommandHelp', 'name arguments help')
 
 
-def _print(s):
+def _print(s: object) -> None:
     print(s)
 
 
-def _get_command_function(name):
+def _get_command_function(name: str) -> Callable[..., None] | None:
     for cmd in COMMANDS:
         if cmd.name == name:
             return cmd.fn
     return None
 
 
-def cmd_bmc_info(ipmi, args):
+def cmd_bmc_info(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     device_id = ipmi.get_device_id()
     print('''
 Device ID:          %(device_id)s
@@ -82,18 +84,18 @@ Additional Device Support:
               ' '.join('%02x' % d for d in device_id.aux)))
 
 
-def cmd_sel_clear(ipmi, args):
+def cmd_sel_clear(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     ipmi.clear_sel()
 
 
-def cmd_sensor_rearm(ipmi, args):
+def cmd_sensor_rearm(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     if len(args) < 1:
         return
     number = int(args[0], 0)
     ipmi.rearm_sensor_events(number)
 
 
-def sdr_show(ipmi, s):
+def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
 
     print("SDR record ID:    0x%04x" % s.id)
     print("SDR type:         0x%02x" % s.type)
@@ -124,7 +126,7 @@ def sdr_show(ipmi, s):
         print("Reading state:    0x%x" % states)
 
 
-def cmd_sdr_show_raw(ipmi, args):
+def cmd_sdr_show_raw(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     if len(args) != 1:
         usage()
         return
@@ -135,7 +137,7 @@ def cmd_sdr_show_raw(ipmi, args):
         print('')
 
 
-def cmd_sdr_show(ipmi, args):
+def cmd_sdr_show(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     if len(args) != 1:
         usage()
         return
@@ -147,7 +149,7 @@ def cmd_sdr_show(ipmi, args):
         print('')
 
 
-def cmd_sdr_show_all(ipmi, args):
+def cmd_sdr_show_all(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     for s in ipmi.device_sdr_entries():
         try:
             sdr_show(ipmi, s)
@@ -156,7 +158,9 @@ def cmd_sdr_show_all(ipmi, args):
         print("\n")
 
 
-def print_sdr_list_entry(record_id, number, id_string, value, states):
+def print_sdr_list_entry(record_id: int, number: int | str | None,
+                         id_string: str | None, value: object,
+                         states: int | None) -> None:
     if number:
         number = str(number)
     else:
@@ -171,7 +175,7 @@ def print_sdr_list_entry(record_id, number, id_string, value, states):
                                                id_string, value, states))
 
 
-def cmd_sdr_list(ipmi, args):
+def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     iter_fct = None
 
     device_id = ipmi.get_device_id()
@@ -213,7 +217,7 @@ def cmd_sdr_list(ipmi, args):
                       e.cc))
 
 
-def cmd_fru_print(ipmi, args):
+def cmd_fru_print(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     fru_id = 0
     print_all = False
     if len(args) > 0:
@@ -286,7 +290,7 @@ Product Info Area:
             print('  Skipped. Use "print <fruid> all"')
 
 
-def cmd_raw(ipmi, args):
+def cmd_raw(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     lun = 0
     if len(args) > 1 and args[0] == 'lun':
         lun = int(args[1], 0)
@@ -302,7 +306,7 @@ def cmd_raw(ipmi, args):
     print(' '.join('%02x' % d for d in array('B', rsp)))
 
 
-def cmd_hpm_capabilities(ipmi, args):
+def cmd_hpm_capabilities(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     cap = ipmi.get_target_upgrade_capabilities()
 
     for c in cap.components:
@@ -312,7 +316,7 @@ def cmd_hpm_capabilities(ipmi, args):
             print("  %s" % prop)
 
 
-def cmd_hpm_check_file(ipmi, args):
+def cmd_hpm_check_file(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     if len(args) < 1:
         return
     cap = ipmi.open_upgrade_image(args[0])
@@ -322,14 +326,14 @@ def cmd_hpm_check_file(ipmi, args):
         print(action)
 
 
-def cmd_hpm_install(ipmi, args):
+def cmd_hpm_install(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     if len(args) < 2:
         print('missing argument')
         return
     ipmi.install_component_from_file(args[0], int(args[1]))
 
 
-def cmd_chassis_status(ipmi, args):
+def cmd_chassis_status(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     status = ipmi.get_chassis_status()
 
     if json_output:
@@ -360,12 +364,12 @@ Restore Policy:    %(restore_policy)s
             print(state)
 
 
-def cmd_picmg_get_power(ipmi, args):
+def cmd_picmg_get_power(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     pwr = ipmi.get_power_level(0, 0)
     print(pwr)
 
 
-def print_link_state(p, s):
+def print_link_state(p: pyipmi.picmg.LinkDescriptor, s: int) -> None:
     intf_str = pyipmi.picmg.LinkDescriptor().get_interface_string(p.interface)
     link_str = pyipmi.picmg.LinkDescriptor().get_link_type_string(
             p.type, p.extension, p.sig_class)
@@ -374,7 +378,7 @@ def print_link_state(p, s):
              p.extension, s, intf_str, link_str))
 
 
-def cmd_picmg_get_portstate_all(ipmi, args):
+def cmd_picmg_get_portstate_all(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     for interface in range(3):
         for channel in range(16):
             try:
@@ -385,7 +389,7 @@ def cmd_picmg_get_portstate_all(ipmi, args):
                     continue
 
 
-def cmd_picmg_get_portstate(ipmi, args):
+def cmd_picmg_get_portstate(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     if len(args) < 2:
         return
     channel = int(args[0])
@@ -394,24 +398,24 @@ def cmd_picmg_get_portstate(ipmi, args):
     print_link_state(p, s)
 
 
-def cmd_picmg_getpower_channel_status(ipmi, args):
+def cmd_picmg_getpower_channel_status(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     ret = ipmi.get_power_channel_status(int(args[0]))
     pprint.pprint(vars(ret))
 
 
-def cmd_picmg_frucontrol_cold_reset(ipmi, args):
+def cmd_picmg_frucontrol_cold_reset(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     ipmi.fru_control_cold_reset(0)
 
 
-def cmd_picmg_send_pm_heartbeat(ipmi, args):
+def cmd_picmg_send_pm_heartbeat(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     ipmi.send_pm_heartbeat()
 
 
-def cmd_picmg_send_channel_power(ipmi, args):
+def cmd_picmg_send_channel_power(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     ipmi.send_channel_power(int(args[0]))
 
 
-def usage(toplevel=False):
+def usage(toplevel: bool = False) -> None:
     commands = []
     maxlen = 0
 
@@ -502,11 +506,11 @@ Ipmbdev interface options:
         print('  %-*s   %s' % (maxlen, name, cmd.help))
 
 
-def version():
+def version() -> None:
     print('ipmitool v%s' % pyipmi.__version__)
 
 
-def parse_interface_options(interface_name, options):
+def parse_interface_options(interface_name: str, options: str | list) -> dict:
     if options:
         options = options.split(',')
 
@@ -545,7 +549,7 @@ def parse_interface_options(interface_name, options):
     return interface_options
 
 
-def main():
+def main() -> None:
     try:
         opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:L:o:b:p:r:J')
     except getopt.GetoptError as err:

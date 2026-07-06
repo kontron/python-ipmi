@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
+
 from .msgs.constants import COMPLETION_CODE_DESCR, CC_ERR_CMD_SPECIFIC_DESC
 
 
@@ -35,16 +37,20 @@ class IpmiTimeoutError(Exception):
 class CompletionCodeError(Exception):
     """IPMI completion code not OK."""
 
-    def __init__(self, cc, cmdid=None, netfn=None, group_extension=None):
+    def __init__(self, cc: int, cmdid: int | None = None,
+                netfn: int | None = None,
+                group_extension: int | None = None) -> None:
         self.cc = cc
         self.cc_desc = self.find_cc_desc(cc, cmdid, netfn, group_extension)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "%s cc=0x%02x desc=%s" \
             % (self.__class__.__name__, self.cc, self.cc_desc)
 
     @staticmethod
-    def find_cc_desc(error_cc, cmdid=None, netfn=None, group_extension=None):
+    def find_cc_desc(error_cc: int, cmdid: int | None = None,
+                     netfn: int | None = None,
+                     group_extension: int | None = None) -> str:
         # Search in global completion codes first
         for cc in COMPLETION_CODE_DESCR:
             if error_cc == cc[0]:
@@ -85,26 +91,26 @@ class HpmError(Exception):
 
 class IpmiConnectionError(Exception):
     """Connection error."""
-    def __init__(self, msg=None):
+    def __init__(self, msg: str | None = None) -> None:
         self.msg = msg
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "{}".format(self.msg)
 
 
 class IpmiLongPasswordError(Exception):
     """Password longer than 20 bytes."""
-    def __init__(self, msg=None):
+    def __init__(self, msg: str | None = None) -> None:
         self.msg = msg
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "{}".format(self.msg)
 
 
 class AuthenticationError(Exception):
     """Authentication error."""
-    def __init__(self, msg=None):
+    def __init__(self, msg: str | None = None) -> None:
         self.msg = msg
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "{}".format(self.msg)

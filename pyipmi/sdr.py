@@ -14,16 +14,20 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
 from __future__ import absolute_import
 from __future__ import division
 
 import math
+from array import array
+from typing import Callable, Generator
+
 from . import errors
 
 from .errors import DecodingError
 from .fields import SdrTypeLengthString
 from .utils import check_completion_code, ByteBuffer
-from .msgs import create_request_by_name
+from .msgs import create_request_by_name, Message
 
 from .helper import get_sdr_data_helper, clear_repository_helper
 from .helper import get_sdr_chunk_helper
@@ -57,22 +61,23 @@ L_CUBERT = 11
 
 
 class Sdr(object):
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def get_sdr_repository_info(self):
+    def get_sdr_repository_info(self) -> SdrRepositoryInfo:
         return SdrRepositoryInfo(
                 self.send_message_with_name('GetSdrRepositoryInfo'))
 
-    def get_sdr_repository_allocation_info(self):
+    def get_sdr_repository_allocation_info(self) -> SdrRepositoryAllocationInfo:
         return SdrRepositoryAllocationInfo(
                 self.send_message_with_name('GetSdrRepositoryAllocationInfo'))
 
-    def reserve_sdr_repository(self):
+    def reserve_sdr_repository(self) -> int:
         rsp = self.send_message_with_name('ReserveSdrRepository')
         return rsp.reservation_id
 
-    def _get_sdr_chunk(self, reservation_id, record_id, offset, length):
+    def _get_sdr_chunk(self, reservation_id: int, record_id: int, offset: int,
+                       length: int) -> tuple[int, array]:
         req = create_request_by_name('GetSdr')
         req.reservation_id = reservation_id
         req.record_id = record_id
@@ -84,13 +89,14 @@ class Sdr(object):
 
         return (rsp.next_record_id, rsp.record_data)
 
-    def get_repository_sdr(self, record_id, reservation_id=None):
+    def get_repository_sdr(self, record_id: int,
+                           reservation_id: int | None = None) -> SdrCommon:
         (next_id, record_data) = get_sdr_data_helper(
                 self.reserve_sdr_repository, self._get_sdr_chunk,
                 record_id, reservation_id)
         return SdrCommon.from_data(record_data, next_id)
 
-    def sdr_repository_entries(self):
+    def sdr_repository_entries(self) -> Generator[SdrCommon, None, None]:
         """A generator that returns the SDR list.
 
         The Generator starts with ID=0x0000 and ends when ID=0xffff
@@ -106,12 +112,13 @@ class Sdr(object):
                 break
             record_id = s.next_id
 
-    def get_repository_sdr_list(self, reservation_id=None):
+    def get_repository_sdr_list(self,
+                                reservation_id: int | None = None) -> list[SdrCommon]:
         """Return the complete SDR list."""
         return list(self.sdr_repository_entries())
 
-    def partial_add_sdr(self, reservation_id, record_id,
-                        offset, progress, data):
+    def partial_add_sdr(self, reservation_id: int, record_id: int,
+                        offset: int, progress: int, data: bytes) -> int:
 
         req = create_request_by_name('PartialAddSdr')
         req.reservation_id = reservation_id
@@ -123,7 +130,7 @@ class Sdr(object):
         check_completion_code(rsp.completion_code)
         return rsp.record_id
 
-    def delete_sdr(self, record_id):
+    def delete_sdr(self, record_id: int) -> int:
         """Delete the sensor record specified by 'record_id'."""
         reservation_id = self.reserve_device_sdr_repository()
         rsp = self.send_message_with_name('DeleteSdr',
@@ -131,33 +138,33 @@ class Sdr(object):
                                           record_id=record_id)
         return rsp.record_id
 
-    def _clear_sdr_repository(self, cmd, reservation_id):
+    def _clear_sdr_repository(self, cmd: int, reservation_id: int) -> int:
         rsp = self.send_message_with_name('ClearSdrRepository',
                                           reservation_id=reservation_id,
                                           cmd=cmd)
         return rsp.status.erase_in_progress
 
-    def clear_sdr_repository(self, retry=5):
+    def clear_sdr_repository(self, retry: int = 5) -> None:
         clear_repository_helper(self.reserve_sdr_repository,
                                 self._clear_sdr_repository, retry)
 
-    def _run_initialization_agent(self, cmd):
+    def _run_initialization_agent(self, cmd: int) -> int:
         rsp = self.send_message_with_name('RunInitializationAgent', cmd=cmd)
         return rsp.status.initialization_completed
 
-    def start_initialization_agent(self):
+    def start_initialization_agent(self) -> None:
         self._run_initialization_agent(RUN_INITIALIZATION_AGENT)
 
-    def get_initialization_agent_status(self):
+    def get_initialization_agent_status(self) -> int:
         return self._run_initialization_agent(GET_INITIALIZATION_AGENT_STATUS)
 
 
 class SdrRepositoryInfo(State):
-    def __init__(self, rsp):
+    def __init__(self, rsp: Message | None) -> None:
         if rsp:
             self._from_response(rsp)
 
-    def _from_response(self, rsp):
+    def _from_response(self, rsp: Message) -> None:
         self.sdr_version = rsp.sdr_version
         self.record_count = rsp.record_count
         self.free_space = rsp.free_space
@@ -171,11 +178,11 @@ class SdrRepositoryInfo(State):
 
 
 class SdrRepositoryAllocationInfo(State):
-    def __init__(self, rsp):
+    def __init__(self, rsp: Message | None) -> None:
         if rsp:
             self._from_response(rsp)
 
-    def _from_response(self, rsp):
+    def _from_response(self, rsp: Message) -> None:
         self.number_of_units = rsp.number_of_units
         self.unit_size = rsp.unit_size
         self.free_units = rsp.free_units
@@ -184,7 +191,8 @@ class SdrRepositoryAllocationInfo(State):
 
 
 class SdrCommon(object):
-    def __init__(self, data=None, next_id=None):
+    def __init__(self, data: bytes | None = None,
+                next_id: int | None = None) -> None:
         if data:
             self.data = data
             self._common_header(data)
@@ -195,7 +203,7 @@ class SdrCommon(object):
         if next_id:
             self.next_id = next_id
 
-    def __str__(self):
+    def __str__(self) -> str:
         if hasattr(self, 'device_id_string'):
             s = '["%s"] [%s]' % \
                  (self.device_id_string,
@@ -205,7 +213,7 @@ class SdrCommon(object):
                  (' '.join(['%02x' % b for b in self.data]))
         return s
 
-    def _common_header(self, data):
+    def _common_header(self, data: bytes) -> None:
         buffer = ByteBuffer(data[:])
         try:
             self.id = buffer.pop_unsigned_int(2)
@@ -215,16 +223,16 @@ class SdrCommon(object):
         except IndexError:
             raise DecodingError('Invalid SDR length (%d)' % len(data))
 
-    def _common_record_key(self, buffer):
+    def _common_record_key(self, buffer: ByteBuffer) -> None:
         self.owner_id = buffer.pop_unsigned_int(1)
         self.owner_lun = buffer.pop_unsigned_int(1) & 0x3
         self.number = buffer.pop_unsigned_int(1)
 
-    def _entity(self, buffer):
+    def _entity(self, buffer: ByteBuffer) -> None:
         self.entity_id = buffer.pop_unsigned_int(1)
         self.entity_instance = buffer.pop_unsigned_int(1)
 
-    def _device_id_string(self, buffer):
+    def _device_id_string(self, buffer: ByteBuffer) -> None:
         self.device_id_string_type = (buffer[0] & 0xc0) >> 4
         self.device_id_string_length = buffer[0] & 0x3f
         field = SdrTypeLengthString(data=buffer[0:1+self.device_id_string_length])
@@ -233,7 +241,7 @@ class SdrCommon(object):
 #            buffer.pop_string(self.device_id_string_length & 0x3f)
 
     @staticmethod
-    def from_data(data, next_id=None):
+    def from_data(data: bytes, next_id: int | None = None) -> SdrCommon:
         sdr_type = data[3]
 
         cls = {
@@ -265,10 +273,11 @@ class SdrFullSensorRecord(SdrCommon):
     DATA_FMT_2S_COMPLEMENT = 2
     DATA_FMT_NONE = 3
 
-    def __init__(self, data=None, next_id=None):
+    def __init__(self, data: bytes | None = None,
+                next_id: int | None = None) -> None:
         super(SdrFullSensorRecord, self).__init__(data, next_id)
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = '["%s"] [%s:%s] [%s]' \
                 % (self.device_id_string,
                    self.entity_id,
@@ -276,7 +285,7 @@ class SdrFullSensorRecord(SdrCommon):
                    ' '.join(['%02x' % b for b in self.data]))
         return s
 
-    def convert_sensor_raw_to_value(self, raw):
+    def convert_sensor_raw_to_value(self, raw: int | None) -> float | None:
         if raw is None:
             return None
         fmt = self.analog_data_format
@@ -290,7 +299,7 @@ class SdrFullSensorRecord(SdrCommon):
 
         return self.lin((self.m * raw + (self.b * 10**self.k1)) * 10**self.k2)
 
-    def convert_sensor_value_to_raw(self, value):
+    def convert_sensor_value_to_raw(self, value: float) -> int:
         linearization = self.linearization & 0x7f
 
         if linearization is not L_LINEAR:
@@ -315,7 +324,7 @@ class SdrFullSensorRecord(SdrCommon):
         return raw
 
     @property
-    def lin(self):
+    def lin(self) -> Callable[[float], float]:
         try:
             return {
                 L_LN: math.log,
@@ -336,12 +345,12 @@ class SdrFullSensorRecord(SdrCommon):
                                        (self.linearization & 0x7f))
 
     @staticmethod
-    def _convert_complement(value, size):
+    def _convert_complement(value: int, size: int) -> int:
         if (value & (1 << (size - 1))):
             value = -(1 << size) + value
         return value
 
-    def _decode_capabilities(self, capabilities):
+    def _decode_capabilities(self, capabilities: int) -> None:
         self.capabilities = []
 
         # ignore sensor
@@ -388,7 +397,7 @@ class SdrFullSensorRecord(SdrCommon):
         if (capabilities & 0x03) == 3:
             pass
 
-    def _from_data(self, data):
+    def _from_data(self, data: bytes) -> None:
         buffer = ByteBuffer(data[5:])
         # record key bytes
         self._common_record_key(buffer.pop_slice(3))
@@ -492,16 +501,17 @@ class SdrFullSensorRecord(SdrCommon):
 # SDR type 0x02
 ##################################################
 class SdrCompactSensorRecord(SdrCommon):
-    def __init__(self, data=None, next_id=None):
+    def __init__(self, data: bytes | None = None,
+                next_id: int | None = None) -> None:
         super(SdrCompactSensorRecord, self).__init__(data, next_id)
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = '["%s"] [%s]' \
             % (self.device_id_string,
                ' '.join(['%02x' % b for b in self.data]))
         return s
 
-    def _from_data(self, data):
+    def _from_data(self, data: bytes) -> None:
         buffer = ByteBuffer(data[5:])
 
         # record key bytes
@@ -532,13 +542,14 @@ class SdrCompactSensorRecord(SdrCommon):
 # SDR type 0x03
 ##################################################
 class SdrEventOnlySensorRecord(SdrCommon):
-    def __init__(self, data=None, next_id=None):
+    def __init__(self, data: bytes | None = None,
+                next_id: int | None = None) -> None:
         super(SdrEventOnlySensorRecord, self).__init__(data, next_id)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'Not supported yet.'
 
-    def _from_data(self, data):
+    def _from_data(self, data: bytes) -> None:
         buffer = ByteBuffer(data[5:])
 
         # record key bytes
@@ -559,16 +570,17 @@ class SdrEventOnlySensorRecord(SdrCommon):
 # SDR type 0x11
 ##################################################
 class SdrFruDeviceLocator(SdrCommon):
-    def __init__(self, data=None, next_id=None):
+    def __init__(self, data: bytes | None = None,
+                next_id: int | None = None) -> None:
         super(SdrFruDeviceLocator, self).__init__(data, next_id)
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = '["%s"] [%s]' \
             % (self.device_id_string,
                ' '.join(['%02x' % b for b in self.data]))
         return s
 
-    def _from_data(self, data):
+    def _from_data(self, data: bytes) -> None:
         buffer = ByteBuffer(data[5:])
         self.device_access_address = buffer.pop_unsigned_int(1) >> 1
         self.fru_device_id = buffer.pop_unsigned_int(1)
@@ -586,17 +598,18 @@ class SdrFruDeviceLocator(SdrCommon):
 # SDR type 0x12
 ##################################################
 class SdrManagementControllerDeviceLocator(SdrCommon):
-    def __init__(self, data=None, next_id=None):
+    def __init__(self, data: bytes | None = None,
+                next_id: int | None = None) -> None:
         super(SdrManagementControllerDeviceLocator, self).__init__(
                 data, next_id)
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = '["%s"] [%s]' \
             % (self.device_id_string,
                ' '.join(['%02x' % b for b in self.data]))
         return s
 
-    def _from_data(self, data):
+    def _from_data(self, data: bytes) -> None:
         buffer = ByteBuffer(data[5:])
         self.device_slave_address = buffer.pop_unsigned_int(1) >> 1
         self.channel_number = buffer.pop_unsigned_int(1) & 0xf
@@ -613,11 +626,12 @@ class SdrManagementControllerDeviceLocator(SdrCommon):
 # SDR type 0x13
 ##################################################
 class SdrManagementControllerConfirmationRecord(SdrCommon):
-    def __init__(self, data=None, next_id=None):
+    def __init__(self, data: bytes | None = None,
+                next_id: int | None = None) -> None:
         super(SdrManagementControllerConfirmationRecord, self).__init__(
                 data, next_id)
 
-    def _from_data(self, data):
+    def _from_data(self, data: bytes) -> None:
         buffer = ByteBuffer(data[5:])
         self.device_slave_address = buffer.pop_unsigned_int(1) >> 1
         self.device_id = buffer.pop_unsigned_int(1)
@@ -634,13 +648,14 @@ class SdrManagementControllerConfirmationRecord(SdrCommon):
 # SDR type 0xC0
 ##################################################
 class SdrOEMSensorRecord(SdrCommon):
-    def __init__(self, data=None, next_id=None):
+    def __init__(self, data: bytes | None = None,
+                next_id: int | None = None) -> None:
         super(SdrOEMSensorRecord, self).__init__(data, next_id)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'Not supported yet.'
 
-    def _from_data(self, data):
+    def _from_data(self, data: bytes) -> None:
         buffer = ByteBuffer(data[5:])
 
         # record key bytes
@@ -649,8 +664,9 @@ class SdrOEMSensorRecord(SdrCommon):
 
 # Any SDR type not known or not implemented
 class SdrUnknownSensorRecord(SdrCommon):
-    def __init__(self, data=None, next_id=None):
+    def __init__(self, data: bytes | None = None,
+                next_id: int | None = None) -> None:
         super(SdrUnknownSensorRecord, self).__init__(data, next_id)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return 'Not supported yet.'

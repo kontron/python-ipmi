@@ -14,27 +14,32 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-from .msgs import create_request_by_name
+from __future__ import annotations
+
+from array import array
+
+from .msgs import create_request_by_name, Message
 from .utils import check_completion_code
 from .state import State
 from .fields import VersionField
 
 
 class Bmc(object):
-    def get_device_id(self):
+    def get_device_id(self) -> DeviceId:
         return DeviceId(self.send_message_with_name('GetDeviceId'))
 
-    def get_device_guid(self):
+    def get_device_guid(self) -> DeviceGuid:
         return DeviceGuid(self.send_message_with_name('GetDeviceGuid'))
 
-    def cold_reset(self):
+    def cold_reset(self) -> None:
         self.send_message_with_name('ColdReset')
 
-    def warm_reset(self):
+    def warm_reset(self) -> None:
         self.send_message_with_name('WarmReset')
 
-    def i2c_write_read(self, bus_type, bus_id, channel, address, count,
-                       data=None):
+    def i2c_write_read(self, bus_type: int, bus_id: int, channel: int,
+                       address: int, count: int,
+                       data: bytes | None = None) -> array:
         req = create_request_by_name('MasterWriteRead')
         req.bus_id.type = bus_type
         req.bus_id.id = bus_id
@@ -47,14 +52,16 @@ class Bmc(object):
         check_completion_code(rsp.completion_code)
         return rsp.data
 
-    def i2c_write(self, bus_type, bus_id, channel, address, data):
+    def i2c_write(self, bus_type: int, bus_id: int, channel: int,
+                 address: int, data: bytes) -> None:
         self.i2c_write_read(bus_type, bus_id, channel, address, 0, data)
 
-    def i2c_read(self, bus_type, bus_id, channel, address, count):
+    def i2c_read(self, bus_type: int, bus_id: int, channel: int,
+                address: int, count: int) -> array:
         return self.i2c_write_read(bus_type, bus_id, channel,
                                    address, count, None)
 
-    def set_watchdog_timer(self, config):
+    def set_watchdog_timer(self, config) -> None:
         req = create_request_by_name('SetWatchdogTimer')
         req.timer_use.timer_use = config.timer_use
         req.timer_use.dont_stop = config.dont_stop and 1 or 0
@@ -69,10 +76,10 @@ class Bmc(object):
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def get_watchdog_timer(self):
+    def get_watchdog_timer(self) -> Watchdog:
         return Watchdog(self.send_message_with_name('GetWatchdogTimer'))
 
-    def reset_watchdog_timer(self):
+    def reset_watchdog_timer(self) -> None:
         self.send_message_with_name('ResetWatchdogTimer')
 
 
@@ -102,7 +109,7 @@ class Watchdog(State):
         ('present_countdown', ''),
     ]
 
-    def _from_response(self, rsp):
+    def _from_response(self, rsp: Message) -> None:
         self.timer_use = rsp.timer_use.timer_use
         self.is_running = bool(rsp.timer_use.is_running)
         self.dont_log = bool(rsp.timer_use.dont_log)
@@ -116,7 +123,7 @@ class Watchdog(State):
 
 class DeviceId(State):
 
-    def __str__(self):
+    def __str__(self) -> str:
         string = 'Device ID: %d' % self.device_id
         string += ' revision: %d' % self.revision
         string += ' available: %d' % self.available
@@ -127,7 +134,7 @@ class DeviceId(State):
         string += ' functions: %s' % ','.join(self.supported_functions)
         return string
 
-    def supports_function(self, name):
+    def supports_function(self, name: str) -> bool:
         """Return if a function is supported.
 
         `name` is one of 'SENSOR', 'SDR_REPOSITORY', 'SEL', 'FRU_INVENTORY',
@@ -135,7 +142,7 @@ class DeviceId(State):
         """
         return name.lower() in self.supported_functions
 
-    def _from_response(self, rsp):
+    def _from_response(self, rsp: Message) -> None:
         self.device_id = rsp.device_id
         self.revision = rsp.device_revision.device_revision
         self.provides_sdrs = bool(rsp.device_revision.provides_device_sdrs)
@@ -171,10 +178,10 @@ class DeviceId(State):
 
 
 class DeviceGuid(State):
-    def __str__(self):
+    def __str__(self) -> str:
         return 'Device GUID: %s' % self.device_guid_string
 
-    def _from_response(self, rsp):
+    def _from_response(self, rsp: Message) -> None:
         self.device_guid = rsp.device_guid
         self.device_guid_string = \
             '%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-' \

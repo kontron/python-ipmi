@@ -15,6 +15,11 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 
+from __future__ import annotations
+
+from typing import Any
+
+
 class Session(object):
     AUTH_TYPE_NONE = 0x00
     AUTH_TYPE_MD2 = 0x01
@@ -38,55 +43,55 @@ class Session(object):
     _serial_port = None
     _serial_baudrate = None
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.established = False
         self.sid = 0
         self.sequence_number = 0
         self.activated = False
 
-    def _get_interface(self):
+    def _get_interface(self) -> Any:
         try:
             return self._interface
         except AttributeError:
             raise RuntimeError('No interface has been set')
 
-    def _set_interface(self, interface):
+    def _set_interface(self, interface: Any) -> None:
         self._interface = interface
 
-    def increment_sequence_number(self):
+    def increment_sequence_number(self) -> None:
         self.sequence_number += 1
         if self.sequence_number > 0xffffffff:
             self.sequence_number = 1
 
-    def set_session_type_rmcp(self, host, port=623):
+    def set_session_type_rmcp(self, host: str, port: int = 623) -> None:
         self._rmcp_host = host
         self._rmcp_port = port
 
     @property
-    def rmcp_host(self):
+    def rmcp_host(self) -> str | None:
         return self._rmcp_host
 
     @property
-    def rmcp_port(self):
+    def rmcp_port(self) -> int | None:
         return self._rmcp_port
 
-    def set_session_type_serial(self, port, baudrate):
+    def set_session_type_serial(self, port: str, baudrate: int) -> None:
         self._serial_port = port
         self._serial_baudrate = baudrate
 
     @property
-    def serial_port(self):
+    def serial_port(self) -> str | None:
         return self._serial_port
 
     @property
-    def serial_baudrate(self):
+    def serial_baudrate(self) -> int | None:
         return self._serial_baudrate
 
     @property
-    def priv_level(self):
+    def priv_level(self) -> int:
         return self._priv_level
 
-    def set_priv_level(self, level):
+    def set_priv_level(self, level: str) -> None:
         LEVELS = {
                    'user': self.PRIV_LEVEL_USER,
                    'operator': self.PRIV_LEVEL_OPERATOR,
@@ -94,38 +99,38 @@ class Session(object):
                  }
         self._priv_level = LEVELS[level.lower()]
 
-    def _set_auth_type(self, auth_type):
+    def _set_auth_type(self, auth_type: int) -> None:
         self._auth_type = auth_type
 
-    def _get_auth_type(self):
+    def _get_auth_type(self) -> int:
         return self._auth_type
 
-    def set_auth_type_user(self, username, password):
+    def set_auth_type_user(self, username: str, password: str) -> None:
         self._auth_type = self.AUTH_TYPE_PASSWORD
         self._auth_username = username
         self._auth_password = password
 
     @property
-    def auth_username(self):
+    def auth_username(self) -> str | None:
         return self._auth_username
 
     @property
-    def auth_password(self):
+    def auth_password(self) -> str | None:
         return self._auth_password
 
-    def establish(self):
+    def establish(self) -> None:
         if hasattr(self.interface, 'establish_session'):
             self.interface.establish_session(self)
 
-    def close(self):
+    def close(self) -> None:
         if hasattr(self.interface, 'close_session'):
             self.interface.close_session()
 
-    def rmcp_ping(self):
+    def rmcp_ping(self) -> None:
         if hasattr(self.interface, 'rmcp_ping'):
             self.interface.rmcp_ping()
 
-    def __str__(self):
+    def __str__(self) -> str:
         string = 'Session:\n'
         string += '  ID: 0x%08x\n' % self.sid
         string += '  Seq: 0x%08x\n' % self.sequence_number

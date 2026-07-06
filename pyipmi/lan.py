@@ -14,6 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
+
+from array import array
+
 from .msgs import create_request_by_name
 from .utils import check_rsp_completion_code, ByteBuffer
 
@@ -60,7 +64,7 @@ CONVERT_RAW_TO_IP_SRC = {
 }
 
 
-def data_to_ip_address(data):
+def data_to_ip_address(data: array) -> str:
     """
     Convert a `GetLanConfigurationParameters(LAN_PARAMETER_IP_ADDRESS)` response
     data into the string representation of the encoded ip address,
@@ -69,7 +73,7 @@ def data_to_ip_address(data):
     return '.'.join(map(str, data))
 
 
-def ip_address_to_data(ip_address):
+def ip_address_to_data(ip_address: str) -> ByteBuffer:
     """
     Convert an ip address (string) into a
     `SetLanConfigurationParameters(LAN_PARAMETER_IP_ADDRESS)` request data.
@@ -77,7 +81,7 @@ def ip_address_to_data(ip_address):
     return ByteBuffer(map(int, ip_address.split('.')))
 
 
-def data_to_ip_source(data):
+def data_to_ip_source(data: array) -> str:
     """
     Convert a `GetLanConfigurationParameters(LAN_PARAMETER_IP_ADDRESS_SOURCE)`
     response data into the string representation of the encoded ip source.
@@ -86,7 +90,7 @@ def data_to_ip_source(data):
     return CONVERT_RAW_TO_IP_SRC[data[0] & 0b1111]
 
 
-def ip_source_to_data(ip_source):
+def ip_source_to_data(ip_source: str) -> ByteBuffer:
     """
     Convert an ip source (string) into a
     `SetLanConfigurationParameters(LAN_PARAMETER_IP_ADDRESS_SOURCE)` request data.
@@ -100,7 +104,7 @@ def ip_source_to_data(ip_source):
     return data
 
 
-def data_to_mac_address(data):
+def data_to_mac_address(data: array) -> str:
     """
     Convert a `GetLanConfigurationParameters(LAN_PARAMETER_MAC_ADDRESS)` response
     data into the string representation of the encoded mac address,
@@ -109,7 +113,7 @@ def data_to_mac_address(data):
     return ':'.join([f"{i:02x}" for i in data])
 
 
-def data_to_vlan(data):
+def data_to_vlan(data: array) -> int:
     """
     Convert a `GetLanConfigurationParameters(LAN_PARAMETER_802_1Q_VLAN_ID)` response
     data into an integer representation of the encoded vlan.
@@ -139,7 +143,7 @@ def data_to_vlan(data):
     return ((data[1] & 0b1111) << 8) | data[0]
 
 
-def vlan_to_data(vlan):
+def vlan_to_data(vlan: int) -> ByteBuffer:
     """
     Convert a vlan (int) into a
     `SetLanConfigurationParameters(LAN_PARAMETER_802_1Q_VLAN_ID)` request data.
@@ -165,9 +169,9 @@ def vlan_to_data(vlan):
 
 
 class Lan(object):
-    def get_lan_config_param(self, channel=0, parameter_selector=0,
-                             set_selector=0, block_selector=0,
-                             revision_only=0):
+    def get_lan_config_param(self, channel: int = 0, parameter_selector: int = 0,
+                             set_selector: int = 0, block_selector: int = 0,
+                             revision_only: int = 0) -> array:
         req = create_request_by_name('GetLanConfigurationParameters')
         req.command.get_parameter_revision_only = revision_only
         if revision_only != 1:
@@ -179,8 +183,8 @@ class Lan(object):
         check_rsp_completion_code(rsp)
         return rsp.data
 
-    def set_lan_config_param(self, channel,
-                             parameter_selector, data):
+    def set_lan_config_param(self, channel: int,
+                             parameter_selector: int, data: ByteBuffer) -> None:
         req = create_request_by_name('SetLanConfigurationParameters')
         req.command.channel_number = channel
         req.parameter_selector = parameter_selector
@@ -188,14 +192,14 @@ class Lan(object):
         rsp = self.send_message(req)
         check_rsp_completion_code(rsp)
 
-    def get_ip_address(self, channel=0):
+    def get_ip_address(self, channel: int = 0) -> str:
         """
         Return a string representing the ip address of the device, in format xxx.xxx.xxx.xxx
         """
         ip_address_raw = self.get_lan_config_param(channel, LAN_PARAMETER_IP_ADDRESS)
         return data_to_ip_address(ip_address_raw)
 
-    def set_ip_address(self, ip_address, channel=0):
+    def set_ip_address(self, ip_address: str, channel: int = 0) -> None:
         """
         WARNING: changing the IP address of the BMC will make a current
         lan session unusable because it still has the former IP address.
@@ -206,7 +210,7 @@ class Lan(object):
         data = ip_address_to_data(ip_address)
         self.set_lan_config_param(channel, LAN_PARAMETER_IP_ADDRESS, data)
 
-    def get_ip_source(self, channel=0):
+    def get_ip_source(self, channel: int = 0) -> str:
         """
         Return a string representing the ip source of the device.
 
@@ -215,7 +219,7 @@ class Lan(object):
         ip_source_raw = self.get_lan_config_param(channel, LAN_PARAMETER_IP_ADDRESS_SOURCE)
         return data_to_ip_source(ip_source_raw)
 
-    def set_ip_source(self, ip_source, channel=0):
+    def set_ip_source(self, ip_source: str, channel: int = 0) -> None:
         """
         WARNING: changing the IP source may change the IP address of the BMC,
         which will make a current lan session unusable because it still has
@@ -227,21 +231,21 @@ class Lan(object):
         data = ip_source_to_data(ip_source)
         self.set_lan_config_param(channel, LAN_PARAMETER_IP_ADDRESS_SOURCE, data)
 
-    def get_mac_address(self, channel=0):
+    def get_mac_address(self, channel: int = 0) -> str:
         """
         Return a string representing the mac address of the device, in format aa:bb:cc:dd:ee:ff.
         """
         mac_address_raw = self.get_lan_config_param(channel, LAN_PARAMETER_MAC_ADDRESS)
         return data_to_mac_address(mac_address_raw)
 
-    def get_vlan_id(self, channel=0):
+    def get_vlan_id(self, channel: int = 0) -> int:
         """
         Return the 802.1q VLAN ID of the device.
         """
         vlan_id_raw = self.get_lan_config_param(channel, LAN_PARAMETER_802_1Q_VLAN_ID)
         return data_to_vlan(vlan_id_raw)
 
-    def set_vlan_id(self, vlan, channel=0):
+    def set_vlan_id(self, vlan: int, channel: int = 0) -> None:
         """
         WARNING: changing the VLAN ID may change the IP address of the BMC
         depending on your current network configuration.

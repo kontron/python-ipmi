@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 
+from __future__ import annotations
+
 import array
 
 from .errors import DecodingError
@@ -17,13 +19,13 @@ class VersionField(object):
     VERSION_FIELD_LEN = 2
     VERSION_WITH_AUX_FIELD_LEN = 6
 
-    def __init__(self, data=None):
+    def __init__(self, data: bytes | str | None = None) -> None:
         self.major = None
         self.minor = None
         if data:
             self._from_data(data)
 
-    def _from_data(self, data):
+    def _from_data(self, data: bytes | str) -> None:
         if isinstance(data, str):
             data = [ord(c) for c in data]
 
@@ -32,10 +34,10 @@ class VersionField(object):
         if len(data) == self.VERSION_WITH_AUX_FIELD_LEN:
             self.auxiliary = data[2:6]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.version_to_string()
 
-    def _decode_data(self, data):
+    def _decode_data(self, data: array.array) -> None:
         """`data` is array.array."""
         self.major = data[0]
 
@@ -46,11 +48,11 @@ class VersionField(object):
         else:
             raise DecodingError()
 
-    def version_to_string(self):
+    def version_to_string(self) -> str:
         return ''.join("%s.%s" % (self.major, self.minor))
 
 
-def _unpack6bitascii(data):
+def _unpack6bitascii(data: bytes) -> str:
     """Unpack the 6bit ascii encoded string."""
     string = ''
     for i in range(0, len(data), 3):
@@ -77,17 +79,19 @@ class TypeLengthString(object):
     TYPE_6BIT_ASCII = 2
     TYPE_ASCII_OR_UTF16 = 3
 
-    def __init__(self, data=None, offset=0, force_lang_eng=False, sdr=False):
+    def __init__(self, data: bytes | None = None, offset: int = 0,
+                force_lang_eng: bool = False, sdr: bool = False) -> None:
         if data:
             self._from_data(data, offset, force_lang_eng)
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.field_type is self.TYPE_FRU_BINARY:
             return ' '.join('%02x' % b for b in self.raw)
         else:
             return self.string.replace('\x00', '')
 
-    def _from_data(self, data, offset=0, force_lang_eng=False):
+    def _from_data(self, data: bytes, offset: int = 0,
+                   force_lang_eng: bool = False) -> None:
         self.offset = offset
         self.field_type = data[offset] >> 6 & 0x3
         self.length = data[offset] & 0x3f
@@ -105,7 +109,8 @@ class TypeLengthString(object):
 
 class FruTypeLengthString(TypeLengthString):
 
-    def __init__(self, data=None, offset=0, force_lang_eng=False):
+    def __init__(self, data: bytes | None = None, offset: int = 0,
+                force_lang_eng: bool = False) -> None:
         super(FruTypeLengthString, self).__init__(data, offset,
                                                   force_lang_eng,
                                                   sdr=False)
@@ -113,5 +118,6 @@ class FruTypeLengthString(TypeLengthString):
 
 class SdrTypeLengthString(TypeLengthString):
 
-    def __init__(self, data=None, offset=0, force_lang_eng=False):
+    def __init__(self, data: bytes | None = None, offset: int = 0,
+                force_lang_eng: bool = False) -> None:
         super(SdrTypeLengthString, self).__init__(data, sdr=True)

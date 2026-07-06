@@ -14,14 +14,19 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
+
 import time
+from typing import Callable
 
 from .errors import CompletionCodeError, RetryError
 from .utils import check_completion_code, ByteBuffer
-from .msgs import constants
+from .msgs import constants, Message
 
 
-def get_sdr_chunk_helper(send_fn, req, reserve_fn, retry=5):
+def get_sdr_chunk_helper(send_fn: Callable[[Message], Message], req: Message,
+                         reserve_fn: Callable[[], int],
+                         retry: int = 5) -> Message:
 
     while True:
         retry -= 1
@@ -46,7 +51,9 @@ def get_sdr_chunk_helper(send_fn, req, reserve_fn, retry=5):
     return rsp
 
 
-def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
+def get_sdr_data_helper(reserve_fn: Callable[[], int], get_fn: Callable,
+                        record_id: int,
+                        reservation_id: int | None = None) -> tuple[int, ByteBuffer]:
     """Helper function to retrieve the sdr data.
 
     A specified helper function is used to retrieve the chunks.
@@ -100,7 +107,8 @@ def get_sdr_data_helper(reserve_fn, get_fn, record_id, reservation_id=None):
     return (next_id, record_data)
 
 
-def _clear_repository(reserve_fn, clear_fn, ctrl, retry, reservation):
+def _clear_repository(reserve_fn: Callable[[], int], clear_fn: Callable,
+                      ctrl: int, retry: int, reservation: int) -> int:
     while True:
         retry -= 1
         if retry <= 0:
@@ -124,7 +132,9 @@ def _clear_repository(reserve_fn, clear_fn, ctrl, retry, reservation):
     return reservation
 
 
-def clear_repository_helper(reserve_fn, clear_fn, retry=5, reservation=None):
+def clear_repository_helper(reserve_fn: Callable[[], int], clear_fn: Callable,
+                            retry: int = 5,
+                            reservation: int | None = None) -> None:
     """Helper function to start repository erasure and wait until finish.
 
     This helper is used by clear_sel and clear_sdr_repository.

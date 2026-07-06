@@ -14,10 +14,12 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
+
 from enum import Enum
 
 from .session import Session
-from .msgs import create_request_by_name
+from .msgs import create_request_by_name, Message
 from .utils import check_completion_code, check_rsp_completion_code
 from .state import State
 
@@ -61,7 +63,9 @@ CONVERT_USER_PRIVILEGE_TO_RAW = {
 
 
 class Messaging(object):
-    def get_channel_authentication_capabilities(self, channel, priv_lvl):
+    def get_channel_authentication_capabilities(
+            self, channel: int,
+            priv_lvl: int) -> ChannelAuthenticationCapabilities:
         req = create_request_by_name('GetChannelAuthenticationCapabilities')
         req.channel.number = channel
         req.privilege_level.requested = priv_lvl
@@ -70,21 +74,21 @@ class Messaging(object):
         caps = ChannelAuthenticationCapabilities(rsp)
         return caps
 
-    def set_username(self, userid=0, username=''):
+    def set_username(self, userid: int = 0, username: str = '') -> None:
         req = create_request_by_name('SetUserName')
         req.userid.userid = userid
         req.user_name = username.ljust(16, '\x00')
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def get_username(self, userid=0):
+    def get_username(self, userid: int = 0) -> str:
         req = create_request_by_name('GetUserName')
         req.userid.userid = userid
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
         return rsp.user_name
 
-    def get_user_access(self, userid=0, channel=0):
+    def get_user_access(self, userid: int = 0, channel: int = 0) -> UserAccess:
         req = create_request_by_name('GetUserAccess')
         req.userid.userid = userid
         req.channel.channel_number = channel
@@ -92,8 +96,10 @@ class Messaging(object):
         check_completion_code(rsp.completion_code)
         return UserAccess(rsp)
 
-    def set_user_access(self, userid, ipmi_msg, link_auth, callback_only,
-                        priv_level, channel=0, enable_change=1, user_session_limit=0):
+    def set_user_access(self, userid: int, ipmi_msg: bool, link_auth: bool,
+                        callback_only: bool, priv_level: UserPrivilegeLevel,
+                        channel: int = 0, enable_change: int = 1,
+                        user_session_limit: int = 0) -> None:
         req = create_request_by_name('SetUserAccess')
         req.channel_access.channel_number = channel
         req.channel_access.ipmi_msg = ipmi_msg
@@ -107,7 +113,7 @@ class Messaging(object):
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def set_user_password(self, userid, password=''):
+    def set_user_password(self, userid: int, password: str = '') -> None:
         if len(password) > 16:
             raise ValueError("Password length cannot be greater than 20.")
         req = create_request_by_name('SetUserPassword')
@@ -117,14 +123,14 @@ class Messaging(object):
         rsp = self.send_message(req)
         check_rsp_completion_code(rsp)
 
-    def enable_user(self, userid):
+    def enable_user(self, userid: int) -> None:
         req = create_request_by_name('SetUserPassword')
         req.userid.userid = userid
         req.operation.operation = PasswordOperation.ENABLE
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def disable_user(self, userid):
+    def disable_user(self, userid: int) -> None:
         req = create_request_by_name('SetUserPassword')
         req.userid.userid = userid
         req.operation.operation = PasswordOperation.DISABLE
@@ -142,7 +148,7 @@ class ChannelAuthenticationCapabilities(State):
         'oem_proprietary': Session.AUTH_TYPE_OEM,
     }
 
-    def _from_response(self, rsp):
+    def _from_response(self, rsp: Message) -> None:
         self.channel = rsp.channel_number
         self.auth_types = []
 
@@ -159,13 +165,13 @@ class ChannelAuthenticationCapabilities(State):
                 if getattr(rsp.support, function):
                     self.auth_types.append(function)
 
-    def get_max_auth_type(self):
+    def get_max_auth_type(self) -> int | None:
         for auth_type in ('md5', 'md2', 'straight', 'oem_proprietary', 'none'):
             if auth_type in self.auth_types:
                 return self._functions[auth_type]
         return None
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = 'Authentication Capabilities:\n'
         s += '  IPMI v1.5: %s\n' % self.ipmi_1_5
         s += '  IPMI v2.0: %s\n' % self.ipmi_2_0
@@ -176,7 +182,7 @@ class ChannelAuthenticationCapabilities(State):
 
 class UserAccess(State):
 
-    def _from_response(self, rsp):
+    def _from_response(self, rsp: Message) -> None:
         self.user_count = rsp.max_user.max_user
         self.enabled_user_count = rsp.enabled_user.count
         self.enabled_status = rsp.enabled_user.status
@@ -186,7 +192,7 @@ class UserAccess(State):
         self.link_auth = rsp.channel_access.link_auth == 1
         self.callback_only = rsp.channel_access.callback == 1
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = 'User Access:\n'
         s += '  Max user number: %i\n' % self.user_count
         s += '  Enabled user: %i\n' % self.enabled_user_count

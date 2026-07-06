@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
+
 from . import constants
 from . import register_message_class
 from . import Message
@@ -94,7 +96,7 @@ LED_STATE_LAMP_TEST = 2
 
 
 class PicmgIdentifier(UnsignedInt):
-    def __init__(self, name='picmg_identifier'):
+    def __init__(self, name: str = 'picmg_identifier') -> None:
         super(PicmgIdentifier, self).__init__(name, 1, PICMG_IDENTIFIER)
 
 
@@ -521,11 +523,11 @@ class GetFruLedStateRsp(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FRU_LED_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
 
-    def _cond_override(obj):
+    def _cond_override(obj: Message) -> bool:
         return (obj.led_states.override_en == 1
                 or obj.led_states.lamp_test_en == 1)
 
-    def _cond_lamp_test(obj):
+    def _cond_lamp_test(obj: Message) -> bool:
         return obj.led_states.lamp_test_en == 1
 
     __fields__ = (

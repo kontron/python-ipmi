@@ -14,7 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
+
 from array import array
+from typing import Any, Callable
 
 from . import constants
 from ..utils import ByteBuffer
@@ -23,35 +26,37 @@ from ..errors import (CompletionCodeError, EncodingError, DecodingError,
 
 
 class BaseField(object):
-    def __init__(self, name, length, default=None):
+    def __init__(self, name: str, length: int | None,
+                default: Any = None) -> None:
         self.name = name
         self.length = length
         self.default = default
 
-    def decode(self, obj, data):
+    def decode(self, obj: Message, data: ByteBuffer) -> None:
         raise NotImplementedError()
 
-    def encode(self, obj, data):
+    def encode(self, obj: Message, data: ByteBuffer) -> None:
         if getattr(obj, self.name) is None:
             raise EncodingError('Field "%s" not set.' % self.name)
         raise NotImplementedError()
 
-    def create(self):
+    def create(self) -> Any:
         raise NotImplementedError()
 
 
 class ByteArray(BaseField):
-    def __init__(self, name, length, default=None):
+    def __init__(self, name: str, length: int,
+                default: bytes | None = None) -> None:
         BaseField.__init__(self, name, length)
         if default is not None:
             self.default = array('B', default)
         else:
             self.default = None
 
-    def _length(self, obj):
+    def _length(self, obj: Message) -> int:
         return self.length
 
-    def encode(self, obj, data):
+    def encode(self, obj: Message, data: ByteBuffer) -> None:
         a = getattr(obj, self.name)
         if len(a) != self._length(obj):
             raise EncodingError('Array must be exactly %d bytes long '
@@ -60,13 +65,13 @@ class ByteArray(BaseField):
         for i in range(self._length(obj)):
             data.push_unsigned_int(a[i], 1)
 
-    def decode(self, obj, data):
+    def decode(self, obj: Message, data: ByteBuffer) -> None:
         bytes = []
         for i in range(self._length(obj)):
             bytes.append(data.pop_unsigned_int(1))
         setattr(obj, self.name, array('B', bytes))
 
-    def create(self):
+    def create(self) -> array:
         if self.default is not None:
             return array('B', self.default)
         else:
@@ -79,27 +84,27 @@ class VariableByteArray(ByteArray):
     The length is dynamically computed by a function.
     """
 
-    def __init__(self, name, length_func):
+    def __init__(self, name: str, length_func: Callable[[Message], int]) -> None:
         ByteArray.__init__(self, name, None, None)
         self._length_func = length_func
 
-    def _length(self, obj):
+    def _length(self, obj: Message) -> int:
         return self._length_func(obj)
 
-    def create(self):
+    def create(self) -> None:
         return None
 
 
 class UnsignedInt(BaseField):
-    def encode(self, obj, data):
+    def encode(self, obj: Message, data: ByteBuffer) -> None:
         value = getattr(obj, self.name)
         data.push_unsigned_int(value, self.length)
 
-    def decode(self, obj, data):
+    def decode(self, obj: Message, data: ByteBuffer) -> None:
         value = data.pop_unsigned_int(self.length)
         setattr(obj, self.name, value)
 
-    def create(self):
+    def create(self) -> int:
         if self.default is not None:
             return self.default
         else:
@@ -107,15 +112,15 @@ class UnsignedInt(BaseField):
 
 
 class String(BaseField):
-    def encode(self, obj, data):
+    def encode(self, obj: Message, data: ByteBuffer) -> None:
         value = getattr(obj, self.name)
         data.push_string(value)
 
-    def decode(self, obj, data):
+    def decode(self, obj: Message, data: ByteBuffer) -> None:
         value = data.pop_string(self.length)
         setattr(obj, self.name, value)
 
-    def create(self):
+    def create(self) -> str | bytes:
         if self.default is not None:
             return self.default
         else:
@@ -123,10 +128,10 @@ class String(BaseField):
 
 
 class CompletionCode(UnsignedInt):
-    def __init__(self, name='completion_code'):
+    def __init__(self, name: str = 'completion_code') -> None:
         UnsignedInt.__init__(self, name, 1, None)
 
-    def decode(self, obj, data):
+    def decode(self, obj: Message, data: ByteBuffer) -> None:
         UnsignedInt.decode(self, obj, data)
         cc = getattr(obj, self.name)
         if cc != constants.CC_OK:
@@ -134,75 +139,78 @@ class CompletionCode(UnsignedInt):
 
 
 class UnsignedIntMask(UnsignedInt):
-    def __init__(self, name, length, mask, default=None):
+    def __init__(self, name: str, length: int, mask: int,
+                default: int | None = None) -> None:
         UnsignedInt.__init__(self, name, length, default)
 
 
 class Timestamp(UnsignedInt):
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         UnsignedInt.__init__(self, name, 4, None)
 
 
 class Conditional(object):
-    def __init__(self, cond_fn, field):
+    def __init__(self, cond_fn: Callable[[Message], bool],
+                field: BaseField) -> None:
         self._condition_fn = cond_fn
         self._field = field
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         return getattr(self._field, name)
 
-    def encode(self, obj, data):
+    def encode(self, obj: Message, data: ByteBuffer) -> None:
         if self._condition_fn(obj):
             self._field.encode(obj, data)
 
-    def decode(self, obj, data):
+    def decode(self, obj: Message, data: ByteBuffer) -> None:
         if self._condition_fn(obj):
             self._field.decode(obj, data)
 
-    def create(self):
+    def create(self) -> Any:
         return self._field.create()
 
 
 class Optional(object):
-    def __init__(self, field):
+    def __init__(self, field: BaseField) -> None:
         self._field = field
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         return getattr(self._field, name)
 
-    def decode(self, obj, data):
+    def decode(self, obj: Message, data: ByteBuffer) -> None:
         if len(data) > 0:
             self._field.decode(obj, data)
         else:
             setattr(obj, self._field.name, None)
 
-    def encode(self, obj, data):
+    def encode(self, obj: Message, data: ByteBuffer) -> None:
         if getattr(obj, self._field.name) is not None:
             self._field.encode(obj, data)
 
-    def create(self):
+    def create(self) -> None:
         return None
 
 
 class RemainingBytes(BaseField):
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         BaseField.__init__(self, name, None)
 
-    def encode(self, obj, data):
+    def encode(self, obj: Message, data: ByteBuffer) -> None:
         a = getattr(obj, self.name)
         data.extend(a)
 
-    def decode(self, obj, data):
+    def decode(self, obj: Message, data: ByteBuffer) -> None:
         setattr(obj, self.name, array('B', data[:]))
         del data.array[:]
 
-    def create(self):
+    def create(self) -> array:
         return array('B')
 
 
 class Bitfield(BaseField):
     class Bit(object):
-        def __init__(self, name, width=1, default=None):
+        def __init__(self, name: str, width: int = 1,
+                    default: int | None = None) -> None:
             self.name = name
             self._width = width
             self.default = default
@@ -210,14 +218,15 @@ class Bitfield(BaseField):
     class ReservedBit(Bit):
         counter = 0
 
-        def __init__(self, width, default=0):
+        def __init__(self, width: int, default: int = 0) -> None:
             Bitfield.Bit.__init__(self, 'reserved_bit_%d' %
                                   Bitfield.reserved_bit_counter,
                                   width, default)
             Bitfield.reserved_bit_counter += 1
 
     class BitWrapper(object):
-        def __init__(self, bits, length):
+        def __init__(self, bits: tuple[Bitfield.Bit, ...],
+                    length: int) -> None:
             self._bits = bits
             self._length = length
             for bit in bits:
@@ -229,7 +238,7 @@ class Bitfield(BaseField):
                 else:
                     setattr(self, bit.name, 0)
 
-        def __str__(self):
+        def __str__(self) -> str:
             s = '['
             for attr in dir(self):
                 if attr.startswith('_'):
@@ -238,10 +247,10 @@ class Bitfield(BaseField):
             s += ']'
             return s
 
-        def __int__(self):
+        def __int__(self) -> int:
             return self._value
 
-        def _get_value(self):
+        def _get_value(self) -> int:
             value = 0
             for bit in self._bits:
                 bit_value = getattr(self, bit.name)
@@ -253,7 +262,7 @@ class Bitfield(BaseField):
                 value |= (bit_value & (2**bit._width - 1)) << bit.offset
             return value
 
-        def _set_value(self, value):
+        def _set_value(self, value: int) -> None:
             for bit in self._bits:
                 tmp = (value >> bit.offset) & (2**bit._width - 1)
                 setattr(self, bit.name, tmp)
@@ -262,12 +271,12 @@ class Bitfield(BaseField):
 
     reserved_bit_counter = 0
 
-    def __init__(self, name, length, *bits):
+    def __init__(self, name: str, length: int, *bits: Bit) -> None:
         BaseField.__init__(self, name, length)
         self._bits = bits
         self._precalc_offsets()
 
-    def _precalc_offsets(self):
+    def _precalc_offsets(self) -> None:
         offset = 0
         for b in self._bits:
             b.offset = offset
@@ -276,13 +285,13 @@ class Bitfield(BaseField):
             raise DescriptionError('Bit description does not match bitfield '
                                    'length')
 
-    def encode(self, obj, data):
+    def encode(self, obj: Message, data: ByteBuffer) -> None:
         wrapper = getattr(obj, self.name)
         value = wrapper._value
         for i in range(self.length):
             data.push_unsigned_int((value >> (8*i)) & 0xff, 1)
 
-    def decode(self, obj, data):
+    def decode(self, obj: Message, data: ByteBuffer) -> None:
         value = 0
         for i in range(self.length):
             try:
@@ -292,17 +301,18 @@ class Bitfield(BaseField):
         wrapper = getattr(obj, self.name)
         wrapper._value = value
 
-    def create(self):
+    def create(self) -> Bitfield.BitWrapper:
         return Bitfield.BitWrapper(self._bits, self.length)
 
 
 class GroupExtensionIdentifier(UnsignedInt):
-    def __init__(self, name='picmg_identifier', value=None):
+    def __init__(self, name: str = 'picmg_identifier',
+                value: int | None = None) -> None:
         UnsignedInt.__init__(self, name, 1, value)
 
 
 class EventMessageRevision(UnsignedInt):
-    def __init__(self, value=None):
+    def __init__(self, value: int | None = None) -> None:
         UnsignedInt.__init__(self, 'event_message_rev', 1, value)
 
 
@@ -313,7 +323,7 @@ class Message(object):
     __group_extension__ = None
     __not_implemented__ = False
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Message constructor with ([buf], [field=val,...]) prototype.
 
         Arguments:
@@ -337,14 +347,14 @@ class Message(object):
             for (name, value) in kwargs.items():
                 self._set_field(name, value)
 
-    def _set_field(self, name, value):
+    def _set_field(self, name: str, value: Any) -> None:
         raise NotImplementedError()
         # TODO walk along the properties..
 
-    def __str__(self):
+    def __str__(self) -> str:
         return '{} [netfn={}, cmd={}, grp={}]'.format(type(self).__name__, self.netfn, self.cmdid, self.group_extension)
 
-    def _create_fields(self):
+    def _create_fields(self) -> None:
         for field in self.__fields__:
             if field.name in self.RESERVED_FIELD_NAMES:
                 raise DescriptionError('Field name "%s" is reserved' %
@@ -354,7 +364,7 @@ class Message(object):
                                        field.name)
             setattr(self, field.name, field.create())
 
-    def _pack(self):
+    def _pack(self) -> array:
         """Pack the message and return an array."""
         data = ByteBuffer()
         if not hasattr(self, '__fields__'):
@@ -364,7 +374,7 @@ class Message(object):
             field.encode(self, data)
         return data.array
 
-    def _encode(self):
+    def _encode(self) -> bytes:
         """Encode the message and return a bytestring."""
         data = ByteBuffer()
         if not hasattr(self, '__fields__'):
@@ -374,7 +384,7 @@ class Message(object):
             field.encode(self, data)
         return data.tostring()
 
-    def _decode(self, data):
+    def _decode(self, data: bytes) -> None:
         """Decode the bytestring message."""
         if not hasattr(self, '__fields__'):
             return
@@ -392,10 +402,10 @@ class Message(object):
         if (cc is None or cc == 0) and len(data) > 0:
             raise DecodingError('Data has extra bytes')
 
-    def _is_request(self):
+    def _is_request(self) -> bool:
         return self.__netfn__ & 1 == 0
 
-    def _is_response(self):
+    def _is_response(self) -> bool:
         return self.__netfn__ & 1 == 1
 
     netfn = property(lambda s: s.__netfn__)
@@ -403,13 +413,13 @@ class Message(object):
     group_extension = property(lambda s: s.__group_extension__)
 
 
-def encode_message(msg):
+def encode_message(msg: Message) -> bytes:
     return msg._encode()
 
 
-def decode_message(msg, data):
+def decode_message(msg: Message, data: bytes) -> None:
     return msg._decode(data)
 
 
-def pack_message(msg):
+def pack_message(msg: Message) -> array:
     return msg._pack()

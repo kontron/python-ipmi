@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
+
 from . import constants
 
 from . import register_message_class
@@ -63,7 +65,7 @@ class ReadFruDataRsp(Message):
     __cmdid__ = constants.CMDID_READ_FRU_DATA
     __netfn__ = constants.NETFN_STORAGE | 1
 
-    def _length_count(obj):
+    def _length_count(obj: Message) -> int:
         return obj.count
 
     __fields__ = (

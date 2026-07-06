@@ -17,20 +17,20 @@
 import logging
 
 
-def log():
+def log() -> logging.Logger:
     return logging.getLogger('pyipmi')
 
 
-def add_log_handler(handler):
+def add_log_handler(handler: logging.Handler) -> None:
     log().addHandler(handler)
 
 
-def set_log_level(level):
+def set_log_level(level: int) -> None:
     log().setLevel(level)
 
 
 class NullHandler(logging.Handler):
-    def emit(self, record):
+    def emit(self, record: logging.LogRecord) -> None:
         pass
 
 

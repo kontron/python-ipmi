@@ -14,15 +14,20 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
+
 from functools import partial
+from typing import Any
+
 from ..errors import DescriptionError
+from .message import Message
 
 
 class MessageRegistry(object):
-    def __init__(self):
+    def __init__(self) -> None:
         self.registry = dict()
 
-    def register_class(self, cls):
+    def register_class(self, cls: type[Message]) -> type[Message]:
         # some sanity checks
         # (1) class name has to end in Req or Rsp
         if cls.__name__[-3:] not in ('Req', 'Rsp'):
@@ -58,16 +63,19 @@ class MessageRegistry(object):
         # register
         return cls
 
-    def create(self, netfn, cmdid, group_extension, *args, **kwargs):
+    def create(self, netfn: int, cmdid: int, group_extension: int | None,
+              *args: Any, **kwargs: Any) -> Message:
         return self.registry[(netfn, cmdid, group_extension)](*args, **kwargs)
 
-    def create_response(self, req):
+    def create_response(self, req: Message) -> Message:
         return self.create(req.netfn + 1, req.cmdid, req.group_extension)
 
-    def create_request_by_name(self, name, *args, **kwargs):
+    def create_request_by_name(self, name: str, *args: Any,
+                               **kwargs: Any) -> Message:
         return self.registry[name + "Req"](*args, **kwargs)
 
-    def create_response_by_name(self, name, *args, **kwargs):
+    def create_response_by_name(self, name: str, *args: Any,
+                                **kwargs: Any) -> Message:
         return self.registry[name + "Rsp"](*args, **kwargs)
 
 

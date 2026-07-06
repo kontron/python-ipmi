@@ -14,8 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
+
 from .errors import DecodingError, EncodingError
-from .msgs import create_request_by_name
+from .msgs import create_request_by_name, Message
 from .msgs import picmg
 from .utils import check_completion_code
 from .state import State
@@ -27,70 +29,70 @@ from .msgs.picmg import \
 
 
 class Picmg(object):
-    def get_picmg_properties(self):
+    def get_picmg_properties(self) -> Message:
         return self.send_message_with_name('GetPicmgProperties')
 
-    def fru_control(self, fru_id, option):
+    def fru_control(self, fru_id: int, option: int) -> bytes:
         rsp = self.send_message_with_name('FruControl', fru_id=fru_id,
                                           option=option)
         return rsp.rsp_data
 
-    def fru_control_cold_reset(self, fru_id=0):
+    def fru_control_cold_reset(self, fru_id: int = 0) -> None:
         self.fru_control(fru_id, FRU_CONTROL_COLD_RESET)
 
-    def fru_control_warm_reset(self, fru_id=0):
+    def fru_control_warm_reset(self, fru_id: int = 0) -> None:
         self.fru_control(fru_id, FRU_CONTROL_WARM_RESET)
 
-    def fru_control_graceful_reboot(self, fru_id=0):
+    def fru_control_graceful_reboot(self, fru_id: int = 0) -> None:
         self.fru_control(fru_id, FRU_CONTROL_GRACEFUL_REBOOT)
 
-    def fru_control_diagnostic_interrupt(self, fru_id=0):
+    def fru_control_diagnostic_interrupt(self, fru_id: int = 0) -> bytes:
         return self.fru_control(fru_id, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT)
 
-    def get_power_level(self, fru_id, power_type):
+    def get_power_level(self, fru_id: int, power_type: int) -> PowerLevel:
         rsp = self.send_message_with_name('GetPowerLevel',
                                           fru_id=fru_id,
                                           power_type=power_type)
         return PowerLevel(rsp)
 
-    def get_fan_speed_properties(self, fru_id):
+    def get_fan_speed_properties(self, fru_id: int) -> FanSpeedProperties:
         rsp = self.send_message_with_name('GetFanSpeedProperties',
                                           fru_id=fru_id)
         return FanSpeedProperties(rsp)
 
-    def set_fan_level(self, fru_id, fan_level):
+    def set_fan_level(self, fru_id: int, fan_level: int) -> None:
         self.send_message_with_name('SetFanLevel',
                                     fru_id=fru_id,
                                     fan_level=fan_level)
 
-    def get_fan_level(self, fru_id):
+    def get_fan_level(self, fru_id: int) -> tuple:
         rsp = self.send_message_with_name('GetFanLevel', fru_id=fru_id)
         local_control_fan_level = None
         if rsp.data:
             local_control_fan_level = rsp.data[0]
         return (rsp.override_fan_level, local_control_fan_level)
 
-    def get_led_state(self, fru_id, led_id):
+    def get_led_state(self, fru_id: int, led_id: int) -> LedState:
         rsp = self.send_message_with_name('GetFruLedState',
                                           fru_id=fru_id,
                                           led_id=led_id)
         return LedState(rsp)
 
-    def set_led_state(self, led):
+    def set_led_state(self, led: LedState) -> None:
         req = create_request_by_name('SetFruLedState')
         req = led.to_request(req)
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def _set_fru_activation(self, fru_id, control):
+    def _set_fru_activation(self, fru_id: int, control: int) -> None:
         self.send_message_with_name('SetFruActivation',
                                     fru_id=fru_id,
                                     control=control)
 
-    def set_fru_activation(self, fru_id):
+    def set_fru_activation(self, fru_id: int) -> None:
         self._set_fru_activation(fru_id, FRU_ACTIVATION_FRU_ACTIVATE)
 
-    def set_fru_deactivation(self, fru_id):
+    def set_fru_deactivation(self, fru_id: int) -> None:
         self._set_fru_activation(fru_id, FRU_ACTIVATION_FRU_DEACTIVATE)
 
     ACTIVATION_LOCK_SET = 0
@@ -98,7 +100,7 @@ class Picmg(object):
     DEACTIVATION_LOCK_SET = 2
     DEACTIVATION_LOCK_CLEAR = 3
 
-    def set_fru_activation_policy(self, fru_id, ctrl):
+    def set_fru_activation_policy(self, fru_id: int, ctrl: int) -> None:
         req = create_request_by_name('SetFruActivationPolicy')
         req.fru_id = fru_id
 
@@ -118,19 +120,19 @@ class Picmg(object):
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def set_fru_activation_lock(self, fru_id):
+    def set_fru_activation_lock(self, fru_id: int) -> None:
         self.set_fru_activation_policy(fru_id, self.ACTIVATION_LOCK_SET)
 
-    def clear_fru_activation_lock(self, fru_id):
+    def clear_fru_activation_lock(self, fru_id: int) -> None:
         self.set_fru_activation_policy(fru_id, self.ACTIVATION_LOCK_CLEAR)
 
-    def set_fru_deactivation_lock(self, fru_id):
+    def set_fru_deactivation_lock(self, fru_id: int) -> None:
         self.set_fru_activation_policy(fru_id, self.DEACTIVATION_LOCK_SET)
 
-    def clear_fru_deactivation_lock(self, fru_id):
+    def clear_fru_deactivation_lock(self, fru_id: int) -> None:
         self.set_fru_activation_policy(fru_id, self.DEACTIVATION_LOCK_CLEAR)
 
-    def set_port_state(self, link_descr, state):
+    def set_port_state(self, link_descr: LinkDescriptor, state: int) -> None:
         req = create_request_by_name('SetPortState')
         req.link_info.channel = link_descr.channel
         req.link_info.interface = link_descr.interface
@@ -146,7 +148,8 @@ class Picmg(object):
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def get_port_state(self, channel_number, channel_interface):
+    def get_port_state(self, channel_number: int,
+                      channel_interface: int) -> tuple[LinkDescriptor, int]:
         req = create_request_by_name('GetPortState')
         req.channel.number = channel_number
         req.channel.interface = channel_interface
@@ -166,19 +169,21 @@ class Picmg(object):
 
         return (link, state)
 
-    def get_pm_global_status(self):
+    def get_pm_global_status(self) -> GlobalStatus:
         rsp = self.send_message_with_name('GetPowerChannelStatus',
                                           starting_power_channel_number=1,
                                           power_channel_count=1)
         return GlobalStatus(rsp)
 
-    def get_power_channel_status(self, start):
+    def get_power_channel_status(self, start: int) -> PowerChannelStatus:
         rsp = self.send_message_with_name('GetPowerChannelStatus',
                                           starting_power_channel_number=start,
                                           power_channel_count=1)
         return PowerChannelStatus(rsp)
 
-    def send_channel_power(self, channel, enable, current_limit, primary_pm=1, backup_pm=0):
+    def send_channel_power(self, channel: int, enable: bool,
+                           current_limit: float, primary_pm: int = 1,
+                           backup_pm: int = 0) -> Message:
         rsp = self.send_message_with_name('SendPowerChannelControl',
                                           channel=channel,
                                           control=5 if enable else 4,
@@ -188,11 +193,12 @@ class Picmg(object):
                                           )
         return rsp
 
-    def send_pm_heartbeat(self):
+    def send_pm_heartbeat(self) -> Message:
         rsp = self.send_message_with_name('SendPmHeartbeat')
         return rsp
 
-    def set_signaling_class(self, interface, channel, signaling_class):
+    def set_signaling_class(self, interface: int, channel: int,
+                            signaling_class: int) -> None:
         req = create_request_by_name('SetSignalingClass')
         req.channel_info.channel_number = channel
         req.channel_info.interface = interface
@@ -200,7 +206,7 @@ class Picmg(object):
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def get_signaling_class(self, interface, channel):
+    def get_signaling_class(self, interface: int, channel: int) -> int:
         req = create_request_by_name('GetSignalingClass')
         req.channel_info.channel_number = channel
         req.channel_info.interface = interface
@@ -266,7 +272,7 @@ class LinkDescriptor(State):
         (INTERFACE_UPDATE_CHANNEL, 'Update Channel'),
     ]
 
-    def get_interface_string(self, interf):
+    def get_interface_string(self, interf: int) -> str:
         for desc in self.INTERFACE_DESCR_STRING:
             if desc[0] == interf:
                 return desc[1]
@@ -312,7 +318,7 @@ class LinkDescriptor(State):
          'Fixed 40GBASE-KR4'),
     ]
 
-    def get_link_type_string(self, link_type, ext, cls=0):
+    def get_link_type_string(self, link_type: int, ext: int, cls: int = 0) -> str:
         for desc in self.LINK_TYPE_DESCR_STRING:
             if desc[0] == link_type and desc[1] == ext and desc[2] == cls:
                 return desc[3]
@@ -321,7 +327,7 @@ class LinkDescriptor(State):
 
 class PowerLevel(State):
 
-    def _from_response(self, rsp):
+    def _from_response(self, rsp: Message) -> None:
         self.dynamic_power_configuration = \
                 rsp.properties.dynamic_power_configuration
         self.power_level = rsp.properties.power_level
@@ -332,7 +338,7 @@ class PowerLevel(State):
 
 class FanSpeedProperties(State):
 
-    def _from_response(self, rsp):
+    def _from_response(self, rsp: Message) -> None:
         self.minimum_speed_level = rsp.minimum_speed_level
         self.maximum_speed_level = rsp.maximum_speed_level
         self.normal_operation_level = rsp.normal_operation_level
@@ -370,8 +376,9 @@ class LedState(State):
         ('lamp_test_duration', ''),
     ]
 
-    def __init__(self, rsp=None, fru_id=None, led_id=None, color=None,
-                 function=None):
+    def __init__(self, rsp: Message | None = None, fru_id: int | None = None,
+                led_id: int | None = None, color: int | None = None,
+                function: int | None = None) -> None:
         super(LedState, self).__init__(rsp)
         if fru_id is not None:
             self.fru_id = fru_id
@@ -382,7 +389,7 @@ class LedState(State):
         if function is not None:
             self.override_function = function
 
-    def __str__(self):
+    def __str__(self) -> str:
         string = '[flags '
         string += self.local_state_available and ' LOCAL_STATE' or ''
         string += self.override_enabled and ' OVR_EN' or ''
@@ -399,7 +406,7 @@ class LedState(State):
         string += ']'
         return string
 
-    def _from_response(self, res):
+    def _from_response(self, res: Message) -> None:
         self.local_state_available = bool(res.led_states.local_avail)
         self.override_enabled = bool(res.led_states.override_en)
         self.lamp_test_enabled = bool(res.led_states.lamp_test_en)
@@ -436,7 +443,7 @@ class LedState(State):
         if self.lamp_test_enabled:
             self.lamp_test_duration = res.lamp_test_duration * 100
 
-    def to_request(self, req):
+    def to_request(self, req: Message) -> Message:
         req.fru_id = self.fru_id
         req.led_id = self.led_id
         req.color = self.override_color
@@ -471,7 +478,7 @@ class GlobalStatus(State):
         ('unidentified_fault', ''),
     ]
 
-    def _from_response(self, rsp):
+    def _from_response(self, rsp: Message) -> None:
         self.role = rsp.global_status.role
         self.management_power_good = \
             bool(rsp.global_status.management_power_good)
@@ -493,7 +500,7 @@ class PowerChannelStatus(State):
         ('pwr_on', ''),
     ]
 
-    def _from_response(self, rsp):
+    def _from_response(self, rsp: Message) -> None:
         data = rsp.data[0]
         self.present = (data >> 0) & 1
         self.management_power = (data >> 1) & 1

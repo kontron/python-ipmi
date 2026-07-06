@@ -14,13 +14,17 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
+
 import time
 from array import array
 
-from ..msgs import create_message, encode_message, decode_message
+from .. import Target
+from ..msgs import create_message, encode_message, decode_message, Message
 from ..errors import IpmiTimeoutError
 from ..logger import log
 from ..interfaces.ipmb import IpmbHeaderReq, checksum, rx_filter, encode_ipmb_msg
+from ..session import Session
 from ..utils import py3_array_tobytes
 
 try:
@@ -36,9 +40,11 @@ class Aardvark(object):
 
     NAME = 'aardvark'
 
-    def __init__(self, slave_address=0x20, port=0, serial_number=None,
-                 enable_i2c_pullups=None, enable_target_power=None,
-                 enable_fastmode=None):
+    def __init__(self, slave_address: int = 0x20, port: int = 0,
+                 serial_number: str | None = None,
+                 enable_i2c_pullups: bool | None = None,
+                 enable_target_power: bool | None = None,
+                 enable_fastmode: bool | None = None) -> None:
         if pyaardvark is None:
             raise RuntimeError('No pyaardvark module found. You can not '
                                'use this interface.')
@@ -53,7 +59,7 @@ class Aardvark(object):
         self.max_retries = 3
         self.next_sequence_number = 0
 
-    def open(self):
+    def open(self) -> None:
         self._dev = pyaardvark.open(self.port, self.serial_number)
         self._dev.enable_i2c_slave(self.slave_address >> 1)
 
@@ -67,31 +73,31 @@ class Aardvark(object):
         else:
             self.enable_fastmode(False)
 
-    def close(self):
+    def close(self) -> None:
         self._dev.close()
 
-    def enable_pullups(self, enabled):
+    def enable_pullups(self, enabled: bool) -> None:
         self._dev.i2c_pullups = enabled
 
-    def enable_target_power(self, enabled):
+    def enable_target_power(self, enabled: bool) -> None:
         self._dev.target_power = enabled
 
-    def enable_fastmode(self, enabled):
+    def enable_fastmode(self, enabled: bool) -> None:
         if enabled:
             self._dev.i2c_bitrate = 400
         else:
             self._dev.i2c_bitrate = 100
 
-    def raw_write(self, address, data):
+    def raw_write(self, address: int, data: bytes) -> None:
         self._dev.i2c_master_write(address, data)
 
-    def establish_session(self, session):
+    def establish_session(self, session: Session) -> None:
         pass
 
-    def close_session(self):
+    def close_session(self) -> None:
         pass
 
-    def is_ipmc_accessible(self, target):
+    def is_ipmc_accessible(self, target: Target) -> bool:
         header = IpmbHeaderReq()
         header.netfn = 6
         header.rs_lun = 0
@@ -104,18 +110,19 @@ class Aardvark(object):
         self._receive_raw(header)
         return True
 
-    def _inc_sequence_number(self):
+    def _inc_sequence_number(self) -> None:
         self.next_sequence_number = (self.next_sequence_number + 1) % 64
 
     @staticmethod
-    def _encode_ipmb_msg_req(header, cmd_data):
+    def _encode_ipmb_msg_req(header: IpmbHeaderReq, cmd_data: bytes) -> array:
         data = header.encode()
         data.extend(cmd_data)
         data.append(checksum(data[2:]))
 
         return data
 
-    def _send_raw(self, header, raw_bytes):
+    def _send_raw(self, header: IpmbHeaderReq,
+                  raw_bytes: bytes | None) -> None:
         raw_bytes = encode_ipmb_msg(header, raw_bytes)
         i2c_addr = header.rs_sa >> 1
 
@@ -124,7 +131,7 @@ class Aardvark(object):
                     ' '.join(['%02x' % b for b in raw_bytes]))
         self._dev.i2c_master_write(i2c_addr, raw_bytes[1:])
 
-    def _receive_raw(self, header):
+    def _receive_raw(self, header: IpmbHeaderReq) -> array:
         start_time = time.time()
         rsp_received = False
         poll_returned_no_data = False
@@ -151,7 +158,8 @@ class Aardvark(object):
 
         return rx_data
 
-    def _send_and_receive(self, target, lun, netfn, cmdid, payload):
+    def _send_and_receive(self, target: Target, lun: int, netfn: int,
+                          cmdid: int, payload: bytes) -> bytes:
         """Send and receive data using aardvark interface.
 
         target:
@@ -193,7 +201,8 @@ class Aardvark(object):
 
         return py3_array_tobytes(rx_data)[5:-1]
 
-    def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
+    def send_and_receive_raw(self, target: Target, lun: int, netfn: int,
+                             raw_bytes: bytes) -> bytes:
         """Interface function to send and receive raw message.
 
         target: IPMI target
@@ -209,7 +218,7 @@ class Aardvark(object):
                                       cmdid=array('B', raw_bytes)[0],
                                       payload=raw_bytes[1:])
 
-    def send_and_receive(self, req):
+    def send_and_receive(self, req: Message) -> Message:
         """Interface function to send and receive an IPMI message.
 
         target: IPMI target

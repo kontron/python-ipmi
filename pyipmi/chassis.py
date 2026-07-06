@@ -15,10 +15,13 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from __future__ import absolute_import
+from __future__ import annotations
+
+from array import array
 from enum import Enum
 
 
-from .msgs import create_request_by_name
+from .msgs import create_request_by_name, Message
 from .utils import check_completion_code, check_rsp_completion_code, ByteBuffer
 from .state import State
 
@@ -83,7 +86,7 @@ CONVERT_BOOT_DEVICE_TO_RAW = {
 }
 
 
-def data_to_boot_mode(data):
+def data_to_boot_mode(data: array) -> str:
     """
     Convert a `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)` response data
     into the string representation of the encoded boot mode.
@@ -93,7 +96,7 @@ def data_to_boot_mode(data):
     return boot_mode
 
 
-def data_to_boot_persistency(data):
+def data_to_boot_persistency(data: array) -> bool:
     """
     Convert a `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)` response data
     into the boolean representation of the encoded boot persistency.
@@ -102,7 +105,7 @@ def data_to_boot_persistency(data):
     return boot_persistent_raw == 1
 
 
-def data_to_boot_device(data):
+def data_to_boot_device(data: array) -> BootDevice:
     """
     Convert a `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)` response data
     into the string representation of the encoded boot device.
@@ -111,7 +114,8 @@ def data_to_boot_device(data):
     return CONVERT_RAW_TO_BOOT_DEVICE[boot_device_raw]
 
 
-def boot_options_to_data(boot_device, boot_mode, boot_persistency):
+def boot_options_to_data(boot_device: BootDevice, boot_mode: str,
+                         boot_persistency: bool) -> ByteBuffer:
     """
     Convert a boot mode (string), boot device (string) and boot persistency (bool)
     into a `SetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)` request data.
@@ -144,35 +148,36 @@ def boot_options_to_data(boot_device, boot_mode, boot_persistency):
 
 
 class Chassis(object):
-    def get_chassis_status(self):
+    def get_chassis_status(self) -> ChassisStatus:
         return ChassisStatus(self.send_message_with_name('GetChassisStatus'))
 
-    def chassis_control(self, option):
+    def chassis_control(self, option: int) -> None:
         req = create_request_by_name('ChassisControl')
         req.control.option = option
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def chassis_control_power_down(self):
+    def chassis_control_power_down(self) -> None:
         self.chassis_control(CONTROL_POWER_DOWN)
 
-    def chassis_control_power_up(self):
+    def chassis_control_power_up(self) -> None:
         self.chassis_control(CONTROL_POWER_UP)
 
-    def chassis_control_power_cycle(self):
+    def chassis_control_power_cycle(self) -> None:
         self.chassis_control(CONTROL_POWER_CYCLE)
 
-    def chassis_control_hard_reset(self):
+    def chassis_control_hard_reset(self) -> None:
         self.chassis_control(CONTROL_HARD_RESET)
 
-    def chassis_control_diagnostic_interrupt(self):
+    def chassis_control_diagnostic_interrupt(self) -> None:
         self.chassis_control(CONTROL_DIAGNOSTIC_INTERRUPT)
 
-    def chassis_control_soft_shutdown(self):
+    def chassis_control_soft_shutdown(self) -> None:
         self.chassis_control(CONTROL_SOFT_SHUTDOWN)
 
-    def get_system_boot_options(self, parameter_selector=0,
-                                set_selector=0, block_selector=0):
+    def get_system_boot_options(self, parameter_selector: int = 0,
+                                set_selector: int = 0,
+                                block_selector: int = 0) -> array:
         req = create_request_by_name('GetSystemBootOptions')
         req.parameter_selector.boot_option_parameter_selector = parameter_selector
         req.set_selector = set_selector
@@ -181,8 +186,8 @@ class Chassis(object):
         check_rsp_completion_code(rsp)
         return rsp.data
 
-    def set_system_boot_options(self, parameter_selector, data,
-                                mark_parameter_invalid=0):
+    def set_system_boot_options(self, parameter_selector: int, data: ByteBuffer,
+                                mark_parameter_invalid: int = 0) -> None:
         req = create_request_by_name('SetSystemBootOptions')
         req.parameter_selector.parameter_validity = mark_parameter_invalid
         req.parameter_selector.boot_option_parameter_selector = parameter_selector
@@ -190,7 +195,7 @@ class Chassis(object):
         rsp = self.send_message(req)
         check_rsp_completion_code(rsp)
 
-    def get_boot_mode(self):
+    def get_boot_mode(self) -> str:
         """
         Return a string corresponding to the device boot mode.
 
@@ -199,7 +204,7 @@ class Chassis(object):
         rsp = self.get_system_boot_options(BOOT_PARAMETER_BOOT_FLAGS)
         return data_to_boot_mode(rsp)
 
-    def get_boot_persistency(self):
+    def get_boot_persistency(self) -> bool:
         """
         Return True if the boot configuration is to be applied to every future
         boot, Fale if it only will applied to the next boot.
@@ -207,7 +212,7 @@ class Chassis(object):
         rsp = self.get_system_boot_options(BOOT_PARAMETER_BOOT_FLAGS)
         return data_to_boot_persistency(rsp)
 
-    def get_boot_device(self):
+    def get_boot_device(self) -> BootDevice:
         """
         Return a string corresponding to the target boot device.
 
@@ -216,7 +221,8 @@ class Chassis(object):
         rsp = self.get_system_boot_options(BOOT_PARAMETER_BOOT_FLAGS)
         return data_to_boot_device(rsp)
 
-    def set_boot_options(self, boot_device, boot_mode, boot_persistency):
+    def set_boot_options(self, boot_device: BootDevice, boot_mode: str,
+                         boot_persistency: bool) -> None:
         data = boot_options_to_data(boot_device, boot_mode, boot_persistency)
         self.set_system_boot_options(BOOT_PARAMETER_BOOT_FLAGS, data)
 
@@ -234,7 +240,7 @@ class ChassisStatus(State):
     last_event = []
     chassis_state = []
 
-    def _from_response(self, rsp):
+    def _from_response(self, rsp: Message) -> None:
         self.power_on = bool(rsp.current_power_state.power_on)
         self.overload = bool(rsp.current_power_state.power_overload)
         self.interlock = bool(rsp.current_power_state.interlock)

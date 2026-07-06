@@ -14,8 +14,11 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
+
 from .constants import (ENTITY_ID_DCMI_AIR_INLET, ENTITY_ID_DCMI_CPU,
                         ENTITY_ID_DCMI_BASEBOARD)
+from .msgs import Message
 
 
 PARAM_SUPPORTED_DCMI_CAPABILITIES = 1
@@ -26,17 +29,17 @@ PARAM_ENHANCED_SYSTEM_POWER_STATISTICS_ATTRIBUTES = 5
 
 
 class Dcmi(object):
-    def get_dcmi_capabilities(self, selector):
+    def get_dcmi_capabilities(self, selector: int) -> Message:
         rsp = self.send_message_with_name('GetDcmiCapabilities',
                                           parameter_selector=selector)
         return rsp
 
-    def get_power_reading(self, mode, attributes=0):
+    def get_power_reading(self, mode: int, attributes: int = 0) -> Message:
         rsp = self.send_message_with_name('GetPowerReading',
                                           mode=mode, attributes=attributes)
         return rsp
 
-    def get_dcmi_sensor_record_ids(self):
+    def get_dcmi_sensor_record_ids(self) -> list[int]:
 
         record_ids = list()
 

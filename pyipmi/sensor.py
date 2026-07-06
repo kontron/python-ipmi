@@ -15,6 +15,10 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from __future__ import absolute_import
+from __future__ import annotations
+
+from array import array
+from typing import Generator
 
 from .utils import check_completion_code
 from .msgs import create_request_by_name
@@ -106,11 +110,12 @@ SENSOR_TYPE_VITA_IPMC_RESET_TYPE = 0xf8
 
 
 class Sensor(object):
-    def reserve_device_sdr_repository(self):
+    def reserve_device_sdr_repository(self) -> int:
         rsp = self.send_message_with_name('ReserveDeviceSdrRepository')
         return rsp.reservation_id
 
-    def _get_device_sdr_chunk(self, reservation_id, record_id, offset, length):
+    def _get_device_sdr_chunk(self, reservation_id: int, record_id: int,
+                              offset: int, length: int) -> tuple[int, array]:
         req = create_request_by_name('GetDeviceSdr')
         req.reservation_id = reservation_id
         req.record_id = record_id
@@ -122,7 +127,8 @@ class Sensor(object):
 
         return (rsp.next_record_id, rsp.record_data)
 
-    def get_device_sdr(self, record_id, reservation_id=None):
+    def get_device_sdr(self, record_id: int,
+                       reservation_id: int | None = None) -> sdr.SdrCommon:
         """Collect all data from the sensor device to get the SDR.
 
         `record_id` the Record ID.
@@ -136,7 +142,7 @@ class Sensor(object):
 
         return sdr.SdrCommon.from_data(record_data, next_id)
 
-    def device_sdr_entries(self):
+    def device_sdr_entries(self) -> Generator[sdr.SdrCommon, None, None]:
         """A generator that returns the SDR list.
 
         Starting with ID=0x0000 and
@@ -152,16 +158,17 @@ class Sensor(object):
                 break
             record_id = record.next_id
 
-    def get_device_sdr_list(self, reservation_id=None):
+    def get_device_sdr_list(self, reservation_id: int | None = None) -> list[sdr.SdrCommon]:
         """Return the complete SDR list."""
         return list(self.device_sdr_entries())
 
-    def rearm_sensor_events(self, sensor_number):
+    def rearm_sensor_events(self, sensor_number: int) -> None:
         """Rearm sensor events for the given sensor number."""
         self.send_message_with_name('RearmSensorEvents',
                                     sensor_number=sensor_number)
 
-    def get_sensor_reading(self, sensor_number, lun=0):
+    def get_sensor_reading(self, sensor_number: int,
+                           lun: int = 0) -> tuple[int | None, int | None]:
         """Return the sensor reading at the assertion states.
 
         `sensor_number`
@@ -183,9 +190,11 @@ class Sensor(object):
                 states |= (rsp.states2 << 8)
         return (reading, states)
 
-    def set_sensor_thresholds(self, sensor_number, lun=0,
-                              unr=None, ucr=None, unc=None,
-                              lnc=None, lcr=None, lnr=None):
+    def set_sensor_thresholds(self, sensor_number: int, lun: int = 0,
+                              unr: int | None = None, ucr: int | None = None,
+                              unc: int | None = None, lnc: int | None = None,
+                              lcr: int | None = None,
+                              lnr: int | None = None) -> None:
         """Set the sensor thresholds that are not 'None'.
 
         `sensor_number`
@@ -210,7 +219,7 @@ class Sensor(object):
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def get_sensor_thresholds(self, sensor_number, lun=0):
+    def get_sensor_thresholds(self, sensor_number: int, lun: int = 0) -> dict[str, int]:
         rsp = self.send_message_with_name('GetSensorThresholds',
                                           sensor_number=sensor_number,
                                           lun=lun)
@@ -223,8 +232,9 @@ class Sensor(object):
                     thresholds[threshold] = getattr(rsp.threshold, threshold)
         return thresholds
 
-    def send_platform_event(self, sensor_type, sensor_number, event_type,
-                            asserted=True, event_data=None):
+    def send_platform_event(self, sensor_type: int, sensor_number: int,
+                            event_type: int, asserted: bool = True,
+                            event_data: list[int] | None = None) -> None:
         req = create_request_by_name('PlatformEvent')
         req.sensor_type = sensor_type
         req.sensor_number = sensor_number
