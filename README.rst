@@ -119,7 +119,7 @@ ipmitool command:
 Compatibility
 -------------
 
-Python > 3.6 is currently supported. Python 2.x is deprecated.
+Python >= 3.10 is currently supported. Python 2.x is deprecated.
 
 Contributing
 ------------
