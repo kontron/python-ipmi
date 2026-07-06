@@ -220,6 +220,28 @@ class TestIpmitool:
             b'\x20\x01\x04\x00\x02\xbf\x7c\x2a\x00\x69\x09\x00\x00\x00\x00'
         )
 
+    def test_parse_output_rsp_verbose_excludes_echoed_request_bytes(self):
+        # With "-v" and a command that has a request payload (e.g. GetSdr),
+        # ipmitool echoes the outgoing bytes as its own "RAW REQUEST (N
+        # bytes)" hex dump before printing "RAW RSP". Those echoed bytes
+        # must not be prepended to the parsed response.
+        test_str = (
+            b'Loading IANA PEN Registry...\n'
+            b'Using best available cipher suite 3\n'
+            b'\n'
+            b'Running Get VSO Capabilities my_addr 0x20, transit 0, target 0x20\n'
+            b'Invalid completion code received: Invalid command\n'
+            b'Discovered IPMB address 0x0\n'
+            b'RAW REQ (channel=0x0 netfn=0xa lun=0x0 cmd=0x23 data_len=6)\n'
+            b'RAW REQUEST (6 bytes)\n'
+            b' 21 00 00 00 00 05\n'
+            b'RAW RSP (7 bytes)\n'
+            b' 47 00 04 00 51 01 33\n'
+        )
+        cc, rsp = self._interface._parse_output(test_str)
+        assert cc is None
+        assert py3_array_tobytes(rsp) == b'\x47\x00\x04\x00\x51\x01\x33'
+
     def test_parse_output_cc(self):
         test_str = b'Unable to send RAW command (channel=0x0 netfn=0x6 lun=0x0 cmd=0x1 rsp=0xcc): Ignore Me\n'
         cc, rsp = self._interface._parse_output(test_str)

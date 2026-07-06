@@ -74,6 +74,8 @@ class Ipmitool(object):
                 r".*password is longer than.*")
         self.re_authentication_error = re.compile(
                 r".*RAKP [0-9]+ HMAC.*")
+        self.re_raw_request = re.compile(
+                r".*RAW REQUEST\s*\((\d+)\s*bytes?\)")
         self._session = None
 
     def open(self) -> None:
@@ -123,6 +125,7 @@ class Ipmitool(object):
     def _parse_output(self, output: bytes) -> tuple[int | None, array | None]:
         cc, rsp = None, None
         values = []
+        skip_bytes_remaining = 0
 
         for line in py3dec_unic_bytes_fix(output).split('\n'):
             # Don't try to parse ipmitool error messages
@@ -156,6 +159,17 @@ class Ipmitool(object):
             if self.re_authentication_error.match(line):
                 raise AuthenticationError('Authentication error')
 
+            # With "-v" ipmitool echoes the outgoing request as its own
+            # "RAW REQUEST (N bytes)" hex dump right before the actual
+            # "RAW RSP" hex dump. Both look like plain hex lines, so we
+            # must discard exactly the announced N request bytes -
+            # otherwise they get prepended to the parsed response,
+            # corrupting every multi-byte-payload command's response.
+            match_raw_request = self.re_raw_request.match(line)
+            if match_raw_request:
+                skip_bytes_remaining = int(match_raw_request.group(1))
+                continue
+
             line = line.replace('\r', '').strip()
             if not line:
                 continue
@@ -171,6 +185,13 @@ class Ipmitool(object):
                 continue
             if any(value > 0xff for value in line_values):
                 continue
+
+            if skip_bytes_remaining > 0:
+                consumed = min(len(line_values), skip_bytes_remaining)
+                skip_bytes_remaining -= consumed
+                line_values = line_values[consumed:]
+                if not line_values:
+                    continue
 
             values.extend(line_values)
 
