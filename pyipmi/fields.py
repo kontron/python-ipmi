@@ -80,7 +80,7 @@ class TypeLengthString(object):
     TYPE_ASCII_OR_UTF16 = 3
 
     def __init__(self, data: bytes | None = None, offset: int = 0,
-                force_lang_eng: bool = False, sdr: bool = False) -> None:
+                 force_lang_eng: bool = False, sdr: bool = False) -> None:
         if data:
             self._from_data(data, offset, force_lang_eng)
 
@@ -110,7 +110,7 @@ class TypeLengthString(object):
 class FruTypeLengthString(TypeLengthString):
 
     def __init__(self, data: bytes | None = None, offset: int = 0,
-                force_lang_eng: bool = False) -> None:
+                 force_lang_eng: bool = False) -> None:
         super(FruTypeLengthString, self).__init__(data, offset,
                                                   force_lang_eng,
                                                   sdr=False)
@@ -119,5 +119,5 @@ class FruTypeLengthString(TypeLengthString):
 class SdrTypeLengthString(TypeLengthString):
 
     def __init__(self, data: bytes | None = None, offset: int = 0,
-                force_lang_eng: bool = False) -> None:
+                 force_lang_eng: bool = False) -> None:
         super(SdrTypeLengthString, self).__init__(data, sdr=True)

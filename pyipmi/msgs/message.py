@@ -27,7 +27,7 @@ from ..errors import (CompletionCodeError, EncodingError, DecodingError,
 
 class BaseField(object):
     def __init__(self, name: str, length: int | None,
-                default: Any = None) -> None:
+                 default: Any = None) -> None:
         self.name = name
         self.length = length
         self.default = default
@@ -46,7 +46,7 @@ class BaseField(object):
 
 class ByteArray(BaseField):
     def __init__(self, name: str, length: int,
-                default: bytes | None = None) -> None:
+                 default: bytes | None = None) -> None:
         BaseField.__init__(self, name, length)
         if default is not None:
             self.default = array('B', default)
@@ -140,7 +140,7 @@ class CompletionCode(UnsignedInt):
 
 class UnsignedIntMask(UnsignedInt):
     def __init__(self, name: str, length: int, mask: int,
-                default: int | None = None) -> None:
+                 default: int | None = None) -> None:
         UnsignedInt.__init__(self, name, length, default)
 
 
@@ -151,7 +151,7 @@ class Timestamp(UnsignedInt):
 
 class Conditional(object):
     def __init__(self, cond_fn: Callable[[Message], bool],
-                field: BaseField) -> None:
+                 field: BaseField) -> None:
         self._condition_fn = cond_fn
         self._field = field
 
@@ -210,7 +210,7 @@ class RemainingBytes(BaseField):
 class Bitfield(BaseField):
     class Bit(object):
         def __init__(self, name: str, width: int = 1,
-                    default: int | None = None) -> None:
+                     default: int | None = None) -> None:
             self.name = name
             self._width = width
             self.default = default
@@ -226,7 +226,7 @@ class Bitfield(BaseField):
 
     class BitWrapper(object):
         def __init__(self, bits: tuple[Bitfield.Bit, ...],
-                    length: int) -> None:
+                     length: int) -> None:
             self._bits = bits
             self._length = length
             for bit in bits:
@@ -307,7 +307,7 @@ class Bitfield(BaseField):
 
 class GroupExtensionIdentifier(UnsignedInt):
     def __init__(self, name: str = 'picmg_identifier',
-                value: int | None = None) -> None:
+                 value: int | None = None) -> None:
         UnsignedInt.__init__(self, name, 1, value)
 
 

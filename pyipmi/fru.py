@@ -54,7 +54,7 @@ class Fru(object):
             offset += len(chunk)
 
     def read_fru_data(self, offset: int | None = None,
-                     count: int | None = None, fru_id: int = 0) -> bytes:
+                      count: int | None = None, fru_id: int = 0) -> bytes:
         req_size = 32
         data = array.array('B')
 
@@ -153,7 +153,7 @@ class Fru(object):
         return InventoryMultiRecordArea(data, ignore_checksum=ignore_checksum)
 
     def get_fru_inventory(self, fru_id: int = 0,
-                         ignore_checksum: bool = False) -> FruInventory:
+                          ignore_checksum: bool = False) -> FruInventory:
         """
         Get the full parsed FRU inventory data.
         """
@@ -192,7 +192,7 @@ class Fru(object):
 
 
 def get_fru_inventory_from_file(filename: str,
-                               ignore_checksum: bool = False) -> FruInventory:
+                                ignore_checksum: bool = False) -> FruInventory:
     try:
         file = open(filename, "rb")
     except IOError:
@@ -222,7 +222,7 @@ def _decode_custom_fields(data: bytes) -> list[FruTypeLengthString]:
 
 class FruData(object):
     def __init__(self, data: bytes | str | None = None,
-                ignore_checksum: bool = False) -> None:
+                 ignore_checksum: bool = False) -> None:
         if data:
             if isinstance(data, str):
                 data = [ord(c) for c in data]
@@ -456,7 +456,7 @@ class InventoryMultiRecordArea(object):
 
 class FruInventory(object):
     def __init__(self, data: bytes | None = None,
-                ignore_checksum: bool = False) -> None:
+                 ignore_checksum: bool = False) -> None:
         self.chassis_info_area = None
         self.board_info_area = None
         self.product_info_area = None

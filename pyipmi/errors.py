@@ -38,8 +38,8 @@ class CompletionCodeError(Exception):
     """IPMI completion code not OK."""
 
     def __init__(self, cc: int, cmdid: int | None = None,
-                netfn: int | None = None,
-                group_extension: int | None = None) -> None:
+                 netfn: int | None = None,
+                 group_extension: int | None = None) -> None:
         self.cc = cc
         self.cc_desc = self.find_cc_desc(cc, cmdid, netfn, group_extension)
 

@@ -53,11 +53,11 @@ class Bmc(object):
         return rsp.data
 
     def i2c_write(self, bus_type: int, bus_id: int, channel: int,
-                 address: int, data: bytes) -> None:
+                  address: int, data: bytes) -> None:
         self.i2c_write_read(bus_type, bus_id, channel, address, 0, data)
 
     def i2c_read(self, bus_type: int, bus_id: int, channel: int,
-                address: int, count: int) -> array:
+                 address: int, count: int) -> array:
         return self.i2c_write_read(bus_type, bus_id, channel,
                                    address, count, None)
 

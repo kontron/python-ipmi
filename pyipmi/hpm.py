@@ -77,7 +77,7 @@ class Hpm(object):
         return TargetUpgradeCapabilities(rsp)
 
     def get_component_property(self, component_id: int,
-                              property_id: int) -> ComponentProperty | None:
+                               property_id: int) -> ComponentProperty | None:
         rsp = self.send_message_with_name('GetComponentProperties',
                                           id=component_id,
                                           selector=property_id)

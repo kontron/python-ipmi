@@ -233,7 +233,7 @@ class IpmiMsg(object):
     HEADER_FORMAT_AUTH = '!BII16BB'
 
     def __init__(self, session: Session | None = None,
-                ignore_sdu_length: bool = False) -> None:
+                 ignore_sdu_length: bool = False) -> None:
         self.session = session
         self.ignore_sdu_length = ignore_sdu_length
 
@@ -366,9 +366,9 @@ class Rmcp(object):
     _session: Session | None = None
 
     def __init__(self, slave_address: int = 0x81,
-                host_target_address: int = 0x20,
-                keep_alive_interval: int = 1, max_retries: int = 0,
-                quirks_cfg: dict = dict()) -> None:
+                 host_target_address: int = 0x20,
+                 keep_alive_interval: int = 1, max_retries: int = 0,
+                 quirks_cfg: dict = dict()) -> None:
         """Native RMCP interface constructor
 
         Parameter `quirks_cfg`: a dict of additional configuration parameters

@@ -19,7 +19,7 @@ class IpmbDev(object):
     NAME = 'ipmbdev'
 
     def __init__(self, slave_address: int = 0x20,
-                port: str = '/dev/ipmb-0') -> None:
+                 port: str = '/dev/ipmb-0') -> None:
         # TODO: slave address is currently not defined here
         self.slave_address = slave_address
         self.port = port

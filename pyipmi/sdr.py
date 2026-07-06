@@ -192,7 +192,7 @@ class SdrRepositoryAllocationInfo(State):
 
 class SdrCommon(object):
     def __init__(self, data: bytes | None = None,
-                next_id: int | None = None) -> None:
+                 next_id: int | None = None) -> None:
         if data:
             self.data = data
             self._common_header(data)
@@ -274,7 +274,7 @@ class SdrFullSensorRecord(SdrCommon):
     DATA_FMT_NONE = 3
 
     def __init__(self, data: bytes | None = None,
-                next_id: int | None = None) -> None:
+                 next_id: int | None = None) -> None:
         super(SdrFullSensorRecord, self).__init__(data, next_id)
 
     def __str__(self) -> str:
@@ -502,7 +502,7 @@ class SdrFullSensorRecord(SdrCommon):
 ##################################################
 class SdrCompactSensorRecord(SdrCommon):
     def __init__(self, data: bytes | None = None,
-                next_id: int | None = None) -> None:
+                 next_id: int | None = None) -> None:
         super(SdrCompactSensorRecord, self).__init__(data, next_id)
 
     def __str__(self) -> str:
@@ -543,7 +543,7 @@ class SdrCompactSensorRecord(SdrCommon):
 ##################################################
 class SdrEventOnlySensorRecord(SdrCommon):
     def __init__(self, data: bytes | None = None,
-                next_id: int | None = None) -> None:
+                 next_id: int | None = None) -> None:
         super(SdrEventOnlySensorRecord, self).__init__(data, next_id)
 
     def __str__(self) -> str:
@@ -571,7 +571,7 @@ class SdrEventOnlySensorRecord(SdrCommon):
 ##################################################
 class SdrFruDeviceLocator(SdrCommon):
     def __init__(self, data: bytes | None = None,
-                next_id: int | None = None) -> None:
+                 next_id: int | None = None) -> None:
         super(SdrFruDeviceLocator, self).__init__(data, next_id)
 
     def __str__(self) -> str:
@@ -599,7 +599,7 @@ class SdrFruDeviceLocator(SdrCommon):
 ##################################################
 class SdrManagementControllerDeviceLocator(SdrCommon):
     def __init__(self, data: bytes | None = None,
-                next_id: int | None = None) -> None:
+                 next_id: int | None = None) -> None:
         super(SdrManagementControllerDeviceLocator, self).__init__(
                 data, next_id)
 
@@ -627,7 +627,7 @@ class SdrManagementControllerDeviceLocator(SdrCommon):
 ##################################################
 class SdrManagementControllerConfirmationRecord(SdrCommon):
     def __init__(self, data: bytes | None = None,
-                next_id: int | None = None) -> None:
+                 next_id: int | None = None) -> None:
         super(SdrManagementControllerConfirmationRecord, self).__init__(
                 data, next_id)
 
@@ -649,7 +649,7 @@ class SdrManagementControllerConfirmationRecord(SdrCommon):
 ##################################################
 class SdrOEMSensorRecord(SdrCommon):
     def __init__(self, data: bytes | None = None,
-                next_id: int | None = None) -> None:
+                 next_id: int | None = None) -> None:
         super(SdrOEMSensorRecord, self).__init__(data, next_id)
 
     def __str__(self) -> str:
@@ -665,7 +665,7 @@ class SdrOEMSensorRecord(SdrCommon):
 # Any SDR type not known or not implemented
 class SdrUnknownSensorRecord(SdrCommon):
     def __init__(self, data: bytes | None = None,
-                next_id: int | None = None) -> None:
+                 next_id: int | None = None) -> None:
         super(SdrUnknownSensorRecord, self).__init__(data, next_id)
 
     def __str__(self) -> str:

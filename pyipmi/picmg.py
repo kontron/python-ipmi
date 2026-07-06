@@ -149,7 +149,7 @@ class Picmg(object):
         check_completion_code(rsp.completion_code)
 
     def get_port_state(self, channel_number: int,
-                      channel_interface: int) -> tuple[LinkDescriptor, int]:
+                       channel_interface: int) -> tuple[LinkDescriptor, int]:
         req = create_request_by_name('GetPortState')
         req.channel.number = channel_number
         req.channel.interface = channel_interface
@@ -377,8 +377,8 @@ class LedState(State):
     ]
 
     def __init__(self, rsp: Message | None = None, fru_id: int | None = None,
-                led_id: int | None = None, color: int | None = None,
-                function: int | None = None) -> None:
+                 led_id: int | None = None, color: int | None = None,
+                 function: int | None = None) -> None:
         super(LedState, self).__init__(rsp)
         if fru_id is not None:
             self.fru_id = fru_id

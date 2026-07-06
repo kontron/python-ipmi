@@ -64,7 +64,7 @@ class MessageRegistry(object):
         return cls
 
     def create(self, netfn: int, cmdid: int, group_extension: int | None,
-              *args: Any, **kwargs: Any) -> Message:
+               *args: Any, **kwargs: Any) -> Message:
         return self.registry[(netfn, cmdid, group_extension)](*args, **kwargs)
 
     def create_response(self, req: Message) -> Message:

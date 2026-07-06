@@ -98,7 +98,7 @@ class Target(object):
     ipmb_address = None
 
     def __init__(self, ipmb_address: int | None = None,
-                routing: str | list[tuple] | None = None) -> None:
+                 routing: str | list[tuple] | None = None) -> None:
         """Initializer for the Target class.
 
         `ipmb_address` is the IPMB target address
@@ -165,8 +165,8 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
            messaging.Messaging):
 
     def __init__(self, interface: Any = None, target: Target | None = None,
-                session: Session = Session(),
-                requester: Any = NullRequester()) -> None:
+                 session: Session = Session(),
+                 requester: Any = NullRequester()) -> None:
         self._interface = interface
 
         # we need a session, set if not passed
@@ -187,7 +187,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         return self
 
     def __exit__(self, exception_type: Any, exception_value: Any,
-                traceback: Any) -> bool:
+                 traceback: Any) -> bool:
         self.close()
         return False
 

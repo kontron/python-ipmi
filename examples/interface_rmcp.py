@@ -5,9 +5,9 @@ import pyipmi.interfaces
 
 
 intf = pyipmi.interfaces.create_interface('rmcp',
-                                               slave_address=0x81,
-                                               host_target_address=0x20,
-                                               keep_alive_interval=0)
+                                          slave_address=0x81,
+                                          host_target_address=0x20,
+                                          keep_alive_interval=0)
 sess = pyipmi.Session()
 sess.set_session_type_rmcp('10.0.114.116', 623)
 sess.set_auth_type_user('admin', 'admin')
