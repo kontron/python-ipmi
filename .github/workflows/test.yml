@@ -5,7 +5,7 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   tests:
     name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
 
     strategy:
       matrix:
@@ -38,7 +38,7 @@ jobs:
 
   finish:
     needs: tests
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - name: Coveralls Finished
       uses: coverallsapp/github-action@master
