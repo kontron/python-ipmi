@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import sys
 import codecs
 from array import array
 from typing import Any, Generator, TYPE_CHECKING
@@ -30,35 +29,22 @@ if TYPE_CHECKING:
     from .msgs import Message
 
 
-_PY3 = (sys.version_info >= (3,))
-
-
 def py3enc_unic_bytes_fix(dat: Any) -> Any:
-    # python 3 unicode fix
-    if isinstance(dat, str) and _PY3:
+    if isinstance(dat, str):
         dat = dat.encode('raw_unicode_escape')
     return dat
 
 
 def py3dec_unic_bytes_fix(dat: bytes) -> str:
-    # python 3 unicode fix
-    if _PY3:
-        return dat.decode('raw_unicode_escape')
-    return dat
+    return dat.decode('raw_unicode_escape')
 
 
 def py3_array_frombytes(msg: array, data: bytes) -> None:
-    if _PY3:
-        return msg.frombytes(data)
-    else:
-        return msg.fromstring(data)
+    return msg.frombytes(data)
 
 
 def py3_array_tobytes(msg: array) -> bytes:
-    if _PY3:
-        return msg.tobytes()
-    else:
-        return msg.tostring()
+    return msg.tobytes()
 
 
 def check_completion_code(cc: int) -> None:
@@ -112,7 +98,7 @@ class ByteBuffer(object):
         return value
 
     def push_string(self, value: str | bytes) -> None:
-        if _PY3 and isinstance(value, str):
+        if isinstance(value, str):
             # Encode Unicode to UTF-8
             value = value.encode()
         py3_array_frombytes(self.array, value)
@@ -121,7 +107,6 @@ class ByteBuffer(object):
         string = self.array[0:length]
         del self.array[0:length]
         return py3_array_tobytes(string)
-        # return py3dec_unic_bytes_fix(string.tostring())
 
     def pop_slice(self, length: int) -> ByteBuffer:
         if len(self.array) < length:
@@ -167,8 +152,6 @@ def bcd_decode(encoded_input: Any) -> tuple[str, int]:
     chars = list()
     try:
         for data in encoded_input:
-            if not _PY3:
-                data = ord(data)
             chars.append(BCD_MAP[data >> 4 & 0xf] + BCD_MAP[data & 0xf])
         return (''.join(chars), len(encoded_input) * 2)
     except IndexError:
@@ -183,5 +166,4 @@ def bcd_search(name: str) -> codecs.CodecInfo | None:
 
 
 def is_string(string: Any) -> bool:
-    if _PY3:
-        return isinstance(string, str)
+    return isinstance(string, str)
