@@ -425,12 +425,12 @@ class Rmcp(Interface):
     def _send_rmcp_msg(self, sdu: bytes | None, class_of_msg: int) -> None:
         rmcp = RmcpMsg(class_of_msg)
         pdu = rmcp.pack(sdu, self.seq_number)
-        self._sock.sendto(pdu, (self.host, self.port))
+        self._sock.send(pdu)
         if self.seq_number != 255:
             self.seq_number = (self.seq_number + 1) % 254
 
     def _receive_rmcp_msg(self) -> tuple[int | None, int | None, bytes]:
-        (pdu, _) = self._sock.recvfrom(4096)
+        pdu = self._sock.recv(4096)
         rmcp = RmcpMsg()
         sdu = rmcp.unpack(pdu)
         return (rmcp.seq_number, rmcp.class_of_msg, sdu)
@@ -528,6 +528,7 @@ class Rmcp(Interface):
         self._session = None
         self.host = session._rmcp_host
         self.port = session._rmcp_port
+        self._sock.connect((self.host, self.port))
 
         # 0 - Ping
         self.ping()

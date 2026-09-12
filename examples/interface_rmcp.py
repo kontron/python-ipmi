@@ -3,14 +3,16 @@
 import pyipmi
 import pyipmi.interfaces
 
-
+# Test with ipmi_sim, a tool that ships with openipmi
+# This should work with the default config file /etc/ipmi/ipmi.conf;
+# just run ipmi_sim -p in another window to start the server
 intf = pyipmi.interfaces.create_interface('rmcp',
                                           slave_address=0x81,
                                           host_target_address=0x20,
                                           keep_alive_interval=0)
 sess = pyipmi.Session()
-sess.set_session_type_rmcp('10.0.114.116', 623)
-sess.set_auth_type_user('admin', 'admin')
+sess.set_session_type_rmcp('localhost', 9001)
+sess.set_auth_type_user('ipmiusr', 'test')
 sess.set_priv_level("ADMINISTRATOR")
 target = pyipmi.Target(ipmb_address=0x20)
 
