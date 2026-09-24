@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
 import array
+import socket
+from unittest.mock import MagicMock
 import pytest
-
 from pyipmi.session import Session
-from pyipmi.interfaces.rmcp import (AsfMsg, AsfPing, AsfPong, IpmiMsg, RmcpMsg)
+from pyipmi.interfaces.rmcp import (AsfMsg, AsfPing, AsfPong, IpmiMsg, RmcpMsg, Rmcp)
 from pyipmi.utils import py3_array_tobytes
 from pyipmi.errors import DecodingError
 
@@ -159,24 +160,61 @@ class TestIpmiMsg:
 
 
 class TestRmcp:
-    # def test_send_and_receive_raw(self):
-    #     mock_send = MagicMock()
-    #     mock_recv = MagicMock()
-    #     mock_recv.return_value = (b'\x06\x00\xee\x07\x00\x00\x00\x00\x00\x00'
-    #                               b'\x00\x00\x00\x06'
-    #                               b'\x01\x02\x03\x04\x05\x06', 0)
+    def test_send_and_receive_raw(self):
+        mock_socket = MagicMock(spec=socket.socket)
+        expected_send = (
+            b"\x06"              # RMCP Version (06h)
+            b"\x00"              # RMCP Reserved
+            b"\xff"              # RMCP Sequence Number (Unsequenced)
+            b"\x07"              # RMCP Class (07h = IPMI)
 
-    #     target = Target()
-    #     target.ipmb_address = 0x20
-    #     rmcp = Rmcp()
-    #     rmcp.host = '10.10.10.10'
-    #     rmcp.port = 637
+            # --- IPMI LAN Session Wrapper ---
+            b"\x00"              # Authentication Type (00h = None / v1.5)
+            b"\x00\x00\x00\x00"  # Session ID (00000000h for unauthenticated/handshake)
+            b"\x00\x00\x00\x00"  # Inbound Sequence Number
+            b"\x07"              # Message Length (7 bytes follow)
 
-    #     rmcp._sock.sendto = mock_send
-    #     rmcp._sock.recvfrom = mock_recv
+            # --- IPMB HEADER ---
+            b"\x20"              # Target Address / Requester (0x20 = BMC)
+            b"\x18"              # NetFn/LUN (NetFn 6 = App Response << 2 | LUN 0) -> 0x18
+            b"\xc8"              # Header Checksum (Zero-sum of preceding 2 bytes)
 
-    #     rmcp.send_and_receive_raw(target, 0, 0, b'\x00')
-    #     rmcp._send_ipmi_msg.assert_called_with(1)
+            b"\x81"              # Source Address / Responder (0x81 = remote proxy)
+            b"\x04"              # SeqNo/LUN (Sequence Number 1 << 2 | LUN 0) -> 0x04
+            b"\x00"              # Command (00h)
+            b"\x7b"              # Data Checksum (Zero-sum of preceding 3 bytes)
+            )
+        expected_recv = (
+            # --- RMCP Header ---
+            b"\x06"              # RMCP Version (06h)
+            b"\x00"              # RMCP Reserved
+            b"\xff"              # RMCP Sequence Number (Unsequenced)
+            b"\x07"              # RMCP Class (07h = IPMI)
+
+            # --- IPMI LAN Session Wrapper ---
+            b"\x00"              # Authentication Type (00h = None / v1.5)
+            b"\x00\x00\x00\x00"  # Session ID (00000000h for unauthenticated/handshake)
+            b"\x00\x00\x00\x00"  # Inbound Sequence Number
+            b"\x08"              # Message Length (8 bytes follow)
+
+            # --- IPMB HEADER ---
+            b"\x81"              # Target Address / Requester (e.g., 0x81 for remote proxy)
+            b"\x1c"              # NetFn/LUN (NetFn 7 = App Response << 2 | LUN 0) -> 0x1C
+            b"\x63"              # Header Checksum (Zero-sum of preceding 2 bytes)
+
+            b"\x20"              # Source Address / Responder (0x20 = BMC)
+            b"\x04"              # SeqNo/LUN (Sequence Number 1 << 2 | LUN 0) -> 0x04
+            b"\x00"              # Command (00h)
+            b"\xc1"              # Completion Code (0xC1 = Invalid Command)
+            b"\x1b"              # Data Checksum (Zero-sum of preceding 4 bytes)
+            )
+
+        rmcp = Rmcp()
+        rmcp._sock = mock_socket
+        mock_socket.recv.return_value = expected_recv
+        result = rmcp.send_and_receive_raw(rmcp.host_target, 0, 6, b'\x00')
+        mock_socket.send.assert_called_with(expected_send)
+        assert result == b'\xc1'
 
     def test_send_and_receive(self):
         pass
