@@ -36,7 +36,7 @@ from pyipmi.utils import py3_array_tobytes
 
 json_output = False
 
-Command = namedtuple('Command', 'name fn')
+Command = namedtuple('Command', 'name fn needs_connection', defaults=(True,))
 CommandHelp = namedtuple('CommandHelp', 'name arguments help')
 
 
@@ -44,10 +44,10 @@ def _print(s: object) -> None:
     print(s)
 
 
-def _get_command_function(name: str) -> Callable[..., None] | None:
+def _get_command(name: str) -> Command | None:
     for cmd in COMMANDS:
         if cmd.name == name:
-            return cmd.fn
+            return cmd
     return None
 
 
@@ -549,6 +549,39 @@ def parse_interface_options(interface_name: str, options: str | list) -> dict:
     return interface_options
 
 
+def create_ipmi_connection(interface_name: str, interface_options: str | list,
+                           target_address: int,
+                           target_routing: str | list | None,
+                           rmcp_host: str | None, rmcp_port: int,
+                           rmcp_user: str, rmcp_password: str,
+                           rmcp_priv_level: str | None) -> pyipmi.Ipmi:
+    interface_options = parse_interface_options(interface_name,
+                                                interface_options)
+
+    try:
+        interface = pyipmi.interfaces.create_interface(interface_name,
+                                                       **interface_options)
+    except RuntimeError as e:
+        print(e)
+#        sys.exit(1)
+        return None
+
+    ipmi = pyipmi.create_connection(interface)
+    ipmi.target = pyipmi.Target(target_address)
+
+    if target_routing is not None:
+        ipmi.target.set_routing(target_routing)
+
+    if rmcp_host is not None:
+        ipmi.session.set_session_type_rmcp(rmcp_host, rmcp_port)
+        ipmi.session.set_auth_type_user(rmcp_user, rmcp_password)
+
+        if rmcp_priv_level is not None:
+            ipmi.session.set_priv_level(rmcp_priv_level)
+
+    return ipmi
+
+
 def main() -> None:
     try:
         opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:L:o:b:p:r:J')
@@ -557,7 +590,7 @@ def main() -> None:
         usage()
         sys.exit(2)
     verbose = False
-    interface_name = 'aardvark'
+    interface_name = None
     target_address = 0x20
     target_routing = None
     rmcp_host = None
@@ -617,7 +650,7 @@ def main() -> None:
     pyipmi.logger.set_log_level(logging.DEBUG)
 
     for i in range(len(args)):
-        cmd = _get_command_function(' '.join(args[0:i+1]))
+        cmd = _get_command(' '.join(args[0:i+1]))
         if cmd is not None:
             args = args[i+1:]
             break
@@ -625,32 +658,15 @@ def main() -> None:
         usage()
         sys.exit(1)
 
-    interface_options = parse_interface_options(interface_name,
-                                                interface_options)
+    ipmi = create_ipmi_connection(interface_name, interface_options,
+                                  target_address, target_routing,
+                                  rmcp_host, rmcp_port, rmcp_user,
+                                  rmcp_password, rmcp_priv_level)
 
     try:
-        interface = pyipmi.interfaces.create_interface(interface_name,
-                                                       **interface_options)
-    except RuntimeError as e:
-        print(e)
-        sys.exit(1)
-
-    ipmi = pyipmi.create_connection(interface)
-    ipmi.target = pyipmi.Target(target_address)
-
-    if target_routing is not None:
-        ipmi.target.set_routing(target_routing)
-
-    if rmcp_host is not None:
-        ipmi.session.set_session_type_rmcp(rmcp_host, rmcp_port)
-        ipmi.session.set_auth_type_user(rmcp_user, rmcp_password)
-
-        if rmcp_priv_level is not None:
-            ipmi.session.set_priv_level(rmcp_priv_level)
-
-    try:
-        ipmi.open()  # this will open interface and session
-        cmd(ipmi, args)
+        if cmd.needs_connection:
+            ipmi.open()  # this will open interface and session
+        cmd.fn(ipmi, args)
     except pyipmi.errors.CompletionCodeError as e:
         print('Command returned with completion code 0x%02x' % e.cc)
         if verbose:
@@ -667,7 +683,8 @@ def main() -> None:
         sys.exit(1)
 
     finally:
-        ipmi.close()  # this will close interface and session
+        if cmd.needs_connection:
+            ipmi.close()  # this will close interface and session
 
 
 COMMANDS = (
@@ -691,7 +708,7 @@ COMMANDS = (
         Command('picmg channel power', cmd_picmg_send_channel_power),
         Command('raw', cmd_raw),
         Command('hpm capabilities', cmd_hpm_capabilities),
-        Command('hpm check', cmd_hpm_check_file),
+        Command('hpm check', cmd_hpm_check_file, needs_connection=False),
         Command('hpm install', cmd_hpm_install),
         Command('chassis status', cmd_chassis_status),
         Command('chassis power off',
