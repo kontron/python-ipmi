@@ -4,24 +4,15 @@ from typing import Any
 
 from .. import Target
 from ..msgs import Message
-from ..session import Session
+from .base import Interface
 
 
-class Mock(object):
+class Mock(Interface):
     """This interface is used as mock."""
 
     NAME = 'mock'
 
     def __init__(self) -> None:
-        pass
-
-    def open(self) -> None:
-        pass
-
-    def close(self) -> None:
-        pass
-
-    def establish_session(self, session: Session) -> None:
         pass
 
     def is_ipmc_accessible(self, target: Target) -> Any:

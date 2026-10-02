@@ -1,0 +1,85 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import pytest
+
+import pyipmi
+import pyipmi.msgs.bmc
+from pyipmi.interfaces import INTERFACES
+from pyipmi.interfaces.base import Interface
+from pyipmi.interfaces.ipmb import IpmbInterface
+from pyipmi.interfaces.aardvark import Aardvark
+from pyipmi.interfaces.ipmbdev import IpmbDev
+from pyipmi.interfaces.openipmblink import OpenIpmbLink
+
+
+@pytest.mark.parametrize('intf', INTERFACES)
+def test_interfaces_use_base_class(intf):
+    assert issubclass(intf, Interface)
+    assert intf.NAME is not None
+
+
+@pytest.mark.parametrize('intf', [Aardvark, IpmbDev, OpenIpmbLink])
+def test_ipmb_interfaces_use_ipmb_base_class(intf):
+    assert issubclass(intf, IpmbInterface)
+
+
+def test_not_implemented():
+    intf = Interface()
+    with pytest.raises(NotImplementedError):
+        intf.send_and_receive_raw(pyipmi.Target(0x20), 0, 6, b'\x01')
+    with pytest.raises(NotImplementedError):
+        intf.is_ipmc_accessible(pyipmi.Target(0x20))
+
+
+class RawStub(Interface):
+    NAME = 'stub'
+
+    def send_and_receive_raw(self, target, lun, netfn, raw_bytes):
+        self.request = (target, lun, netfn, raw_bytes)
+        return (b'\x00\x0c\x89\x00\x00\x02\x3d\x98'
+                b'\x3a\x00\xbe\x14\x04\x00\x02\x00')
+
+
+def test_send_and_receive_uses_raw():
+    intf = RawStub()
+    req = pyipmi.msgs.bmc.GetDeviceIdReq()
+    req.target = pyipmi.Target(0x72)
+    rsp = intf.send_and_receive(req)
+
+    assert intf.request == (req.target, 0, 6, b'\x01')
+    assert rsp.completion_code == 0
+    assert rsp.device_id == 0x0c
+
+
+class IpmbStub(IpmbInterface):
+    NAME = 'ipmbstub'
+
+    def _send_raw(self, header, raw_bytes):
+        self.header = header
+        self.raw_bytes = raw_bytes
+
+    def _receive_raw(self, header):
+        # rqSA netFn/LUN chk rsSA seq/LUN cmd cc data chk
+        return bytes((0x20, 0x1c, 0xc4, 0x72, header.rq_seq << 2, 0x01,
+                      0x00, 0xaa, 0x00))
+
+
+def test_ipmb_send_and_receive_raw():
+    intf = IpmbStub(slave_address=0x20)
+    rsp = intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01\x02')
+
+    assert rsp == b'\x00\xaa'
+    assert intf.header.rs_sa == 0x72
+    assert intf.header.rq_sa == 0x20
+    assert intf.header.netfn == 6
+    assert intf.header.cmdid == 1
+    assert intf.header.rq_seq == 1
+    assert intf.raw_bytes == b'\x02'
+
+
+def test_ipmb_inc_sequence_number():
+    intf = IpmbStub()
+    intf.next_sequence_number = 63
+    intf._inc_sequence_number()
+    assert intf.next_sequence_number == 0

@@ -16,15 +16,18 @@
 
 from __future__ import annotations
 
+import time
 from array import array
 from typing import Iterable
 
-from .. import Routing
+from .. import Routing, Target
+from ..errors import IpmiTimeoutError
 from ..logger import log
 from ..msgs import (create_message, create_request_by_name,
                     encode_message, decode_message, constants)
 from ..utils import check_completion_code
 from ..utils import py3_array_tobytes, py3_array_frombytes
+from .base import Interface
 
 
 def checksum(data: Iterable[int]) -> int:
@@ -278,3 +281,99 @@ def rx_filter(header: IpmbHeaderReq, data: bytes | array, rq_sa: bool = False,
             match = False
 
     return match
+
+
+class IpmbInterface(Interface):
+    """Base class of interfaces that are directly connected to an IPMB.
+
+    The interface sends IPMB requests with its own `slave_address` as
+    requester and waits for the matching response. A subclass has to
+    implement `_send_raw()` and `_receive_raw()`.
+    """
+
+    def __init__(self, slave_address: int = 0x20) -> None:
+        self.slave_address = slave_address
+        self.timeout = 0.25
+        self.max_retries = 3
+        self.next_sequence_number = 0
+
+    def _send_raw(self, header: IpmbHeaderReq,
+                  raw_bytes: bytes | None) -> None:
+        """Send an IPMB request with the given header and data."""
+        raise NotImplementedError()
+
+    def _receive_raw(self, header: IpmbHeaderReq) -> bytes | array:
+        """Receive the IPMB response to the request with the given header.
+
+        Returns the complete IPMB message, starting with rqSA.
+        Raises IpmiTimeoutError if no matching response is received.
+        """
+        raise NotImplementedError()
+
+    def is_ipmc_accessible(self, target: Target) -> bool:
+        header = IpmbHeaderReq()
+        header.netfn = 6
+        header.rs_lun = 0
+        header.rs_sa = target.ipmb_address
+        header.rq_seq = self.next_sequence_number
+        header.rq_lun = 0
+        header.rq_sa = self.slave_address
+        header.cmdid = 1
+        self._send_raw(header, None)
+        self._receive_raw(header)
+        return True
+
+    def _inc_sequence_number(self) -> None:
+        self.next_sequence_number = (self.next_sequence_number + 1) % 64
+
+    def _send_and_receive(self, target: Target, lun: int, netfn: int,
+                          cmdid: int, payload: bytes) -> bytes:
+        """Send a request and receive the response.
+
+        target: IPMI target
+        lun: logical unit number
+        netfn: network function
+        cmdid: command id
+        payload: IPMI message payload as bytestring
+
+        Returns the response data as bytestring, starting with the
+        completion code.
+        """
+        self._inc_sequence_number()
+
+        # assemble IPMB header
+        header = IpmbHeaderReq()
+        header.netfn = netfn
+        header.rs_lun = lun
+        header.rs_sa = target.ipmb_address
+        header.rq_seq = self.next_sequence_number
+        header.rq_lun = 0
+        header.rq_sa = self.slave_address
+        header.cmdid = cmdid
+
+        retries = 0
+        while retries < self.max_retries:
+            try:
+                self._send_raw(header, payload)
+                rx_data = self._receive_raw(header)
+                break
+            except IpmiTimeoutError:
+                pass
+            except IOError:
+                pass
+
+            retries += 1
+            time.sleep(retries * 0.2)
+
+        else:
+            raise IpmiTimeoutError()
+
+        return bytes(rx_data[6:-1])
+
+    def send_and_receive_raw(self, target: Target, lun: int, netfn: int,
+                             raw_bytes: bytes) -> bytes:
+        return self._send_and_receive(target=target,
+                                      lun=lun,
+                                      netfn=netfn,
+                                      cmdid=array('B', raw_bytes)[0],
+                                      payload=raw_bytes[1:])

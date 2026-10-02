@@ -27,11 +27,11 @@ from typing import Any, Callable
 
 from .. import Target
 from ..session import Session
-from ..msgs import (create_message, create_request_by_name,
-                    encode_message, decode_message, constants, Message)
+from ..msgs import create_request_by_name, constants, Message
 from ..messaging import ChannelAuthenticationCapabilities
 from ..errors import DecodingError, NotSupportedError, RetryError
 from ..logger import log
+from .base import Interface
 from ..interfaces.ipmb import (IpmbHeaderReq, encode_ipmb_msg,
                                encode_bridged_message, decode_bridged_message,
                                rx_filter)
@@ -360,7 +360,7 @@ class IpmiMsg(object):
         pass
 
 
-class Rmcp(object):
+class Rmcp(Interface):
     NAME = 'rmcp'
 
     _session: Session | None = None
@@ -673,20 +673,3 @@ class Rmcp(object):
                                       netfn=netfn,
                                       cmdid=array('B', raw_bytes)[0],
                                       payload=raw_bytes[1:])
-
-    def send_and_receive(self, req: Message) -> Message:
-        """Interface function to send and receive an IPMI message.
-
-        target: IPMI target
-        req: IPMI message request
-
-        Returns the IPMI message response.
-        """
-        rx_data = self._send_and_receive(target=req.target,
-                                         lun=req.lun,
-                                         netfn=req.netfn,
-                                         cmdid=req.cmdid,
-                                         payload=encode_message(req))
-        rsp = create_message(req.netfn + 1, req.cmdid, req.group_extension)
-        decode_message(rsp, rx_data)
-        return rsp

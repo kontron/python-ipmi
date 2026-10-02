@@ -31,12 +31,12 @@ from ..errors import (
     AuthenticationError,
 )
 from ..logger import log
-from ..msgs import encode_message, decode_message, create_message, Message
 from ..msgs.constants import CC_OK
-from ..utils import py3dec_unic_bytes_fix, ByteBuffer, py3_array_tobytes
+from ..utils import py3dec_unic_bytes_fix, py3_array_tobytes
+from .base import Interface
 
 
-class Ipmitool(object):
+class Ipmitool(Interface):
     """This interface uses the ipmitool raw command.
 
     This "emulates" a RMCP session by using raw commands.
@@ -78,17 +78,8 @@ class Ipmitool(object):
                 r".*RAW REQUEST\s*\((\d+)\s*bytes?\)")
         self._session = None
 
-    def open(self) -> None:
-        pass
-
-    def close(self) -> None:
-        pass
-
     def establish_session(self, session: Session) -> None:
         self._session = session
-
-    def close_session(self) -> None:
-        pass
 
     def rmcp_ping(self) -> None:
 
@@ -232,21 +223,6 @@ class Ipmitool(object):
             ''.join('%02x ' % b for b in array('B', data))))
 
         return py3_array_tobytes(data)
-
-    def send_and_receive(self, req: Message) -> Message:
-        log().debug('IPMI Request [%s]', req)
-
-        req_data = ByteBuffer((req.cmdid,))
-        req_data.push_string(encode_message(req))
-
-        rsp_data = self.send_and_receive_raw(req.target, req.lun, req.netfn,
-                                             py3_array_tobytes(req_data))
-
-        rsp = create_message(req.netfn + 1, req.cmdid, req.group_extension)
-        decode_message(rsp, rsp_data)
-        log().debug('IPMI Response [%s])', rsp)
-
-        return rsp
 
     @staticmethod
     def _build_ipmitool_raw_data(lun: int, netfn: int, raw: bytes) -> str:
