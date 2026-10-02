@@ -258,6 +258,22 @@ ipmitool command:
 
     ipmitool -I serial-terminal -D /dev/tty2:115200 -t 0xb2 -l 0 raw 0x06 0x01
 
+IPMB with openipmblink
+**********************
+
+For :abbr:`IPMB (Intelligent Platform Management Bus)` interface with the openipmblink bridge, pass the bridge's data serial port and the IPMB bus number (0 or 1). The own IPMB address of that bus is set to ``slave_address`` when the interface is opened.
+
+.. code:: python
+
+  interface = pyipmi.interfaces.create_interface('openipmblink',
+                                               slave_address=0x20,
+                                               port='/dev/ttyACM1',
+                                               bus=0)
+  ipmi = pyipmi.create_connection(interface)
+  ipmi.target = pyipmi.Target(ipmb_address=0xb4)
+  ipmi.open()
+  device_id = ipmi.get_device_id()
+
 IPMB with Aardvark
 ******************
 

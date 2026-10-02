@@ -475,7 +475,8 @@ Options:
   -h               Show this help
   -v               Be verbose
   -V               Print version
-  -I <interface>   Set interface (available: rmcp, aardvark, ipmitool, ipmbdev)
+  -I <interface>   Set interface (available: rmcp, aardvark, ipmitool, ipmbdev,
+                   openipmblink)
   -H <host>        Set RMCP host
   -U <user>        Set RMCP user
   -L <level>       Set RMCP privilege level
@@ -496,6 +497,10 @@ Ipmitool interface options:
 
 Ipmbdev interface options:
   port=<path>       Specify path to Linux IPMB device (/dev/ipmb-0 by default)
+
+Openipmblink interface options:
+  port=<path>       Data serial port of the bridge (/dev/ttyACM1 by default)
+  bus=<n>           IPMB bus of the bridge (0 by default)
 '''[1:])
         print('Commands:')
 
@@ -545,6 +550,13 @@ def parse_interface_options(interface_name: str, options: str | list) -> dict:
         elif interface_name == 'ipmbdev':
             if name == 'port':
                 interface_options['port'] = value
+        elif interface_name == 'openipmblink':
+            if name == 'port':
+                interface_options['port'] = value
+            elif name == 'bus':
+                interface_options['bus'] = int(value)
+            else:
+                print('Warning: unknown option %s' % name)
 
     return interface_options
 
