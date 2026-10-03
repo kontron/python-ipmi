@@ -274,6 +274,39 @@ For :abbr:`IPMB (Intelligent Platform Management Bus)` interface with the openip
   ipmi.open()
   device_id = ipmi.get_device_id()
 
+Both buses of the bridge can be used at the same time; the interfaces share the serial port.
+
+The interface also answers requests addressed to its own IPMB address. This works the same way for all IPMB interfaces (``openipmblink``, ``aardvark`` and ``ipmbdev``), each takes a ``router`` argument. Incoming messages are passed to a ``MessageRouter``: responses are matched to the pending requests, requests are passed to the handler registered for their NetFn and command. Requests without a handler get completion code ``0xC1`` (invalid command). Without a router, incoming requests are ignored.
+
+.. code:: python
+
+  from pyipmi.interfaces.router import MessageRouter
+  from pyipmi.msgs import bmc, constants
+
+  def get_device_id(req):
+      rsp = bmc.GetDeviceIdRsp()
+      rsp.completion_code = constants.CC_OK
+      rsp.device_id = 0x12
+      return rsp
+
+  router = MessageRouter()
+  router.register_handler(constants.NETFN_APP, constants.CMDID_GET_DEVICE_ID,
+                          get_device_id)
+  interface = pyipmi.interfaces.create_interface('openipmblink',
+                                               slave_address=0x20,
+                                               port='/dev/ttyACM1',
+                                               bus=0,
+                                               router=router)
+  interface.open()
+
+Handlers run in a worker thread of the router. ``register_raw_handler()`` registers a handler that gets the interface, the IPMB header and the raw request data and returns the raw response data. See ``examples/interface_openipmblink.py`` for the bridge self-test.
+
+The ``port`` can also be a pyserial URL, e.g. ``socket://localhost:5555`` for a bridge shared over TCP. ``examples/bmc_openipmblink.py`` runs a BMC on bus 1 and shares the bridge this way, so ``ipmitool.py`` can send requests from bus 0:
+
+.. code:: shell
+
+  ipmitool.py -I openipmblink -o port=socket://localhost:5555,bus=0,address=0x24 -t 0x20 bmc info
+
 IPMB with Aardvark
 ******************
 
