@@ -34,3 +34,10 @@ class TestParseInterfaceOptions:
     def test_options_ipmbdev(self):
         options = parse_interface_options('ipmbdev', 'port=/dev/ipmb0')
         assert options['port'] == '/dev/ipmb0'
+
+    def test_options_openipmblink(self):
+        options = parse_interface_options(
+            'openipmblink', 'port=socket://localhost:5555,bus=1,address=0x24')
+        assert options['port'] == 'socket://localhost:5555'
+        assert options['bus'] == 1
+        assert options['slave_address'] == 0x24
