@@ -16,9 +16,10 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from array import array
-from typing import Iterable
+from typing import Iterable, TYPE_CHECKING
 
 from .. import Routing, Target
 from ..errors import IpmiTimeoutError
@@ -28,6 +29,9 @@ from ..msgs import (create_message, create_request_by_name,
 from ..utils import check_completion_code
 from ..utils import py3_array_tobytes, py3_array_frombytes
 from .base import Interface
+
+if TYPE_CHECKING:
+    from .router import MessageRouter
 
 
 def checksum(data: Iterable[int]) -> int:
@@ -286,29 +290,88 @@ def rx_filter(header: IpmbHeaderReq, data: bytes | array, rq_sa: bool = False,
 class IpmbInterface(Interface):
     """Base class of interfaces that are directly connected to an IPMB.
 
-    The interface sends IPMB requests with its own `slave_address` as
-    requester and waits for the matching response. A subclass has to
-    implement `_send_raw()` and `_receive_raw()`.
+    The interface works as requester and responder at the same time. All
+    received messages are passed to a `MessageRouter`: it matches responses
+    to the pending requests and answers incoming requests with the registered
+    handlers. Without a router given, incoming requests are ignored.
+
+    A subclass implements `send_frame()` and passes each received message to
+    `_receive_frame()`. Interfaces that have to poll the hardware implement
+    `_read_frame()` and start the receive thread with `_start_receiver()`.
     """
 
-    def __init__(self, slave_address: int = 0x20) -> None:
+    def __init__(self, slave_address: int = 0x20,
+                 router: MessageRouter | None = None) -> None:
+        # imported here, the router module depends on this module
+        from .router import MessageRouter
+
         self.slave_address = slave_address
         self.timeout = 0.25
         self.max_retries = 3
         self.next_sequence_number = 0
+        self._sequence_lock = threading.Lock()
+        self._default_router = MessageRouter(unhandled_cc=None)
+        self.router = router
+        self._receiver: threading.Thread | None = None
+        self._stop_receiver_event = threading.Event()
 
-    def _send_raw(self, header: IpmbHeaderReq,
-                  raw_bytes: bytes | None) -> None:
-        """Send an IPMB request with the given header and data."""
+    @property
+    def router(self) -> MessageRouter:
+        return self._router
+
+    @router.setter
+    def router(self, router: MessageRouter | None) -> None:
+        """Set the router, None sets the default router."""
+        self._router = router if router is not None else self._default_router
+
+    def send_frame(self, frame: bytes) -> None:
+        """Send a complete IPMB message, starting with rsSA."""
         raise NotImplementedError()
 
-    def _receive_raw(self, header: IpmbHeaderReq) -> bytes | array:
-        """Receive the IPMB response to the request with the given header.
+    def _read_frame(self, timeout: float) -> bytes | None:
+        """Read the next received IPMB message, starting with rqSA.
 
-        Returns the complete IPMB message, starting with rqSA.
-        Raises IpmiTimeoutError if no matching response is received.
+        Returns None if no message is received within the timeout.
+        Only needed for interfaces that use the receive thread.
         """
         raise NotImplementedError()
+
+    def _receive_frame(self, frame: bytes) -> None:
+        """Pass a received IPMB message to the router."""
+        log().debug('IPMB RX [%s]', ' '.join(['%02x' % b for b in frame]))
+        self._router.handle_frame(self, bytes(frame))
+
+    def _start_receiver(self) -> None:
+        """Start the thread that reads messages with `_read_frame()`."""
+        self._stop_receiver_event.clear()
+        self._receiver = threading.Thread(target=self._receive_loop,
+                                          name='%s-rx' % self.NAME,
+                                          daemon=True)
+        self._receiver.start()
+
+    def _stop_receiver(self) -> None:
+        self._stop_receiver_event.set()
+        if self._receiver is not None:
+            self._receiver.join()
+            self._receiver = None
+
+    def _receive_loop(self) -> None:
+        while not self._stop_receiver_event.is_set():
+            try:
+                frame = self._read_frame(0.05)
+            except Exception as e:
+                log().error('%s receive failed: %s', self.NAME, e)
+                return
+            if frame:
+                self._receive_frame(frame)
+
+    def close(self) -> None:
+        self._default_router.close()
+
+    def _request(self, header: IpmbHeaderReq,
+                 payload: bytes | None) -> bytes:
+        """Send a request and return the complete response message."""
+        return self._router.request(self, header, payload, self.timeout)
 
     def is_ipmc_accessible(self, target: Target) -> bool:
         header = IpmbHeaderReq()
@@ -319,12 +382,13 @@ class IpmbInterface(Interface):
         header.rq_lun = 0
         header.rq_sa = self.slave_address
         header.cmdid = 1
-        self._send_raw(header, None)
-        self._receive_raw(header)
+        self._request(header, None)
         return True
 
-    def _inc_sequence_number(self) -> None:
-        self.next_sequence_number = (self.next_sequence_number + 1) % 64
+    def _inc_sequence_number(self) -> int:
+        with self._sequence_lock:
+            self.next_sequence_number = (self.next_sequence_number + 1) % 64
+            return self.next_sequence_number
 
     def _send_and_receive(self, target: Target, lun: int, netfn: int,
                           cmdid: int, payload: bytes) -> bytes:
@@ -339,14 +403,12 @@ class IpmbInterface(Interface):
         Returns the response data as bytestring, starting with the
         completion code.
         """
-        self._inc_sequence_number()
-
         # assemble IPMB header
         header = IpmbHeaderReq()
         header.netfn = netfn
         header.rs_lun = lun
         header.rs_sa = target.ipmb_address
-        header.rq_seq = self.next_sequence_number
+        header.rq_seq = self._inc_sequence_number()
         header.rq_lun = 0
         header.rq_sa = self.slave_address
         header.cmdid = cmdid
@@ -354,8 +416,7 @@ class IpmbInterface(Interface):
         retries = 0
         while retries < self.max_retries:
             try:
-                self._send_raw(header, payload)
-                rx_data = self._receive_raw(header)
+                rx_data = self._request(header, payload)
                 break
             except IpmiTimeoutError:
                 pass

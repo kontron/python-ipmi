@@ -2,64 +2,53 @@ from __future__ import annotations
 
 import os
 import select
-import time
-from array import array
 
-from ..errors import IpmiTimeoutError
 from ..logger import log
-from .ipmb import IpmbInterface, IpmbHeaderReq, rx_filter, encode_ipmb_msg
+from .ipmb import IpmbInterface
+from .router import MessageRouter
 
 
 class IpmbDev(IpmbInterface):
-    """This interface uses ipmb-dev-int linux driver."""
+    """This interface uses ipmb-dev-int linux driver.
+
+    The driver receives all messages addressed to the slave address of the
+    device. A receive thread passes them to the router, so the interface can
+    also answer incoming requests (see `MessageRouter`).
+    """
 
     NAME = 'ipmbdev'
 
     def __init__(self, slave_address: int = 0x20,
-                 port: str = '/dev/ipmb-0') -> None:
+                 port: str = '/dev/ipmb-0',
+                 router: MessageRouter | None = None) -> None:
         # TODO: slave address is currently not defined here
-        super().__init__(slave_address)
+        super().__init__(slave_address, router)
         self.port = port
 
     def open(self) -> None:
         self._dev = os.open(self.port, os.O_RDWR)
+        self._start_receiver()
 
     def close(self) -> None:
+        self._stop_receiver()
         os.close(self._dev)
+        super().close()
 
-    def _send_raw(self, header: IpmbHeaderReq,
-                  raw_bytes: bytes | None) -> None:
-        raw_bytes = encode_ipmb_msg(header, raw_bytes)
-        i2c_addr = header.rs_sa >> 1
+    def send_frame(self, frame: bytes) -> None:
+        i2c_addr = frame[0] >> 1
 
         log().debug('I2C TX to %02Xh [%s]', i2c_addr,
-                    ' '.join(['%02x' % b for b in raw_bytes]))
-        os.write(self._dev, bytes([len(raw_bytes)]) + raw_bytes)
+                    ' '.join(['%02x' % b for b in frame]))
+        os.write(self._dev, bytes([len(frame)]) + bytes(frame))
 
-    def _receive_raw(self, header: IpmbHeaderReq) -> array:
-        start_time = time.time()
-        rsp_received = False
-        poll_returned_no_data = False
-        while not rsp_received:
-            timeout = self.timeout - (time.time() - start_time)
+    def _read_frame(self, timeout: float) -> bytes | None:
+        r, w, e = select.select([self._dev], [], [], timeout)
+        if self._dev not in r:
+            return None
 
-            if timeout <= 0 or poll_returned_no_data:
-                raise IpmiTimeoutError()
-
-            r, w, e = select.select([self._dev], [], [], timeout)
-            if self._dev not in r:
-                poll_returned_no_data = True
-                continue
-
-            rx_data = os.read(self._dev, 256)
-            # ipmb-dev-int puts message length into first byte
-            assert rx_data[0] == len(rx_data) - 1
-            rx_data = rx_data[1:]
-
-            rx_data = array('B', rx_data)
-            log().debug('I2C RX from %02Xh [%s]', rx_data[3],
-                        ' '.join(['%02x' % c for c in rx_data]))
-
-            rsp_received = rx_filter(header, rx_data)
-
-        return rx_data
+        rx_data = os.read(self._dev, 256)
+        # ipmb-dev-int puts message length into first byte
+        if not rx_data or rx_data[0] != len(rx_data) - 1:
+            log().debug('ipmbdev RX bad length [%s]', rx_data.hex(' '))
+            return None
+        return rx_data[1:]

@@ -17,12 +17,14 @@
 from __future__ import annotations
 
 import json
+import queue
+import threading
 import time
-from typing import Any
+from typing import Any, Callable
 
-from ..errors import IpmiTimeoutError
 from ..logger import log
-from .ipmb import IpmbInterface, IpmbHeaderReq, rx_filter, encode_ipmb_msg
+from .ipmb import IpmbInterface
+from .router import MessageRouter
 
 try:
     import serial
@@ -34,94 +36,243 @@ class OpenIpmbLinkError(IOError):
     pass
 
 
-class OpenIpmbLink(IpmbInterface):
-    """This interface uses the openipmblink USB to IPMB bridge.
+class OpenIpmbLinkDevice(object):
+    """Connection to the data serial port of an openipmblink bridge.
 
-    The bridge is connected via its data USB serial port. The host protocol
-    (version 3) uses one JSON object per line, IPMB messages are transferred
-    as hex strings including both checksums.
+    All buses of a bridge share one serial port, so the interfaces of the
+    buses share one device (see `acquire()`). A receive thread reads all
+    packets from the bridge: replies are passed to the waiting `command()`,
+    received IPMB messages to the listener of their bus.
+
+    The host protocol (version 3) uses one JSON object per line, IPMB
+    messages are transferred as hex strings including both checksums.
     """
 
-    NAME = 'openipmblink'
     PROTOCOL_VERSION = 3
 
-    def __init__(self, slave_address: int = 0x20,
-                 port: str = '/dev/ttyACM1', bus: int = 0) -> None:
+    _devices: dict[str, OpenIpmbLinkDevice] = {}
+    _devices_lock = threading.Lock()
+
+    def __init__(self, port: str, cmd_timeout: float = 1.0) -> None:
+        self.port = port
+        self.cmd_timeout = cmd_timeout
+        self.info: dict | None = None
+        self._ser = None
+        self._rx_buf = bytearray()
+        self._replies: queue.Queue = queue.Queue()
+        self._command_lock = threading.Lock()
+        self._listeners: dict[int, Callable[[bytes, int | None], None]] = {}
+        self._listeners_lock = threading.Lock()
+        self._reader: threading.Thread | None = None
+        self._stop = threading.Event()
+        self._users = 0
+
+    @classmethod
+    def acquire(cls, port: str) -> OpenIpmbLinkDevice:
+        """Return the open device of the port, open it on first use."""
+        with cls._devices_lock:
+            device = cls._devices.get(port)
+            if device is None:
+                device = cls(port)
+                device.open()
+                cls._devices[port] = device
+            device._users += 1
+            return device
+
+    def release(self) -> None:
+        """Release a device returned by `acquire()`, close it on last use."""
+        with self._devices_lock:
+            self._users -= 1
+            if self._users > 0:
+                return
+            if self._devices.get(self.port) is self:
+                del self._devices[self.port]
+        self.close()
+
+    def open(self) -> None:
         if serial is None:
             raise RuntimeError('No pyserial module found. You can not '
                                'use this interface.')
 
-        super().__init__(slave_address)
-        self.port = port
-        self.bus = bus
-        self.cmd_timeout = 1.0
-        self._ser = None
+        # the port is a device path or a pyserial URL, e.g. a bridge shared
+        # over TCP: socket://localhost:5555
+        self._ser = serial.serial_for_url(self.port, timeout=0.05)
         self._rx_buf = bytearray()
-        self._pending_rx = []
-
-    def open(self) -> None:
-        self._ser = serial.Serial(self.port, timeout=0.05)
-        self._rx_buf = bytearray()
-        self._pending_rx = []
+        self._stop.clear()
         # terminate a partial line left over from an earlier session
         self._ser.write(b'\n')
+        self._reader = threading.Thread(target=self._read_loop,
+                                        name='openipmblink-rx', daemon=True)
+        self._reader.start()
 
-        info = self._command('ping')
-        if info.get('version') != self.PROTOCOL_VERSION:
-            raise OpenIpmbLinkError(
-                'bridge protocol version %s, interface needs %d'
-                % (info.get('version'), self.PROTOCOL_VERSION))
+        try:
+            try:
+                info = self.command('ping')
+            except OpenIpmbLinkError:
+                # the bridge may report the partial line as error
+                info = self.command('ping')
+            if info.get('version') != self.PROTOCOL_VERSION:
+                raise OpenIpmbLinkError(
+                    'bridge protocol version %s, interface needs %d'
+                    % (info.get('version'), self.PROTOCOL_VERSION))
+        except Exception:
+            self.close()
+            raise
+
+        self.info = info
         log().debug('openipmblink v%s on %s', info.get('version'),
                     info.get('board'))
 
-        self._check_status(self._command('set_addr', bus=self.bus,
-                                         addr=self.slave_address))
-
     def close(self) -> None:
+        self._stop.set()
+        if self._reader is not None:
+            self._reader.join()
+            self._reader = None
         if self._ser is not None:
             self._ser.close()
             self._ser = None
 
-    def _write_packet(self, packet: dict) -> None:
-        line = json.dumps(packet, separators=(',', ':')).encode()
-        log().debug('openipmblink TX %s', line)
-        self._ser.write(line + b'\n')
+    def add_listener(self, bus: int,
+                     listener: Callable[[bytes, int | None], None]) -> None:
+        """Pass IPMB messages received on the bus to the listener.
 
-    def _read_packet(self, timeout: float) -> dict | None:
-        """Return the next JSON packet or None on timeout."""
-        deadline = time.monotonic() + timeout
+        The listener is called with the message and the receive time stamp
+        of the bridge. It is called in the receive thread and must not block.
+        """
+        with self._listeners_lock:
+            if bus in self._listeners:
+                raise OpenIpmbLinkError('bus %d is already in use' % bus)
+            self._listeners[bus] = listener
+
+    def remove_listener(self, bus: int) -> None:
+        with self._listeners_lock:
+            self._listeners.pop(bus, None)
+
+    def has_listener(self, bus: int) -> bool:
+        return bus in self._listeners
+
+    def command(self, cmd: str, **params: Any) -> dict:
+        """Send a command to the bridge and return its reply."""
+        with self._command_lock:
+            # drop late replies of commands that timed out
+            while not self._replies.empty():
+                self._replies.get_nowait()
+
+            line = json.dumps(dict(cmd=cmd, **params),
+                              separators=(',', ':')).encode()
+            log().debug('openipmblink TX %s', line)
+            self._ser.write(line + b'\n')
+
+            deadline = time.monotonic() + self.cmd_timeout
+            while True:
+                timeout = max(0.0, deadline - time.monotonic())
+                try:
+                    packet = self._replies.get(timeout=timeout)
+                except queue.Empty:
+                    raise OpenIpmbLinkError('no reply from bridge')
+                if packet.get('evt') == 'error':
+                    raise OpenIpmbLinkError('bridge reported error: %s'
+                                            % packet.get('status'))
+                if packet.get('rsp') == cmd:
+                    return packet
+
+    def _read_packet(self) -> dict | None:
+        """Return the next JSON packet or None if no complete line is read."""
         while True:
             pos = self._rx_buf.find(b'\n')
-            if pos >= 0:
-                line = bytes(self._rx_buf[:pos]).rstrip(b'\r')
-                del self._rx_buf[:pos + 1]
-                log().debug('openipmblink RX %s', line)
-                try:
-                    packet = json.loads(line)
-                except ValueError:
-                    continue  # e.g. partial line after opening the port
-                if isinstance(packet, dict):
-                    return packet
+            if pos < 0:
+                data = self._ser.read(self._ser.in_waiting or 1)
+                if not data:
+                    return None
+                self._rx_buf += data
                 continue
-            if time.monotonic() >= deadline:
-                return None
-            self._rx_buf += self._ser.read(self._ser.in_waiting or 1)
 
-    def _command(self, cmd: str, **params: Any) -> dict:
-        """Send a command to the bridge and return its reply."""
-        self._write_packet(dict(cmd=cmd, **params))
-        deadline = time.monotonic() + self.cmd_timeout
-        while True:
-            packet = self._read_packet(max(0.0, deadline - time.monotonic()))
-            if packet is None:
-                raise OpenIpmbLinkError('no reply from bridge')
-            if packet.get('rsp') == cmd:
+            line = bytes(self._rx_buf[:pos]).rstrip(b'\r')
+            del self._rx_buf[:pos + 1]
+            log().debug('openipmblink RX %s', line)
+            try:
+                packet = json.loads(line)
+            except ValueError:
+                continue  # e.g. partial line after opening the port
+            if isinstance(packet, dict):
                 return packet
-            if packet.get('evt') == 'error':
-                raise OpenIpmbLinkError('bridge reported error: %s'
-                                        % packet.get('status'))
-            if packet.get('evt') == 'rx':
-                self._pending_rx.append(packet)
+
+    def _read_loop(self) -> None:
+        while not self._stop.is_set():
+            try:
+                packet = self._read_packet()
+            except Exception as e:
+                log().error('openipmblink receive failed: %s', e)
+                return
+
+            if packet is None:
+                continue
+            if 'rsp' in packet or packet.get('evt') == 'error':
+                self._replies.put(packet)
+            elif packet.get('evt') == 'rx':
+                self._dispatch(packet)
+
+    def _dispatch(self, packet: dict) -> None:
+        listener = self._listeners.get(packet.get('bus'))
+        if listener is None:
+            return
+        try:
+            frame = bytes.fromhex(packet['msg'])
+        except (KeyError, TypeError, ValueError):
+            log().debug('openipmblink bad rx event %s', packet)
+            return
+        try:
+            listener(frame, packet.get('ts'))
+        except Exception:
+            log().exception('openipmblink rx listener failed')
+
+
+class OpenIpmbLink(IpmbInterface):
+    """This interface uses one IPMB bus of the openipmblink bridge.
+
+    The bridge is connected via its data USB serial port. Interfaces for the
+    other bus of the same bridge can be opened at the same time; they share
+    the serial port.
+
+    Incoming requests are ignored by default. To answer them, set a
+    `MessageRouter` with registered handlers, e.g.:
+
+        router = MessageRouter()
+        router.register_handler(NETFN_APP, CMDID_GET_DEVICE_ID, handler)
+        intf = OpenIpmbLink(port='/dev/ttyACM1', bus=0, router=router)
+    """
+
+    NAME = 'openipmblink'
+
+    def __init__(self, slave_address: int = 0x20,
+                 port: str = '/dev/ttyACM1', bus: int = 0,
+                 router: MessageRouter | None = None) -> None:
+        if serial is None:
+            raise RuntimeError('No pyserial module found. You can not '
+                               'use this interface.')
+
+        super().__init__(slave_address, router)
+        self.port = port
+        self.bus = bus
+        self._device: OpenIpmbLinkDevice | None = None
+
+    def open(self) -> None:
+        device = OpenIpmbLinkDevice.acquire(self.port)
+        try:
+            self._check_status(device.command('set_addr', bus=self.bus,
+                                              addr=self.slave_address))
+            device.add_listener(self.bus, self._on_rx)
+        except Exception:
+            device.release()
+            raise
+        self._device = device
+
+    def close(self) -> None:
+        if self._device is not None:
+            self._device.remove_listener(self.bus)
+            self._device.release()
+            self._device = None
+        super().close()
 
     @staticmethod
     def _check_status(reply: dict) -> None:
@@ -129,46 +280,14 @@ class OpenIpmbLink(IpmbInterface):
         if status != 'ok':
             raise OpenIpmbLinkError('bridge status: %s' % status)
 
-    def _receive_frame(self, timeout: float) -> bytes | None:
-        """Return the next IPMB message received on our bus."""
-        deadline = time.monotonic() + timeout
-        while True:
-            while self._pending_rx:
-                packet = self._pending_rx.pop(0)
-                if packet.get('bus') == self.bus:
-                    return bytes.fromhex(packet['msg'])
-            packet = self._read_packet(max(0.0, deadline - time.monotonic()))
-            if packet is None:
-                return None
-            if packet.get('evt') == 'rx':
-                self._pending_rx.append(packet)
+    def send_frame(self, frame: bytes) -> None:
+        if self._device is None:
+            raise OpenIpmbLinkError('interface is not open')
 
-    def _send_raw(self, header: IpmbHeaderReq,
-                  raw_bytes: bytes | None) -> None:
-        raw_bytes = encode_ipmb_msg(header, raw_bytes)
+        log().debug('IPMB TX bus %d [%s]', self.bus,
+                    ' '.join(['%02x' % b for b in frame]))
+        self._check_status(self._device.command('send', bus=self.bus,
+                                                msg=bytes(frame).hex()))
 
-        log().debug('IPMB TX to %02Xh [%s]', header.rs_sa,
-                    ' '.join(['%02x' % b for b in raw_bytes]))
-        self._check_status(self._command('send', bus=self.bus,
-                                         msg=raw_bytes.hex()))
-
-    def _receive_raw(self, header: IpmbHeaderReq) -> bytes:
-        start_time = time.monotonic()
-        while True:
-            timeout = self.timeout - (time.monotonic() - start_time)
-            if timeout <= 0:
-                raise IpmiTimeoutError()
-
-            rx_data = self._receive_frame(timeout)
-            if rx_data is None:
-                raise IpmiTimeoutError()
-
-            log().debug('IPMB RX [%s]',
-                        ' '.join(['%02x' % c for c in rx_data]))
-
-            if len(rx_data) < 7:
-                log().debug('IPMB RX message too short')
-                continue
-
-            if rx_filter(header, rx_data):
-                return rx_data
+    def _on_rx(self, frame: bytes, ts: int | None) -> None:
+        self._receive_frame(frame)

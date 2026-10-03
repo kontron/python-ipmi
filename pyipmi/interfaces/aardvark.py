@@ -16,12 +16,12 @@
 
 from __future__ import annotations
 
+import threading
 import time
-from array import array
 
-from ..errors import IpmiTimeoutError
 from ..logger import log
-from .ipmb import IpmbInterface, IpmbHeaderReq, rx_filter, encode_ipmb_msg
+from .ipmb import IpmbInterface
+from .router import MessageRouter
 
 try:
     import pyaardvark
@@ -30,9 +30,17 @@ except ImportError:  # python 2
 except RuntimeError:  # python 3
     pyaardvark = None
 
+# maximum time the receive thread blocks the device while polling
+POLL_INTERVAL_MS = 10
+
 
 class Aardvark(IpmbInterface):
-    """This interface uses an I2C USB adapter."""
+    """This interface uses an I2C USB adapter.
+
+    The adapter is enabled as I2C slave with the own IPMB address. A receive
+    thread passes all received messages to the router, so the interface
+    can also answer incoming requests (see `MessageRouter`).
+    """
 
     NAME = 'aardvark'
 
@@ -40,17 +48,20 @@ class Aardvark(IpmbInterface):
                  serial_number: str | None = None,
                  enable_i2c_pullups: bool | None = None,
                  enable_target_power: bool | None = None,
-                 enable_fastmode: bool | None = None) -> None:
+                 enable_fastmode: bool | None = None,
+                 router: MessageRouter | None = None) -> None:
         if pyaardvark is None:
             raise RuntimeError('No pyaardvark module found. You can not '
                                'use this interface.')
 
-        super().__init__(slave_address)
+        super().__init__(slave_address, router)
         self.port = port
         self.serial_number = serial_number
         self.i2c_pullups = enable_i2c_pullups
         self.target_power = enable_target_power
         self.fastmode = enable_fastmode
+        # the Aardvark API is not thread-safe
+        self._dev_lock = threading.Lock()
 
     def open(self) -> None:
         self._dev = pyaardvark.open(self.port, self.serial_number)
@@ -66,8 +77,12 @@ class Aardvark(IpmbInterface):
         else:
             self.enable_fastmode(False)
 
+        self._start_receiver()
+
     def close(self) -> None:
+        self._stop_receiver()
         self._dev.close()
+        super().close()
 
     def enable_pullups(self, enabled: bool) -> None:
         self._dev.i2c_pullups = enabled
@@ -82,41 +97,26 @@ class Aardvark(IpmbInterface):
             self._dev.i2c_bitrate = 100
 
     def raw_write(self, address: int, data: bytes) -> None:
-        self._dev.i2c_master_write(address, data)
+        with self._dev_lock:
+            self._dev.i2c_master_write(address, data)
 
-    def _send_raw(self, header: IpmbHeaderReq,
-                  raw_bytes: bytes | None) -> None:
-        raw_bytes = encode_ipmb_msg(header, raw_bytes)
-        i2c_addr = header.rs_sa >> 1
+    def send_frame(self, frame: bytes) -> None:
+        i2c_addr = frame[0] >> 1
 
-        raw_bytes = array('B', raw_bytes)
         log().debug('I2C TX to %02Xh [%s]', i2c_addr,
-                    ' '.join(['%02x' % b for b in raw_bytes]))
-        self._dev.i2c_master_write(i2c_addr, raw_bytes[1:])
+                    ' '.join(['%02x' % b for b in frame]))
+        with self._dev_lock:
+            self._dev.i2c_master_write(i2c_addr, bytes(frame[1:]))
 
-    def _receive_raw(self, header: IpmbHeaderReq) -> array:
-        start_time = time.time()
-        rsp_received = False
-        poll_returned_no_data = False
-        while not rsp_received:
-            timeout = self.timeout - (time.time() - start_time)
+    def _read_frame(self, timeout: float) -> bytes | None:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            with self._dev_lock:
+                events = self._dev.poll(POLL_INTERVAL_MS)
+                if pyaardvark.POLL_I2C_READ not in events:
+                    continue
+                (i2c_addr, rx_data) = self._dev.i2c_slave_read()
 
-            if timeout <= 0 or poll_returned_no_data:
-                raise IpmiTimeoutError()
-
-            ret = self._dev.poll(int(timeout * 1000))
-
-            # poll returns an empty list if no event is pending
-            if not ret:
-                poll_returned_no_data = True
-                continue
-
-            (i2c_addr, rx_data) = self._dev.i2c_slave_read()
-            rx_data = array('B', rx_data)
-            log().debug('I2C RX from %02Xh [%s]', i2c_addr << 1,
-                        ' '.join(['%02x' % c for c in rx_data]))
-
-            rx_data = array('B', [i2c_addr << 1, ]) + rx_data
-            rsp_received = rx_filter(header, rx_data)
-
-        return rx_data
+            # the adapter strips the own address (rqSA) of the message
+            return bytes((i2c_addr << 1,)) + bytes(rx_data)
+        return None

@@ -1,60 +1,123 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import collections
+import threading
+import time
+import types
 
-class MockPyaardvark:
-    def enable_i2c_slave(self, d):
-        pass
+import pytest
+from unittest.mock import patch
+
+import pyipmi
+from pyipmi.interfaces.aardvark import Aardvark
+from pyipmi.interfaces.router import MessageRouter, encode_ipmb_response
+from pyipmi.interfaces.ipmb import IpmbHeaderReq, encode_ipmb_msg
+
+POLL_I2C_READ = 0x01
 
 
-class TestAardvark:
-    pass
+class FakeAardvarkDevice:
+    """Simulates the Aardvark adapter, enabled as I2C slave.
 
-    # @classmethod
-    # def setup_class(self):
-    #     """Mock pyaardvark import
-    #     http://erikzaadi.com/2012/07/03/mocking-python-imports/
-    #     """
-    #     self.pyaardvark_mock = MagicMock()
-    #     self.pyaardvark_mock.open.return_value = MockPyaardvark()
+    Messages written as master are passed to the responder, which returns
+    a list of complete IPMB messages to receive as slave.
+    """
 
-    #     modules = {
-    #         'pyaardvark': self.pyaardvark_mock,
-    #         'pyaardvark.open': self.pyaardvark_mock.open,
-    #     }
+    def __init__(self):
+        self.responder = None
+        self.slave_address = None
+        self.written = []
+        self.rx = collections.deque()
+        self.lock = threading.Lock()
+        self.closed = False
 
-    #     self.module_patcher = patch.dict('sys.modules', modules)
-    #     self.module_patcher.start()
-    #     ok_('pyaardvark' in sys.modules.keys())
-    #     ok_('pyaardvark.open' in sys.modules.keys())
+    def enable_i2c_slave(self, address):
+        self.slave_address = address
 
-    #     from pyipmi.interfaces.aardvark import Aardvark
-    #     self.my_aardvark = Aardvark()
+    def i2c_master_write(self, i2c_addr, data):
+        frame = bytes(((i2c_addr << 1),)) + bytes(data)
+        self.written.append(frame)
+        for rx_frame in (self.responder(frame) if self.responder else []):
+            self.inject(rx_frame)
 
-    # @classmethod
-    # def teardown_class(self):
-    #     """Let's clean up"""
-    #     self.module_patcher.stop()
+    def inject(self, frame):
+        """Receive a complete IPMB message as slave."""
+        # the adapter returns the slave address and the data without it
+        with self.lock:
+            self.rx.append((frame[0] >> 1, frame[1:]))
 
-    # def test_rx_filter(self):
-    #     header = IpmbHeader()
-    #     header.rs_lun = 0
-    #     header.rs_sa = 0x72
-    #     header.rq_seq = 2
-    #     header.rq_lun = 0
-    #     header.rq_sa = 0x20
-    #     header.netfn = 6
-    #     header.cmdid = 1
+    def poll(self, timeout_ms):
+        with self.lock:
+            if self.rx:
+                return [POLL_I2C_READ]
+        time.sleep(timeout_ms / 1000)
+        return []
 
-    #     rx_data = (0x1c, 0xc4, 0x72, 0x08, 0x1, 0x85)
+    def i2c_slave_read(self):
+        with self.lock:
+            return self.rx.popleft()
 
-    #     ok_(self.my_aardvark._rx_filter(0x20, header, rx_data))
+    def close(self):
+        self.closed = True
 
-    # def test_inc_sequence_number(self):
-    #     self.my_aardvark.next_sequence_number = 0
-    #     self.my_aardvark._inc_sequence_number()
-    #     eq_(self.my_aardvark.next_sequence_number, 1)
 
-    #     self.my_aardvark.next_sequence_number = 63
-    #     self.my_aardvark._inc_sequence_number()
-    #     eq_(self.my_aardvark.next_sequence_number, 0)
+@pytest.fixture
+def device():
+    device = FakeAardvarkDevice()
+    module = types.SimpleNamespace(open=lambda port, serial_number: device,
+                                   POLL_I2C_READ=POLL_I2C_READ)
+    with patch('pyipmi.interfaces.aardvark.pyaardvark', module):
+        yield device
+
+
+def test_open_close(device):
+    intf = Aardvark(slave_address=0x24)
+    intf.open()
+    assert device.slave_address == 0x12
+    intf.close()
+    assert device.closed
+
+
+def test_requester(device):
+    device.responder = lambda frame: [
+        encode_ipmb_response(IpmbHeaderReq(data=frame), b'\x00\x11')]
+    intf = Aardvark(slave_address=0x20)
+    intf.open()
+    try:
+        rsp = intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
+    finally:
+        intf.close()
+
+    assert rsp == b'\x00\x11'
+    header = IpmbHeaderReq(data=device.written[0])
+    assert header.rs_sa == 0x72
+    assert header.rq_sa == 0x20
+
+
+def test_responder(device):
+    router = MessageRouter()
+    router.register_raw_handler(6, 1, lambda intf, hdr, data: b'\x00\x42')
+    intf = Aardvark(slave_address=0x20, router=router)
+    intf.open()
+    try:
+        # incoming Get Device ID request from 0x24
+        header = IpmbHeaderReq()
+        header.rs_sa = 0x20
+        header.netfn = 6
+        header.rs_lun = 0
+        header.rq_sa = 0x24
+        header.rq_seq = 5
+        header.rq_lun = 0
+        header.cmdid = 1
+        device.inject(encode_ipmb_msg(header, None))
+
+        deadline = time.monotonic() + 1.0
+        while not device.written:
+            assert time.monotonic() < deadline
+            time.sleep(0.01)
+    finally:
+        intf.close()
+        router.close()
+
+    assert device.written[0] == encode_ipmb_response(header, b'\x00\x42')

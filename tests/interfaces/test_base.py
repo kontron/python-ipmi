@@ -7,7 +7,8 @@ import pyipmi
 import pyipmi.msgs.bmc
 from pyipmi.interfaces import INTERFACES
 from pyipmi.interfaces.base import Interface
-from pyipmi.interfaces.ipmb import IpmbInterface
+from pyipmi.interfaces.ipmb import IpmbInterface, IpmbHeaderReq
+from pyipmi.interfaces.router import MessageRouter, encode_ipmb_response
 from pyipmi.interfaces.aardvark import Aardvark
 from pyipmi.interfaces.ipmbdev import IpmbDev
 from pyipmi.interfaces.openipmblink import OpenIpmbLink
@@ -53,16 +54,14 @@ def test_send_and_receive_uses_raw():
 
 
 class IpmbStub(IpmbInterface):
+    """Answers each request with cc 0x00 and data 0xaa."""
+
     NAME = 'ipmbstub'
 
-    def _send_raw(self, header, raw_bytes):
-        self.header = header
-        self.raw_bytes = raw_bytes
-
-    def _receive_raw(self, header):
-        # rqSA netFn/LUN chk rsSA seq/LUN cmd cc data chk
-        return bytes((0x20, 0x1c, 0xc4, 0x72, header.rq_seq << 2, 0x01,
-                      0x00, 0xaa, 0x00))
+    def send_frame(self, frame):
+        self.header = IpmbHeaderReq(data=frame)
+        self.raw_bytes = frame[6:-1]
+        self._receive_frame(encode_ipmb_response(self.header, b'\x00\xaa'))
 
 
 def test_ipmb_send_and_receive_raw():
@@ -76,6 +75,18 @@ def test_ipmb_send_and_receive_raw():
     assert intf.header.cmdid == 1
     assert intf.header.rq_seq == 1
     assert intf.raw_bytes == b'\x02'
+
+
+def test_ipmb_default_router():
+    intf = IpmbStub()
+    assert isinstance(intf.router, MessageRouter)
+    assert intf.router.unhandled_cc is None
+
+    router = MessageRouter()
+    intf.router = router
+    assert intf.router is router
+    intf.router = None
+    assert intf.router is intf._default_router
 
 
 def test_ipmb_inc_sequence_number():
