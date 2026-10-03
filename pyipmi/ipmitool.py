@@ -17,41 +17,27 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from __future__ import annotations
-from __future__ import print_function
 
-import sys
-import getopt
+import argparse
 import json
 import logging
-import traceback
 import pprint
+import sys
+import traceback
 from array import array
-
-from collections import namedtuple
 from typing import Callable
 
 import pyipmi
 import pyipmi.interfaces
 from pyipmi.utils import py3_array_tobytes
 
-json_output = False
 
-Command = namedtuple('Command', 'name fn needs_connection', defaults=(True,))
-CommandHelp = namedtuple('CommandHelp', 'name arguments help')
-
-
-def _print(s: object) -> None:
-    print(s)
+def auto_int(value: str) -> int:
+    """Argument type for numbers, decimal or with 0x prefix."""
+    return int(value, 0)
 
 
-def _get_command(name: str) -> Command | None:
-    for cmd in COMMANDS:
-        if cmd.name == name:
-            return cmd
-    return None
-
-
-def cmd_bmc_info(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+def cmd_bmc_info(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     device_id = ipmi.get_device_id()
     print('''
 Device ID:          %(device_id)s
@@ -84,15 +70,24 @@ Additional Device Support:
               ' '.join('%02x' % d for d in device_id.aux)))
 
 
-def cmd_sel_clear(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+def cmd_bmc_reset(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    if args.type == 'cold':
+        ipmi.cold_reset()
+    else:
+        ipmi.warm_reset()
+
+
+def cmd_sel_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    for entry in ipmi.sel_entries():
+        print(entry)
+
+
+def cmd_sel_clear(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     ipmi.clear_sel()
 
 
-def cmd_sensor_rearm(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    if len(args) < 1:
-        return
-    number = int(args[0], 0)
-    ipmi.rearm_sensor_events(number)
+def cmd_sensor_rearm(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.rearm_sensor_events(args.number)
 
 
 def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
@@ -126,30 +121,23 @@ def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
         print("Reading state:    0x%x" % states)
 
 
-def cmd_sdr_show_raw(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    if len(args) != 1:
-        usage()
-        return
+def cmd_sdr_show_raw(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     try:
-        sdr = ipmi.get_device_sdr(int(args[0], 0))
+        sdr = ipmi.get_device_sdr(args.sdr_id)
         print(' '.join(['0x%02x' % b for b in sdr.data]))
     except ValueError:
         print('')
 
 
-def cmd_sdr_show(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    if len(args) != 1:
-        usage()
-        return
-
+def cmd_sdr_show(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     try:
-        s = ipmi.get_device_sdr(int(args[0], 0))
+        s = ipmi.get_device_sdr(args.sdr_id)
         sdr_show(ipmi, s)
     except ValueError:
         print('')
 
 
-def cmd_sdr_show_all(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+def cmd_sdr_show_all(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     for s in ipmi.device_sdr_entries():
         try:
             sdr_show(ipmi, s)
@@ -175,7 +163,7 @@ def print_sdr_list_entry(record_id: int, number: int | str | None,
                                                id_string, value, states))
 
 
-def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     iter_fct = None
 
     device_id = ipmi.get_device_id()
@@ -217,15 +205,8 @@ def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
                       e.cc))
 
 
-def cmd_fru_print(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    fru_id = 0
-    print_all = False
-    if len(args) > 0:
-        fru_id = int(args[0])
-    if len(args) > 1 and args[1] == 'all':
-        print_all = True
-
-    inv = ipmi.get_fru_inventory(fru_id)
+def cmd_fru_print(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    inv = ipmi.get_fru_inventory(args.fru_id)
 
     # Chassis Info Area
     area = inv.chassis_info_area
@@ -283,30 +264,20 @@ Product Info Area:
     area = inv.multirecord_area
     if area:
         print('Multirecord Area:')
-        if print_all:
+        if args.all == 'all':
             for record in area.records:
                 print('  %s' % record)
         else:
             print('  Skipped. Use "print <fruid> all"')
 
 
-def cmd_raw(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    lun = 0
-    if len(args) > 1 and args[0] == 'lun':
-        lun = int(args[1], 0)
-        args = args[2:]
-
-    if len(args) < 2:
-        usage()
-        return
-
-    netfn = int(args[0], 0)
-    raw_bytes = array('B', [int(d, 0) for d in args[1:]])
-    rsp = ipmi.raw_command(lun, netfn, py3_array_tobytes(raw_bytes))
+def cmd_raw(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    raw_bytes = array('B', args.data)
+    rsp = ipmi.raw_command(args.lun, args.netfn, py3_array_tobytes(raw_bytes))
     print(' '.join('%02x' % d for d in array('B', rsp)))
 
 
-def cmd_hpm_capabilities(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+def cmd_hpm_capabilities(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     cap = ipmi.get_target_upgrade_capabilities()
 
     for c in cap.components:
@@ -316,27 +287,22 @@ def cmd_hpm_capabilities(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
             print("  %s" % prop)
 
 
-def cmd_hpm_check_file(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    if len(args) < 1:
-        return
-    cap = ipmi.open_upgrade_image(args[0])
+def cmd_hpm_check_file(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    cap = ipmi.open_upgrade_image(args.file)
 
     print(cap.header)
     for action in cap.actions:
         print(action)
 
 
-def cmd_hpm_install(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    if len(args) < 2:
-        print('missing argument')
-        return
-    ipmi.install_component_from_file(args[0], int(args[1]))
+def cmd_hpm_install(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.install_component_from_file(args.file, args.component_id)
 
 
-def cmd_chassis_status(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+def cmd_chassis_status(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     status = ipmi.get_chassis_status()
 
-    if json_output:
+    if args.json:
         status = {
                   'power_on': status.power_on,
                   'overload': status.overload,
@@ -346,7 +312,6 @@ def cmd_chassis_status(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
                   'restore_policy': status.restore_policy
                  }
         print(json.dumps(status))
-        pass
     else:
 
         print('''
@@ -364,7 +329,21 @@ Restore Policy:    %(restore_policy)s
             print(state)
 
 
-def cmd_picmg_get_power(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+CHASSIS_POWER_CONTROLS = {
+    'off': 'chassis_control_power_down',
+    'on': 'chassis_control_power_up',
+    'cycle': 'chassis_control_power_cycle',
+    'reset': 'chassis_control_hard_reset',
+    'diag': 'chassis_control_power_diagnostic_interrupt',
+    'soft': 'chassis_control_power_soft_shutdown',
+}
+
+
+def cmd_chassis_power(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    getattr(ipmi, CHASSIS_POWER_CONTROLS[args.action])()
+
+
+def cmd_picmg_get_power(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     pwr = ipmi.get_power_level(0, 0)
     print(pwr)
 
@@ -378,7 +357,8 @@ def print_link_state(p: pyipmi.picmg.LinkDescriptor, s: int) -> None:
              p.extension, s, intf_str, link_str))
 
 
-def cmd_picmg_get_portstate_all(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+def cmd_picmg_get_portstate_all(ipmi: pyipmi.Ipmi,
+                                args: argparse.Namespace) -> None:
     for interface in range(3):
         for channel in range(16):
             try:
@@ -389,30 +369,31 @@ def cmd_picmg_get_portstate_all(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
                     continue
 
 
-def cmd_picmg_get_portstate(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    if len(args) < 2:
-        return
-    channel = int(args[0])
-    interface = int(args[1])
-    (p, s) = ipmi.get_port_state(channel, interface)
+def cmd_picmg_get_portstate(ipmi: pyipmi.Ipmi,
+                            args: argparse.Namespace) -> None:
+    (p, s) = ipmi.get_port_state(args.channel, args.interface)
     print_link_state(p, s)
 
 
-def cmd_picmg_getpower_channel_status(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    ret = ipmi.get_power_channel_status(int(args[0]))
+def cmd_picmg_getpower_channel_status(ipmi: pyipmi.Ipmi,
+                                      args: argparse.Namespace) -> None:
+    ret = ipmi.get_power_channel_status(args.start)
     pprint.pprint(vars(ret))
 
 
-def cmd_picmg_frucontrol_cold_reset(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+def cmd_picmg_frucontrol_cold_reset(ipmi: pyipmi.Ipmi,
+                                    args: argparse.Namespace) -> None:
     ipmi.fru_control_cold_reset(0)
 
 
-def cmd_picmg_send_pm_heartbeat(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+def cmd_picmg_send_pm_heartbeat(ipmi: pyipmi.Ipmi,
+                                args: argparse.Namespace) -> None:
     ipmi.send_pm_heartbeat()
 
 
-def cmd_picmg_send_channel_power(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    ipmi.send_channel_power(int(args[0]))
+def cmd_picmg_send_channel_power(ipmi: pyipmi.Ipmi,
+                                 args: argparse.Namespace) -> None:
+    ipmi.send_channel_power(args.channel)
 
 
 VITA_LED_COLORS = ('reserved', 'BLUE', 'RED', 'GREEN', 'AMBER', 'ORANGE',
@@ -420,14 +401,6 @@ VITA_LED_COLORS = ('reserved', 'BLUE', 'RED', 'GREEN', 'AMBER', 'ORANGE',
 
 VITA_FRU_CONTROL_OPTIONS = ('Cold Reset', 'Warm Reset', 'Graceful Reboot',
                             'Issue Diagnostic Interrupt')
-
-
-def _vita_args(args: list[str], count: int, usage: str) -> list[int]:
-    """Return the first count arguments as numbers (decimal or 0x hex)."""
-    if len(args) < count:
-        print('usage: vita %s' % usage)
-        sys.exit(1)
-    return [int(arg, 0) for arg in args[:count]]
 
 
 def _vita_led_color(color: int) -> str:
@@ -444,7 +417,7 @@ def _vita_led_function(function: int) -> str:
     return 'BLINKING'
 
 
-def cmd_vita_properties(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+def cmd_vita_properties(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     rsp = ipmi.get_vita_vso_capabilities()
     ipmc = rsp.ipmc_identifier
     ipmb = rsp.ipmb_capabilities
@@ -465,18 +438,16 @@ def cmd_vita_properties(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     print('FRU Device ID     : 0x%02x' % rsp.ipmc_fru_device_id)
 
 
-def cmd_vita_frucontrol(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    fru_id, option = _vita_args(args, 2, 'frucontrol <FRU-ID> <OPTION>')
-    name = (VITA_FRU_CONTROL_OPTIONS[option]
-            if option < len(VITA_FRU_CONTROL_OPTIONS) else 'Unknown')
-    print('FRU Device Id: %d FRU Control Option: %s' % (fru_id, name))
-    ipmi.vita_fru_control(fru_id, option)
+def cmd_vita_frucontrol(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    name = (VITA_FRU_CONTROL_OPTIONS[args.option]
+            if args.option < len(VITA_FRU_CONTROL_OPTIONS) else 'Unknown')
+    print('FRU Device Id: %d FRU Control Option: %s' % (args.fru_id, name))
+    ipmi.vita_fru_control(args.fru_id, args.option)
     print('FRU Control: ok')
 
 
-def cmd_vita_addrinfo(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    fru_id = _vita_args(args, 1, 'addrinfo [<FRU-ID>]')[0] if args else 0
-    rsp = ipmi.get_vita_fru_address_info(fru_id)
+def cmd_vita_addrinfo(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    rsp = ipmi.get_vita_fru_address_info(args.fru_id)
     print('Hardware Address : 0x%02x' % rsp.hardware_address)
     print('IPMB-0 Address   : 0x%02x' % rsp.ipmb_0_address)
     print('FRU ID           : 0x%02x' % rsp.fru_id)
@@ -487,21 +458,18 @@ def cmd_vita_addrinfo(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
         print('Channel 7 Address: 0x%02x' % rsp.address_on_channel_7)
 
 
-def cmd_vita_activate(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    fru_id, = _vita_args(args, 1, 'activate <FRU-ID>')
-    ipmi.set_vita_fru_activation(fru_id)
+def cmd_vita_activate(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.set_vita_fru_activation(args.fru_id)
     print('FRU has been successfully activated')
 
 
-def cmd_vita_deactivate(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    fru_id, = _vita_args(args, 1, 'deactivate <FRU-ID>')
-    ipmi.set_vita_fru_deactivation(fru_id)
+def cmd_vita_deactivate(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.set_vita_fru_deactivation(args.fru_id)
     print('FRU has been successfully deactivated')
 
 
-def cmd_vita_policy_get(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    fru_id, = _vita_args(args, 1, 'policy get <FRU-ID>')
-    policy = ipmi.get_vita_fru_state_policy(fru_id).activation_policies
+def cmd_vita_policy_get(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    policy = ipmi.get_vita_fru_state_policy(args.fru_id).activation_policies
     print('FRU State Policy Bits:\t%xh' % int(policy))
     print('    Default-Activation-Locked Policy Bit is %d'
           % policy.default_activation_locked)
@@ -512,22 +480,18 @@ def cmd_vita_policy_get(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     print('    Activation-Locked Policy Bit is %d' % policy.activation_lock)
 
 
-def cmd_vita_policy_set(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    fru_id, mask, value = _vita_args(args, 3,
-                                     'policy set <FRU-ID> <MASK> <VALUE>')
-    ipmi.set_vita_fru_state_policy(fru_id, mask, value)
+def cmd_vita_policy_set(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.set_vita_fru_state_policy(args.fru_id, args.mask, args.value)
     print('FRU state policy bits have been updated')
 
 
-def cmd_vita_led_prop(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    fru_id, = _vita_args(args, 1, 'led prop <FRU-ID>')
-    rsp = ipmi.get_vita_led_properties(fru_id)
+def cmd_vita_led_prop(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    rsp = ipmi.get_vita_led_properties(args.fru_id)
     print('LED Count:\t   %#x' % rsp.led_count)
 
 
-def cmd_vita_led_cap(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    fru_id, led_id = _vita_args(args, 2, 'led cap <FRU-ID> <LED-ID>')
-    rsp = ipmi.get_vita_led_color_capabilities(fru_id, led_id)
+def cmd_vita_led_cap(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    rsp = ipmi.get_vita_led_color_capabilities(args.fru_id, args.led_id)
     capabilities = int(rsp.color_capabilities)
     colors = [VITA_LED_COLORS[i] for i in range(8) if capabilities & (1 << i)]
     print('LED Color Capabilities: %s' % ', '.join(colors))
@@ -544,9 +508,8 @@ def cmd_vita_led_cap(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
             print('      [PAYLOAD PWR]')
 
 
-def cmd_vita_led_get(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    fru_id, led_id = _vita_args(args, 2, 'led get <FRU-ID> <LED-ID>')
-    rsp = ipmi.get_vita_led_state(fru_id, led_id)
+def cmd_vita_led_get(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    rsp = ipmi.get_vita_led_state(args.fru_id, args.led_id)
     state = rsp.state
     flags = [name for (bit, name) in ((state.ipmc_control, 'LOCAL CONTROL'),
                                       (state.override, 'OVERRIDE'),
@@ -576,114 +539,10 @@ def cmd_vita_led_get(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
             print('  Lamp test duration:    %x' % rsp.lamp_test_duration)
 
 
-def cmd_vita_led_set(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
-    fru_id, led_id, function, duration, color = _vita_args(
-        args, 5, 'led set <FRU-ID> <LED-ID> <FUNCTION> <DURATION> <COLOR>')
-    ipmi.set_vita_led_state(fru_id, led_id, function, duration, color)
+def cmd_vita_led_set(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.set_vita_led_state(args.fru_id, args.led_id, args.function,
+                            args.duration, args.color)
     print('LED state has been updated')
-
-
-def usage(toplevel: bool = False) -> None:
-    commands = []
-    maxlen = 0
-
-    if toplevel:
-        argv = []
-    else:
-        argv = sys.argv[1:]
-
-    # (1) try to find help for commands on exactly one level above
-    for cmd in COMMAND_HELP:
-        subcommands = cmd.name.split(' ')
-        if (len(subcommands) == len(argv) + 1
-                and subcommands[:len(argv)] == argv):
-            commands.append(cmd)
-            if cmd.arguments:
-                maxlen = max(maxlen, len(cmd.name)+len(cmd.arguments)+1)
-            else:
-                maxlen = max(maxlen, len(cmd.name))
-
-    # (2) if nothing found, try to find help on any level above
-    if maxlen == 0:
-        for cmd in COMMAND_HELP:
-            subcommands = cmd.name.split(' ')
-            if (len(subcommands) > len(argv) + 1
-                    and subcommands[:len(argv)] == argv):
-                commands.append(cmd)
-                if cmd.arguments:
-                    maxlen = max(maxlen, len(cmd.name)+len(cmd.arguments)+1)
-                else:
-                    maxlen = max(maxlen, len(cmd.name))
-
-    # (3) find help on same level
-    if maxlen == 0:
-        for cmd in COMMAND_HELP:
-            subcommands = cmd.name.split(' ')
-            if (len(subcommands) == len(argv)
-                    and subcommands[:len(argv)] == argv):
-                commands.append(cmd)
-                if cmd.arguments:
-                    maxlen = max(maxlen, len(cmd.name)+len(cmd.arguments)+1)
-                else:
-                    maxlen = max(maxlen, len(cmd.name))
-
-    # if still nothing found, print toplevel usage
-    if maxlen == 0:
-        usage(toplevel=True)
-        return
-
-    if len(argv) == 0:
-        version()
-        print('usage: ipmitool [options...] <command>')
-        print('''
-Options:
-  -t <addr>        Set target IPMB address
-  -b <channel>     Set target channel
-  -r <rtr>         Set target routing (not supported atm)
-  -h               Show this help
-  -v               Be verbose
-  -V               Print version
-  -I <interface>   Set interface (available: rmcp, aardvark, ipmitool, ipmbdev,
-                   openipmblink)
-  -H <host>        Set RMCP host
-  -U <user>        Set RMCP user
-  -L <level>       Set RMCP privilege level
-  -P <password>    Set RMCP password
-  -o <options>     Set interface specific options (name=value, separated
-                   by commas, see below for available options).
-'''[1:])
-        print('''
-Aardvark interface options:
-  serial=<SN>       Serial number of the device
-  pullups=<on|off>  Enable/disable pullups
-  power=<on|off>    Enable/disable target power
-  fastmode=<on|off> Enable/disable 400kHz I2C bitrate (Default 100kHz)
-
-Ipmitool interface options:
-  interface_type    Set the interface type to be used (lan, lanplus, serial, open)
-  cipher            Set the cipher to be used (0-255)
-
-Ipmbdev interface options:
-  port=<path>       Specify path to Linux IPMB device (/dev/ipmb-0 by default)
-
-Openipmblink interface options:
-  port=<path>       Data serial port of the bridge (/dev/ttyACM1 by default)
-                    or pyserial URL of a shared bridge
-                    (e.g. socket://localhost:5555)
-  bus=<n>           IPMB bus of the bridge (0 by default)
-  address=<addr>    Own IPMB address (0x20 by default)
-'''[1:])
-        print('Commands:')
-
-    for cmd in commands:
-        name = cmd.name
-        if cmd.arguments:
-            name = '%s %s' % (name, cmd.arguments)
-        print('  %-*s   %s' % (maxlen, name, cmd.help))
-
-
-def version() -> None:
-    print('ipmitool v%s' % pyipmi.__version__)
 
 
 def parse_interface_options(interface_name: str, options: str | list) -> dict:
@@ -748,7 +607,6 @@ def create_ipmi_connection(interface_name: str, interface_options: str | list,
                                                        **interface_options)
     except RuntimeError as e:
         print(e)
-#        sys.exit(1)
         return None
 
     ipmi = pyipmi.create_connection(interface)
@@ -767,236 +625,269 @@ def create_ipmi_connection(interface_name: str, interface_options: str | list,
     return ipmi
 
 
-def main() -> None:
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], 't:hvVI:H:U:P:L:o:b:p:r:J')
-    except getopt.GetoptError as err:
-        print(str(err))
-        usage()
-        sys.exit(2)
-    verbose = False
-    interface_name = None
-    target_address = 0x20
-    target_routing = None
-    rmcp_host = None
-    rmcp_port = 623
-    rmcp_user = ''
-    rmcp_password = ''
-    rmcp_priv_level = None
-    interface_options = list()
-    for o, a in opts:
-        if o == '-v':
-            verbose = True
-        elif o == '-h':
-            usage()
-            sys.exit()
-        elif o == '-V':
-            version()
-            sys.exit()
-        elif o == '-t':
-            target_address = int(a, 0)
-        elif o == '-b':
-            target_routing = [(0x20, int(a), 0)]
-        elif o == '-r':
-            target_routing = a
-        elif o == '-H':
-            rmcp_host = a
-        elif o == '-p':
-            rmcp_port = int(a, 0)
-        elif o == '-U':
-            rmcp_user = a
-        elif o == '-P':
-            rmcp_password = a
-        elif o == '-L':
-            rmcp_priv_level = a
-        elif o == '-I':
-            interface_name = a
-        elif o == '-o':
-            interface_options = a
-        elif o == '-J':
-            global json_output
-            json_output = True
-        else:
-            assert False, 'unhandled option'
+INTERFACE_OPTIONS_HELP = '''
+interface options (-o name=value,...):
+  aardvark:
+    serial=<SN>        serial number of the device
+    pullups=<on|off>   enable/disable pullups
+    power=<on|off>     enable/disable target power
+    fastmode=<on|off>  enable/disable 400kHz I2C bitrate (default 100kHz)
+  ipmitool:
+    interface_type     interface type to be used (lan, lanplus, serial, open)
+    cipher             cipher to be used (0-255)
+  ipmbdev:
+    port=<path>        path to Linux IPMB device (default /dev/ipmb-0)
+  openipmblink:
+    port=<path>        data serial port of the bridge (default /dev/ttyACM1)
+                       or pyserial URL of a shared bridge
+                       (e.g. socket://localhost:5555)
+    bus=<n>            IPMB bus of the bridge (default 0)
+    address=<addr>     own IPMB address (default 0x20)
+'''
 
-    # fake sys.argv
-    sys.argv = [sys.argv[0]] + args
 
-    if len(args) == 0:
-        usage()
+class _CommandGroups(object):
+    """Helper to build nested subcommands."""
+
+    def __init__(self, subparsers: argparse._SubParsersAction) -> None:
+        self._subparsers = subparsers
+
+    def group(self, name: str, help: str) -> _CommandGroups:
+        """Add a command with subcommands, e.g. 'sdr' of 'sdr list'."""
+        parser = self._subparsers.add_parser(name, help=help,
+                                             description=help)
+        parser.set_defaults(func=None, help_parser=parser)
+        return _CommandGroups(parser.add_subparsers(metavar='<command>'))
+
+    def command(self, name: str, func: Callable, help: str,
+                needs_connection: bool = True) -> argparse.ArgumentParser:
+        """Add a command, its arguments are added to the returned parser."""
+        parser = self._subparsers.add_parser(name, help=help,
+                                             description=help)
+        parser.set_defaults(func=func, needs_connection=needs_connection)
+        return parser
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog='ipmitool.py',
+        description='Pure python IPMI tool',
+        epilog=INTERFACE_OPTIONS_HELP,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.set_defaults(func=None, help_parser=parser)
+
+    parser.add_argument('-V', '--version', action='version',
+                        version='ipmitool v%s' % pyipmi.__version__)
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='be verbose')
+    parser.add_argument('-J', '--json', action='store_true',
+                        help='print the output as JSON (if supported)')
+    parser.add_argument('-I', dest='interface', metavar='<interface>',
+                        help='interface (rmcp, aardvark, ipmitool, ipmbdev, '
+                             'openipmblink)')
+    parser.add_argument('-o', dest='options', metavar='<options>',
+                        default='',
+                        help='interface specific options (name=value, '
+                             'separated by commas, see below)')
+    parser.add_argument('-t', dest='target', metavar='<addr>', type=auto_int,
+                        default=0x20, help='target IPMB address')
+    parser.add_argument('-b', dest='channel', metavar='<channel>', type=int,
+                        help='target channel')
+    parser.add_argument('-r', dest='routing', metavar='<routing>',
+                        help='target routing')
+    parser.add_argument('-H', dest='host', metavar='<host>', help='RMCP host')
+    parser.add_argument('-p', dest='port', metavar='<port>', type=auto_int,
+                        default=623, help='RMCP port (default 623)')
+    parser.add_argument('-U', dest='user', metavar='<user>', default='',
+                        help='RMCP user')
+    parser.add_argument('-P', dest='password', metavar='<password>',
+                        default='', help='RMCP password')
+    parser.add_argument('-L', dest='priv_level', metavar='<level>',
+                        help='RMCP privilege level')
+
+    commands = _CommandGroups(parser.add_subparsers(metavar='<command>'))
+
+    p = commands.command('raw', cmd_raw,
+                         'Send a RAW IPMI request and print response')
+    p.add_argument('-l', '--lun', type=auto_int, default=0, help='LUN')
+    p.add_argument('netfn', type=auto_int)
+    p.add_argument('data', type=auto_int, nargs='+',
+                   help='command id and data bytes')
+
+    group = commands.group('bmc', 'Management Controller status and '
+                           'global enables')
+    group.command('info', cmd_bmc_info, 'BMC Device ID information')
+    p = group.command('reset', cmd_bmc_reset, 'BMC reset control')
+    p.add_argument('type', choices=('cold', 'warm'))
+
+    group = commands.group('chassis', 'Get chassis status and set power '
+                           'state')
+    group.command('status', cmd_chassis_status, 'Get chassis status')
+    p = group.command('power', cmd_chassis_power, 'Set power state')
+    p.add_argument('action', choices=tuple(CHASSIS_POWER_CONTROLS))
+
+    group = commands.group('fru', 'Print built-in FRU')
+    p = group.command('print', cmd_fru_print, 'Print FRU inventory')
+    p.add_argument('fru_id', type=auto_int, nargs='?', default=0)
+    p.add_argument('all', nargs='?', choices=('all',),
+                   help='also print the multirecord area')
+
+    group = commands.group('sdr', 'Print Sensor Data Repository entries '
+                           'and readings')
+    group.command('list', cmd_sdr_list, 'List all SDRs')
+    p = group.command('raw', cmd_sdr_show_raw, 'Show SDR raw data')
+    p.add_argument('sdr_id', type=auto_int)
+    p = group.command('show', cmd_sdr_show, 'Show detail for one SDR')
+    p.add_argument('sdr_id', type=auto_int)
+    group.command('showall', cmd_sdr_show_all, 'Show detail for all SDRs')
+
+    group = commands.group('sel', 'Print System Event Log (SEL)')
+    group.command('list', cmd_sel_list, 'List all SEL entries')
+    group.command('clear', cmd_sel_clear, 'Clear SEL')
+
+    group = commands.group('sensor', 'Sensor commands')
+    p = group.command('rearm', cmd_sensor_rearm, 'Rearm sensor events')
+    p.add_argument('number', type=auto_int, help='sensor number')
+
+    group = commands.group('hpm', 'HPM.1 commands')
+    group.command('capabilities', cmd_hpm_capabilities,
+                  'Request the target upgrade capabilities')
+    p = group.command('check', cmd_hpm_check_file,
+                      'Check the specified HPM.1 file',
+                      needs_connection=False)
+    p.add_argument('file')
+    p = group.command('install', cmd_hpm_install,
+                      'Install the specified HPM.1 file to the controller')
+    p.add_argument('file')
+    p.add_argument('component_id', type=int)
+
+    group = commands.group('picmg', 'PICMG commands')
+    sub = group.group('frucontrol', 'FRU control')
+    sub.command('cr', cmd_picmg_frucontrol_cold_reset, 'Cold reset')
+    sub = group.group('power', 'Power level')
+    sub.command('get', cmd_picmg_get_power, 'Request the power level')
+    sub = group.group('portstate', 'Port state')
+    p = sub.command('get', cmd_picmg_get_portstate,
+                    'Request the port state for an interface')
+    p.add_argument('channel', type=auto_int)
+    p.add_argument('interface', type=auto_int)
+    sub.command('getall', cmd_picmg_get_portstate_all,
+                'Request all port states for all interfaces')
+    sub = group.group('channel', 'Power channel')
+    p = sub.command('status', cmd_picmg_getpower_channel_status,
+                    'Request the power channel status')
+    p.add_argument('start', type=auto_int, help='starting power channel')
+    p = sub.command('power', cmd_picmg_send_channel_power,
+                    'Send channel power')
+    p.add_argument('channel', type=auto_int)
+    sub = group.group('send', 'Send')
+    sub.command('heartbeat', cmd_picmg_send_pm_heartbeat,
+                'Send PM heartbeat')
+
+    group = commands.group('vita', 'VITA 46.11 commands')
+    group.command('properties', cmd_vita_properties, 'Get VSO properties')
+    p = group.command('frucontrol', cmd_vita_frucontrol, 'FRU control')
+    p.add_argument('fru_id', type=auto_int)
+    p.add_argument('option', type=auto_int,
+                   help='0: cold reset, 1: warm reset, 2: graceful reboot, '
+                        '3: diagnostic interrupt')
+    p = group.command('addrinfo', cmd_vita_addrinfo,
+                      'Get address information')
+    p.add_argument('fru_id', type=auto_int, nargs='?', default=0)
+    p = group.command('activate', cmd_vita_activate, 'Activate a FRU')
+    p.add_argument('fru_id', type=auto_int)
+    p = group.command('deactivate', cmd_vita_deactivate, 'Deactivate a FRU')
+    p.add_argument('fru_id', type=auto_int)
+
+    sub = group.group('policy', 'FRU state policy bits')
+    p = sub.command('get', cmd_vita_policy_get,
+                    'Get the FRU activation policy')
+    p.add_argument('fru_id', type=auto_int)
+    p = sub.command('set', cmd_vita_policy_set,
+                    'Set the FRU activation policy')
+    p.add_argument('fru_id', type=auto_int)
+    policy_bits = ('bit 0: activation locked, 1: deactivation locked, '
+                   '2: commanded deactivation ignored, '
+                   '3: default activation locked')
+    p.add_argument('mask', type=auto_int,
+                   help='policy bits to change (%s)' % policy_bits)
+    p.add_argument('value', type=auto_int, help='new policy bits')
+
+    sub = group.group('led', 'FRU LED commands')
+    p = sub.command('prop', cmd_vita_led_prop, 'Get LED properties')
+    p.add_argument('fru_id', type=auto_int)
+    for name, func, help in (
+            ('cap', cmd_vita_led_cap, 'Get LED color capabilities'),
+            ('get', cmd_vita_led_get, 'Get LED state')):
+        p = sub.command(name, func, help)
+        p.add_argument('fru_id', type=auto_int)
+        p.add_argument('led_id', type=auto_int)
+    p = sub.command('set', cmd_vita_led_set, 'Set LED state')
+    p.add_argument('fru_id', type=auto_int)
+    p.add_argument('led_id', type=auto_int,
+                   help='0-0xfe: LED, 0xff: all LEDs')
+    p.add_argument('function', type=auto_int,
+                   help='0: off, 1-250: blinking (off duration), '
+                        '251: lamp test, 252: local control, 255: on')
+    p.add_argument('duration', type=auto_int,
+                   help='lamp test or on duration')
+    p.add_argument('color', type=auto_int,
+                   help='1: blue, 2: red, 3: green, 4: amber, 5: orange, '
+                        '6: white, 0xe: do not change, 0xf: default')
+
+    return parser
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    if args.func is None:
+        args.help_parser.print_help()
         sys.exit(1)
 
     handler = logging.StreamHandler()
-    if verbose:
+    if args.verbose:
         handler.setLevel(logging.DEBUG)
     else:
         handler.setLevel(logging.INFO)
     pyipmi.logger.add_log_handler(handler)
     pyipmi.logger.set_log_level(logging.DEBUG)
 
-    for i in range(len(args)):
-        cmd = _get_command(' '.join(args[0:i+1]))
-        if cmd is not None:
-            args = args[i+1:]
-            break
-    else:
-        usage()
-        sys.exit(1)
+    routing = args.routing
+    if args.channel is not None:
+        routing = [(0x20, args.channel, 0)]
 
-    ipmi = create_ipmi_connection(interface_name, interface_options,
-                                  target_address, target_routing,
-                                  rmcp_host, rmcp_port, rmcp_user,
-                                  rmcp_password, rmcp_priv_level)
-    if ipmi is None and cmd.needs_connection:
-        sys.exit(1)  # interface could not be created, error is printed
+    ipmi = None
+    if args.needs_connection:
+        ipmi = create_ipmi_connection(args.interface, args.options,
+                                      args.target, routing,
+                                      args.host, args.port, args.user,
+                                      args.password, args.priv_level)
+        if ipmi is None:
+            sys.exit(1)  # interface could not be created, error is printed
 
     try:
-        if cmd.needs_connection:
+        if args.needs_connection:
             ipmi.open()  # this will open interface and session
-        cmd.fn(ipmi, args)
+        args.func(ipmi, args)
     except pyipmi.errors.CompletionCodeError as e:
         print('Command returned with completion code 0x%02x' % e.cc)
-        if verbose:
+        if args.verbose:
             traceback.print_exc()
         sys.exit(1)
     except pyipmi.errors.IpmiTimeoutError:
         print('Command timed out')
-        if verbose:
+        if args.verbose:
             traceback.print_exc()
         sys.exit(1)
     except KeyboardInterrupt:
-        if verbose:
+        if args.verbose:
             traceback.print_exc()
         sys.exit(1)
-
     finally:
-        if cmd.needs_connection:
+        if args.needs_connection:
             ipmi.close()  # this will close interface and session
-
-
-COMMANDS = (
-        Command('bmc info', cmd_bmc_info),
-        Command('bmc reset cold', lambda i, a: i.cold_reset()),
-        Command('bmc reset warm', lambda i, a: i.warm_reset()),
-        Command('sel list', lambda i, a: list(map(_print, i.sel_entries()))),
-        Command('sel clear', cmd_sel_clear),
-        Command('sensor rearm', cmd_sensor_rearm),
-        Command('sdr list', cmd_sdr_list),
-        Command('sdr raw', cmd_sdr_show_raw),
-        Command('sdr show', cmd_sdr_show),
-        Command('sdr showall', cmd_sdr_show_all),
-        Command('fru print', cmd_fru_print),
-        Command('picmg frucontrol cr', cmd_picmg_frucontrol_cold_reset),
-        Command('picmg power get', cmd_picmg_get_power),
-        Command('picmg portstate get', cmd_picmg_get_portstate),
-        Command('picmg portstate getall', cmd_picmg_get_portstate_all),
-        Command('picmg channel status', cmd_picmg_getpower_channel_status),
-        Command('picmg send heartbeat', cmd_picmg_send_pm_heartbeat),
-        Command('picmg channel power', cmd_picmg_send_channel_power),
-        Command('vita properties', cmd_vita_properties),
-        Command('vita frucontrol', cmd_vita_frucontrol),
-        Command('vita addrinfo', cmd_vita_addrinfo),
-        Command('vita activate', cmd_vita_activate),
-        Command('vita deactivate', cmd_vita_deactivate),
-        Command('vita policy get', cmd_vita_policy_get),
-        Command('vita policy set', cmd_vita_policy_set),
-        Command('vita led prop', cmd_vita_led_prop),
-        Command('vita led cap', cmd_vita_led_cap),
-        Command('vita led get', cmd_vita_led_get),
-        Command('vita led set', cmd_vita_led_set),
-        Command('raw', cmd_raw),
-        Command('hpm capabilities', cmd_hpm_capabilities),
-        Command('hpm check', cmd_hpm_check_file, needs_connection=False),
-        Command('hpm install', cmd_hpm_install),
-        Command('chassis status', cmd_chassis_status),
-        Command('chassis power off',
-                lambda i, a: i.chassis_control_power_down()),
-        Command('chassis power on',
-                lambda i, a: i.chassis_control_power_up()),
-        Command('chassis power cycle',
-                lambda i, a: i.chassis_control_power_cycle()),
-        Command('chassis power reset',
-                lambda i, a: i.chassis_control_hard_reset()),
-        Command('chassis power diag',
-                lambda i, a: i.chassis_control_power_diagnostic_interrupt()),
-        Command('chassis power soft',
-                lambda i, a: i.chassis_control_power_soft_shutdown()),
-)
-
-COMMAND_HELP = (
-        CommandHelp('raw', None, 'Send a RAW IPMI request and print response'),
-
-        CommandHelp('fru', None,
-                    'Print built-in FRU and scan SDR for FRU locators'),
-
-        CommandHelp('sensor', None, None),
-        CommandHelp('sensor rearm', '<sensor-numer>', 'Rearm Sensor Events'),
-
-        CommandHelp('sel', None, 'Print System Event Log (SEL)'),
-        CommandHelp('sel list', None, 'List all SEL entries'),
-        CommandHelp('sel clear', None, 'Clear SEL'),
-
-        CommandHelp('sdr', None,
-                    'Print Sensor Data Repository entries and readings'),
-        CommandHelp('sdr list', None, 'List all SDRs'),
-        CommandHelp('sdr raw', '<sdr-id>', 'Show SDR raw data'),
-        CommandHelp('sdr show', '<sdr-id>', 'Show detail for one SDR'),
-        CommandHelp('sdr showall', None, 'Show detail for all SDRs'),
-
-        CommandHelp('bmc', None,
-                    'Management Controller status and global enables'),
-        CommandHelp('bmc info', None, 'BMC Device ID inforamtion'),
-        CommandHelp('bmc reset', '<cold|warm>', 'BMC reset control'),
-
-        CommandHelp('picmg', None, 'PICMG commands'),
-        CommandHelp('picmg frucontrol', '<cr>', 'Issue frucontrol'),
-        CommandHelp('picmg power get', 'get PICMG power level',
-                    'Request the power level'),
-        CommandHelp('picmg portstate getall', '',
-                    'Request all portstates for all interfaces'),
-        CommandHelp('picmg portstate get', '<channel> <interface>',
-                    'Request the portstate for an interface'),
-
-        CommandHelp('vita', None, 'VITA 46.11 commands'),
-        CommandHelp('vita properties', None, 'Get VSO properties'),
-        CommandHelp('vita frucontrol', '<fru-id> <option>',
-                    'FRU control (0: cold reset, 1: warm reset, '
-                    '2: graceful reboot, 3: diagnostic interrupt)'),
-        CommandHelp('vita addrinfo', '[<fru-id>]',
-                    'Get address information'),
-        CommandHelp('vita activate', '<fru-id>', 'Activate a FRU'),
-        CommandHelp('vita deactivate', '<fru-id>', 'Deactivate a FRU'),
-        CommandHelp('vita policy', None, 'FRU state policy bits'),
-        CommandHelp('vita policy get', '<fru-id>',
-                    'Get the FRU activation policy'),
-        CommandHelp('vita policy set', '<fru-id> <mask> <value>',
-                    'Set the FRU activation policy (bit 0: activation '
-                    'locked, 1: deactivation locked, 2: commanded '
-                    'deactivation ignored, 3: default activation locked)'),
-        CommandHelp('vita led', None, 'FRU LED commands'),
-        CommandHelp('vita led prop', '<fru-id>', 'Get LED properties'),
-        CommandHelp('vita led cap', '<fru-id> <led-id>',
-                    'Get LED color capabilities'),
-        CommandHelp('vita led get', '<fru-id> <led-id>', 'Get LED state'),
-        CommandHelp('vita led set',
-                    '<fru-id> <led-id> <function> <duration> <color>',
-                    'Set LED state (function: 0 off, 1-250 blinking, '
-                    '251 lamp test, 252 local control, 255 on; '
-                    'color: 1 blue .. 6 white, 0xe no change, 0xf default)'),
-
-        CommandHelp('hpm', None, 'HPM.1 commands'),
-        CommandHelp('hpm capabilities', 'HPM.1 target upgrade capabilities',
-                    'Request the target upgrade capabilities'),
-        CommandHelp('hpm check', 'HPM.1 file check',
-                    'Check the specified HPM.1 file'),
-        CommandHelp('hpm install', '<file> <component id>',
-                    'Install the specified HPM.1 file to the controller'),
-
-        CommandHelp('chassis', None, 'Get chassis status and set power state'),
-        CommandHelp('chassis status', '', 'Get chassis status'),
-        CommandHelp('chassis power', '<on|off|cycle|reset|diag|soft>',
-                    'Set power state')
-)
 
 
 if __name__ == '__main__':

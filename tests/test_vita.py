@@ -126,13 +126,9 @@ def test_completion_code_error(ipmi):
 
 
 def run_cli(ipmi, command, capsys):
-    words = command.split()
-    for i in range(len(words), 0, -1):
-        cmd = pyipmi.ipmitool._get_command(' '.join(words[:i]))
-        if cmd is not None:
-            cmd.fn(ipmi, words[i:])
-            return capsys.readouterr().out
-    raise AssertionError('unknown command %s' % command)
+    args = pyipmi.ipmitool.build_parser().parse_args(command.split())
+    args.func(ipmi, args)
+    return capsys.readouterr().out
 
 
 def test_cli_properties(ipmi, capsys):
@@ -193,4 +189,6 @@ def test_cli_led(ipmi, capsys):
 def test_cli_missing_argument(ipmi, capsys):
     with pytest.raises(SystemExit):
         run_cli(ipmi, 'vita led get 0', capsys)
-    assert 'usage: vita led get <FRU-ID> <LED-ID>' in capsys.readouterr().out
+    err = capsys.readouterr().err
+    assert 'usage: ipmitool.py vita led get' in err
+    assert 'required: led_id' in err
