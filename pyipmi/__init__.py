@@ -34,6 +34,7 @@ from . import picmg
 from . import sdr
 from . import sel
 from . import sensor
+from . import vita
 from . import msgs
 
 from .errors import IpmiTimeoutError, CompletionCodeError, RetryError
@@ -162,7 +163,7 @@ class Target(object):
 
 class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
            sdr.Sdr, sensor.Sensor, event.Event, sel.Sel, lan.Lan,
-           messaging.Messaging):
+           messaging.Messaging, vita.Vita):
 
     def __init__(self, interface: Any = None, target: Target | None = None,
                  session: Session = Session(),

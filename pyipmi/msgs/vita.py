@@ -222,7 +222,6 @@ class VitaGetFruLedCapabilitiesRsp(VitaMessage):
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
-        UnsignedInt('reserved', 1),
         Bitfield('color_capabilities', 1,
                  Bitfield.ReservedBit(1, 0),
                  Bitfield.Bit('blue', 1, default=0),

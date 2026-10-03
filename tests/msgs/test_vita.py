@@ -214,7 +214,7 @@ def test_VitaGetFruLedCapabilitiesReq_encode():
 
 def test_VitaGetFruLedCapabilitiesRsp_decode():
     m = pyipmi.msgs.vita.VitaGetFruLedCapabilitiesRsp()
-    decode_message(m, b'\x00\x03\x00\x55\x02\x04')
+    decode_message(m, b'\x00\x03\x55\x02\x04')
     assert m.completion_code == 0
     assert m.vita_identifier == 3
     assert m.color_capabilities.blue == 0
@@ -229,7 +229,7 @@ def test_VitaGetFruLedCapabilitiesRsp_decode():
 
     # optional
     m = pyipmi.msgs.vita.VitaGetFruLedCapabilitiesRsp()
-    decode_message(m, b'\x00\x03\x00\x55\x02\x04\x03')
+    decode_message(m, b'\x00\x03\x55\x02\x04\x03')
     assert m.vita_identifier == 3
     assert m.flags == 3
 
@@ -240,13 +240,13 @@ def test_VitaGetFruLedCapabilitiesRsp_encode():
     m.default_color_local_control.value = 2
     m.default_color_override_control.value = 4
     data = encode_message(m)
-    assert data == b'\x00\x03\x00\x04\x02\x04'
+    assert data == b'\x00\x03\x04\x02\x04'
 
     # optional
     m = pyipmi.msgs.vita.VitaGetFruLedCapabilitiesRsp()
     m.flags = 4
     data = encode_message(m)
-    assert data == b'\x00\x03\x00\x00\x00\x00\x04'
+    assert data == b'\x00\x03\x00\x00\x00\x04'
 
 
 def test_VitaSetFruLedStateReq_decode():

@@ -415,6 +415,174 @@ def cmd_picmg_send_channel_power(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
     ipmi.send_channel_power(int(args[0]))
 
 
+VITA_LED_COLORS = ('reserved', 'BLUE', 'RED', 'GREEN', 'AMBER', 'ORANGE',
+                   'WHITE', 'reserved')
+
+VITA_FRU_CONTROL_OPTIONS = ('Cold Reset', 'Warm Reset', 'Graceful Reboot',
+                            'Issue Diagnostic Interrupt')
+
+
+def _vita_args(args: list[str], count: int, usage: str) -> list[int]:
+    """Return the first count arguments as numbers (decimal or 0x hex)."""
+    if len(args) < count:
+        print('usage: vita %s' % usage)
+        sys.exit(1)
+    return [int(arg, 0) for arg in args[:count]]
+
+
+def _vita_led_color(color: int) -> str:
+    if 0 <= color < len(VITA_LED_COLORS):
+        return VITA_LED_COLORS[color]
+    return 'invalid'
+
+
+def _vita_led_function(function: int) -> str:
+    if function == 0x00:
+        return 'OFF'
+    if function == 0xff:
+        return 'ON'
+    return 'BLINKING'
+
+
+def cmd_vita_properties(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+    rsp = ipmi.get_vita_vso_capabilities()
+    ipmc = rsp.ipmc_identifier
+    ipmb = rsp.ipmb_capabilities
+    rev = rsp.specification_revision
+    print('VSO Identifier    : 0x%02x' % rsp.vita_identifier)
+    print('IPMC Identifier   : 0x%02x' % int(ipmc))
+    print('    Tier  %d' % (ipmc.tier_functionality + 1))
+    print('    Layer %d' % (ipmc.layer_functionality + 1))
+    print('IPMB Capabilities : 0x%02x' % int(ipmb))
+    frequency = {0: '100', 1: '400'}.get(ipmb.max_frequency, 'RESERVED')
+    print('    Frequency  %skHz' % frequency)
+    print('    %d IPMB interface%s supported'
+          % (ipmb.number_ipmbs + 1, 's' if ipmb.number_ipmbs else ''))
+    print('VSO Standard      : %s'
+          % ('VITA 46.11' if rsp.vso_standard.standard == 0 else 'RESERVED'))
+    print('VSO Spec Revision : %d.%d' % (rev & 0xf, rev >> 4))
+    print('Max FRU Device ID : 0x%02x' % rsp.max_fru_id)
+    print('FRU Device ID     : 0x%02x' % rsp.ipmc_fru_device_id)
+
+
+def cmd_vita_frucontrol(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+    fru_id, option = _vita_args(args, 2, 'frucontrol <FRU-ID> <OPTION>')
+    name = (VITA_FRU_CONTROL_OPTIONS[option]
+            if option < len(VITA_FRU_CONTROL_OPTIONS) else 'Unknown')
+    print('FRU Device Id: %d FRU Control Option: %s' % (fru_id, name))
+    ipmi.vita_fru_control(fru_id, option)
+    print('FRU Control: ok')
+
+
+def cmd_vita_addrinfo(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+    fru_id = _vita_args(args, 1, 'addrinfo [<FRU-ID>]')[0] if args else 0
+    rsp = ipmi.get_vita_fru_address_info(fru_id)
+    print('Hardware Address : 0x%02x' % rsp.hardware_address)
+    print('IPMB-0 Address   : 0x%02x' % rsp.ipmb_0_address)
+    print('FRU ID           : 0x%02x' % rsp.fru_id)
+    print('Site ID          : 0x%02x' % rsp.site_id)
+    print('Site Type        : %s'
+          % pyipmi.vita.VITA_SITE_TYPES.get(rsp.site_type, 'Unknown'))
+    if rsp.address_on_channel_7 is not None:
+        print('Channel 7 Address: 0x%02x' % rsp.address_on_channel_7)
+
+
+def cmd_vita_activate(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+    fru_id, = _vita_args(args, 1, 'activate <FRU-ID>')
+    ipmi.set_vita_fru_activation(fru_id)
+    print('FRU has been successfully activated')
+
+
+def cmd_vita_deactivate(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+    fru_id, = _vita_args(args, 1, 'deactivate <FRU-ID>')
+    ipmi.set_vita_fru_deactivation(fru_id)
+    print('FRU has been successfully deactivated')
+
+
+def cmd_vita_policy_get(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+    fru_id, = _vita_args(args, 1, 'policy get <FRU-ID>')
+    policy = ipmi.get_vita_fru_state_policy(fru_id).activation_policies
+    print('FRU State Policy Bits:\t%xh' % int(policy))
+    print('    Default-Activation-Locked Policy Bit is %d'
+          % policy.default_activation_locked)
+    print('    Commanded-Deactivation-Ignored Policy Bit is %d'
+          % policy.commanded_deactivation_ignored)
+    print('    Deactivation-Locked Policy Bit is %d'
+          % policy.deactivation_lock)
+    print('    Activation-Locked Policy Bit is %d' % policy.activation_lock)
+
+
+def cmd_vita_policy_set(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+    fru_id, mask, value = _vita_args(args, 3,
+                                     'policy set <FRU-ID> <MASK> <VALUE>')
+    ipmi.set_vita_fru_state_policy(fru_id, mask, value)
+    print('FRU state policy bits have been updated')
+
+
+def cmd_vita_led_prop(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+    fru_id, = _vita_args(args, 1, 'led prop <FRU-ID>')
+    rsp = ipmi.get_vita_led_properties(fru_id)
+    print('LED Count:\t   %#x' % rsp.led_count)
+
+
+def cmd_vita_led_cap(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+    fru_id, led_id = _vita_args(args, 2, 'led cap <FRU-ID> <LED-ID>')
+    rsp = ipmi.get_vita_led_color_capabilities(fru_id, led_id)
+    capabilities = int(rsp.color_capabilities)
+    colors = [VITA_LED_COLORS[i] for i in range(8) if capabilities & (1 << i)]
+    print('LED Color Capabilities: %s' % ', '.join(colors))
+    print('Default LED Color in')
+    print('      LOCAL control:  %s'
+          % _vita_led_color(rsp.default_color_local_control.value))
+    print('      OVERRIDE state: %s'
+          % _vita_led_color(rsp.default_color_override_control.value))
+    if rsp.flags is not None:
+        print('LED flags:')
+        if rsp.flags & 2:
+            print('      [HW RESTRICT]')
+        if rsp.flags & 1:
+            print('      [PAYLOAD PWR]')
+
+
+def cmd_vita_led_get(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+    fru_id, led_id = _vita_args(args, 2, 'led get <FRU-ID> <LED-ID>')
+    rsp = ipmi.get_vita_led_state(fru_id, led_id)
+    state = rsp.state
+    flags = [name for (bit, name) in ((state.ipmc_control, 'LOCAL CONTROL'),
+                                      (state.override, 'OVERRIDE'),
+                                      (state.lamp_test, 'LAMPTEST'),
+                                      (state.hardware_restrict, 'HW RESTRICT'))
+             if bit]
+    print('LED states:                   %x\t%s'
+          % (int(state), ' '.join('[%s]' % flag for flag in flags)))
+
+    if state.ipmc_control:
+        print('  Local Control function:     %x\t[%s]'
+              % (rsp.local_control_function,
+                 _vita_led_function(rsp.local_control_function)))
+        print('  Local Control On-Duration:  %x'
+              % rsp.local_control_on_duration)
+        print('  Local Control Color:        %x\t[%s]'
+              % (rsp.local_control_color,
+                 _vita_led_color(rsp.local_control_color & 7)))
+
+    if (state.override or state.lamp_test) and rsp.override_state is not None:
+        print('  Override function:     %x\t[%s]'
+              % (rsp.override_state, _vita_led_function(rsp.override_state)))
+        print('  Override On-Duration:  %x' % rsp.override_on_duration)
+        print('  Override Color:        %x\t[%s]'
+              % (rsp.override_color, _vita_led_color(rsp.override_color & 7)))
+        if state.lamp_test and rsp.lamp_test_duration is not None:
+            print('  Lamp test duration:    %x' % rsp.lamp_test_duration)
+
+
+def cmd_vita_led_set(ipmi: pyipmi.Ipmi, args: list[str]) -> None:
+    fru_id, led_id, function, duration, color = _vita_args(
+        args, 5, 'led set <FRU-ID> <LED-ID> <FUNCTION> <DURATION> <COLOR>')
+    ipmi.set_vita_led_state(fru_id, led_id, function, duration, color)
+    print('LED state has been updated')
+
+
 def usage(toplevel: bool = False) -> None:
     commands = []
     maxlen = 0
@@ -679,6 +847,8 @@ def main() -> None:
                                   target_address, target_routing,
                                   rmcp_host, rmcp_port, rmcp_user,
                                   rmcp_password, rmcp_priv_level)
+    if ipmi is None and cmd.needs_connection:
+        sys.exit(1)  # interface could not be created, error is printed
 
     try:
         if cmd.needs_connection:
@@ -723,6 +893,17 @@ COMMANDS = (
         Command('picmg channel status', cmd_picmg_getpower_channel_status),
         Command('picmg send heartbeat', cmd_picmg_send_pm_heartbeat),
         Command('picmg channel power', cmd_picmg_send_channel_power),
+        Command('vita properties', cmd_vita_properties),
+        Command('vita frucontrol', cmd_vita_frucontrol),
+        Command('vita addrinfo', cmd_vita_addrinfo),
+        Command('vita activate', cmd_vita_activate),
+        Command('vita deactivate', cmd_vita_deactivate),
+        Command('vita policy get', cmd_vita_policy_get),
+        Command('vita policy set', cmd_vita_policy_set),
+        Command('vita led prop', cmd_vita_led_prop),
+        Command('vita led cap', cmd_vita_led_cap),
+        Command('vita led get', cmd_vita_led_get),
+        Command('vita led set', cmd_vita_led_set),
         Command('raw', cmd_raw),
         Command('hpm capabilities', cmd_hpm_capabilities),
         Command('hpm check', cmd_hpm_check_file, needs_connection=False),
@@ -775,6 +956,33 @@ COMMAND_HELP = (
                     'Request all portstates for all interfaces'),
         CommandHelp('picmg portstate get', '<channel> <interface>',
                     'Request the portstate for an interface'),
+
+        CommandHelp('vita', None, 'VITA 46.11 commands'),
+        CommandHelp('vita properties', None, 'Get VSO properties'),
+        CommandHelp('vita frucontrol', '<fru-id> <option>',
+                    'FRU control (0: cold reset, 1: warm reset, '
+                    '2: graceful reboot, 3: diagnostic interrupt)'),
+        CommandHelp('vita addrinfo', '[<fru-id>]',
+                    'Get address information'),
+        CommandHelp('vita activate', '<fru-id>', 'Activate a FRU'),
+        CommandHelp('vita deactivate', '<fru-id>', 'Deactivate a FRU'),
+        CommandHelp('vita policy', None, 'FRU state policy bits'),
+        CommandHelp('vita policy get', '<fru-id>',
+                    'Get the FRU activation policy'),
+        CommandHelp('vita policy set', '<fru-id> <mask> <value>',
+                    'Set the FRU activation policy (bit 0: activation '
+                    'locked, 1: deactivation locked, 2: commanded '
+                    'deactivation ignored, 3: default activation locked)'),
+        CommandHelp('vita led', None, 'FRU LED commands'),
+        CommandHelp('vita led prop', '<fru-id>', 'Get LED properties'),
+        CommandHelp('vita led cap', '<fru-id> <led-id>',
+                    'Get LED color capabilities'),
+        CommandHelp('vita led get', '<fru-id> <led-id>', 'Get LED state'),
+        CommandHelp('vita led set',
+                    '<fru-id> <led-id> <function> <duration> <color>',
+                    'Set LED state (function: 0 off, 1-250 blinking, '
+                    '251 lamp test, 252 local control, 255 on; '
+                    'color: 1 blue .. 6 white, 0xe no change, 0xf default)'),
 
         CommandHelp('hpm', None, 'HPM.1 commands'),
         CommandHelp('hpm capabilities', 'HPM.1 target upgrade capabilities',
