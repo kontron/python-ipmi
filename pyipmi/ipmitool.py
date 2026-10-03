@@ -500,7 +500,10 @@ Ipmbdev interface options:
 
 Openipmblink interface options:
   port=<path>       Data serial port of the bridge (/dev/ttyACM1 by default)
+                    or pyserial URL of a shared bridge
+                    (e.g. socket://localhost:5555)
   bus=<n>           IPMB bus of the bridge (0 by default)
+  address=<addr>    Own IPMB address (0x20 by default)
 '''[1:])
         print('Commands:')
 
@@ -555,6 +558,8 @@ def parse_interface_options(interface_name: str, options: str | list) -> dict:
                 interface_options['port'] = value
             elif name == 'bus':
                 interface_options['bus'] = int(value)
+            elif name == 'address':
+                interface_options['slave_address'] = int(value, 0)
             else:
                 print('Warning: unknown option %s' % name)
 
