@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import queue
+import socket
 import threading
 import time
 from typing import Any, Callable
@@ -126,11 +127,25 @@ class OpenIpmbLinkDevice(object):
     def close(self) -> None:
         self._stop.set()
         if self._reader is not None:
+            self._cancel_read()
             self._reader.join()
             self._reader = None
         if self._ser is not None:
             self._ser.close()
             self._ser = None
+
+    def _cancel_read(self) -> None:
+        """Interrupt the blocking read of the receive thread."""
+        cancel_read = getattr(self._ser, 'cancel_read', None)
+        if cancel_read is not None:
+            cancel_read()  # serial port
+            return
+        sock = getattr(self._ser, '_socket', None)
+        if sock is not None:
+            try:
+                sock.shutdown(socket.SHUT_RDWR)  # socket:// URL
+            except OSError:
+                pass
 
     def add_listener(self, bus: int,
                      listener: Callable[[bytes, int | None], None]) -> None:
@@ -202,7 +217,8 @@ class OpenIpmbLinkDevice(object):
             try:
                 packet = self._read_packet()
             except Exception as e:
-                log().error('openipmblink receive failed: %s', e)
+                if not self._stop.is_set():
+                    log().error('openipmblink receive failed: %s', e)
                 return
 
             if packet is None:

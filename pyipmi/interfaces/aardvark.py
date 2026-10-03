@@ -16,8 +16,10 @@
 
 from __future__ import annotations
 
+import queue
 import threading
 import time
+from typing import Any, Callable
 
 from ..logger import log
 from .ipmb import IpmbInterface
@@ -30,8 +32,27 @@ except ImportError:  # python 2
 except RuntimeError:  # python 3
     pyaardvark = None
 
-# maximum time the receive thread blocks the device while polling
-POLL_INTERVAL_MS = 10
+# The receive thread checks the adapter for received messages in this
+# interval. In between, it waits for device calls of other threads.
+POLL_INTERVAL = 0.001
+
+
+class _DeviceCall(object):
+    """A device function call, done by the receive thread."""
+
+    def __init__(self, func: Callable[..., Any], args: tuple) -> None:
+        self.func = func
+        self.args = args
+        self.done = threading.Event()
+        self.result: Any = None
+        self.error: Exception | None = None
+
+    def run(self) -> None:
+        try:
+            self.result = self.func(*self.args)
+        except Exception as e:
+            self.error = e
+        self.done.set()
 
 
 class Aardvark(IpmbInterface):
@@ -40,6 +61,9 @@ class Aardvark(IpmbInterface):
     The adapter is enabled as I2C slave with the own IPMB address. A receive
     thread passes all received messages to the router, so the interface
     can also answer incoming requests (see `MessageRouter`).
+
+    The Aardvark API is not thread-safe. While the receive thread runs, it
+    does all device accesses, the other threads pass them to it.
     """
 
     NAME = 'aardvark'
@@ -60,8 +84,7 @@ class Aardvark(IpmbInterface):
         self.i2c_pullups = enable_i2c_pullups
         self.target_power = enable_target_power
         self.fastmode = enable_fastmode
-        # the Aardvark API is not thread-safe
-        self._dev_lock = threading.Lock()
+        self._calls: queue.Queue = queue.Queue()
 
     def open(self) -> None:
         self._dev = pyaardvark.open(self.port, self.serial_number)
@@ -81,42 +104,69 @@ class Aardvark(IpmbInterface):
 
     def close(self) -> None:
         self._stop_receiver()
+        self._run_calls()
         self._dev.close()
         super().close()
 
+    def _wakeup_receiver(self) -> None:
+        self._calls.put(None)
+
+    def _call(self, func: Callable[..., Any], *args: Any) -> Any:
+        """Call a device function, in the receive thread if it runs."""
+        receiver = self._receiver
+        if receiver is None or receiver is threading.current_thread():
+            return func(*args)
+
+        call = _DeviceCall(func, args)
+        self._calls.put(call)
+        if not call.done.wait(1.0):
+            raise IOError('aardvark receive thread does not respond')
+        if call.error is not None:
+            raise call.error
+        return call.result
+
+    def _run_calls(self, timeout: float = 0) -> None:
+        """Run the queued device calls, wait up to timeout for the first."""
+        try:
+            call = self._calls.get(timeout=timeout) if timeout else \
+                self._calls.get_nowait()
+            while True:
+                if call is not None:
+                    call.run()
+                call = self._calls.get_nowait()
+        except queue.Empty:
+            pass
+
     def enable_pullups(self, enabled: bool) -> None:
-        self._dev.i2c_pullups = enabled
+        self._call(setattr, self._dev, 'i2c_pullups', enabled)
 
     def enable_target_power(self, enabled: bool) -> None:
-        self._dev.target_power = enabled
+        self._call(setattr, self._dev, 'target_power', enabled)
 
     def enable_fastmode(self, enabled: bool) -> None:
-        if enabled:
-            self._dev.i2c_bitrate = 400
-        else:
-            self._dev.i2c_bitrate = 100
+        bitrate = 400 if enabled else 100
+        self._call(setattr, self._dev, 'i2c_bitrate', bitrate)
 
     def raw_write(self, address: int, data: bytes) -> None:
-        with self._dev_lock:
-            self._dev.i2c_master_write(address, data)
+        self._call(self._dev.i2c_master_write, address, data)
 
     def send_frame(self, frame: bytes) -> None:
         i2c_addr = frame[0] >> 1
 
         log().debug('I2C TX to %02Xh [%s]', i2c_addr,
                     ' '.join(['%02x' % b for b in frame]))
-        with self._dev_lock:
-            self._dev.i2c_master_write(i2c_addr, bytes(frame[1:]))
+        self._call(self._dev.i2c_master_write, i2c_addr, bytes(frame[1:]))
 
     def _read_frame(self, timeout: float) -> bytes | None:
         deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            with self._dev_lock:
-                events = self._dev.poll(POLL_INTERVAL_MS)
-                if pyaardvark.POLL_I2C_READ not in events:
-                    continue
+        while not self._stop_receiver_event.is_set():
+            events = self._dev.poll(0)
+            if pyaardvark.POLL_I2C_READ in events:
                 (i2c_addr, rx_data) = self._dev.i2c_slave_read()
-
-            # the adapter strips the own address (rqSA) of the message
-            return bytes((i2c_addr << 1,)) + bytes(rx_data)
+                # the adapter strips the own address (rqSA) of the message
+                return bytes((i2c_addr << 1,)) + bytes(rx_data)
+            if time.monotonic() >= deadline:
+                break
+            # a device call wakes up the wait immediately
+            self._run_calls(POLL_INTERVAL)
         return None

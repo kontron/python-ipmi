@@ -352,8 +352,13 @@ class IpmbInterface(Interface):
     def _stop_receiver(self) -> None:
         self._stop_receiver_event.set()
         if self._receiver is not None:
+            self._wakeup_receiver()
             self._receiver.join()
             self._receiver = None
+
+    def _wakeup_receiver(self) -> None:
+        """Interrupt a blocking `_read_frame()`, so that close is fast."""
+        pass
 
     def _receive_loop(self) -> None:
         while not self._stop_receiver_event.is_set():

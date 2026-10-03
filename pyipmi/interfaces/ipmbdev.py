@@ -27,12 +27,19 @@ class IpmbDev(IpmbInterface):
 
     def open(self) -> None:
         self._dev = os.open(self.port, os.O_RDWR)
+        # wakes up the receive thread on close
+        self._wakeup_r, self._wakeup_w = os.pipe()
         self._start_receiver()
 
     def close(self) -> None:
         self._stop_receiver()
         os.close(self._dev)
+        os.close(self._wakeup_r)
+        os.close(self._wakeup_w)
         super().close()
+
+    def _wakeup_receiver(self) -> None:
+        os.write(self._wakeup_w, b'\0')
 
     def send_frame(self, frame: bytes) -> None:
         i2c_addr = frame[0] >> 1
@@ -42,7 +49,7 @@ class IpmbDev(IpmbInterface):
         os.write(self._dev, bytes([len(frame)]) + bytes(frame))
 
     def _read_frame(self, timeout: float) -> bytes | None:
-        r, w, e = select.select([self._dev], [], [], timeout)
+        r, w, e = select.select([self._dev, self._wakeup_r], [], [], timeout)
         if self._dev not in r:
             return None
 
