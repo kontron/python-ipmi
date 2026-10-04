@@ -8,7 +8,7 @@ def test_session_object():
     session = Session()
     assert session.sid == 0
     assert session.sequence_number == 0
-    assert session.activated == False
+    assert session.activated is False
 
 
 def test_session_interface():
@@ -53,4 +53,4 @@ def test_set_priv_level():
 
 def test_string():
     session = Session()
-    s = str(session)
+    str(session)
