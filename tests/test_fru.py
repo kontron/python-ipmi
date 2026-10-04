@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import datetime
 import os
 import pytest
 
@@ -55,6 +56,33 @@ def test_fru_inventory_from_file_2():
     assert fru.board_info_area is not None
     assert fru.product_info_area is not None
     assert fru.multirecord_area is None
+
+
+def test_fru_inventory_from_file_3():
+    fru_file = os.path.join(this_file_path,
+                            'fru_bin/supermicro_A2SDi-4C-HLN4F.bin')
+    fru = get_fru_inventory_from_file(fru_file)
+    assert fru.multirecord_area is None
+
+    chassis_area = fru.chassis_info_area
+    assert chassis_area.type == 23  # rack mount chassis
+    assert chassis_area.part_number.string == ''
+    assert chassis_area.serial_number.string == ''
+
+    board_area = fru.board_info_area
+    assert board_area.mfg_date == datetime.datetime(2025, 2, 15, 16, 0)
+    assert board_area.manufacturer.string == 'Supermicro'
+    assert board_area.product_name.string == 'A2SDi-4C-HLN4F'
+    assert board_area.serial_number.string == 'OM252S008784'
+    assert board_area.part_number.string == ''
+
+    product_area = fru.product_info_area
+    assert product_area.manufacturer.string == 'Thomas-Krenn.AG'
+    assert product_area.name.string == '1HE Intel Single-CPU RI1102A-F Server'
+    assert product_area.version.string == '2.0'
+    assert product_area.serial_number.string == '9000430981'
+    assert product_area.part_number.string == ''
+    assert product_area.asset_tag.string == ''
 
 
 def test_board_area():
