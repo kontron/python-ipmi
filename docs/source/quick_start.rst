@@ -258,6 +258,27 @@ ipmitool command:
 
     ipmitool -I serial-terminal -D /dev/tty2:115200 -t 0xb2 -l 0 raw 0x06 0x01
 
+System interface with the Linux IPMI driver
+*******************************************
+
+The ``ipmidev`` interface uses the Linux IPMI driver (``ipmi_devintf`` with e.g. ``ipmi_si`` for KCS, SMIC and BT or ``ipmi_ssif``) to access the system interface of the BMC via ``/dev/ipmi0``. No session is needed.
+
+.. code:: python
+
+  interface = pyipmi.interfaces.create_interface('ipmidev', port='/dev/ipmi0')
+  ipmi = pyipmi.create_connection(interface)
+  ipmi.target = pyipmi.Target(0x20)
+  ipmi.open()
+  ipmi.get_device_id()
+
+Requests to the BMC (no target address or ``0x20``) are sent to the system interface. Requests to other targets are bridged by the BMC: either to the target IPMB address on channel 0 or, with a routing of one bridge, on the given channel, e.g. ``pyipmi.Target(0x72, routing=[(0x20, 0x20, 7), (0x20, 0x72, None)])``. Bridging over more than one hop is not supported.
+
+ipmitool command:
+
+.. code:: shell
+
+    ipmitool.py -I ipmidev bmc info
+
 IPMB with openipmblink
 **********************
 

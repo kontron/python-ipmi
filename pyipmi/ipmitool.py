@@ -580,6 +580,13 @@ def parse_interface_options(interface_name: str, options: str | list) -> dict:
         elif interface_name == 'ipmbdev':
             if name == 'port':
                 interface_options['port'] = value
+        elif interface_name == 'ipmidev':
+            if name == 'port':
+                interface_options['port'] = value
+            elif name == 'timeout':
+                interface_options['timeout'] = float(value)
+            else:
+                print('Warning: unknown option %s' % name)
         elif interface_name == 'openipmblink':
             if name == 'port':
                 interface_options['port'] = value
@@ -637,6 +644,9 @@ interface options (-o name=value,...):
     cipher             cipher to be used (0-255)
   ipmbdev:
     port=<path>        path to Linux IPMB device (default /dev/ipmb-0)
+  ipmidev:
+    port=<path>        path to Linux IPMI device (default /dev/ipmi0)
+    timeout=<sec>      response timeout in seconds (default 10)
   openipmblink:
     port=<path>        data serial port of the bridge (default /dev/ttyACM1)
                        or pyserial URL of a shared bridge
@@ -684,7 +694,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help='print the output as JSON (if supported)')
     parser.add_argument('-I', dest='interface', metavar='<interface>',
                         help='interface (rmcp, aardvark, ipmitool, ipmbdev, '
-                             'openipmblink)')
+                             'ipmidev, openipmblink)')
     parser.add_argument('-o', dest='options', metavar='<options>',
                         default='',
                         help='interface specific options (name=value, '

@@ -9,6 +9,7 @@ Features
 * legacy RMCP interface (using ipmitool as backend)
 * RMCP+ interface (using ipmitool as backend)
 * system (KCS) interface (using ipmitool as backend)
+* system interface (KCS, SMIC, BT, SSIF) using the IPMI driver on Linux
 * IPMB interface using the `Total Phase`_ Aardvark
 * IPMB interface using ipmb-dev driver on Linux
 
@@ -28,8 +29,13 @@ For IPMB interface a `Total Phase`_ Aardvark is needed.
 Another option is to use ipmb-dev driver on Linux with an I2C bus, driver of which supports slave mode:
 https://www.kernel.org/doc/html/latest/driver-api/ipmb.html
 
-For legacy RMCP, RMCP+ and system interface (KCS) the installtion of ipmitool
-is required.
+For the native system interface the Linux IPMI driver is needed
+(``ipmi_devintf`` and e.g. ``ipmi_si`` or ``ipmi_ssif``), which provides
+``/dev/ipmi0``:
+https://www.kernel.org/doc/html/latest/driver-api/ipmi.html
+
+For legacy RMCP, RMCP+ and system interface (KCS) using ipmitool as backend
+the installtion of ipmitool is required.
 
 Installation
 ------------
@@ -115,6 +121,29 @@ ipmitool command:
 .. code:: shell
 
     ipmitool -I serial-terminal -D /dev/tty2:115200 -t 0xb2 -l 0 raw 0x06 0x01
+
+Example with the system interface using the Linux IPMI driver:
+
+.. code:: python
+
+    import pyipmi
+    import pyipmi.interfaces
+
+    interface = pyipmi.interfaces.create_interface('ipmidev', port='/dev/ipmi0')
+
+    connection = pyipmi.create_connection(interface)
+
+    connection.target = pyipmi.Target(0x20)
+
+    connection.open()
+    connection.get_device_id()
+    connection.close()
+
+ipmitool command:
+
+.. code:: shell
+
+    ipmitool -I open -t 0x20 raw 0x06 0x01
 
 Compatibility
 -------------

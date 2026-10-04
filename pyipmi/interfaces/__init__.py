@@ -21,6 +21,7 @@ from typing import Any
 from .ipmitool import Ipmitool
 from .aardvark import Aardvark
 from .ipmbdev import IpmbDev
+from .ipmidev import IpmiDev
 from .mock import Mock
 from .openipmblink import OpenIpmbLink
 from .rmcp import Rmcp
@@ -29,6 +30,7 @@ INTERFACES = [
     Ipmitool,
     Aardvark,
     IpmbDev,
+    IpmiDev,
     Mock,
     Rmcp,
     OpenIpmbLink,

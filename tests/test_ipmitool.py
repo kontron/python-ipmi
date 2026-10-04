@@ -38,6 +38,11 @@ class TestParseInterfaceOptions:
         options = parse_interface_options('ipmbdev', 'port=/dev/ipmb0')
         assert options['port'] == '/dev/ipmb0'
 
+    def test_options_ipmidev(self):
+        options = parse_interface_options('ipmidev', 'port=/dev/ipmi1,timeout=2')
+        assert options['port'] == '/dev/ipmi1'
+        assert options['timeout'] == 2.0
+
     def test_options_openipmblink(self):
         options = parse_interface_options(
             'openipmblink', 'port=socket://localhost:5555,bus=1,address=0x24')
