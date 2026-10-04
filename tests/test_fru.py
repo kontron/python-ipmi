@@ -85,6 +85,44 @@ def test_fru_inventory_from_file_3():
     assert product_area.asset_tag.string == ''
 
 
+def test_fru_inventory_from_file_4():
+    fru_file = os.path.join(this_file_path,
+                            'fru_bin/HP_ProLiant_BL460c_Gen8.bin')
+    fru = get_fru_inventory_from_file(fru_file)
+
+    chassis_area = fru.chassis_info_area
+    assert chassis_area.type == 17  # main server chassis
+    assert chassis_area.part_number.string == ''
+    assert chassis_area.serial_number.string == 'CZJ2380K2L'
+    assert len(chassis_area.custom_chassis_info) == 2
+
+    board_area = fru.board_info_area
+    assert board_area.language_code == 25  # english
+    assert board_area.mfg_date == datetime.datetime(2012, 9, 14, 14, 42)
+    assert board_area.manufacturer.string == 'HP'
+    assert board_area.product_name.string == 'HP ProLiant BL460c Gen8'
+    assert board_area.serial_number.string == 'TW29NQ0583    '
+    assert board_area.part_number.string == '654609-001'
+    assert board_area.fru_file_id.string == '06/08/11'
+    assert len(board_area.custom_mfg_info) == 2
+
+    product_area = fru.product_info_area
+    assert product_area.manufacturer.string == 'HP'
+    assert product_area.name.string == 'HP ProLiant BL460c Gen8'
+    assert product_area.part_number.string == '666162-B21'
+    assert product_area.version.string == 'G8'
+    assert product_area.serial_number.string == 'CZJ2380K2L'
+    assert product_area.asset_tag.string == ''
+    assert product_area.fru_file_id.string == ''
+
+    # three HP OEM records
+    records = fru.multirecord_area.records
+    assert len(records) == 3
+    assert [r.record_type_id for r in records] == [0xd0, 0xd0, 0xd0]
+    assert [r.length for r in records] == [47, 8, 7]
+    assert [r.end_of_list for r in records] == [False, False, True]
+
+
 def test_board_area():
     fru_file = os.path.join(this_file_path, 'fru_bin/kontron_am4010.bin')
     fru = get_fru_inventory_from_file(fru_file)
