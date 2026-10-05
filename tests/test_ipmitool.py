@@ -4,6 +4,7 @@ import pytest
 
 from pyipmi import ipmitool
 from pyipmi.ipmitool import build_parser, parse_interface_options
+from pyipmi.sdr import SdrCommon
 
 
 class TestParseInterfaceOptions:
@@ -165,3 +166,48 @@ class TestParser:
             ('connect', 'ipmbdev', 'port=/dev/ipmb-1', 0x72, [(0x20, 7, 0)],
              None, 623, '', '', None),
             'open', 'sel clear', 'close']
+
+
+class TestSdrShow:
+    def test_mc_confirmation_record(self, capsys):
+        data = [0x45, 0x00, 0x51, 0x13, 0x1b, 0x20, 0x00, 0x01,
+                0x02, 0x01, 0x51, 0x4a, 0xc1, 0x62, 0x06, 0x80,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+        ipmitool.sdr_show(None, SdrCommon.from_data(data))
+
+        out = capsys.readouterr().out
+        assert 'SDR record ID:    0x0045' in out
+        assert 'SDR type:         0x13' in out
+        assert 'Device Id string' not in out
+        assert 'Entity' not in out
+        assert 'Slave address:    0x20' in out
+        assert 'Device revision:  1' in out
+        assert 'Channel:          0' in out
+        assert 'Firmware:         2.01' in out
+        assert 'IPMI version:     1.5' in out
+        assert 'Manufacturer ID:  0x2c14a' in out
+        assert 'Product ID:       0x8006' in out
+
+    @pytest.mark.parametrize('data', [
+        # OEM record
+        [0x05, 0x00, 0x51, 0xc0, 0x05, 0x57, 0x01, 0x00, 0xaa, 0xbb],
+        # unknown record type
+        [0x01, 0x00, 0x51, 0x0a, 0x00],
+    ])
+    def test_record_without_id_string(self, capsys, data):
+        ipmitool.sdr_show(None, SdrCommon.from_data(data))
+
+        out = capsys.readouterr().out
+        assert 'SDR type:         0x%02x' % data[3] in out
+        assert 'Device Id string' not in out
+
+    def test_fru_device_locator_record(self, capsys):
+        data = [0x02, 0x00, 0x51, 0x11, 0x10, 0x20, 0x00, 0x00,
+                0x00, 0x00, 0x10, 0x00, 0x0a, 0x01, 0x00, 0xc4,
+                0x46, 0x52, 0x55, 0x31]
+        ipmitool.sdr_show(None, SdrCommon.from_data(data))
+
+        out = capsys.readouterr().out
+        assert 'Device Id string: FRU1' in out
+        assert 'Entity:           10.1' in out
