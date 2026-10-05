@@ -135,12 +135,17 @@ class IpmbHeaderRsp(IpmbHeader):
         self.cmdid = data[5]
 
     def from_req_header(self, req_header: IpmbHeaderReq) -> None:
-        self.rs_lun = req_header.rq_lun
-        self.rs_sa = req_header.rq_sa
+        """Set up the header of the response to the given request.
+
+        The fields keep their meaning (rq_sa is the requester), encode()
+        puts them in the response order.
+        """
+        self.rs_lun = req_header.rs_lun
+        self.rs_sa = req_header.rs_sa
         self.rq_seq = req_header.rq_seq
-        self.rq_lun = req_header.rs_lun
-        self.rq_sa = req_header.rs_sa
-        self.netfn = req_header.netfn
+        self.rq_lun = req_header.rq_lun
+        self.rq_sa = req_header.rq_sa
+        self.netfn = req_header.netfn | 1
         self.cmdid = req_header.cmdid
 
 

@@ -209,3 +209,23 @@ def test_rx_filter_config_filter():
     rx_data = encode_ipmb_msg(header_rsp, b'\xaa\xbb\xcc')
 
     assert not rx_filter(header_req, rx_data, rs_sa=True)
+
+
+def test_header_rsp_from_req_header():
+    req_header = IpmbHeaderReq()
+    req_header.rs_sa = 0x20
+    req_header.rs_lun = 0
+    req_header.rq_sa = 0x81
+    req_header.rq_lun = 2
+    req_header.rq_seq = 5
+    req_header.netfn = 6
+    req_header.cmdid = 1
+
+    rsp_header = IpmbHeaderRsp()
+    rsp_header.from_req_header(req_header)
+    rsp = encode_ipmb_msg(rsp_header, b'\x00')
+
+    # response NetFn, requester address first
+    assert rsp[:2] == b'\x81\x1e'
+    assert rsp[3] == 0x20
+    assert rx_filter(req_header, rsp)
