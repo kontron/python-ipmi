@@ -80,6 +80,54 @@ COMPLETION_CODE_DESCR = (
     (CC_UNSPECIFIED_ERROR, 'Unspecified error'),
 )
 
+# RMCP+ and RAKP message status codes (IPMI v2.0, table 13-15)
+MSC_OK = 0x00
+MSC_INSUFFICIENT_RESOURCES = 0x01
+MSC_INVALID_SESSION_ID = 0x02
+MSC_INVALID_PAYLOAD_TYPE = 0x03
+MSC_INVALID_AUTHENTICATION_ALGORITHM = 0x04
+MSC_INVALID_INTEGRITY_ALGORITHM = 0x05
+MSC_NO_MATCHING_AUTHENTICATION_PAYLOAD = 0x06
+MSC_NO_MATCHING_INTEGRITY_PAYLOAD = 0x07
+MSC_INACTIVE_SESSION_ID = 0x08
+MSC_INVALID_ROLE = 0x09
+MSC_UNAUTHORIZED_ROLE = 0x0a
+MSC_INSUFFICIENT_RESOURCES_FOR_ROLE = 0x0b
+MSC_INVALID_NAME_LENGTH = 0x0c
+MSC_UNAUTHORIZED_NAME = 0x0d
+MSC_UNAUTHORIZED_GUID = 0x0e
+MSC_INVALID_INTEGRITY_CHECK_VALUE = 0x0f
+MSC_INVALID_CONFIDENTIALITY_ALGORITHM = 0x10
+MSC_NO_CIPHER_SUITE_MATCH = 0x11
+MSC_ILLEGAL_PARAMETER = 0x12
+
+MESSAGE_STATUS_CODE_DESCR = (
+    (MSC_OK, 'No errors'),
+    (MSC_INSUFFICIENT_RESOURCES,
+     'Insufficient resources to create a session'),
+    (MSC_INVALID_SESSION_ID, 'Invalid Session ID'),
+    (MSC_INVALID_PAYLOAD_TYPE, 'Invalid payload type'),
+    (MSC_INVALID_AUTHENTICATION_ALGORITHM, 'Invalid authentication algorithm'),
+    (MSC_INVALID_INTEGRITY_ALGORITHM, 'Invalid integrity algorithm'),
+    (MSC_NO_MATCHING_AUTHENTICATION_PAYLOAD,
+     'No matching authentication payload'),
+    (MSC_NO_MATCHING_INTEGRITY_PAYLOAD, 'No matching integrity payload'),
+    (MSC_INACTIVE_SESSION_ID, 'Inactive Session ID'),
+    (MSC_INVALID_ROLE, 'Invalid role'),
+    (MSC_UNAUTHORIZED_ROLE, 'Unauthorized role or privilege level requested'),
+    (MSC_INSUFFICIENT_RESOURCES_FOR_ROLE,
+     'Insufficient resources to create a session at the requested role'),
+    (MSC_INVALID_NAME_LENGTH, 'Invalid name length'),
+    (MSC_UNAUTHORIZED_NAME, 'Unauthorized name'),
+    (MSC_UNAUTHORIZED_GUID, 'Unauthorized GUID'),
+    (MSC_INVALID_INTEGRITY_CHECK_VALUE, 'Invalid integrity check value'),
+    (MSC_INVALID_CONFIDENTIALITY_ALGORITHM,
+     'Invalid confidentiality algorithm'),
+    (MSC_NO_CIPHER_SUITE_MATCH,
+     'No Cipher Suite match with proposed security algorithms'),
+    (MSC_ILLEGAL_PARAMETER, 'Illegal or unrecognized parameter'),
+)
+
 # network functions
 NETFN_CHASSIS = 0x00
 NETFN_BRIDGE = 0x02

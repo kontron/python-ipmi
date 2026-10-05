@@ -16,7 +16,8 @@
 
 from __future__ import annotations
 
-from .msgs.constants import COMPLETION_CODE_DESCR, CC_ERR_CMD_SPECIFIC_DESC
+from .msgs.constants import (COMPLETION_CODE_DESCR, CC_ERR_CMD_SPECIFIC_DESC,
+                             MESSAGE_STATUS_CODE_DESCR)
 
 
 class DecodingError(Exception):
@@ -59,6 +60,19 @@ class CompletionCodeError(Exception):
             return descr
         # Completion code description not found
         return "Unknown error description"
+
+
+class MessageStatusCodeError(Exception):
+    """RMCP+ session setup message status code not OK."""
+
+    def __init__(self, msc: int) -> None:
+        self.msc = msc
+        self.msc_desc = dict(MESSAGE_STATUS_CODE_DESCR).get(
+            msc, "Unknown error description")
+
+    def __str__(self) -> str:
+        return "%s msc=0x%02x desc=%s" \
+            % (self.__class__.__name__, self.msc, self.msc_desc)
 
 
 class NotSupportedError(Exception):
