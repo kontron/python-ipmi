@@ -113,6 +113,23 @@ ipmitool command:
 
     ipmitool -I lanplus -C 3 -H 10.0.0.1 -p 623 -U "admin" -P "admin" -L ADMINISTRATOR raw 0x06 0x01
 
+Device quirks
+*************
+
+Some devices do not answer exactly as the IPMI specification expects. The native ``rmcp`` and ``rmcpplus`` interfaces can be configured to accept these answers with the ``quirks_cfg`` argument:
+
+.. code:: python
+
+  interface = pyipmi.interfaces.create_interface(
+      'rmcp', quirks_cfg={'rmcp_ignore_rq_seq': True})
+
+The supported quirks are:
+
+* ``rmcp_ignore_rq_seq`` - do not check the sequence number of a response against the request. Use this if a response is rejected although it arrives, e.g. with ``RetryError: Max retry while checking received data against request header``. Some shelf managers and carrier managers (e.g. VadaTech) replace the sequence number of bridged requests in their responses.
+* ``rmcp_ignore_sdu_length`` - do not check the payload length of received IPMI v1.5 messages against the length field of the message header. Use this for devices that send a wrong length. With ``rmcpplus`` this only affects the messages before the session is established.
+
+Run with debug logging (``logging.basicConfig(level=logging.DEBUG)``) to see why a response was rejected, e.g. ``sequence number mismatch``.
+
 Legacy RMCP interface with IPMITOOL as backend
 **********************************************
 

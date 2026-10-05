@@ -393,7 +393,7 @@ class Rmcp(Interface):
                 quirks_cfg={'rmcp_ignore_sdu_length': True}
             )
 
-        - `rmcp_ignore_rq_seq: bool` wheater or not to verify the req_seq field
+        - `rmcp_ignore_rq_seq: bool` whether or not to verify the rq_seq field
         for rx_filter. The default value is `False`.
 
             Example:

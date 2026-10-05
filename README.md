@@ -211,6 +211,13 @@ ipmitool -I lan -H 10.0.0.1 -p 623 -L "ADMINISTRATOR" -U "admin" -P "admin" -t 0
 
 Do not set a routing to talk to the BMC of a server itself, the bridged
 request fails then (e.g. with completion code `0x83`, NAK on write).
+
+Some shelf managers and carrier managers do not return the sequence number
+of a bridged request in their response. If responses are rejected with
+`RetryError: Max retry while checking received data against request header`,
+create the native interface with
+`quirks_cfg={'rmcp_ignore_rq_seq': True}`. With the ipmitool backend the
+routing needs the bridge channel of every hop except the last one.
 See the [documentation](https://python-ipmi.readthedocs.io/en/latest/quick_start.html)
 for more routing examples.
 
