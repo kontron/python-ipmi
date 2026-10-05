@@ -18,7 +18,8 @@ from __future__ import annotations
 
 from array import array
 
-from .msgs import create_request_by_name
+from .errors import CompletionCodeError, DataNotFound
+from .msgs import constants, create_request_by_name
 from .utils import check_rsp_completion_code, ByteBuffer
 
 LAN_PARAMETER_SET_IN_PROGRESS = 0
@@ -168,14 +169,44 @@ def vlan_to_data(vlan: int) -> ByteBuffer:
     return data
 
 
+# channels to look for the LAN channel, 0 is the primary IPMB channel
+LAN_CHANNEL_SEARCH_RANGE = range(1, 0x0c)
+
+
 class Lan:
-    def get_lan_config_param(self, channel: int = 0, parameter_selector: int = 0,
+    def __init__(self) -> None:
+        self._lan_channel: int | None = None
+
+    def get_lan_channel(self) -> int:
+        """Return the number of the first 802.3 LAN channel.
+
+        The channel is looked up with Get Channel Info once per connection.
+        """
+        if self._lan_channel is None:
+            for channel in LAN_CHANNEL_SEARCH_RANGE:
+                try:
+                    info = self.get_channel_info(channel)
+                except CompletionCodeError:
+                    # channel not implemented
+                    continue
+                if info.medium_type == constants.CHANNEL_MEDIUM_LAN_802_3:
+                    self._lan_channel = channel
+                    break
+            else:
+                raise DataNotFound('no LAN channel found')
+        return self._lan_channel
+
+    def _channel(self, channel: int | None) -> int:
+        return self.get_lan_channel() if channel is None else channel
+
+    def get_lan_config_param(self, channel: int | None = None,
+                             parameter_selector: int = 0,
                              set_selector: int = 0, block_selector: int = 0,
                              revision_only: int = 0) -> array:
         req = create_request_by_name('GetLanConfigurationParameters')
         req.command.get_parameter_revision_only = revision_only
         if revision_only != 1:
-            req.command.channel_number = channel
+            req.command.channel_number = self._channel(channel)
             req.parameter_selector = parameter_selector
             req.set_selector = set_selector
             req.block_selector = block_selector
@@ -183,23 +214,24 @@ class Lan:
         check_rsp_completion_code(rsp)
         return rsp.data
 
-    def set_lan_config_param(self, channel: int,
+    def set_lan_config_param(self, channel: int | None,
                              parameter_selector: int, data: ByteBuffer) -> None:
         req = create_request_by_name('SetLanConfigurationParameters')
-        req.command.channel_number = channel
+        req.command.channel_number = self._channel(channel)
         req.parameter_selector = parameter_selector
         req.data = data
         rsp = self.send_message(req)
         check_rsp_completion_code(rsp)
 
-    def get_ip_address(self, channel: int = 0) -> str:
+    def get_ip_address(self, channel: int | None = None) -> str:
         """
         Return a string representing the ip address of the device, in format xxx.xxx.xxx.xxx
         """
         ip_address_raw = self.get_lan_config_param(channel, LAN_PARAMETER_IP_ADDRESS)
         return data_to_ip_address(ip_address_raw)
 
-    def set_ip_address(self, ip_address: str, channel: int = 0) -> None:
+    def set_ip_address(self, ip_address: str,
+                       channel: int | None = None) -> None:
         """
         WARNING: changing the IP address of the BMC will make a current
         lan session unusable because it still has the former IP address.
@@ -210,7 +242,7 @@ class Lan:
         data = ip_address_to_data(ip_address)
         self.set_lan_config_param(channel, LAN_PARAMETER_IP_ADDRESS, data)
 
-    def get_ip_source(self, channel: int = 0) -> str:
+    def get_ip_source(self, channel: int | None = None) -> str:
         """
         Return a string representing the ip source of the device.
 
@@ -219,7 +251,8 @@ class Lan:
         ip_source_raw = self.get_lan_config_param(channel, LAN_PARAMETER_IP_ADDRESS_SOURCE)
         return data_to_ip_source(ip_source_raw)
 
-    def set_ip_source(self, ip_source: str, channel: int = 0) -> None:
+    def set_ip_source(self, ip_source: str,
+                      channel: int | None = None) -> None:
         """
         WARNING: changing the IP source may change the IP address of the BMC,
         which will make a current lan session unusable because it still has
@@ -231,21 +264,21 @@ class Lan:
         data = ip_source_to_data(ip_source)
         self.set_lan_config_param(channel, LAN_PARAMETER_IP_ADDRESS_SOURCE, data)
 
-    def get_mac_address(self, channel: int = 0) -> str:
+    def get_mac_address(self, channel: int | None = None) -> str:
         """
         Return a string representing the mac address of the device, in format aa:bb:cc:dd:ee:ff.
         """
         mac_address_raw = self.get_lan_config_param(channel, LAN_PARAMETER_MAC_ADDRESS)
         return data_to_mac_address(mac_address_raw)
 
-    def get_vlan_id(self, channel: int = 0) -> int:
+    def get_vlan_id(self, channel: int | None = None) -> int:
         """
         Return the 802.1q VLAN ID of the device.
         """
         vlan_id_raw = self.get_lan_config_param(channel, LAN_PARAMETER_802_1Q_VLAN_ID)
         return data_to_vlan(vlan_id_raw)
 
-    def set_vlan_id(self, vlan: int, channel: int = 0) -> None:
+    def set_vlan_id(self, vlan: int, channel: int | None = None) -> None:
         """
         WARNING: changing the VLAN ID may change the IP address of the BMC
         depending on your current network configuration.
