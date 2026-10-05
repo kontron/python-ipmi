@@ -69,7 +69,7 @@ class Messaging:
         req = create_request_by_name('GetChannelAuthenticationCapabilities')
         req.channel.number = channel
         req.privilege_level.requested = priv_lvl
-        rsp = self.send_and_receive(req)
+        rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
         caps = ChannelAuthenticationCapabilities(rsp)
         return caps
