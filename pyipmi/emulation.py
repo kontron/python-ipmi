@@ -13,8 +13,6 @@ from collections import OrderedDict
 
 import pyipmi
 
-from pyipmi.logger import log
-
 from pyipmi.interfaces import rmcp
 from pyipmi.interfaces import ipmb
 from pyipmi.msgs import (create_message, decode_message, encode_message,
@@ -22,6 +20,8 @@ from pyipmi.msgs import (create_message, decode_message, encode_message,
                          Message)
 from pyipmi.msgs import constants
 from pyipmi.session import Session
+
+logger = logging.getLogger(__name__)
 
 UDP_IP = "127.0.0.1"
 UDP_PORT = 1623
@@ -93,11 +93,11 @@ def handle_fru_inventory_are_info(context: ConnectionContext, req: Message) -> M
     try:
         fru_filename = cfg['fru'][req.fru_id]
     except KeyError:
-        log().warning(f'cannot find frufile for fru_id={req.fru_id} in config')
+        logger.warning(f'cannot find frufile for fru_id={req.fru_id} in config')
         rsp.completion_code = constants.CC_PARAM_OUT_OF_RANGE
         return rsp
     except TypeError:
-        log().warning(f'cannot find frufile for fru_id={req.fru_id} in config')
+        logger.warning(f'cannot find frufile for fru_id={req.fru_id} in config')
         rsp.completion_code = constants.CC_REQ_DATA_NOT_PRESENT
         return rsp
 
@@ -105,7 +105,7 @@ def handle_fru_inventory_are_info(context: ConnectionContext, req: Message) -> M
         statinfo = os.stat(fru_filename)
         rsp.area_size = statinfo.st_size
     except FileNotFoundError:
-        log().warning(f'cannot open file={fru_filename} for fru_id={req.fru_id}')
+        logger.warning(f'cannot open file={fru_filename} for fru_id={req.fru_id}')
         rsp.completion_code = constants.CC_PARAM_OUT_OF_RANGE
         return rsp
 
@@ -121,7 +121,7 @@ def handle_fru_read(context: ConnectionContext, req: Message) -> Message:
         fru_filename = cfg['fru'][req.fru_id]
     except KeyError:
         rsp.completion_code = constants.CC_PARAM_OUT_OF_RANGE
-        log().debug(f'cannot find file for fru_id={req.fru_id} in config')
+        logger.debug(f'cannot find file for fru_id={req.fru_id} in config')
         return rsp
 
     try:
@@ -132,7 +132,7 @@ def handle_fru_read(context: ConnectionContext, req: Message) -> Message:
             rsp.count = len(d)
             rsp.data = d
     except FileNotFoundError:
-        log().debug(f'cannot open file={fru_filename} for fru_id={req.fru_id}')
+        logger.debug(f'cannot open file={fru_filename} for fru_id={req.fru_id}')
         rsp.completion_code = constants.CC_PARAM_OUT_OF_RANGE
         return rsp
 
@@ -164,7 +164,7 @@ def handle_get_sdr(context: ConnectionContext, req: Message) -> Message:
     rsp = create_response_message(req)
 
     if len(sdr_list) == 0:
-        log().warning('no SDR present')
+        logger.warning('no SDR present')
         rsp.completion_code = constants.CC_REQ_DATA_NOT_PRESENT
         return rsp
 
@@ -205,7 +205,7 @@ def handle_ipmi_request_msg(context: ConnectionContext, req: Message) -> Message
         fct = handler_registry[type(req)]
     except KeyError:
         rsp = create_response_message(req)
-        log().warning(f'no handler for: {type(req)}')
+        logger.warning(f'no handler for: {type(req)}')
         rsp.completion_code = constants.CC_INV_CMD
         return rsp
 
@@ -218,10 +218,10 @@ def handle_rmcp_asf_msg(context: ConnectionContext, sdu: bytes) -> bytes:
     asf.unpack(sdu)
     # t = rmcp.AsfMsg().from_data(sdu)
     if asf.asf_type == rmcp.AsfMsg.ASF_TYPE_PRESENCE_PING:
-        log().debug(f'ASF RX: ping: {asf}')
+        logger.debug(f'ASF RX: ping: {asf}')
     pong = rmcp.AsfPong()
     pdu = pong.pack()
-    log().debug(f'ASF TX: pong: {asf}')
+    logger.debug(f'ASF TX: pong: {asf}')
     return pdu
 
 
@@ -237,8 +237,8 @@ def handle_rmcp_ipmi_msg(context: ConnectionContext, sdu: bytes) -> bytes:
         req_header = ipmb.IpmbHeaderReq(data=ipmi_sdu)
         group_id = _get_group_id(ipmi_sdu)
 
-        log().warning(f'Cant create message: netfn 0x{req_header.netfn:x} cmd: 0x{req_header.cmdid:x} group: {group_id}')
-        log().debug('IPMI RX: {:s}'.format(
+        logger.warning(f'Cant create message: netfn 0x{req_header.netfn:x} cmd: 0x{req_header.cmdid:x} group: {group_id}')
+        logger.debug('IPMI RX: {:s}'.format(
             ' '.join('%02x' % b for b in array('B', ipmi_sdu))))
 
         # bytes are immutable ... so convert to change
@@ -271,8 +271,8 @@ def handle_rmcp_ipmi_msg(context: ConnectionContext, sdu: bytes) -> bytes:
     except KeyError:
         return _create_invalid_response(ipmi_sdu)
 
-    log().debug('IPMI RX: {}: {:s}'.format(req,
-                ' '.join('%02x' % b for b in array('B', ipmi_sdu))))
+    logger.debug('IPMI RX: {}: {:s}'.format(req,
+                 ' '.join('%02x' % b for b in array('B', ipmi_sdu))))
     decode_message(req, ipmi_sdu[6:-1])
 
     rsp = handle_ipmi_request_msg(context, req)
@@ -282,8 +282,8 @@ def handle_rmcp_ipmi_msg(context: ConnectionContext, sdu: bytes) -> bytes:
     rsp_header.from_req_header(req_header)
 
     tx_data = ipmb.encode_ipmb_msg(rsp_header, data)
-    log().debug('IPMI TX: {}: {:s}'.format(rsp,
-                ' '.join('%02x' % b for b in array('B', tx_data))))
+    logger.debug('IPMI TX: {}: {:s}'.format(rsp,
+                 ' '.join('%02x' % b for b in array('B', tx_data))))
 
     # rmcp ipmi rsp msg
     ipmi_tx = rmcp.IpmiMsg(context.session)

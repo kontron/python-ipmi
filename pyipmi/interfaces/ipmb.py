@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
 from array import array
@@ -24,12 +25,13 @@ from collections.abc import Iterable
 
 from .. import Routing, Target
 from ..errors import IpmiTimeoutError
-from ..logger import log
 from ..msgs import (create_message, create_request_by_name,
                     encode_message, decode_message, constants)
 from ..utils import check_completion_code
 from ..utils import py3_array_tobytes, py3_array_frombytes
 from .base import Interface
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .router import MessageRouter
@@ -282,7 +284,7 @@ def rx_filter(header: IpmbHeaderReq, data: bytes | array, rq_sa: bool = False,
 
     for left, right, msg in checks:
         if left != right:
-            log().debug(f'{msg:s}: {left:d} {right:d}')
+            logger.debug(f'{msg:s}: {left:d} {right:d}')
             match = False
 
     return match
@@ -339,7 +341,7 @@ class IpmbInterface(Interface):
 
     def _receive_frame(self, frame: bytes) -> None:
         """Pass a received IPMB message to the router."""
-        log().debug('IPMB RX [%s]', bytes(frame).hex(' '))
+        logger.debug('IPMB RX [%s]', bytes(frame).hex(' '))
         self._router.handle_frame(self, bytes(frame))
 
     def _start_receiver(self) -> None:
@@ -365,7 +367,7 @@ class IpmbInterface(Interface):
             try:
                 frame = self._read_frame(0.05)
             except Exception as e:
-                log().error('%s receive failed: %s', self.NAME, e)
+                logger.error('%s receive failed: %s', self.NAME, e)
                 return
             if frame:
                 self._receive_frame(frame)

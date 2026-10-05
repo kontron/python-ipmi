@@ -27,6 +27,7 @@ from . import event
 from . import fru
 from . import hpm
 from . import lan
+from . import logger  # noqa: F401 - installs the NullHandler
 from . import messaging
 from . import picmg
 from . import sdr

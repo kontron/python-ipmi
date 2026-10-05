@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import logging
 import os
 import select
 
-from ..logger import log
 from .ipmb import IpmbInterface
 from .router import MessageRouter
+
+logger = logging.getLogger(__name__)
 
 
 class IpmbDev(IpmbInterface):
@@ -42,7 +44,7 @@ class IpmbDev(IpmbInterface):
         os.write(self._wakeup_w, b'\0')
 
     def send_frame(self, frame: bytes) -> None:
-        log().debug('IPMB TX [%s]', bytes(frame).hex(' '))
+        logger.debug('IPMB TX [%s]', bytes(frame).hex(' '))
         os.write(self._dev, bytes([len(frame)]) + bytes(frame))
 
     def _read_frame(self, timeout: float) -> bytes | None:
@@ -53,6 +55,6 @@ class IpmbDev(IpmbInterface):
         rx_data = os.read(self._dev, 256)
         # ipmb-dev-int puts message length into first byte
         if not rx_data or rx_data[0] != len(rx_data) - 1:
-            log().debug('ipmbdev RX bad length [%s]', rx_data.hex(' '))
+            logger.debug('ipmbdev RX bad length [%s]', rx_data.hex(' '))
             return None
         return rx_data[1:]

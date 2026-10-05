@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import ctypes
+import logging
 import os
 import platform
 import select
@@ -25,9 +26,10 @@ import time
 
 from .. import Target
 from ..errors import IpmiTimeoutError
-from ..logger import log
 from ..msgs import constants
 from .base import Interface
+
+logger = logging.getLogger(__name__)
 
 try:
     import fcntl
@@ -207,9 +209,9 @@ class IpmiDev(Interface):
                     and recv.msg.cmd == cmdid):
                 return rx_data
 
-            log().debug('ipmidev RX dropped type %d msgid %d netfn %02Xh '
-                        'cmd %02Xh [%s]', recv.recv_type, recv.msgid,
-                        recv.msg.netfn, recv.msg.cmd, rx_data.hex(' '))
+            logger.debug('ipmidev RX dropped type %d msgid %d netfn %02Xh '
+                         'cmd %02Xh [%s]', recv.recv_type, recv.msgid,
+                         recv.msg.netfn, recv.msg.cmd, rx_data.hex(' '))
 
     def send_and_receive_raw(self, target: Target, lun: int, netfn: int,
                              raw_bytes: bytes) -> bytes:
@@ -224,11 +226,11 @@ class IpmiDev(Interface):
             self._msgid = (self._msgid + 1) & 0x7fffffff
             msgid = self._msgid
 
-            log().debug('ipmidev TX netfn %02Xh cmd %02Xh [%s]', netfn, cmdid,
-                        data.hex(' '))
+            logger.debug('ipmidev TX netfn %02Xh cmd %02Xh [%s]', netfn, cmdid,
+                         data.hex(' '))
             self._send(addr, netfn, cmdid, data, msgid)
             rx_data = self._receive(msgid, netfn, cmdid)
-            log().debug('ipmidev RX [%s]', rx_data.hex(' '))
+            logger.debug('ipmidev RX [%s]', rx_data.hex(' '))
 
         if not rx_data:
             raise IpmiTimeoutError()

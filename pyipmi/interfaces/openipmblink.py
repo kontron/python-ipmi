@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import queue
 import socket
 import threading
@@ -24,9 +25,10 @@ import time
 from typing import Any
 from collections.abc import Callable
 
-from ..logger import log
 from .ipmb import IpmbInterface
 from .router import MessageRouter
+
+logger = logging.getLogger(__name__)
 
 try:
     import serial
@@ -122,8 +124,8 @@ class OpenIpmbLinkDevice:
             raise
 
         self.info = info
-        log().debug('openipmblink v%s on %s', info.get('version'),
-                    info.get('board'))
+        logger.debug('openipmblink v%s on %s', info.get('version'),
+                     info.get('board'))
 
     def close(self) -> None:
         self._stop.set()
@@ -176,7 +178,7 @@ class OpenIpmbLinkDevice:
 
             line = json.dumps(dict(cmd=cmd, **params),
                               separators=(',', ':')).encode()
-            log().debug('openipmblink TX %s', line)
+            logger.debug('openipmblink TX %s', line)
             self._ser.write(line + b'\n')
 
             deadline = time.monotonic() + self.cmd_timeout
@@ -205,7 +207,7 @@ class OpenIpmbLinkDevice:
 
             line = bytes(self._rx_buf[:pos]).rstrip(b'\r')
             del self._rx_buf[:pos + 1]
-            log().debug('openipmblink RX %s', line)
+            logger.debug('openipmblink RX %s', line)
             try:
                 packet = json.loads(line)
             except ValueError:
@@ -219,7 +221,7 @@ class OpenIpmbLinkDevice:
                 packet = self._read_packet()
             except Exception as e:
                 if not self._stop.is_set():
-                    log().error('openipmblink receive failed: %s', e)
+                    logger.error('openipmblink receive failed: %s', e)
                 return
 
             if packet is None:
@@ -236,12 +238,12 @@ class OpenIpmbLinkDevice:
         try:
             frame = bytes.fromhex(packet['msg'])
         except (KeyError, TypeError, ValueError):
-            log().debug('openipmblink bad rx event %s', packet)
+            logger.debug('openipmblink bad rx event %s', packet)
             return
         try:
             listener(frame, packet.get('ts'))
         except Exception:
-            log().exception('openipmblink rx listener failed')
+            logger.exception('openipmblink rx listener failed')
 
 
 class OpenIpmbLink(IpmbInterface):
@@ -301,7 +303,7 @@ class OpenIpmbLink(IpmbInterface):
         if self._device is None:
             raise OpenIpmbLinkError('interface is not open')
 
-        log().debug('IPMB TX bus %d [%s]', self.bus, bytes(frame).hex(' '))
+        logger.debug('IPMB TX bus %d [%s]', self.bus, bytes(frame).hex(' '))
         self._check_status(self._device.command('send', bus=self.bus,
                                                 msg=bytes(frame).hex()))
 
