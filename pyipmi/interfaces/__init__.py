@@ -25,6 +25,7 @@ from .ipmidev import IpmiDev
 from .mock import Mock
 from .openipmblink import OpenIpmbLink
 from .rmcp import Rmcp
+from .rmcpplus import RmcpPlus
 
 INTERFACES = [
     Ipmitool,
@@ -33,6 +34,7 @@ INTERFACES = [
     IpmiDev,
     Mock,
     Rmcp,
+    RmcpPlus,
     OpenIpmbLink,
 ]
 

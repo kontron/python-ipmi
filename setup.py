@@ -74,4 +74,7 @@ setup(name=name,
       ],
       install_requires=[
       ],
+      extras_require={
+          'rmcpplus': ['cryptography'],
+      },
       )
