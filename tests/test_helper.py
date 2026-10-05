@@ -1,18 +1,21 @@
 #!/usr/bin/env python
 
 from array import array
+from types import SimpleNamespace
 from unittest.mock import MagicMock, call
 
 import pytest
 
 from pyipmi.errors import CompletionCodeError, RetryError
-from pyipmi.helper import (clear_repository_helper, get_sdr_data_helper,
-                           ReadLength)
+from pyipmi.helper import (clear_repository_helper, get_sdr_chunk_helper,
+                           get_sdr_data_helper, ReadLength)
 from pyipmi.msgs.constants import (REPOSITORY_ERASURE_COMPLETED,
                                    REPOSITORY_ERASURE_IN_PROGRESS,
                                    REPOSITORY_INITIATE_ERASE,
                                    REPOSITORY_GET_ERASE_STATUS,
-                                   CC_CANT_RET_NUM_REQ_BYTES)
+                                   CC_CANT_RET_NUM_REQ_BYTES, CC_INV_CMD,
+                                   CC_OK, CC_RES_CANCELED,
+                                   CC_RESP_COULD_NOT_BE_PRV, CC_TIMEOUT)
 
 
 def test_clear_repository_helper():
@@ -85,3 +88,76 @@ def test_get_sdr_data_helper_read_length_exhausted():
     device = FakeSdrDevice(SDR_RECORD, max_length=0)
     with pytest.raises(RetryError):
         get_sdr_data_helper(lambda: 1, device.get, 4, 1)
+
+
+@pytest.fixture
+def no_sleep(monkeypatch):
+    monkeypatch.setattr('pyipmi.helper.time.sleep', lambda t: None)
+
+
+def chunk_rsp(cc):
+    return SimpleNamespace(completion_code=cc)
+
+
+@pytest.mark.parametrize('cc', [CC_TIMEOUT, CC_RESP_COULD_NOT_BE_PRV])
+def test_get_sdr_chunk_helper_retry(no_sleep, cc):
+    send_fn = MagicMock(side_effect=[chunk_rsp(cc), chunk_rsp(CC_OK)])
+    reserve_fn = MagicMock()
+    rsp = get_sdr_chunk_helper(send_fn, SimpleNamespace(), reserve_fn)
+    assert rsp.completion_code == CC_OK
+    assert send_fn.call_count == 2
+    reserve_fn.assert_not_called()
+
+
+def test_get_sdr_chunk_helper_reservation_canceled(no_sleep):
+    send_fn = MagicMock(side_effect=[chunk_rsp(CC_RES_CANCELED),
+                                     chunk_rsp(CC_OK)])
+    req = SimpleNamespace(reservation_id=1)
+    get_sdr_chunk_helper(send_fn, req, lambda: 2)
+    assert req.reservation_id == 2
+
+
+def test_get_sdr_chunk_helper_error():
+    send_fn = MagicMock(return_value=chunk_rsp(CC_INV_CMD))
+    with pytest.raises(CompletionCodeError):
+        get_sdr_chunk_helper(send_fn, SimpleNamespace(), MagicMock())
+
+
+def test_get_sdr_chunk_helper_retry_exhausted(no_sleep):
+    send_fn = MagicMock(return_value=chunk_rsp(CC_TIMEOUT))
+    with pytest.raises(RetryError):
+        get_sdr_chunk_helper(send_fn, SimpleNamespace(), MagicMock())
+    assert send_fn.call_count == 4
+
+
+def test_get_sdr_data_helper_other_error():
+    def get_fn(reservation_id, record_id, offset, length):
+        if offset:
+            raise CompletionCodeError(CC_INV_CMD)
+        return (0xffff, array('B', SDR_RECORD[:5]))
+    with pytest.raises(CompletionCodeError):
+        get_sdr_data_helper(lambda: 1, get_fn, 4)
+
+
+def test_clear_repository_helper_reservation_canceled(no_sleep):
+    reserve_fn = MagicMock(side_effect=[0x1234, 0x5678])
+    clear_fn = MagicMock(side_effect=[
+        CompletionCodeError(CC_RES_CANCELED),
+        REPOSITORY_ERASURE_COMPLETED,
+        REPOSITORY_ERASURE_COMPLETED,
+    ])
+    clear_repository_helper(reserve_fn, clear_fn)
+    assert clear_fn.call_args_list[-1] == call(REPOSITORY_GET_ERASE_STATUS,
+                                               0x5678)
+
+
+def test_clear_repository_helper_error():
+    clear_fn = MagicMock(side_effect=CompletionCodeError(CC_INV_CMD))
+    with pytest.raises(CompletionCodeError):
+        clear_repository_helper(lambda: 1, clear_fn)
+
+
+def test_clear_repository_helper_retry_exhausted(no_sleep):
+    clear_fn = MagicMock(return_value=REPOSITORY_ERASURE_IN_PROGRESS)
+    with pytest.raises(RetryError):
+        clear_repository_helper(lambda: 1, clear_fn)
