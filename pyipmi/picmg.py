@@ -156,6 +156,9 @@ class Picmg:
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
+        # no link information if the port is not supported
+        link = None
+        state = None
         if len(rsp.data) > 4:
             link = LinkDescriptor()
             link.channel = rsp.data[0] & 0x3F
@@ -433,11 +436,11 @@ class LedState(State):
                 self.override_function = self.FUNCTION_ON
             elif res.override_function in picmg.LED_FUNCTION_BLINKING_RANGE:
                 self.override_function = self.FUNCTION_BLINKING
-                self.override_off_duration = res.local_function * 10
+                self.override_off_duration = res.override_function * 10
+                self.override_on_duration = res.override_on_duration * 10
             else:
                 raise DecodingError()
 
-            self.override_off_duration = res.override_on_duration * 10
             self.override_color = res.override_color
 
         if self.lamp_test_enabled:
