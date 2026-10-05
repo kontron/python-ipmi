@@ -82,10 +82,38 @@ http://python-ipmi.rtfd.org
 
 ## Example
 
-Below is an example that shows how to setup the interface and the connection
-using the [ipmitool] as backend with both network and serial interfaces.
+The examples below talk to the BMC of a server, which has the IPMB address
+`0x20`. Set a routing only for targets behind the BMC, see
+[Bridged targets](#bridged-targets).
 
-Example with lan interface:
+Example with the native RMCP+ interface (IPMI v2.0, like `ipmitool -I lanplus`):
+
+```python
+import pyipmi
+import pyipmi.interfaces
+
+# without cipher_suite the cipher suites 17 and 3 are tried
+interface = pyipmi.interfaces.create_interface('rmcpplus', cipher_suite=3)
+
+connection = pyipmi.create_connection(interface)
+
+connection.target = pyipmi.Target(0x20)
+connection.session.set_session_type_rmcp('10.0.0.1', port=623)
+connection.session.set_auth_type_user('admin', 'admin')
+connection.session.set_priv_level('ADMINISTRATOR')
+
+connection.open()
+connection.get_device_id()
+connection.close()
+```
+
+ipmitool command:
+
+```shell
+ipmitool -I lanplus -C 3 -H 10.0.0.1 -p 623 -U admin -P admin -L ADMINISTRATOR -t 0x20 raw 0x06 0x01
+```
+
+Example using the [ipmitool] as backend with the lan interface:
 
 ```python
 import pyipmi
@@ -96,8 +124,7 @@ interface = pyipmi.interfaces.create_interface('ipmitool', interface_type='lan')
 
 connection = pyipmi.create_connection(interface)
 
-connection.target = pyipmi.Target(0x82)
-connection.target.set_routing([(0x81,0x20,0),(0x20,0x82,7)])
+connection.target = pyipmi.Target(0x20)
 
 connection.session.set_session_type_rmcp('10.0.0.1', port=623)
 connection.session.set_auth_type_user('admin', 'admin')
@@ -110,7 +137,7 @@ connection.get_device_id()
 ipmitool command:
 
 ```shell
-ipmitool -I lan -H 10.0.0.1 -p 623 -L "ADMINISTRATOR" -U "admin" -P "admin" -t 0x82 -b 0 -l 0 raw 0x06 0x01
+ipmitool -I lan -H 10.0.0.1 -p 623 -L "ADMINISTRATOR" -U "admin" -P "admin" raw 0x06 0x01
 ```
 
 Example with serial interface:
@@ -161,32 +188,31 @@ ipmitool command:
 ipmitool -I open -t 0x20 raw 0x06 0x01
 ```
 
-Example with the native RMCP+ interface:
+### Bridged targets
+
+In ATCA and MicroTCA systems the controllers of blades and AMCs are not
+reachable directly but only through the shelf manager or MCH, which forwards
+(bridges) the requests on IPMB. For these targets set the IPMB address of the
+target and the routing to it. A routing is a list of
+`(requester address, responder address, channel)` tuples, one per hop.
+
+Example for an ATCA blade with IPMB address `0x82` behind the shelf manager:
 
 ```python
-import pyipmi
-import pyipmi.interfaces
-
-# without cipher_suite the cipher suites 17 and 3 are tried
-interface = pyipmi.interfaces.create_interface('rmcpplus', cipher_suite=3)
-
-connection = pyipmi.create_connection(interface)
-
-connection.target = pyipmi.Target(0x20)
-connection.session.set_session_type_rmcp('10.0.0.1', port=623)
-connection.session.set_auth_type_user('admin', 'admin')
-connection.session.set_priv_level('ADMINISTRATOR')
-
-connection.open()
-connection.get_device_id()
-connection.close()
+connection.target = pyipmi.Target(0x82)
+connection.target.set_routing([(0x81, 0x20, 0), (0x20, 0x82, None)])
 ```
 
 ipmitool command:
 
 ```shell
-ipmitool -I lanplus -C 3 -H 10.0.0.1 -p 623 -U admin -P admin -L ADMINISTRATOR -t 0x20 raw 0x06 0x01
+ipmitool -I lan -H 10.0.0.1 -p 623 -L "ADMINISTRATOR" -U "admin" -P "admin" -t 0x82 -b 0 raw 0x06 0x01
 ```
+
+Do not set a routing to talk to the BMC of a server itself, the bridged
+request fails then (e.g. with completion code `0x83`, NAK on write).
+See the [documentation](https://python-ipmi.readthedocs.io/en/latest/quick_start.html)
+for more routing examples.
 
 ## Compatibility
 

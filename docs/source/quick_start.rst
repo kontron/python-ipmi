@@ -16,14 +16,15 @@ Creating the session
 
 Authenticated :abbr:`IPMI (Intelligent Platform Management Interface)` communication to the :abbr:`BMC (Board Management Controller)` is accomplished by establishing a session. Once established, a session is identified by a Session ID. The Session ID identifies a connection between a given remote user and :abbr:`BMC (Board Management Controller)`, using either the :abbr:`LAN (Local Area Network)` or Serial/Modem connection.
 
-Before establishing the session the interface type shall be defined. There are 4 interface types included in this library:
+Before establishing the session the interface type shall be defined. These are the most common interface types included in this library:
 
+  * **'rmcpplus'** - native :abbr:`RMCP (Remote Management Control Protocol)`\+ (IPMI v2.0 over :abbr:`LAN (Local Area Network)`, like ``ipmitool -I lanplus``). Encrypted sessions need the `cryptography`_ package (``pip install python-ipmi[rmcpplus]``).
   * **'rmcp'** - using native :abbr:`RMCP (Remote Management Control Protocol)` encapsulation over :abbr:`LAN (Local Area Network)` (so called :abbr:`IPMI (Intelligent Platform Management Interface)` over :abbr:`LAN (Local Area Network)`). This interface requires only common python libraries.
   * **'ipmitool'** - so called legacy :abbr:`RMCP (Remote Management Control Protocol)`, still an :abbr:`IPMI (Intelligent Platform Management Interface)` over :abbr:`LAN (Local Area Network)`, but requires IPMITOOL as backend. This interface requires `ipmitool`_  compiled and installed, and each time an ipmitool command is issued a new session is established with the Target (left for legacy purposes; used before native rmcp was not implemented yet).
   * **'aardvark'** - :abbr:`IPMB (Intelligent Platform Management Bus)` interface (using the `Total Phase`_ Aardvark)
   * **'mock'** - This interface uses the ipmitool raw command to "emulate" an :abbr:`RMCP (Remote Management Control Protocol)` session. It uses the session information to assemble the correct ipmitool parameters. Therefore, a session must be established before any request can be sent.
 
-Then you create an instance of the ``pyipmi.Ipmi`` object using the ``interface`` instance just created, and set also the required parameters of the interface type. You should also set the :abbr:`IPMI (Intelligent Platform Management Interface)` **Target**, otherwise different runtime errors shall be expected later on when invoking methods of this library. Finally, you can try to establish a session. If there is a connection problem (no response), then you get the following error during session establishment: 
+Then you create an instance of the ``pyipmi.Ipmi`` object using the ``interface`` instance just created, and set also the required parameters of the interface type. You should also set the :abbr:`IPMI (Intelligent Platform Management Interface)` **Target**. For the :abbr:`BMC (Board Management Controller)` of a server this is ``pyipmi.Target(0x20)`` without a routing. A routing is only needed for targets that are reachable through a bridge, e.g. blades and AMCs in ATCA or MicroTCA systems (see `Bridged targets`_). Finally, you can try to establish a session. If there is a connection problem (no response), then you get the following error during session establishment: 
 
 .. error::
 
@@ -87,6 +88,31 @@ For ``create_interface`` method the first argument tells that a native RMCP inte
   CompletionCodeError: CompletionCodeError cc=0x81 desc=Unknown error description
 
 
+Native RMCP+ interface
+**********************
+
+The ``rmcpplus`` interface establishes an IPMI v2.0 session. Without ``cipher_suite`` the cipher suites 17 and 3 are tried:
+
+.. code:: python
+
+  interface = pyipmi.interfaces.create_interface('rmcpplus', cipher_suite=3)
+  ipmi = pyipmi.create_connection(interface)
+  ipmi.session.set_session_type_rmcp(host='10.0.0.1', port=623)
+  ipmi.session.set_auth_type_user(username='admin', password='admin')
+  ipmi.session.set_priv_level('ADMINISTRATOR')
+
+  ipmi.target = pyipmi.Target(ipmb_address=0x20)
+
+  ipmi.open()
+  device_id = ipmi.get_device_id()
+  ipmi.close()
+
+ipmitool command:
+
+.. code:: shell
+
+    ipmitool -I lanplus -C 3 -H 10.0.0.1 -p 623 -U "admin" -P "admin" -L ADMINISTRATOR raw 0x06 0x01
+
 Legacy RMCP interface with IPMITOOL as backend
 **********************************************
 
@@ -100,12 +126,36 @@ An example showing how to setup the interface and the connection using the ipmit
   ipmi.session.set_session_type_rmcp('10.0.0.1', port=623)
   ipmi.session.set_auth_type_user('admin', 'admin')
 
-  ipmi.target = pyipmi.Target(ipmb_address=0x82, routing=[(0x81,0x20,0),(0x20,0x82,7)])
+  ipmi.target = pyipmi.Target(ipmb_address=0x20)
 
   ipmi.session.establish()
   ipmi.get_device_id()
 
-where in the ``create_interface`` method the supported interface types for ipmitool are **'lan'** , **'lanplus'**, and **'serial-terminal'**. When setting the **Target**, the ``ipmb_address`` argument represents the :abbr:`IPMI (Intelligent Platform Management Interface)` target address, and ``routing`` argument represents the bridging information over which a target is reachable. The path is given as a list of tuples in the form (address, bridge_channel). Here are three examples to have a better understanding about the format of the routing:
+where in the ``create_interface`` method the supported interface types for ipmitool are **'lan'** , **'lanplus'**, and **'serial-terminal'**.
+
+ipmitool command:
+
+.. code:: shell
+
+    ipmitool -I lan -H 10.0.0.1 -p 623 -U "admin" -P "admin" raw 0x06 0x01
+
+Bridged targets
+***************
+
+In :abbr:`ATCA (Advanced Telecommunication Computing Architecture)` and :abbr:`uTCA (Micro Telecommunication Computing Architecture)` systems the controllers of blades and AMCs are not reachable directly, but only through the shelf manager or :abbr:`MCH (MicroTCA Carrier Hub)` that forwards (bridges) the requests on :abbr:`IPMB (Intelligent Platform Management Bus)`. For these targets the ``ipmb_address`` argument of the **Target** is the :abbr:`IPMI (Intelligent Platform Management Interface)` address of the target, and the ``routing`` argument is the path over which the target is reachable. The path is given as a list of tuples in the form (requester address, responder address, bridge channel), one per hop.
+
+.. warning::
+
+  Do not set a routing to talk to the :abbr:`BMC (Board Management Controller)` of a server itself. The bridged request is sent to a target that does not exist and fails, e.g. with completion code ``0x83`` (NAK on write) or ``ipmitool failed``.
+
+Example for an :abbr:`ATCA (Advanced Telecommunication Computing Architecture)` blade with the IPMB address 0x82 behind the shelf manager:
+
+.. code:: python
+
+  ipmi.target = pyipmi.Target(ipmb_address=0x82,
+                              routing=[(0x81, 0x20, 0), (0x20, 0x82, None)])
+
+Here are three examples to have a better understanding about the format of the routing:
 
 * **Example #1**: access to an :abbr:`ATCA (Advanced Telecommunication Computing Architecture)` blade in a chassis
 
@@ -191,7 +241,7 @@ where in the ``create_interface`` method the supported interface types for ipmit
 
 * **Example #3**: access to an :abbr:`MMC (Module Management Controller)` of an :abbr:`AMC (Advanced Mezzanine Card)` plugged into :abbr:`ATCA (Advanced Telecommunication Computing Architecture)` :abbr:`AMC (Advanced Mezzanine Card)` carrier
 
-  - slave = 0x81, target = 0x72
+  - slave = 0x81, target = 0x80
   - routing = [(0x81,0x20,0),(0x20,0x8e,7),(0x20,0x80,None)]
 
 .. graphviz::
@@ -232,11 +282,14 @@ where in the ``create_interface`` method the supported interface types for ipmit
     }
 
 
-ipmitool command:
+ipmitool command for example #1:
 
 .. code:: shell
 
     ipmitool -I lan -H 10.0.0.1 -p 623 -U "admin" -P "admin" -t 0x82 -b 0 -l 0 raw 0x06 0x01
+
+Serial interface with IPMITOOL as backend
+*****************************************
 
 An example that shows how to setup the interface and the connection using the ipmitool as backend with serial interfaces:
 
@@ -420,3 +473,4 @@ in which case debug, info and warning messages are all recorded in the **'ipmi_d
 .. _Total Phase: http://www.totalphase.com
 .. _ipmitool: https://codeberg.org/IPMITool/ipmitool
 .. _commands: https://github.com/kontron/python-ipmi/blob/master/docs/commands.rst
+.. _cryptography: https://pypi.org/project/cryptography/
