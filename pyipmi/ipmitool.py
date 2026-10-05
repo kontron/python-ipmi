@@ -630,6 +630,13 @@ def parse_interface_options(interface_name: str, options: str | list) -> dict:
                 interface_options['slave_address'] = int(value, 0)
             else:
                 print('Warning: unknown option %s' % name)
+        elif interface_name == 'rmcpplus':
+            if name == 'cipher':
+                interface_options['cipher_suite'] = int(value)
+            elif name == 'kg':
+                interface_options['kg'] = bytes.fromhex(value)
+            else:
+                print('Warning: unknown option %s' % name)
 
     return interface_options
 
@@ -687,6 +694,10 @@ interface options (-o name=value,...):
                        (e.g. socket://localhost:5555)
     bus=<n>            IPMB bus of the bridge (default 0)
     address=<addr>     own IPMB address (default 0x20)
+  rmcpplus:
+    cipher=<id>        cipher suite (1, 2, 3, 15, 16, 17; default: try 17,
+                       then 3)
+    kg=<hex>           BMC key K_G as hex string (default: user password)
 '''
 
 
@@ -956,8 +967,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('-J', '--json', action='store_true',
                         help='print the output as JSON (if supported)')
     parser.add_argument('-I', dest='interface', metavar='<interface>',
-                        help='interface (rmcp, aardvark, ipmitool, ipmbdev, '
-                             'ipmidev, openipmblink)')
+                        help='interface (rmcp, rmcpplus, aardvark, ipmitool, '
+                             'ipmbdev, ipmidev, openipmblink)')
     parser.add_argument('-o', dest='options', metavar='<options>',
                         default='',
                         help='interface specific options (name=value, '
