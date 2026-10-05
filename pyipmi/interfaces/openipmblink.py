@@ -301,8 +301,7 @@ class OpenIpmbLink(IpmbInterface):
         if self._device is None:
             raise OpenIpmbLinkError('interface is not open')
 
-        log().debug('IPMB TX bus %d [%s]', self.bus,
-                    ' '.join(['%02x' % b for b in frame]))
+        log().debug('IPMB TX bus %d [%s]', self.bus, bytes(frame).hex(' '))
         self._check_status(self._device.command('send', bus=self.bus,
                                                 msg=bytes(frame).hex()))
 
