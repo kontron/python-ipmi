@@ -220,8 +220,11 @@ def handle_rmcp_asf_msg(context: ConnectionContext, sdu: bytes) -> bytes:
     if asf.asf_type == rmcp.AsfMsg.ASF_TYPE_PRESENCE_PING:
         logger.debug(f'ASF RX: ping: {asf}')
     pong = rmcp.AsfPong()
+    # answer with the tag of the ping, IPMI supported (ASF 1.0)
+    pong.tag = asf.tag
+    pong.supported_entities = 0x81
     pdu = pong.pack()
-    logger.debug(f'ASF TX: pong: {asf}')
+    logger.debug(f'ASF TX: pong: {pong}')
     return pdu
 
 
