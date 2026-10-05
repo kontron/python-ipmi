@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # python-ipmi documentation build configuration file, created by
 # sphinx-quickstart on Fri Mar  1 16:02:43 2019.

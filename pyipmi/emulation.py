@@ -93,11 +93,11 @@ def handle_fru_inventory_are_info(context: ConnectionContext, req: Message) -> M
     try:
         fru_filename = cfg['fru'][req.fru_id]
     except KeyError:
-        log().warning('cannot find frufile for fru_id={} in config'.format(req.fru_id))
+        log().warning(f'cannot find frufile for fru_id={req.fru_id} in config')
         rsp.completion_code = constants.CC_PARAM_OUT_OF_RANGE
         return rsp
     except TypeError:
-        log().warning('cannot find frufile for fru_id={} in config'.format(req.fru_id))
+        log().warning(f'cannot find frufile for fru_id={req.fru_id} in config')
         rsp.completion_code = constants.CC_REQ_DATA_NOT_PRESENT
         return rsp
 
@@ -105,7 +105,7 @@ def handle_fru_inventory_are_info(context: ConnectionContext, req: Message) -> M
         statinfo = os.stat(fru_filename)
         rsp.area_size = statinfo.st_size
     except FileNotFoundError:
-        log().warning('cannot open file={} for fru_id={}'.format(fru_filename, req.fru_id))
+        log().warning(f'cannot open file={fru_filename} for fru_id={req.fru_id}')
         rsp.completion_code = constants.CC_PARAM_OUT_OF_RANGE
         return rsp
 
@@ -121,7 +121,7 @@ def handle_fru_read(context: ConnectionContext, req: Message) -> Message:
         fru_filename = cfg['fru'][req.fru_id]
     except KeyError:
         rsp.completion_code = constants.CC_PARAM_OUT_OF_RANGE
-        log().debug('cannot find file for fru_id={} in config'.format(req.fru_id))
+        log().debug(f'cannot find file for fru_id={req.fru_id} in config')
         return rsp
 
     try:
@@ -132,7 +132,7 @@ def handle_fru_read(context: ConnectionContext, req: Message) -> Message:
             rsp.count = len(d)
             rsp.data = d
     except FileNotFoundError:
-        log().debug('cannot open file={} for fru_id={}'.format(fru_filename, req.fru_id))
+        log().debug(f'cannot open file={fru_filename} for fru_id={req.fru_id}')
         rsp.completion_code = constants.CC_PARAM_OUT_OF_RANGE
         return rsp
 
@@ -205,7 +205,7 @@ def handle_ipmi_request_msg(context: ConnectionContext, req: Message) -> Message
         fct = handler_registry[type(req)]
     except KeyError:
         rsp = create_response_message(req)
-        log().warning('no handler for: {}'.format(type(req)))
+        log().warning(f'no handler for: {type(req)}')
         rsp.completion_code = constants.CC_INV_CMD
         return rsp
 
@@ -237,7 +237,7 @@ def handle_rmcp_ipmi_msg(context: ConnectionContext, sdu: bytes) -> bytes:
         req_header = ipmb.IpmbHeaderReq(data=ipmi_sdu)
         group_id = _get_group_id(ipmi_sdu)
 
-        log().warning('Cant create message: netfn 0x{:x} cmd: 0x{:x} group: {}'.format(req_header.netfn, req_header.cmdid, group_id))
+        log().warning(f'Cant create message: netfn 0x{req_header.netfn:x} cmd: 0x{req_header.cmdid:x} group: {group_id}')
         log().debug('IPMI RX: {:s}'.format(
             ' '.join('%02x' % b for b in array('B', ipmi_sdu))))
 
@@ -311,7 +311,7 @@ def load_sdr_dump(dump_file: str) -> None:
             sdr_list[sdr.id] = sdr
 
 
-class ConnectionContext():
+class ConnectionContext:
     STATE_IDLE = 0
     STATE_ACTIVE = 1
     STATE_CLOSED = 2
@@ -342,7 +342,7 @@ def handle_thread(context: ConnectionContext, pdu: bytes) -> None:
             pdu = rmcp_msg.pack(tx_data, context.session.sequence_number)
             context.sock.sendto(pdu, context.addr)
         except IndexError:
-            print('unknown class_of_msg {}'.format(msg.class_of_msg))
+            print(f'unknown class_of_msg {msg.class_of_msg}')
 
 
 def main(args: list[str] | None = None) -> None:
@@ -365,7 +365,7 @@ def main(args: list[str] | None = None) -> None:
 
     config = None
     if args.config:
-        with open(args.config, 'r') as stream:
+        with open(args.config) as stream:
             config = yaml.safe_load(stream)
 
         if 'sdr' in config:

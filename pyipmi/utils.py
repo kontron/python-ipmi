@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import codecs
 from array import array
-from typing import Any, Generator, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from collections.abc import Generator
 from .msgs import constants
 from .errors import DecodingError, CompletionCodeError
 
@@ -76,7 +77,7 @@ def chunks(data: Any, count: int) -> Generator[Any, None, None]:
         yield data[i:i+count]
 
 
-class ByteBuffer(object):
+class ByteBuffer:
     def __init__(self, data: Any = None) -> None:
 
         if data is not None:
@@ -86,7 +87,7 @@ class ByteBuffer(object):
 
     def push_unsigned_int(self, value: int, length: int) -> None:
         for i in range(length):
-            self.array.append((value >> (8*i) & 0xff))
+            self.array.append(value >> (8*i) & 0xff)
 
     def pop_unsigned_int(self, length: int) -> int:
         value = 0

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 
 from __future__ import annotations
@@ -10,7 +9,7 @@ from .errors import DecodingError
 from .utils import py3_array_tobytes
 
 
-class VersionField(object):
+class VersionField:
     """This class represent the Version fields defines by IPMI.
 
     Introduced with HPM the version field can hold additional auxiliary bytes.
@@ -64,7 +63,7 @@ def _unpack6bitascii(data: bytes) -> str:
     return string
 
 
-class TypeLengthString(object):
+class TypeLengthString:
     """
     This is the TYPE/LENGTH BYTE FORMAT field representation according the
     Platform Management FRU Information Storage Definition v1.0.
@@ -111,13 +110,11 @@ class FruTypeLengthString(TypeLengthString):
 
     def __init__(self, data: bytes | None = None, offset: int = 0,
                  force_lang_eng: bool = False) -> None:
-        super(FruTypeLengthString, self).__init__(data, offset,
-                                                  force_lang_eng,
-                                                  sdr=False)
+        super().__init__(data, offset, force_lang_eng, sdr=False)
 
 
 class SdrTypeLengthString(TypeLengthString):
 
     def __init__(self, data: bytes | None = None, offset: int = 0,
                  force_lang_eng: bool = False) -> None:
-        super(SdrTypeLengthString, self).__init__(data, sdr=True)
+        super().__init__(data, sdr=True)

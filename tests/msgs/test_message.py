@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 from array import array
 from pyipmi.utils import ByteBuffer
@@ -7,7 +6,7 @@ from pyipmi.msgs.message import (Bitfield, Message, UnsignedInt,
                                  RemainingBytes, String)
 
 
-class TMessage(object):
+class TMessage:
     def __init__(self, field):
         setattr(self, field.name, field.create())
         self.field = field

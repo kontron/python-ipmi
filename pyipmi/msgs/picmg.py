@@ -97,7 +97,7 @@ LED_STATE_LAMP_TEST = 2
 
 class PicmgIdentifier(UnsignedInt):
     def __init__(self, name: str = 'picmg_identifier') -> None:
-        super(PicmgIdentifier, self).__init__(name, 1, PICMG_IDENTIFIER)
+        super().__init__(name, 1, PICMG_IDENTIFIER)
 
 
 class PicmgMessage(Message):

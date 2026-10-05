@@ -28,7 +28,7 @@ PARAM_MANAGEABILITY_ACCESS_ATTRIBUTES = 4
 PARAM_ENHANCED_SYSTEM_POWER_STATISTICS_ATTRIBUTES = 5
 
 
-class Dcmi(object):
+class Dcmi:
     def get_dcmi_capabilities(self, selector: int) -> Message:
         rsp = self.send_message_with_name('GetDcmiCapabilities',
                                           parameter_selector=selector)

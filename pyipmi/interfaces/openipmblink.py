@@ -21,7 +21,8 @@ import queue
 import socket
 import threading
 import time
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from ..logger import log
 from .ipmb import IpmbInterface
@@ -37,7 +38,7 @@ class OpenIpmbLinkError(IOError):
     pass
 
 
-class OpenIpmbLinkDevice(object):
+class OpenIpmbLinkDevice:
     """Connection to the data serial port of an openipmblink bridge.
 
     All buses of a bridge share one serial port, so the interfaces of the

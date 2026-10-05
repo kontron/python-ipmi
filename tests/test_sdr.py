@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 import pytest
 
@@ -11,7 +10,7 @@ from pyipmi.sdr import (SdrCommon, SdrFullSensorRecord, SdrCompactSensorRecord,
                         SdrUnknownSensorRecord)
 
 
-class TestSdrFullSensorRecord():
+class TestSdrFullSensorRecord:
     def test_convert_complement(self):
         assert SdrFullSensorRecord()._convert_complement(0x8, 4) == -8
         assert SdrFullSensorRecord()._convert_complement(0x80, 8) == -128
@@ -221,7 +220,7 @@ class TestSdrFullSensorRecord():
         assert sdr.device_id_string == 'A2:Vcc 12V'
 
 
-class TestSdrCommon():
+class TestSdrCommon:
     def test_invalid_data_length(self):
         with pytest.raises(DecodingError):
             data = (0x00, 0x01, 0x02, 0x03)
@@ -236,7 +235,7 @@ class TestSdrCommon():
         assert sdr.length == 0x04
 
 
-class TestSdrCompactSensorRecord():
+class TestSdrCompactSensorRecord:
 
     def test_invalid_length(self):
         with pytest.raises(DecodingError):
@@ -263,7 +262,7 @@ def test_sdreventonlysensorrecord():
         SdrEventOnlySensorRecord(data)
 
 
-class TestSdrFruDeviceLocatorRecord():
+class TestSdrFruDeviceLocatorRecord:
 
     def test_invalid_length(self):
         with pytest.raises(DecodingError):
@@ -281,7 +280,7 @@ class TestSdrFruDeviceLocatorRecord():
                            '10 02 c2 61 00 cc 4b 6f 6e 74 72 6f 6e 20 4d 43 4d 43]'
 
 
-class TestSdrManagementControllerDeviceRecord():
+class TestSdrManagementControllerDeviceRecord:
 
     def test_invalid_length(self):
         with pytest.raises(DecodingError):
@@ -300,7 +299,7 @@ class TestSdrManagementControllerDeviceRecord():
         assert sdr.device_id_string == 'A2:AM4220'
 
 
-class TestSdrManagementControllerConfirmationRecord():
+class TestSdrManagementControllerConfirmationRecord:
 
     def test_decode(self):
         data = [0x45, 0x00, 0x51, 0x13, 0x1b, 0x20, 0x00, 0x01,

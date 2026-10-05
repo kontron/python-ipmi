@@ -25,7 +25,7 @@ import pprint
 import sys
 import traceback
 from array import array
-from typing import Callable
+from collections.abc import Callable
 
 import pyipmi
 import pyipmi.interfaces
@@ -198,11 +198,7 @@ def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
         except pyipmi.errors.CompletionCodeError as e:
             if s.type in (pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD,
                           pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD):
-                print('0x{:04x} | {:3d} | {:18s} | ERR: CC=0x{:02x}'.format(
-                      s.id,
-                      s.number,
-                      s.device_id_string,
-                      e.cc))
+                print(f'0x{s.id:04x} | {s.number:3d} | {s.device_id_string:18s} | ERR: CC=0x{e.cc:02x}')
 
 
 def cmd_fru_print(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -656,7 +652,7 @@ interface options (-o name=value,...):
 '''
 
 
-class _CommandGroups(object):
+class _CommandGroups:
     """Helper to build nested subcommands."""
 
     def __init__(self, subparsers: argparse._SubParsersAction) -> None:

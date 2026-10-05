@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2014  Kontron Europe GmbH
 #
 # This library is free software; you can redistribute it and/or
@@ -15,7 +14,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-from __future__ import absolute_import
 from __future__ import annotations
 
 import time
@@ -55,7 +53,7 @@ def create_connection(interface: Any) -> Ipmi:
     return Ipmi(interface=interface, session=session)
 
 
-class Requester(object):
+class Requester:
     """The Requester class.
 
     This represents an IPMI device which initiates a request/response
@@ -66,7 +64,7 @@ class Requester(object):
         self.ipmb_address = ipmb_address
 
 
-class NullRequester(object):
+class NullRequester:
     """The NullRequester class.
 
     This requester is used for interfaces which doesn't require a valid
@@ -78,7 +76,7 @@ class NullRequester(object):
         raise AssertionError('NullRequester does not provide an IPMB address')
 
 
-class Routing(object):
+class Routing:
     """The Target class represents an IPMI target."""
 
     def __init__(self, rq_sa: int, rs_sa: int, channel: int | None) -> None:
@@ -92,7 +90,7 @@ class Routing(object):
         return s
 
 
-class Target(object):
+class Target:
     """The Target class represents an IPMI target."""
 
     routing = None

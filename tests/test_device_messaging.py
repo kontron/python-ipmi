@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 from pyipmi.messaging import UserAccess, UserPrivilegeLevel
 import pyipmi.msgs.device_messaging

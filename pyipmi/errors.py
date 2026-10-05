@@ -95,7 +95,7 @@ class IpmiConnectionError(Exception):
         self.msg = msg
 
     def __str__(self) -> str:
-        return "{}".format(self.msg)
+        return f"{self.msg}"
 
 
 class IpmiLongPasswordError(Exception):
@@ -104,7 +104,7 @@ class IpmiLongPasswordError(Exception):
         self.msg = msg
 
     def __str__(self) -> str:
-        return "{}".format(self.msg)
+        return f"{self.msg}"
 
 
 class AuthenticationError(Exception):
@@ -113,4 +113,4 @@ class AuthenticationError(Exception):
         self.msg = msg
 
     def __str__(self) -> str:
-        return "{}".format(self.msg)
+        return f"{self.msg}"

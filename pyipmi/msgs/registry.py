@@ -23,7 +23,7 @@ from ..errors import DescriptionError
 from .message import Message
 
 
-class MessageRegistry(object):
+class MessageRegistry:
     def __init__(self) -> None:
         self.registry = dict()
 

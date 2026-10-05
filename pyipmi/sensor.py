@@ -14,11 +14,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-from __future__ import absolute_import
 from __future__ import annotations
 
 from array import array
-from typing import Generator
+from collections.abc import Generator
 
 from .utils import check_completion_code
 from .msgs import create_request_by_name
@@ -109,7 +108,7 @@ SENSOR_TYPE_VITA_PAYLOAD_MODE = 0xf7
 SENSOR_TYPE_VITA_IPMC_RESET_TYPE = 0xf8
 
 
-class Sensor(object):
+class Sensor:
     def reserve_device_sdr_repository(self) -> int:
         rsp = self.send_message_with_name('ReserveDeviceSdrRepository')
         return rsp.reservation_id

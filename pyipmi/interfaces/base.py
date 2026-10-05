@@ -22,7 +22,7 @@ from ..msgs import create_message, encode_message, decode_message, Message
 from ..session import Session
 
 
-class Interface(object):
+class Interface:
     """Base class of all interfaces.
 
     It defines the methods used by `pyipmi.Ipmi` and `pyipmi.Session`.

@@ -29,7 +29,7 @@ from .fields import FruTypeLengthString
 codecs.register(bcd_search)
 
 
-class Fru(object):
+class Fru:
     def __init__(self):
         self.write_length = 16
 
@@ -48,8 +48,8 @@ class Fru(object):
 
             # check if device wrote the same number of bytes sent
             if write_rsp.count_written != len(chunk):
-                raise Exception('sent {:} bytes but device wrote {:} bytes'
-                                .format(len(chunk), write_rsp.count_written))
+                raise Exception(f'sent {len(chunk)} bytes but device wrote {write_rsp.count_written} bytes'
+                                )
 
             offset += len(chunk)
 
@@ -195,7 +195,7 @@ def get_fru_inventory_from_file(filename: str,
                                 ignore_checksum: bool = False) -> FruInventory:
     try:
         file = open(filename, "rb")
-    except IOError:
+    except OSError:
         print('Error open file "%s"' % filename)
 
     ################################
@@ -220,7 +220,7 @@ def _decode_custom_fields(data: bytes) -> list[FruTypeLengthString]:
     return fields
 
 
-class FruData(object):
+class FruData:
     def __init__(self, data: bytes | str | None = None,
                  ignore_checksum: bool = False) -> None:
         if data:
@@ -438,7 +438,7 @@ class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
         self.maximum_current_output = float(maximum_current_output/10)
 
 
-class InventoryMultiRecordArea(object):
+class InventoryMultiRecordArea:
     def __init__(self, data: bytes, ignore_checksum: bool = False) -> None:
         if data:
             self._from_data(data)
@@ -454,7 +454,7 @@ class InventoryMultiRecordArea(object):
                 break
 
 
-class FruInventory(object):
+class FruInventory:
     def __init__(self, data: bytes | None = None,
                  ignore_checksum: bool = False) -> None:
         self.chassis_info_area = None
