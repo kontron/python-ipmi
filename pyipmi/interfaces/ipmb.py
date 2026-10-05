@@ -339,7 +339,7 @@ class IpmbInterface(Interface):
 
     def _receive_frame(self, frame: bytes) -> None:
         """Pass a received IPMB message to the router."""
-        log().debug('IPMB RX [%s]', ' '.join(['%02x' % b for b in frame]))
+        log().debug('IPMB RX [%s]', bytes(frame).hex(' '))
         self._router.handle_frame(self, bytes(frame))
 
     def _start_receiver(self) -> None:

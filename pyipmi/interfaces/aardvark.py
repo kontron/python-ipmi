@@ -154,8 +154,7 @@ class Aardvark(IpmbInterface):
     def send_frame(self, frame: bytes) -> None:
         i2c_addr = frame[0] >> 1
 
-        log().debug('I2C TX to %02Xh [%s]', i2c_addr,
-                    ' '.join(['%02x' % b for b in frame]))
+        log().debug('IPMB TX [%s]', bytes(frame).hex(' '))
         self._call(self._dev.i2c_master_write, i2c_addr, bytes(frame[1:]))
 
     def _read_frame(self, timeout: float) -> bytes | None:

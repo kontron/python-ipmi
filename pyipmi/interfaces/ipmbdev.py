@@ -42,10 +42,7 @@ class IpmbDev(IpmbInterface):
         os.write(self._wakeup_w, b'\0')
 
     def send_frame(self, frame: bytes) -> None:
-        i2c_addr = frame[0] >> 1
-
-        log().debug('I2C TX to %02Xh [%s]', i2c_addr,
-                    ' '.join(['%02x' % b for b in frame]))
+        log().debug('IPMB TX [%s]', bytes(frame).hex(' '))
         os.write(self._dev, bytes([len(frame)]) + bytes(frame))
 
     def _read_frame(self, timeout: float) -> bytes | None:
