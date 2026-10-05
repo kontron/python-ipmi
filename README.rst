@@ -35,7 +35,7 @@ For the native system interface the Linux IPMI driver is needed
 https://www.kernel.org/doc/html/latest/driver-api/ipmi.html
 
 For legacy RMCP, RMCP+ and system interface (KCS) using ipmitool as backend
-the installtion of ipmitool is required.
+the installation of ipmitool is required.
 
 Installation
 ------------

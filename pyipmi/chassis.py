@@ -206,7 +206,7 @@ class Chassis:
     def get_boot_persistency(self) -> bool:
         """
         Return True if the boot configuration is to be applied to every future
-        boot, Fale if it only will applied to the next boot.
+        boot, False if it will only be applied to the next boot.
         """
         rsp = self.get_system_boot_options(BOOT_PARAMETER_BOOT_FLAGS)
         return data_to_boot_persistency(rsp)
