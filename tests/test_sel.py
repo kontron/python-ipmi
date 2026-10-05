@@ -36,75 +36,77 @@ class TestSel:
 
 
 class TestSelInfo:
-    rsp = create_response_by_name('GetSelInfo')
-    rsp.version = 1
-    rsp.entries = 1023
-    rsp.free_bytes = 512
-    info = SelInfo(rsp)
 
-    assert info.version == 1
-    assert info.entries == 1023
-    assert info.free_bytes == 512
+    def test_sel_info(self):
+        rsp = create_response_by_name('GetSelInfo')
+        rsp.version = 1
+        rsp.entries = 1023
+        rsp.free_bytes = 512
+        info = SelInfo(rsp)
 
-    rsp.operation_support.get_sel_allocation_info = 1
-    rsp.operation_support.reserve_sel = 0
-    rsp.operation_support.partial_add_sel_entry = 0
-    rsp.operation_support.delete_sel = 0
-    rsp.operation_support.overflow_flag = 0
-    info = SelInfo(rsp)
-    assert 'get_sel_allocation_info' in info.operation_support
-    assert 'reserve_sel' not in info.operation_support
-    assert 'partial_add_sel_entry' not in info.operation_support
-    assert 'delete_sel' not in info.operation_support
-    assert 'overflow_flag' not in info.operation_support
+        assert info.version == 1
+        assert info.entries == 1023
+        assert info.free_bytes == 512
 
-    rsp.operation_support.get_sel_allocation_info = 0
-    rsp.operation_support.reserve_sel = 1
-    rsp.operation_support.partial_add_sel_entry = 0
-    rsp.operation_support.delete_sel = 0
-    rsp.operation_support.overflow_flag = 0
-    info = SelInfo(rsp)
-    assert 'get_sel_allocation_info' not in info.operation_support
-    assert 'reserve_sel' in info.operation_support
-    assert 'partial_add_sel_entry' not in info.operation_support
-    assert 'delete_sel' not in info.operation_support
-    assert 'overflow_flag' not in info.operation_support
+        rsp.operation_support.get_sel_allocation_info = 1
+        rsp.operation_support.reserve_sel = 0
+        rsp.operation_support.partial_add_sel_entry = 0
+        rsp.operation_support.delete_sel = 0
+        rsp.operation_support.overflow_flag = 0
+        info = SelInfo(rsp)
+        assert 'get_sel_allocation_info' in info.operation_support
+        assert 'reserve_sel' not in info.operation_support
+        assert 'partial_add_sel_entry' not in info.operation_support
+        assert 'delete_sel' not in info.operation_support
+        assert 'overflow_flag' not in info.operation_support
 
-    rsp.operation_support.get_sel_allocation_info = 0
-    rsp.operation_support.reserve_sel = 0
-    rsp.operation_support.partial_add_sel_entry = 1
-    rsp.operation_support.delete_sel = 0
-    rsp.operation_support.overflow_flag = 0
-    info = SelInfo(rsp)
-    assert 'get_sel_allocation_info' not in info.operation_support
-    assert 'reserve_sel' not in info.operation_support
-    assert 'partial_add_sel_entry' in info.operation_support
-    assert 'delete_sel' not in info.operation_support
-    assert 'overflow_flag' not in info.operation_support
+        rsp.operation_support.get_sel_allocation_info = 0
+        rsp.operation_support.reserve_sel = 1
+        rsp.operation_support.partial_add_sel_entry = 0
+        rsp.operation_support.delete_sel = 0
+        rsp.operation_support.overflow_flag = 0
+        info = SelInfo(rsp)
+        assert 'get_sel_allocation_info' not in info.operation_support
+        assert 'reserve_sel' in info.operation_support
+        assert 'partial_add_sel_entry' not in info.operation_support
+        assert 'delete_sel' not in info.operation_support
+        assert 'overflow_flag' not in info.operation_support
 
-    rsp.operation_support.get_sel_allocation_info = 0
-    rsp.operation_support.reserve_sel = 0
-    rsp.operation_support.partial_add_sel_entry = 0
-    rsp.operation_support.delete_sel = 1
-    rsp.operation_support.overflow_flag = 0
-    info = SelInfo(rsp)
-    assert 'get_sel_allocation_info' not in info.operation_support
-    assert 'reserve_sel' not in info.operation_support
-    assert 'partial_add_sel_entry' not in info.operation_support
-    assert 'delete_sel' in info.operation_support
-    assert 'overflow_flag' not in info.operation_support
+        rsp.operation_support.get_sel_allocation_info = 0
+        rsp.operation_support.reserve_sel = 0
+        rsp.operation_support.partial_add_sel_entry = 1
+        rsp.operation_support.delete_sel = 0
+        rsp.operation_support.overflow_flag = 0
+        info = SelInfo(rsp)
+        assert 'get_sel_allocation_info' not in info.operation_support
+        assert 'reserve_sel' not in info.operation_support
+        assert 'partial_add_sel_entry' in info.operation_support
+        assert 'delete_sel' not in info.operation_support
+        assert 'overflow_flag' not in info.operation_support
 
-    rsp.operation_support.get_sel_allocation_info = 0
-    rsp.operation_support.reserve_sel = 0
-    rsp.operation_support.partial_add_sel_entry = 0
-    rsp.operation_support.delete_sel = 0
-    rsp.operation_support.overflow_flag = 1
-    info = SelInfo(rsp)
-    assert 'get_sel_allocation_info' not in info.operation_support
-    assert 'reserve_sel' not in info.operation_support
-    assert 'partial_add_sel_entry' not in info.operation_support
-    assert 'delete_sel' not in info.operation_support
-    assert 'overflow_flag' in info.operation_support
+        rsp.operation_support.get_sel_allocation_info = 0
+        rsp.operation_support.reserve_sel = 0
+        rsp.operation_support.partial_add_sel_entry = 0
+        rsp.operation_support.delete_sel = 1
+        rsp.operation_support.overflow_flag = 0
+        info = SelInfo(rsp)
+        assert 'get_sel_allocation_info' not in info.operation_support
+        assert 'reserve_sel' not in info.operation_support
+        assert 'partial_add_sel_entry' not in info.operation_support
+        assert 'delete_sel' in info.operation_support
+        assert 'overflow_flag' not in info.operation_support
+
+        rsp.operation_support.get_sel_allocation_info = 0
+        rsp.operation_support.reserve_sel = 0
+        rsp.operation_support.partial_add_sel_entry = 0
+        rsp.operation_support.delete_sel = 0
+        rsp.operation_support.overflow_flag = 1
+        info = SelInfo(rsp)
+        assert 'get_sel_allocation_info' not in info.operation_support
+        assert 'reserve_sel' not in info.operation_support
+        assert 'partial_add_sel_entry' not in info.operation_support
+        assert 'delete_sel' not in info.operation_support
+        assert 'overflow_flag' in info.operation_support
 
 
 class TestSelEnty:
