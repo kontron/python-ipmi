@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import re
+import shlex
 
 from subprocess import Popen, PIPE
 from array import array
@@ -96,8 +97,7 @@ class Ipmitool(Interface):
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += (' -A NONE')
         elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
-            cmd += (' -U "%s"' % self._session.auth_username)
-            cmd += (' -P "%s"' % self._session.auth_password)
+            cmd += self._build_ipmitool_credentials()
         cmd += (' session info all')
 
         _, rc = self._run_ipmitool(cmd)
@@ -258,6 +258,13 @@ class Ipmitool(Interface):
 
         return cmd
 
+    def _build_ipmitool_credentials(self) -> str:
+        # The command is executed by a shell, so the credentials have to be
+        # quoted to prevent the shell from interpreting characters like
+        # '$', '`', '"' or '\'.
+        return (f' -U {shlex.quote(self._session.auth_username)}'
+                f' -P {shlex.quote(self._session.auth_password)}')
+
     def _build_ipmitool_priv_level(self, level: int) -> str:
         LEVELS = {
                    Session.PRIV_LEVEL_USER: 'USER',
@@ -285,8 +292,7 @@ class Ipmitool(Interface):
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += ' -P ""'
         elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
-            cmd += (' -U "%s"' % self._session.auth_username)
-            cmd += (' -P "%s"' % self._session.auth_password)
+            cmd += self._build_ipmitool_credentials()
         else:
             raise RuntimeError('Session type %d not supported' %
                                self._session.auth_type)
