@@ -1,0 +1,22 @@
+target-version = "py310"
+
+[lint]
+# preview enables the pycodestyle whitespace/indentation rules (E1, E2, E3)
+# that flake8 checked before
+preview = true
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "PIE",  # flake8-pie
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E226",   # missing whitespace around arithmetic operator (flake8 default)
+    "E501",   # line too long
+    "B903",   # class could be a dataclass or namedtuple
+    "C408",   # dict()/list() calls instead of literals
+    "UP031",  # %-style string formatting
+]

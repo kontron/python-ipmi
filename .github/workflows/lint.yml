@@ -1,22 +1,38 @@
-name: Lint with flake8
+name: Lint
 
 on: [push, pull_request, workflow_dispatch]
 
 jobs:
-  lint:
-    name: Lint with flake8
+  ruff:
+    name: Lint with ruff
     runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install flake8
+        run: pip install ruff
 
-      - name: Lint with flake8
-        run: |
-          flake8 pyipmi/ tests/ --count --show-source --statistics
+      - name: Lint with ruff
+        run: ruff check --output-format=github .
+
+  codespell:
+    name: Check spelling with codespell
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install codespell
+
+      - name: Check spelling
+        run: codespell
