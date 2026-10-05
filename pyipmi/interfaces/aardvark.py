@@ -19,7 +19,8 @@ from __future__ import annotations
 import queue
 import threading
 import time
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from ..logger import log
 from .ipmb import IpmbInterface
@@ -37,7 +38,7 @@ except RuntimeError:  # python 3
 POLL_INTERVAL = 0.001
 
 
-class _DeviceCall(object):
+class _DeviceCall:
     """A device function call, done by the receive thread."""
 
     def __init__(self, func: Callable[..., Any], args: tuple) -> None:
@@ -120,7 +121,7 @@ class Aardvark(IpmbInterface):
         call = _DeviceCall(func, args)
         self._calls.put(call)
         if not call.done.wait(1.0):
-            raise IOError('aardvark receive thread does not respond')
+            raise OSError('aardvark receive thread does not respond')
         if call.error is not None:
             raise call.error
         return call.result

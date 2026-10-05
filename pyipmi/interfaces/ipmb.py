@@ -19,7 +19,8 @@ from __future__ import annotations
 import threading
 import time
 from array import array
-from typing import Iterable, TYPE_CHECKING
+from typing import TYPE_CHECKING
+from collections.abc import Iterable
 
 from .. import Routing, Target
 from ..errors import IpmiTimeoutError
@@ -42,7 +43,7 @@ def checksum(data: Iterable[int]) -> int:
     return -csum % 256
 
 
-class IpmbHeader(object):
+class IpmbHeader:
     """Representation of the IPMI message header.
 
     Request:
@@ -281,7 +282,7 @@ def rx_filter(header: IpmbHeaderReq, data: bytes | array, rq_sa: bool = False,
 
     for left, right, msg in checks:
         if left != right:
-            log().debug('{:s}: {:d} {:d}'.format(msg, left, right))
+            log().debug(f'{msg:s}: {left:d} {right:d}')
             match = False
 
     return match
@@ -425,7 +426,7 @@ class IpmbInterface(Interface):
                 break
             except IpmiTimeoutError:
                 pass
-            except IOError:
+            except OSError:
                 pass
 
             retries += 1

@@ -23,7 +23,8 @@ import random
 import threading
 from array import array
 from queue import Queue
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from .. import Target
 from ..session import Session
@@ -56,7 +57,7 @@ def call_repeatedly(interval: float, func: Callable[..., Any],
         while not stopped.wait(interval):
             try:
                 func(*args)
-            except socket.timeout:
+            except TimeoutError:
                 pass
 
     t = threading.Thread(target=loop)
@@ -66,7 +67,7 @@ def call_repeatedly(interval: float, func: Callable[..., Any],
     return stopped.set
 
 
-class RmcpMsg(object):
+class RmcpMsg:
     RMCP_HEADER_FORMAT = '!BxBB'
     ASF_RMCP_V_1_0 = 6
     version: int | None = None
@@ -97,7 +98,7 @@ class RmcpMsg(object):
         return sdu
 
 
-class AsfMsg(object):
+class AsfMsg:
     ASF_HEADER_FORMAT = '!IBBxB'
 
     ASF_TYPE_PRESENCE_PONG = 0x40
@@ -228,7 +229,7 @@ class AsfPong(AsfMsg):
             raise DecodingError('Data length mismatch')
 
 
-class IpmiMsg(object):
+class IpmiMsg:
     HEADER_FORMAT_NO_AUTH = '!BIIB'
     HEADER_FORMAT_AUTH = '!BII16BB'
 
@@ -333,8 +334,7 @@ class IpmiMsg(object):
                 raise DecodingError('short SDU')
             elif len(pdu) > header_len + data_len:
                 raise DecodingError(
-                    'SDU has extra bytes ({:d},{:d},{:d} )'.format(
-                        len(pdu), header_len, data_len))
+                    f'SDU has extra bytes ({len(pdu):d},{header_len:d},{data_len:d} )')
 
         if hasattr(self, 'check_header'):
             self.check_header()
@@ -648,7 +648,7 @@ class Rmcp(Interface):
                                          f"host {self.host}")
                     break
 
-                except socket.timeout:
+                except TimeoutError:
                     retry += 1
 
         if retry > self.max_retries:

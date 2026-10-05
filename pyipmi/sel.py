@@ -18,7 +18,7 @@
 from __future__ import annotations
 
 from array import array
-from typing import Generator
+from collections.abc import Generator
 
 from .errors import CompletionCodeError, DecodingError
 from .utils import check_completion_code, ByteBuffer
@@ -30,7 +30,7 @@ from .helper import clear_repository_helper
 from .state import State
 
 
-class Sel(object):
+class Sel:
     def get_sel_entries_count(self) -> int:
         info = SelInfo(self.send_message_with_name('GetSelInfo'))
         return info.entries

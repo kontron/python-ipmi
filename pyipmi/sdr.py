@@ -15,12 +15,10 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from __future__ import annotations
-from __future__ import absolute_import
-from __future__ import division
 
 import math
 from array import array
-from typing import Callable, Generator
+from collections.abc import Callable, Generator
 
 from . import errors
 
@@ -60,7 +58,7 @@ L_SQRT = 10
 L_CUBERT = 11
 
 
-class Sdr(object):
+class Sdr:
     def __init__(self) -> None:
         pass
 
@@ -190,7 +188,7 @@ class SdrRepositoryAllocationInfo(State):
         self.maximum_record_size = rsp.maximum_record_size
 
 
-class SdrCommon(object):
+class SdrCommon:
     def __init__(self, data: bytes | None = None,
                  next_id: int | None = None) -> None:
         if data:
@@ -275,7 +273,7 @@ class SdrFullSensorRecord(SdrCommon):
 
     def __init__(self, data: bytes | None = None,
                  next_id: int | None = None) -> None:
-        super(SdrFullSensorRecord, self).__init__(data, next_id)
+        super().__init__(data, next_id)
 
     def __str__(self) -> str:
         s = '["%s"] [%s:%s] [%s]' \
@@ -503,7 +501,7 @@ class SdrFullSensorRecord(SdrCommon):
 class SdrCompactSensorRecord(SdrCommon):
     def __init__(self, data: bytes | None = None,
                  next_id: int | None = None) -> None:
-        super(SdrCompactSensorRecord, self).__init__(data, next_id)
+        super().__init__(data, next_id)
 
     def __str__(self) -> str:
         s = '["%s"] [%s]' \
@@ -544,7 +542,7 @@ class SdrCompactSensorRecord(SdrCommon):
 class SdrEventOnlySensorRecord(SdrCommon):
     def __init__(self, data: bytes | None = None,
                  next_id: int | None = None) -> None:
-        super(SdrEventOnlySensorRecord, self).__init__(data, next_id)
+        super().__init__(data, next_id)
 
     def __str__(self) -> str:
         return 'Not supported yet.'
@@ -572,7 +570,7 @@ class SdrEventOnlySensorRecord(SdrCommon):
 class SdrFruDeviceLocator(SdrCommon):
     def __init__(self, data: bytes | None = None,
                  next_id: int | None = None) -> None:
-        super(SdrFruDeviceLocator, self).__init__(data, next_id)
+        super().__init__(data, next_id)
 
     def __str__(self) -> str:
         s = '["%s"] [%s]' \
@@ -600,7 +598,7 @@ class SdrFruDeviceLocator(SdrCommon):
 class SdrManagementControllerDeviceLocator(SdrCommon):
     def __init__(self, data: bytes | None = None,
                  next_id: int | None = None) -> None:
-        super(SdrManagementControllerDeviceLocator, self).__init__(
+        super().__init__(
                 data, next_id)
 
     def __str__(self) -> str:
@@ -628,7 +626,7 @@ class SdrManagementControllerDeviceLocator(SdrCommon):
 class SdrManagementControllerConfirmationRecord(SdrCommon):
     def __init__(self, data: bytes | None = None,
                  next_id: int | None = None) -> None:
-        super(SdrManagementControllerConfirmationRecord, self).__init__(
+        super().__init__(
                 data, next_id)
 
     def _from_data(self, data: bytes) -> None:
@@ -650,7 +648,7 @@ class SdrManagementControllerConfirmationRecord(SdrCommon):
 class SdrOEMSensorRecord(SdrCommon):
     def __init__(self, data: bytes | None = None,
                  next_id: int | None = None) -> None:
-        super(SdrOEMSensorRecord, self).__init__(data, next_id)
+        super().__init__(data, next_id)
 
     def __str__(self) -> str:
         return 'Not supported yet.'
@@ -666,7 +664,7 @@ class SdrOEMSensorRecord(SdrCommon):
 class SdrUnknownSensorRecord(SdrCommon):
     def __init__(self, data: bytes | None = None,
                  next_id: int | None = None) -> None:
-        super(SdrUnknownSensorRecord, self).__init__(data, next_id)
+        super().__init__(data, next_id)
 
     def __str__(self) -> str:
         return 'Not supported yet.'

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 from pyipmi.bmc import DeviceId, DeviceGuid, Watchdog
 import pyipmi.msgs.bmc

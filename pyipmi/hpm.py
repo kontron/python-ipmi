@@ -15,7 +15,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 from __future__ import annotations
-from __future__ import print_function
 
 import os
 import codecs
@@ -65,7 +64,7 @@ CC_ABORT_UPGRADE_CANNOT_ABORT = 0x80
 CC_ABORT_UPGRADE_CANNOT_RESUME_OPERATION = 0x81
 
 
-class Hpm(object):
+class Hpm:
 
     @staticmethod
     def _get_component_count(components: int) -> int:
@@ -218,7 +217,7 @@ class Hpm(object):
                     return
             except IpmiTimeoutError:
                 time.sleep(interval)
-            except IOError:
+            except OSError:
                 time.sleep(interval)
 
     def activate_firmware(self, rollback_override: int | None = None) -> None:
@@ -359,7 +358,7 @@ class Hpm(object):
                 self.get_device_id()
             except IpmiTimeoutError:
                 time.sleep(interval)
-            except IOError:
+            except OSError:
                 time.sleep(interval)
         time.sleep(5)
 
@@ -417,7 +416,7 @@ class TargetUpgradeCapabilities(State):
 codecs.register(bcd_search)
 
 
-class ComponentProperty(object):
+class ComponentProperty:
     def __init__(self, data: bytes | None = None) -> None:
         if (data):
             self._from_rsp_data(data)
@@ -528,7 +527,7 @@ class SelfTestResult(State):
         self.fail_mc = (result2 & 0x01) >> 0
 
 
-class RollbackStatus(object):
+class RollbackStatus:
     def __init__(self, rsp: Message | None = None) -> None:
         if rsp:
             self._from_rsp(rsp)
@@ -543,7 +542,7 @@ image_header = collections.namedtuple('image_header',
                                       ['field_name', 'format', 'start', 'len'])
 
 
-class UpgradeImageHeaderRecord(object):
+class UpgradeImageHeaderRecord:
     FORMAT = [
         image_header('format_version', 'B', 8, 1),
         image_header('device_id', 'B', 9, 1),
@@ -609,7 +608,7 @@ class UpgradeImageHeaderRecord(object):
         return "\n".join(str)
 
 
-class UpgradeActionRecord(object):
+class UpgradeActionRecord:
 
     ACTIONS = (
         "Backup",
@@ -673,7 +672,7 @@ class UpgradeActionRecordUploadForCompare(UpgradeActionRecord):
     pass
 
 
-class ImageChecksumRecord(object):
+class ImageChecksumRecord:
     def __init__(self, data: bytes | None = None) -> None:
         if data:
             self._from_data(data)
@@ -685,7 +684,7 @@ class ImageChecksumRecord(object):
 HPM_IMAGE_CHECKSUM_SIZE = 16
 
 
-class UpgradeImage(object):
+class UpgradeImage:
     def __init__(self, filename: str | None = None) -> None:
         self.actions = None
 
@@ -706,7 +705,7 @@ class UpgradeImage(object):
 
         try:
             file = open(filename, "rb")
-        except IOError:
+        except OSError:
             print('Error open file "%s"' % filename)
 
         ################################

@@ -24,7 +24,7 @@ from .state import State
 from .fields import VersionField
 
 
-class Bmc(object):
+class Bmc:
     def get_device_id(self) -> DeviceId:
         return DeviceId(self.send_message_with_name('GetDeviceId'))
 

@@ -14,7 +14,6 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-from __future__ import absolute_import
 from __future__ import annotations
 
 from array import array
@@ -147,7 +146,7 @@ def boot_options_to_data(boot_device: BootDevice, boot_mode: str,
     return data
 
 
-class Chassis(object):
+class Chassis:
     def get_chassis_status(self) -> ChassisStatus:
         return ChassisStatus(self.send_message_with_name('GetChassisStatus'))
 

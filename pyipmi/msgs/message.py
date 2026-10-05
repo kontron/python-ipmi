@@ -17,7 +17,8 @@
 from __future__ import annotations
 
 from array import array
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from . import constants
 from ..utils import ByteBuffer
@@ -25,7 +26,7 @@ from ..errors import (CompletionCodeError, EncodingError, DecodingError,
                       DescriptionError)
 
 
-class BaseField(object):
+class BaseField:
     def __init__(self, name: str, length: int | None,
                  default: Any = None) -> None:
         self.name = name
@@ -149,7 +150,7 @@ class Timestamp(UnsignedInt):
         UnsignedInt.__init__(self, name, 4, None)
 
 
-class Conditional(object):
+class Conditional:
     def __init__(self, cond_fn: Callable[[Message], bool],
                  field: BaseField) -> None:
         self._condition_fn = cond_fn
@@ -170,7 +171,7 @@ class Conditional(object):
         return self._field.create()
 
 
-class Optional(object):
+class Optional:
     def __init__(self, field: BaseField) -> None:
         self._field = field
 
@@ -208,7 +209,7 @@ class RemainingBytes(BaseField):
 
 
 class Bitfield(BaseField):
-    class Bit(object):
+    class Bit:
         def __init__(self, name: str, width: int = 1,
                      default: int | None = None) -> None:
             self.name = name
@@ -224,7 +225,7 @@ class Bitfield(BaseField):
                                   width, default)
             Bitfield.reserved_bit_counter += 1
 
-    class BitWrapper(object):
+    class BitWrapper:
         def __init__(self, bits: tuple[Bitfield.Bit, ...],
                      length: int) -> None:
             self._bits = bits
@@ -316,7 +317,7 @@ class EventMessageRevision(UnsignedInt):
         UnsignedInt.__init__(self, 'event_message_rev', 1, value)
 
 
-class Message(object):
+class Message:
     RESERVED_FIELD_NAMES = ['cmdid', 'netfn', 'lun', 'group_extension']
 
     __default_lun__ = 0
@@ -352,7 +353,7 @@ class Message(object):
         # TODO walk along the properties..
 
     def __str__(self) -> str:
-        return '{} [netfn={}, cmd={}, grp={}]'.format(type(self).__name__, self.netfn, self.cmdid, self.group_extension)
+        return f'{type(self).__name__} [netfn={self.netfn}, cmd={self.cmdid}, grp={self.group_extension}]'
 
     def _create_fields(self) -> None:
         for field in self.__fields__:

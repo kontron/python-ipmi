@@ -70,7 +70,7 @@ VITA_SITE_TYPES = {
 }
 
 
-class Vita(object):
+class Vita:
     """VITA 46.11 commands of a VSO (VITA Standards Organization) IPMC."""
 
     def get_vita_vso_capabilities(self) -> Message:

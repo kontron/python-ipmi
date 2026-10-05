@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import queue
 import threading
-from typing import Any, Callable, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from collections.abc import Callable
 
 from ..errors import IpmiTimeoutError
 from ..logger import log
@@ -50,13 +51,13 @@ def encode_ipmb_response(req_header: IpmbHeaderReq, data: bytes) -> bytes:
     return encode_ipmb_msg(header, data)
 
 
-class _PendingRequest(object):
+class _PendingRequest:
     def __init__(self) -> None:
         self.event = threading.Event()
         self.frame: bytes | None = None
 
 
-class MessageRouter(object):
+class MessageRouter:
     """Decides what happens with IPMB messages of one or more interfaces.
 
     Outgoing requests are sent with `request()`, which waits for the matching
@@ -217,7 +218,7 @@ class MessageRouter(object):
 
         try:
             interface.send_frame(encode_ipmb_response(header, rsp_data))
-        except IOError as e:
+        except OSError as e:
             log().warning('IPMB sending response failed: %s', e)
 
     def _start_worker(self) -> None:

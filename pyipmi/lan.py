@@ -168,7 +168,7 @@ def vlan_to_data(vlan: int) -> ByteBuffer:
     return data
 
 
-class Lan(object):
+class Lan:
     def get_lan_config_param(self, channel: int = 0, parameter_selector: int = 0,
                              set_selector: int = 0, block_selector: int = 0,
                              revision_only: int = 0) -> array:
@@ -259,5 +259,5 @@ class Lan(object):
         self.set_lan_config_param(channel, LAN_PARAMETER_802_1Q_VLAN_ID, data)
 
 
-class LanParameter(object):
+class LanParameter:
     pass

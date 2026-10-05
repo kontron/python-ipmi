@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 import array
 import pytest
@@ -47,14 +46,14 @@ class TestAsfMsg:
         assert str(m) == 'aa bb cc'
 
 
-class TestAsfPing():
+class TestAsfPing:
     def test_pack(self):
         m = AsfPing()
         pdu = m.pack()
         assert pdu == b'\x00\x00\x11\xbe\x80\x00\x00\x00'
 
 
-class TestAsfPong():
+class TestAsfPong:
     def test_unpack(self):
         pdu = b'\x00\x00\x11\xbe\x40\x00\x00\x10\x00\x00\x11\xbe\x00\x00\x00\x00\x81\x00\x00\x00\x00\x00\x00\x00'
         m = AsfPong()

@@ -26,21 +26,21 @@ def main():
 
     for selector in range(1, 6):
         caps = ipmi.get_dcmi_capabilities(selector)
-        print('Selector: {} '.format(selector))
-        print('  version:  {} '.format(caps.specification_conformence))
-        print('  revision: {}'.format(caps.parameter_revision))
-        print('  data:     {}'.format(caps.parameter_data))
+        print(f'Selector: {selector} ')
+        print(f'  version:  {caps.specification_conformence} ')
+        print(f'  revision: {caps.parameter_revision}')
+        print(f'  data:     {caps.parameter_data}')
 
     rsp = ipmi.get_power_reading(1)
 
     print('Power Reading')
-    print('  current:   {}'.format(rsp.current_power))
-    print('  minimum:   {}'.format(rsp.minimum_power))
-    print('  maximum:   {}'.format(rsp.maximum_power))
-    print('  average:   {}'.format(rsp.average_power))
-    print('  timestamp: {}'.format(rsp.timestamp))
-    print('  period:    {}'.format(rsp.period))
-    print('  state:     {}'.format(rsp.reading_state))
+    print(f'  current:   {rsp.current_power}')
+    print(f'  minimum:   {rsp.minimum_power}')
+    print(f'  maximum:   {rsp.maximum_power}')
+    print(f'  average:   {rsp.average_power}')
+    print(f'  timestamp: {rsp.timestamp}')
+    print(f'  period:    {rsp.period}')
+    print(f'  state:     {rsp.reading_state}')
 
     ipmi.close()
 

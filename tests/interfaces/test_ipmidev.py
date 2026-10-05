@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 
 import ctypes
 import os
@@ -19,7 +18,7 @@ DEVICE_ID_RSP = (b'\x00\x0c\x89\x00\x00\x02\x3d\x98'
                  b'\x3a\x00\xbe\x14\x04\x00\x02\x00')
 
 
-class FakeDriver(object):
+class FakeDriver:
     """Emulates the ioctls of /dev/ipmi0.
 
     `responder` gets the address structure, netfn, cmd and data of a request

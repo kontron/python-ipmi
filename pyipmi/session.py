@@ -20,7 +20,7 @@ from __future__ import annotations
 from typing import Any
 
 
-class Session(object):
+class Session:
     AUTH_TYPE_NONE = 0x00
     AUTH_TYPE_MD2 = 0x01
     AUTH_TYPE_MD5 = 0x02

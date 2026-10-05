@@ -132,7 +132,7 @@ class Ipmitool(Interface):
 
             # Check for unable to establish session
             if self.re_unable_establish.match(line):
-                raise IpmiConnectionError('ipmitool: {}'.format(line))
+                raise IpmiConnectionError(f'ipmitool: {line}')
 
             # Check for completion code
             match_completion_code = self.re_completion_code.match(line)
@@ -142,7 +142,7 @@ class Ipmitool(Interface):
 
             # Check for error opening ipmi device
             if self.re_could_not_open.match(line):
-                raise RuntimeError('ipmitool failed: {}'.format(output))
+                raise RuntimeError(f'ipmitool failed: {output}')
 
             if self.re_long_password.match(line):
                 raise IpmiLongPasswordError(line)
@@ -226,7 +226,7 @@ class Ipmitool(Interface):
 
     @staticmethod
     def _build_ipmitool_raw_data(lun: int, netfn: int, raw: bytes) -> str:
-        cmd = ' -l {:d} raw '.format(lun)
+        cmd = f' -l {lun:d} raw '
         cmd += ' '.join(['0x%02x' % (d)
                          for d in [netfn] + array('B', raw).tolist()])
         return cmd
@@ -302,13 +302,8 @@ class Ipmitool(Interface):
         if not hasattr(self, '_session'):
             raise RuntimeError('Session needs to be set')
 
-        cmd = '{path!s:s} -I {interface!s:s} -D {port!s:s}:{baud!s:s}'\
-            .format(
-                path=self.IPMITOOL_PATH,
-                interface=self._interface_type,
-                port=self._session.serial_port,
-                baud=self._session.serial_baudrate
-            )
+        cmd = (f'{self.IPMITOOL_PATH} -I {self._interface_type} '
+               f'-D {self._session.serial_port}:{self._session.serial_baudrate}')
 
         cmd += self._build_ipmitool_target(target)
         cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)

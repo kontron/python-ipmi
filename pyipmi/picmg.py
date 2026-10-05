@@ -28,7 +28,7 @@ from .msgs.picmg import \
         FRU_ACTIVATION_FRU_ACTIVATE, FRU_ACTIVATION_FRU_DEACTIVATE
 
 
-class Picmg(object):
+class Picmg:
     def get_picmg_properties(self) -> Message:
         return self.send_message_with_name('GetPicmgProperties')
 
@@ -379,7 +379,7 @@ class LedState(State):
     def __init__(self, rsp: Message | None = None, fru_id: int | None = None,
                  led_id: int | None = None, color: int | None = None,
                  function: int | None = None) -> None:
-        super(LedState, self).__init__(rsp)
+        super().__init__(rsp)
         if fru_id is not None:
             self.fru_id = fru_id
         if led_id is not None:

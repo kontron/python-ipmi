@@ -4,7 +4,7 @@ from pyipmi import interfaces, create_connection
 from pyipmi.msgs.event import (SetEventReceiverRsp, GetEventReceiverRsp)
 
 
-class TestEvent(object):
+class TestEvent:
 
     def setup_method(self):
         self.mock_send_recv = MagicMock()

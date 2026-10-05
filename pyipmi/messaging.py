@@ -62,7 +62,7 @@ CONVERT_USER_PRIVILEGE_TO_RAW = {
 }
 
 
-class Messaging(object):
+class Messaging:
     def get_channel_authentication_capabilities(
             self, channel: int,
             priv_lvl: int) -> ChannelAuthenticationCapabilities:
