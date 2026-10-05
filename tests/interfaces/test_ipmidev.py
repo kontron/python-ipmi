@@ -37,10 +37,14 @@ class FakeDriver:
             addr_type = ctypes.c_int.from_address(arg.addr).value
             if addr_type == ipmidev.IPMI_SYSTEM_INTERFACE_ADDR_TYPE:
                 assert arg.addr_len == ctypes.sizeof(IpmiSystemInterfaceAddr)
-                addr = IpmiSystemInterfaceAddr.from_address(arg.addr)
+                addr_cls = IpmiSystemInterfaceAddr
             else:
                 assert arg.addr_len == ctypes.sizeof(IpmiIpmbAddr)
-                addr = IpmiIpmbAddr.from_address(arg.addr)
+                addr_cls = IpmiIpmbAddr
+            # copy the address, the memory is owned by the interface and is
+            # freed after the request was sent
+            addr = addr_cls.from_buffer_copy(
+                ctypes.string_at(arg.addr, arg.addr_len))
             data = ctypes.string_at(arg.msg.data, arg.msg.data_len)
             req = (addr, arg.msg.netfn, arg.msg.cmd, data)
             self.requests.append(req)
