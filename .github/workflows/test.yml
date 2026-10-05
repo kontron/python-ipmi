@@ -19,7 +19,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: pip install python-coveralls coverage pytest pytest-cov cryptography
+        run: pip install python-coveralls coverage pytest pytest-cov
+
+      # cryptography (needed for RMCP+ AES) cannot be built for PyPy 3.10,
+      # the AES tests are skipped there
+      - name: Install optional dependencies
+        if: ${{ !startsWith(matrix.python-version, 'pypy') }}
+        run: pip install cryptography
 
         #      - name: Setup and run tests
         #        run: python setup.py test
