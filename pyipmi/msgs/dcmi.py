@@ -73,7 +73,6 @@ class GetPowerReadingReq(DcmiMessage):
 class GetPowerReadingRsp(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_POWER_READING
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __not_implemented__ = True
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
@@ -91,9 +90,9 @@ class GetPowerReadingRsp(DcmiMessage):
 class GetPowerLimitReq(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_POWER_LIMIT
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __not_implemented__ = True
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('reserved', 2, 0),
     )
 
 
@@ -101,10 +100,15 @@ class GetPowerLimitReq(DcmiMessage):
 class GetPowerLimitRsp(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_POWER_LIMIT
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __not_implemented__ = True
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('reserved_1', 2, 0),
+        UnsignedInt('exception_actions', 1),
+        UnsignedInt('power_limit', 2),
+        UnsignedInt('correction_time_limit', 4),
+        UnsignedInt('reserved_2', 2, 0),
+        UnsignedInt('statistics_sampling_period', 2),
     )
 
 
@@ -112,9 +116,14 @@ class GetPowerLimitRsp(DcmiMessage):
 class SetPowerLimitReq(DcmiMessage):
     __cmdid__ = constants.CMDID_SET_POWER_LIMIT
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __not_implemented__ = True
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('reserved_1', 3, 0),
+        UnsignedInt('exception_actions', 1),
+        UnsignedInt('power_limit', 2),
+        UnsignedInt('correction_time_limit', 4),
+        UnsignedInt('reserved_2', 2, 0),
+        UnsignedInt('statistics_sampling_period', 2),
     )
 
 
@@ -122,7 +131,6 @@ class SetPowerLimitReq(DcmiMessage):
 class SetPowerLimitRsp(DcmiMessage):
     __cmdid__ = constants.CMDID_SET_POWER_LIMIT
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __not_implemented__ = True
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
@@ -130,20 +138,20 @@ class SetPowerLimitRsp(DcmiMessage):
 
 
 @register_message_class
-class GetActivateDeactivatePowerLimitReq(DcmiMessage):
+class ActivateDeactivatePowerLimitReq(DcmiMessage):
     __cmdid__ = constants.CMDID_ACTIVATE_DEACTIVATE_POWER_LIMIT
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __not_implemented__ = True
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('activation', 1),
+        UnsignedInt('reserved', 2, 0),
     )
 
 
 @register_message_class
-class GetActivateDeactivatePowerLimitRsp(DcmiMessage):
+class ActivateDeactivatePowerLimitRsp(DcmiMessage):
     __cmdid__ = constants.CMDID_ACTIVATE_DEACTIVATE_POWER_LIMIT
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __not_implemented__ = True
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
@@ -154,9 +162,10 @@ class GetActivateDeactivatePowerLimitRsp(DcmiMessage):
 class GetAssetTagReq(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_ASSET_TAG
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __not_implemented__ = True
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('offset', 1),
+        UnsignedInt('number_of_bytes', 1),
     )
 
 
@@ -164,10 +173,11 @@ class GetAssetTagReq(DcmiMessage):
 class GetAssetTagRsp(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_ASSET_TAG
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __not_implemented__ = True
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('total_length', 1),
+        RemainingBytes('data'),
     )
 
 
@@ -201,9 +211,11 @@ class GetDcmiSensorInfoRsp(DcmiMessage):
 class SetAssetTagReq(DcmiMessage):
     __cmdid__ = constants.CMDID_SET_ASSET_TAG
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __not_implemented__ = True
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('offset', 1),
+        UnsignedInt('number_of_bytes', 1),
+        RemainingBytes('data'),
     )
 
 
@@ -211,10 +223,10 @@ class SetAssetTagReq(DcmiMessage):
 class SetAssetTagRsp(DcmiMessage):
     __cmdid__ = constants.CMDID_SET_ASSET_TAG
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __not_implemented__ = True
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('total_length', 1),
     )
 
 
@@ -222,9 +234,10 @@ class SetAssetTagRsp(DcmiMessage):
 class GetManagementControllerIdStringReq(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_MANAGEMENT_CONTROLLER_ID_STRING
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __not_implemented__ = True
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('offset', 1),
+        UnsignedInt('number_of_bytes', 1),
     )
 
 
@@ -232,10 +245,11 @@ class GetManagementControllerIdStringReq(DcmiMessage):
 class GetManagementControllerIdStringRsp(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_MANAGEMENT_CONTROLLER_ID_STRING
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __not_implemented__ = True
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('total_length', 1),
+        RemainingBytes('data'),
     )
 
 
@@ -243,9 +257,11 @@ class GetManagementControllerIdStringRsp(DcmiMessage):
 class SetManagementControllerIdStringReq(DcmiMessage):
     __cmdid__ = constants.CMDID_SET_MANAGEMENT_CONTROLLER_ID_STRING
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __not_implemented__ = True
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('offset', 1),
+        UnsignedInt('number_of_bytes', 1),
+        RemainingBytes('data'),
     )
 
 
@@ -253,8 +269,8 @@ class SetManagementControllerIdStringReq(DcmiMessage):
 class SetManagementControllerIdStringRsp(DcmiMessage):
     __cmdid__ = constants.CMDID_SET_MANAGEMENT_CONTROLLER_ID_STRING
     __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
-    __not_implemented__ = True
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('total_length', 1),
     )
