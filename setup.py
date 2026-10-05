@@ -34,13 +34,14 @@ except (OSError, subprocess.CalledProcessError):
         version = 'unknown'
 
 
-with open('README.rst') as f:
+with open('README.md') as f:
     readme = f.read()
 
 setup(name=name,
       version=version,
       description='Pure python IPMI library',
       long_description=readme,
+      long_description_content_type='text/markdown',
       url='https://github.com/kontron/python-ipmi',
       download_url='https://github.com/kontron/python-ipmi/tarball/' + version,
       author='Michael Walle, Heiko Thiery',
