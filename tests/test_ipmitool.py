@@ -5,7 +5,11 @@ import logging
 
 import pytest
 
+from unittest.mock import MagicMock
+
 from pyipmi import ipmitool
+from pyipmi.errors import CompletionCodeError
+from pyipmi.msgs import create_response_by_name, decode_message
 from pyipmi.ipmitool import build_parser, log_level, parse_interface_options
 from pyipmi.sdr import SdrCommon
 
@@ -160,6 +164,23 @@ class TestParser:
         ('picmg send heartbeat', 'cmd_picmg_send_pm_heartbeat'),
         ('vita properties', 'cmd_vita_properties'),
         ('vita led set 0 1 255 0 3', 'cmd_vita_led_set'),
+        ('dcmi discover', 'cmd_dcmi_discover'),
+        ('dcmi sensors', 'cmd_dcmi_sensors'),
+        ('dcmi get_temp_reading', 'cmd_dcmi_get_temp_reading'),
+        ('dcmi power reading', 'cmd_dcmi_power_reading'),
+        ('dcmi power get_limit', 'cmd_dcmi_power_get_limit'),
+        ('dcmi power set_limit 300 1000 5', 'cmd_dcmi_power_set_limit'),
+        ('dcmi power activate', 'cmd_dcmi_power_activate'),
+        ('dcmi power deactivate', 'cmd_dcmi_power_deactivate'),
+        ('dcmi thermalpolicy get inlet 1', 'cmd_dcmi_thermalpolicy_get'),
+        ('dcmi thermalpolicy set inlet 1 45 10',
+         'cmd_dcmi_thermalpolicy_set'),
+        ('dcmi asset_tag', 'cmd_dcmi_asset_tag'),
+        ('dcmi set_asset_tag tag', 'cmd_dcmi_set_asset_tag'),
+        ('dcmi get_mc_id_string', 'cmd_dcmi_get_mc_id_string'),
+        ('dcmi set_mc_id_string bmc', 'cmd_dcmi_set_mc_id_string'),
+        ('dcmi get_conf_param', 'cmd_dcmi_get_conf_param'),
+        ('dcmi set_conf_param 3 64', 'cmd_dcmi_set_conf_param'),
     ])
     def test_commands(self, command, func):
         assert self.parse(command).func is getattr(ipmitool, func)
@@ -175,6 +196,37 @@ class TestParser:
         assert (args.fru_id, args.all) == (0, None)
         args = self.parse('fru print 2 all')
         assert (args.fru_id, args.all) == (2, 'all')
+
+    def test_dcmi_entity(self):
+        assert self.parse('dcmi get_temp_reading').entity is None
+        assert self.parse('dcmi get_temp_reading cpu').entity == 0x41
+        assert self.parse('dcmi get_temp_reading 0x37').entity == 0x37
+        args = self.parse('dcmi thermalpolicy get baseboard 2')
+        assert (args.entity, args.instance) == (0x42, 2)
+
+    def test_dcmi_invalid_entity(self, capsys):
+        with pytest.raises(SystemExit):
+            self.parse('dcmi get_temp_reading gpu')
+        assert 'invalid entity' in capsys.readouterr().err
+
+    def test_dcmi_power_set_limit(self):
+        args = self.parse('dcmi power set_limit 300 1000 5')
+        assert (args.limit, args.correction_time, args.sampling_period,
+                args.action) == (300, 1000, 5, 'no_action')
+        args = self.parse('dcmi power set_limit 300 1000 5 '
+                          '--action power_off')
+        assert args.action == 'power_off'
+
+    def test_dcmi_thermalpolicy_set(self):
+        args = self.parse('dcmi thermalpolicy set cpu 1 80 30 --power-off')
+        assert (args.entity, args.instance, args.limit,
+                args.exception_time) == (0x41, 1, 80, 30)
+        assert args.power_off and not args.log_sel and not args.disable
+
+    def test_dcmi_set_conf_param_invalid_selector(self, capsys):
+        with pytest.raises(SystemExit):
+            self.parse('dcmi set_conf_param 6 1')
+        assert 'invalid choice' in capsys.readouterr().err
 
     def test_hpm_check_needs_no_connection(self):
         assert not self.parse('hpm check file.img').needs_connection
@@ -267,3 +319,151 @@ class TestSdrShow:
         out = capsys.readouterr().out
         assert 'Device Id string: FRU1' in out
         assert 'Entity:           10.1' in out
+
+
+class TestDcmiCommands:
+    def setup_method(self):
+        self.ipmi = MagicMock()
+
+    def run(self, command):
+        args = build_parser().parse_args(command.split())
+        args.func(self.ipmi, args)
+        return args
+
+    def test_discover(self, capsys):
+        rsp = create_response_by_name('GetDcmiCapabilities')
+        decode_message(rsp, b'\x00\xdc\x01\x05\x02\x00\x01\x05')
+        self.ipmi.get_dcmi_capabilities.side_effect = [
+            rsp, rsp, rsp, CompletionCodeError(0xcc), rsp]
+
+        self.run('dcmi discover')
+
+        out = capsys.readouterr().out.splitlines()
+        assert len(out) == 5
+        assert out[0] == ('Supported DCMI capabilities                  : '
+                          '00 01 05 (DCMI 1.5, revision 2)')
+        assert out[3].endswith('ERR: CC=0xcc')
+
+    def test_power_reading(self, capsys):
+        rsp = create_response_by_name('GetPowerReading')
+        decode_message(rsp, b'\x00\xdc\x64\x00\x32\x00\xc8\x00\x78\x00'
+                            b'\x10\x20\x30\x40\xe8\x03\x00\x00\x40')
+        self.ipmi.get_power_reading.return_value = rsp
+
+        self.run('dcmi power reading')
+
+        self.ipmi.get_power_reading.assert_called_once_with(1)
+        out = capsys.readouterr().out
+        assert 'Instantaneous power reading :   100 Watts' in out
+        assert 'Average power               :   120 Watts' in out
+        assert 'Power reading state         : activated' in out
+
+    def test_power_get_limit(self, capsys):
+        rsp = create_response_by_name('GetPowerLimit')
+        decode_message(rsp, b'\x00\xdc\x00\x00\x01\x2c\x01'
+                            b'\xe8\x03\x00\x00\x00\x00\x05\x00')
+        self.ipmi.get_power_limit.return_value = rsp
+
+        self.run('dcmi power get_limit')
+
+        out = capsys.readouterr().out
+        assert 'Exception actions      : power_off' in out
+        assert 'Power limit            : 300 Watts' in out
+        assert 'Correction time        : 1000 ms' in out
+        assert 'Sampling period        : 5 s' in out
+
+    def test_power_set_limit(self):
+        self.run('dcmi power set_limit 300 1000 5 --action sel_logging')
+        self.ipmi.set_power_limit.assert_called_once_with(300, 1000, 5, 0x11)
+
+    def test_power_activate_deactivate(self):
+        self.run('dcmi power activate')
+        self.ipmi.activate_power_limit.assert_called_once_with()
+        self.run('dcmi power deactivate')
+        self.ipmi.deactivate_power_limit.assert_called_once_with()
+
+    def test_sensors(self, capsys):
+        self.ipmi.get_dcmi_sensor_record_ids.return_value = [0x10, 0x20]
+        sdr = MagicMock(device_id_string='Inlet Temp')
+        self.ipmi.get_repository_sdr.side_effect = [
+            sdr, CompletionCodeError(0xcb)]
+
+        self.run('dcmi sensors')
+
+        assert capsys.readouterr().out.splitlines() == [
+            '0x0010 | Inlet Temp', '0x0020 | ']
+
+    def test_get_temp_reading_all(self, capsys):
+        self.ipmi.get_temperature_readings.side_effect = [
+            [(1, 25)], [(1, 45), (2, -5)], CompletionCodeError(0xcb)]
+
+        self.run('dcmi get_temp_reading')
+
+        assert capsys.readouterr().out.splitlines() == [
+            'inlet      |   1 |  +25 C',
+            'cpu        |   1 |  +45 C',
+            'cpu        |   2 |   -5 C',
+            'baseboard  | ERR: CC=0xcb']
+
+    def test_get_temp_reading_entity(self):
+        self.ipmi.get_temperature_readings.return_value = []
+        self.run('dcmi get_temp_reading 0x37')
+        self.ipmi.get_temperature_readings.assert_called_once_with(0x37)
+
+    def test_thermalpolicy_get(self, capsys):
+        rsp = create_response_by_name('GetThermalLimit')
+        decode_message(rsp, b'\x00\xdc\xa0\x2d\x2c\x01')
+        self.ipmi.get_thermal_limit.return_value = rsp
+
+        self.run('dcmi thermalpolicy get inlet 1')
+
+        self.ipmi.get_thermal_limit.assert_called_once_with(0x40, 1)
+        out = capsys.readouterr().out
+        assert 'Exception actions    : enabled' in out
+        assert '  Hard power off     : inactive' in out
+        assert '  Log event to SEL   : active' in out
+        assert 'Temperature limit    : 45 C' in out
+        assert 'Exception time       : 300 s' in out
+
+    def test_thermalpolicy_set(self):
+        self.run('dcmi thermalpolicy set cpu 2 80 30 --log-sel')
+        self.ipmi.set_thermal_limit.assert_called_once_with(
+            0x41, 2, 80, 30, enable=True, hard_power_off=False,
+            log_event_to_sel=True)
+
+    def test_asset_tag(self, capsys):
+        self.ipmi.get_asset_tag.return_value = 'my tag'
+        self.run('dcmi asset_tag')
+        assert capsys.readouterr().out == 'Asset tag: my tag\n'
+
+        self.run('dcmi set_asset_tag new')
+        self.ipmi.set_asset_tag.assert_called_once_with('new')
+
+    def test_mc_id_string(self, capsys):
+        self.ipmi.get_management_controller_id_string.return_value = 'bmc'
+        self.run('dcmi get_mc_id_string')
+        assert capsys.readouterr().out == \
+            'Management controller ID string: bmc\n'
+
+        self.run('dcmi set_mc_id_string new')
+        self.ipmi.set_management_controller_id_string.assert_called_once_with(
+            'new')
+
+    def test_get_conf_param(self, capsys):
+        rsp = create_response_by_name('GetDcmiConfigurationParameters')
+        decode_message(rsp, b'\x00\xdc\x01\x05\x01\x3c\x00')
+        self.ipmi.get_dcmi_configuration_parameters.return_value = rsp
+
+        self.run('dcmi get_conf_param 5')
+
+        self.ipmi.get_dcmi_configuration_parameters.assert_called_once_with(5)
+        assert capsys.readouterr().out == 'DHCP timing 3           : 3c 00\n'
+
+    @pytest.mark.parametrize('command, selector, data', [
+        ('dcmi set_conf_param 3 64', 3, b'\x40'),
+        ('dcmi set_conf_param 5 0x3c', 5, b'\x3c\x00'),
+    ])
+    def test_set_conf_param(self, command, selector, data):
+        self.run(command)
+        self.ipmi.set_dcmi_configuration_parameters.assert_called_once_with(
+            selector, data)
