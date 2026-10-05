@@ -97,7 +97,7 @@ def get_sdr_data_helper(reserve_fn: Callable[[], int], get_fn: Callable,
                 if max_req_len <= 0:
                     retry = 0
             else:
-                raise CompletionCodeError(e.cc)
+                raise CompletionCodeError(e.cc) from e
 
         record_data.extend(data[:])
         offset = len(record_data)

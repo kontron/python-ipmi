@@ -113,6 +113,14 @@ def test_ipmi():
     assert isinstance(ipmi.requester, NullRequester)
 
 
+def test_ipmi_default_session_not_shared():
+    ipmi1 = Ipmi(interface=interfaces.create_interface('mock'))
+    ipmi2 = Ipmi(interface=interfaces.create_interface('mock'))
+    assert ipmi1.session is not ipmi2.session
+    assert ipmi1.session.interface is not ipmi2.session.interface
+    assert isinstance(ipmi1.requester, NullRequester)
+
+
 def test_ipmi_with_statemetn():
     interface = interfaces.create_interface('mock')
 

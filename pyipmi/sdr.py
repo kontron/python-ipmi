@@ -219,7 +219,7 @@ class SdrCommon:
             self.type = buffer.pop_unsigned_int(1)
             self.length = buffer.pop_unsigned_int(1)
         except IndexError:
-            raise DecodingError('Invalid SDR length (%d)' % len(data))
+            raise DecodingError('Invalid SDR length (%d)' % len(data)) from None
 
     def _common_record_key(self, buffer: ByteBuffer) -> None:
         self.owner_id = buffer.pop_unsigned_int(1)
@@ -340,7 +340,7 @@ class SdrFullSensorRecord(SdrCommon):
             }[self.linearization & 0x7f]
         except KeyError:
             raise errors.DecodingError('unknown linearization %d' %
-                                       (self.linearization & 0x7f))
+                                       (self.linearization & 0x7f)) from None
 
     @staticmethod
     def _convert_complement(value: int, size: int) -> int:

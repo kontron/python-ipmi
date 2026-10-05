@@ -68,7 +68,7 @@ class ByteArray(BaseField):
 
     def decode(self, obj: Message, data: ByteBuffer) -> None:
         bytes = []
-        for i in range(self._length(obj)):
+        for _ in range(self._length(obj)):
             bytes.append(data.pop_unsigned_int(1))
         setattr(obj, self.name, array('B', bytes))
 
@@ -298,7 +298,7 @@ class Bitfield(BaseField):
             try:
                 value |= data.pop_unsigned_int(1) << (8*i)
             except IndexError:
-                raise DecodingError('Data too short for message')
+                raise DecodingError('Data too short for message') from None
         wrapper = getattr(obj, self.name)
         wrapper._value = value
 

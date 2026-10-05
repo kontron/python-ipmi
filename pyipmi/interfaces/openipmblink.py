@@ -185,7 +185,7 @@ class OpenIpmbLinkDevice:
                 try:
                     packet = self._replies.get(timeout=timeout)
                 except queue.Empty:
-                    raise OpenIpmbLinkError('no reply from bridge')
+                    raise OpenIpmbLinkError('no reply from bridge') from None
                 if packet.get('evt') == 'error':
                     raise OpenIpmbLinkError('bridge reported error: %s'
                                             % packet.get('status'))

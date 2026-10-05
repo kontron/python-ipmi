@@ -374,8 +374,6 @@ class FruDataMultiRecord(FruData):
 class FruDataUnknown(FruDataMultiRecord):
     """This class is used to indicate undecoded picmg record."""
 
-    pass
-
 
 class FruPicmgRecord(FruDataMultiRecord):
     PICMG_RECORD_ID_BACKPLANE_PTP_CONNECTIVITY = 0x04
