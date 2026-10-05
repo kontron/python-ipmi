@@ -113,6 +113,13 @@ def cmd_sensor_rearm(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     ipmi.rearm_sensor_events(args.number)
 
 
+def format_analog_value(value: float | None) -> str:
+    """Format a converted analog sensor value with 3 decimal places."""
+    if value is None:
+        return 'na'
+    return '%.3f' % value
+
+
 def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
 
     print("SDR record ID:    0x%04x" % s.id)
@@ -124,15 +131,19 @@ def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
         print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
     if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
         (raw, states) = ipmi.get_sensor_reading(s.number, s.owner_lun)
-        value = s.convert_sensor_raw_to_value(raw)
-        if value is None:
-            value = "na"
-        t_unr = s.convert_sensor_raw_to_value(s.threshold['unr'])
-        t_ucr = s.convert_sensor_raw_to_value(s.threshold['ucr'])
-        t_unc = s.convert_sensor_raw_to_value(s.threshold['unc'])
-        t_lnc = s.convert_sensor_raw_to_value(s.threshold['lnc'])
-        t_lcr = s.convert_sensor_raw_to_value(s.threshold['lcr'])
-        t_lnr = s.convert_sensor_raw_to_value(s.threshold['lnr'])
+        value = format_analog_value(s.convert_sensor_raw_to_value(raw))
+        t_unr = format_analog_value(
+            s.convert_sensor_raw_to_value(s.threshold['unr']))
+        t_ucr = format_analog_value(
+            s.convert_sensor_raw_to_value(s.threshold['ucr']))
+        t_unc = format_analog_value(
+            s.convert_sensor_raw_to_value(s.threshold['unc']))
+        t_lnc = format_analog_value(
+            s.convert_sensor_raw_to_value(s.threshold['lnc']))
+        t_lcr = format_analog_value(
+            s.convert_sensor_raw_to_value(s.threshold['lcr']))
+        t_lnr = format_analog_value(
+            s.convert_sensor_raw_to_value(s.threshold['lnr']))
         print("Reading value:    %s" % value)
         print("Reading state:    0x%x" % states)
         print("UNR:              %s" % t_unr)
@@ -223,7 +234,8 @@ def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
                 (value, states) = ipmi.get_sensor_reading(s.number)
                 number = s.number
                 if value is not None:
-                    value = s.convert_sensor_raw_to_value(value)
+                    value = format_analog_value(
+                        s.convert_sensor_raw_to_value(value))
 
             elif s.type is pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
                 (value, states) = ipmi.get_sensor_reading(s.number)
