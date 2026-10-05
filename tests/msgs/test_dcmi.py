@@ -3,11 +3,13 @@
 import pytest
 
 import pyipmi.msgs.dcmi
+from pyipmi.errors import CompletionCodeError
 from pyipmi.msgs import create_request_by_name
 from pyipmi.msgs import create_response_by_name
 from pyipmi.msgs import decode_message
 from pyipmi.msgs import encode_message
 from pyipmi.msgs.constants import NETFN_GROUP_EXTENSION
+from pyipmi.utils import check_rsp_completion_code
 
 
 @pytest.mark.parametrize('name, cmdid', [
@@ -292,3 +294,23 @@ def test_getdcmiconfigurationparameters_decode_rsp():
     assert m.specification_conformance.minor == 5
     assert m.parameter_revision == 1
     assert m.parameter_data.tobytes() == b'\x3c\x00'
+
+
+@pytest.mark.parametrize('name, cc, desc', [
+    ('GetPowerLimit', 0x80, 'no active set power limit'),
+    ('SetPowerLimit', 0x84, 'power limit out of range'),
+    ('SetPowerLimit', 0x85, 'correction time out of range'),
+    ('SetPowerLimit', 0x89, 'statistics reporting period out of range'),
+    ('GetAssetTag', 0x81, 'encoding type in FRU is BCD Plus'),
+    ('SetThermalLimit', 0x84, 'temperature limit out of range'),
+    ('SetDcmiConfigurationParameters', 0x82,
+     'attempt to write read-only parameter'),
+    ('GetDcmiConfigurationParameters', 0x80, 'parameter not supported'),
+])
+def test_command_specific_completion_codes(name, cc, desc):
+    rsp = create_response_by_name(name)
+    decode_message(rsp, bytes([cc]))
+    with pytest.raises(CompletionCodeError) as e:
+        check_rsp_completion_code(rsp)
+    assert e.value.cc == cc
+    assert e.value.cc_desc == desc
