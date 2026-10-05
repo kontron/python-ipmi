@@ -78,6 +78,6 @@ class Interface:
         rsp = create_message(req.netfn + 1, req.cmdid, req.group_extension)
         decode_message(rsp, rx_data)
 
-        logger.debug('IPMI Response [%s])', rsp)
+        logger.debug('IPMI Response [%s]', rsp)
 
         return rsp
