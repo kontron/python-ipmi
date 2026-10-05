@@ -251,6 +251,14 @@ def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
                 print(f'0x{s.id:04x} | {s.number:3d} | {s.device_id_string:18s} | ERR: CC=0x{e.cc:02x}')
 
 
+def cmd_fru_read(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    data = ipmi.read_fru_data_full(args.fru_id)
+    with open(args.filename, 'wb') as f:
+        f.write(data)
+    print('Read %d bytes from FRU %d to %s'
+          % (len(data), args.fru_id, args.filename))
+
+
 def cmd_fru_print(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     inv = ipmi.get_fru_inventory(args.fru_id)
 
@@ -1022,11 +1030,15 @@ def build_parser() -> argparse.ArgumentParser:
     p = group.command('power', cmd_chassis_power, 'Set power state')
     p.add_argument('action', choices=tuple(CHASSIS_POWER_CONTROLS))
 
-    group = commands.group('fru', 'Print built-in FRU')
+    group = commands.group('fru', 'Print and read built-in FRU')
     p = group.command('print', cmd_fru_print, 'Print FRU inventory')
     p.add_argument('fru_id', type=auto_int, nargs='?', default=0)
     p.add_argument('all', nargs='?', choices=('all',),
                    help='also print the multirecord area')
+    p = group.command('read', cmd_fru_read,
+                      'Read the FRU data and write it to a file')
+    p.add_argument('fru_id', type=auto_int)
+    p.add_argument('filename', help='file to write the FRU data to')
 
     group = commands.group('sdr', 'Print Sensor Data Repository entries '
                            'and readings')

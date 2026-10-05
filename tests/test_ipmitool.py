@@ -146,6 +146,7 @@ class TestParser:
         ('chassis status', 'cmd_chassis_status'),
         ('chassis power cycle', 'cmd_chassis_power'),
         ('fru print', 'cmd_fru_print'),
+        ('fru read 0 fru.bin', 'cmd_fru_read'),
         ('sdr list', 'cmd_sdr_list'),
         ('sdr raw 1', 'cmd_sdr_show_raw'),
         ('sdr show 1', 'cmd_sdr_show'),
@@ -196,6 +197,12 @@ class TestParser:
         assert (args.fru_id, args.all) == (0, None)
         args = self.parse('fru print 2 all')
         assert (args.fru_id, args.all) == (2, 'all')
+
+    def test_fru_read(self):
+        args = self.parse('fru read 0x02 fru.bin')
+        assert (args.fru_id, args.filename) == (2, 'fru.bin')
+        with pytest.raises(SystemExit):
+            self.parse('fru read 0')
 
     def test_dcmi_entity(self):
         assert self.parse('dcmi get_temp_reading').entity is None
@@ -467,3 +474,16 @@ class TestDcmiCommands:
         self.run(command)
         self.ipmi.set_dcmi_configuration_parameters.assert_called_once_with(
             selector, data)
+
+
+def test_cmd_fru_read(tmp_path, capsys):
+    ipmi = MagicMock()
+    ipmi.read_fru_data_full.return_value = bytes(range(256))
+    filename = tmp_path / 'fru.bin'
+    args = build_parser().parse_args(['fru', 'read', '1', str(filename)])
+    args.func(ipmi, args)
+
+    ipmi.read_fru_data_full.assert_called_once_with(1)
+    assert filename.read_bytes() == bytes(range(256))
+    assert capsys.readouterr().out == (
+        'Read 256 bytes from FRU 1 to %s\n' % filename)
