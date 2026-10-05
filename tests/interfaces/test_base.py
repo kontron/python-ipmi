@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import logging
+
 import pytest
 
 import pyipmi
@@ -74,6 +76,16 @@ def test_ipmb_send_and_receive_raw():
     assert intf.header.cmdid == 1
     assert intf.header.rq_seq == 1
     assert intf.raw_bytes == b'\x02'
+
+
+def test_ipmb_rx_logged_by_interface_module(caplog):
+    intf = IpmbStub(slave_address=0x20)
+    with caplog.at_level(logging.DEBUG, logger='pyipmi'), \
+            caplog.at_level(logging.DEBUG, logger=__name__):
+        intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
+
+    rx = [r for r in caplog.records if r.getMessage().startswith('IPMB RX')]
+    assert [r.name for r in rx] == [__name__]
 
 
 def test_ipmb_default_router():

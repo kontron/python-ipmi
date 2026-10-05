@@ -327,6 +327,14 @@ class IpmbInterface(Interface):
         """Set the router, None sets the default router."""
         self._router = router if router is not None else self._default_router
 
+    @property
+    def _logger(self) -> logging.Logger:
+        """Logger of the module that implements the interface.
+
+        Received frames are logged there, next to the sent frames.
+        """
+        return logging.getLogger(type(self).__module__)
+
     def send_frame(self, frame: bytes) -> None:
         """Send a complete IPMB message, starting with rsSA."""
         raise NotImplementedError()
@@ -341,7 +349,7 @@ class IpmbInterface(Interface):
 
     def _receive_frame(self, frame: bytes) -> None:
         """Pass a received IPMB message to the router."""
-        logger.debug('IPMB RX [%s]', bytes(frame).hex(' '))
+        self._logger.debug('IPMB RX [%s]', bytes(frame).hex(' '))
         self._router.handle_frame(self, bytes(frame))
 
     def _start_receiver(self) -> None:
@@ -367,7 +375,7 @@ class IpmbInterface(Interface):
             try:
                 frame = self._read_frame(0.05)
             except Exception as e:
-                logger.error('%s receive failed: %s', self.NAME, e)
+                self._logger.error('%s receive failed: %s', self.NAME, e)
                 return
             if frame:
                 self._receive_frame(frame)
