@@ -358,6 +358,7 @@ CMDID_VITA_GET_PAYLOAD_MODE_CAPABILITIES = 0x46
 CMDID_VITA_SET_PAYLOAD_MODE = 0x47
 
 # DCMI commands .. NetFn Group Extension (ID 0xdc)
+GROUP_EXTENSION_DCMI = 0xdc
 CMDID_GET_DCMI_CAPABILITIES_INFO = 0x01
 CMDID_GET_POWER_READING = 0x02
 CMDID_GET_POWER_LIMIT = 0x03
@@ -434,6 +435,36 @@ CC_ERR_CMD_SPECIFIC_DESC = {
     },
     (NETFN_CHASSIS, CMDID_GET_SYSTEM_BOOT_OPTIONS, None): {
         0x80: "parameter not supported:"
+    },
+    (NETFN_GROUP_EXTENSION, CMDID_GET_POWER_LIMIT, GROUP_EXTENSION_DCMI): {
+        0x80: "no active set power limit"
+    },
+    (NETFN_GROUP_EXTENSION, CMDID_SET_POWER_LIMIT, GROUP_EXTENSION_DCMI): {
+        0x84: "power limit out of range",
+        0x85: "correction time out of range",
+        0x89: "statistics reporting period out of range"
+    },
+    (NETFN_GROUP_EXTENSION, CMDID_GET_ASSET_TAG, GROUP_EXTENSION_DCMI): {
+        0x80: "encoding type in FRU is binary / unspecified",
+        0x81: "encoding type in FRU is BCD Plus",
+        0x82: "encoding type in FRU is 6-bit ASCII Packed",
+        0x83: "encoding type in FRU is set to ASCII+Latin1 but language "
+              "code is not set to English"
+    },
+    (NETFN_GROUP_EXTENSION, CMDID_SET_THERMAL_LIMIT, GROUP_EXTENSION_DCMI): {
+        0x84: "temperature limit out of range",
+        0x85: "exception time out of range"
+    },
+    (NETFN_GROUP_EXTENSION, CMDID_SET_DCMI_CONFIGURATION_PARAMETERS,
+     GROUP_EXTENSION_DCMI): {
+        0x80: "parameter not supported",
+        0x81: "attempt to set the 'set in progress' value (in parameter #0) "
+              "when not in the 'set complete' state",
+        0x82: "attempt to write read-only parameter"
+    },
+    (NETFN_GROUP_EXTENSION, CMDID_GET_DCMI_CONFIGURATION_PARAMETERS,
+     GROUP_EXTENSION_DCMI): {
+        0x80: "parameter not supported"
     }
 }
 

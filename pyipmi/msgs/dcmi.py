@@ -25,7 +25,7 @@ from . import RemainingBytes
 from . import Timestamp
 from . import UnsignedInt
 
-DCMI_GROUP_CODE = 0xdc
+DCMI_GROUP_CODE = constants.GROUP_EXTENSION_DCMI
 
 
 class DcmiMessage(Message):
