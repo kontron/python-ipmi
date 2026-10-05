@@ -139,7 +139,7 @@ class Hpm:
                         constants.CMDID_HPM_INITIATE_UPGRADE_ACTION,
                         timeout, interval)
             else:
-                raise HpmError('initiate_upgrade_action CC=0x%02x' % e.cc)
+                raise HpmError('initiate_upgrade_action CC=0x%02x' % e.cc) from e
 
     def upload_firmware_block(self, block_number: int, data: bytes) -> None:
         if isinstance(data, str):
@@ -168,11 +168,11 @@ class Hpm:
                             constants.CMDID_HPM_UPLOAD_FIRMWARE_BLOCK,
                             timeout, interval)
                 else:
-                    raise HpmError('upload_firmware_block CC=0x%02x' % e.cc)
+                    raise HpmError('upload_firmware_block CC=0x%02x' % e.cc) from e
             except IpmiTimeoutError:
                 retry -= 1
                 if retry == 0:
-                    raise IpmiTimeoutError()
+                    raise IpmiTimeoutError() from None
 
             block_number += 1
             block_number &= 0xff
@@ -195,7 +195,7 @@ class Hpm:
                             constants.CMDID_HPM_FINISH_FIRMWARE_UPLOAD,
                             timeout, interval)
             else:
-                raise HpmError('finish_firmware_upload CC=0x%02x' % e.cc)
+                raise HpmError('finish_firmware_upload CC=0x%02x' % e.cc) from e
 
     def get_upgrade_status(self) -> UpgradeStatus:
         return UpgradeStatus(self.send_message_with_name('GetUpgradeStatus'))
@@ -239,7 +239,7 @@ class Hpm:
                             constants.CMDID_HPM_ACTIVATE_FIRMWARE,
                             timeout, interval)
             else:
-                raise HpmError('activate_firmware CC=0x%02x' % e.cc)
+                raise HpmError('activate_firmware CC=0x%02x' % e.cc) from e
         except IpmiTimeoutError:
             # controller is in reset and flashed new firmware
             pass
@@ -266,7 +266,7 @@ class Hpm:
                             constants.CMDID_HPM_INITIATE_MANUAL_ROLLBACK,
                             60, interval)
             else:
-                raise HpmError('activate_firmware CC=0x%02x' % e.cc)
+                raise HpmError('initiate_manual_rollback CC=0x%02x' % e.cc) from e
         except IpmiTimeoutError:
             # controller is in reset and flashed new firmware
             pass

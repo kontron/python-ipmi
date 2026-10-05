@@ -6,7 +6,7 @@ from pyipmi.msgs.registry import DEFAULT_REGISTRY
 
 
 def make_table(grid):
-    col_length = map(list, zip(*[[len(item) for item in row] for row in grid]))
+    col_length = map(list, zip(*[[len(item) for item in row] for row in grid], strict=False))
     max_cols = [max(out) for out in col_length]
     rst = table_div(max_cols, 1)
 

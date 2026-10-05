@@ -95,7 +95,7 @@ class ByteBuffer:
             try:
                 value |= self.array.pop(0) << (8*i)
             except IndexError:
-                raise DecodingError('Data too short for message')
+                raise DecodingError('Data too short for message') from None
         return value
 
     def push_string(self, value: str | bytes) -> None:
@@ -156,7 +156,7 @@ def bcd_decode(encoded_input: Any) -> tuple[str, int]:
             chars.append(BCD_MAP[data >> 4 & 0xf] + BCD_MAP[data & 0xf])
         return (''.join(chars), len(encoded_input) * 2)
     except IndexError:
-        raise ValueError()
+        raise ValueError() from None
 
 
 def bcd_search(name: str) -> codecs.CodecInfo | None:

@@ -53,7 +53,7 @@ class Session:
         try:
             return self._interface
         except AttributeError:
-            raise RuntimeError('No interface has been set')
+            raise RuntimeError('No interface has been set') from None
 
     def _set_interface(self, interface: Any) -> None:
         self._interface = interface

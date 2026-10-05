@@ -54,7 +54,7 @@ class Dcmi:
                                               entity_instance_start=0)
             # convert the returned raw data in a list of SDR record IDs
             ids = [msb << 8 | lsb for (lsb, msb) in
-                   zip(rsp.record_ids, rsp.record_ids[1:])[::2]]
+                   zip(rsp.record_ids[0::2], rsp.record_ids[1::2], strict=False)]
             record_ids.extend(ids)
 
         return record_ids

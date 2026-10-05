@@ -164,8 +164,8 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
            messaging.Messaging, vita.Vita):
 
     def __init__(self, interface: Any = None, target: Target | None = None,
-                 session: Session = Session(),
-                 requester: Any = NullRequester()) -> None:
+                 session: Session | None = None,
+                 requester: Any = None) -> None:
         self._interface = interface
 
         # we need a session, set if not passed
@@ -176,7 +176,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         self._session.interface = interface
 
         self._target = target
-        self.requester = requester
+        self.requester = requester if requester is not None else NullRequester()
 
         for base in Ipmi.__bases__:
             base.__init__(self)
@@ -259,19 +259,19 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         try:
             return self._interface
         except AttributeError:
-            raise RuntimeError('No interface has been set')
+            raise RuntimeError('No interface has been set') from None
 
     def _get_session(self) -> Session:
         try:
             return self._session
         except AttributeError:
-            raise RuntimeError('No IPMI session has been set')
+            raise RuntimeError('No IPMI session has been set') from None
 
     def _get_target(self) -> Target:
         try:
             return self._target
         except AttributeError:
-            raise RuntimeError('No IPMI target has been set')
+            raise RuntimeError('No IPMI target has been set') from None
 
     def _set_interface(self, interface: Any) -> None:
         self._interface = interface

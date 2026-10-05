@@ -167,7 +167,7 @@ class AsfMsg:
                 AsfMsg().ASF_TYPE_PRESENCE_PONG: AsfPong,
             }[asf.asf_type]
         except KeyError:
-            raise DecodingError('Unsupported ASF type(0x%02x)' % asf.asf_type)
+            raise DecodingError('Unsupported ASF type(0x%02x)' % asf.asf_type) from None
 
         instance = cls()
         instance.unpack(sdu)
@@ -321,7 +321,7 @@ class IpmiMsg:
             self.auth_type = array('B', pdu)[0]
             (self.sequence_number,) = struct.unpack('!I', pdu[1:5])
             (self.session_id,) = struct.unpack('!I', pdu[5:9])
-            self.auth_code = [a for a in struct.unpack('!16B', pdu[9:25])]
+            self.auth_code = list(struct.unpack('!16B', pdu[9:25]))
             data_len = array('B', pdu)[25]
         else:
             header_len = struct.calcsize(self.HEADER_FORMAT_NO_AUTH)
@@ -368,7 +368,7 @@ class Rmcp(Interface):
     def __init__(self, slave_address: int = 0x81,
                  host_target_address: int = 0x20,
                  keep_alive_interval: int = 1, max_retries: int = 0,
-                 quirks_cfg: dict = dict()) -> None:
+                 quirks_cfg: dict | None = None) -> None:
         """Native RMCP interface constructor
 
         Parameter `quirks_cfg`: a dict of additional configuration parameters
@@ -409,6 +409,8 @@ class Rmcp(Interface):
         self._stop_keep_alive = None
         self._q = Queue()
         self.transaction_lock = threading.Lock()
+        if quirks_cfg is None:
+            quirks_cfg = {}
         self.quirks_cfg = quirks_cfg
         self.ignore_sdu_length = quirks_cfg.get('rmcp_ignore_sdu_length', False)
         self.ignore_rq_seq = quirks_cfg.get('rmcp_ignore_rq_seq', False)

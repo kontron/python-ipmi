@@ -21,17 +21,14 @@ from .msgs.constants import COMPLETION_CODE_DESCR, CC_ERR_CMD_SPECIFIC_DESC
 
 class DecodingError(Exception):
     """Error on message decoding."""
-    pass
 
 
 class EncodingError(Exception):
     """Error on message encoding."""
-    pass
 
 
 class IpmiTimeoutError(Exception):
     """Timeout occurred."""
-    pass
 
 
 class CompletionCodeError(Exception):
@@ -66,27 +63,22 @@ class CompletionCodeError(Exception):
 
 class NotSupportedError(Exception):
     """Not supported yet."""
-    pass
 
 
 class DescriptionError(Exception):
     """Message description incorrect."""
-    pass
 
 
 class RetryError(Exception):
     """Maximum number of retries exceeded."""
-    pass
 
 
 class DataNotFound(Exception):
     """Requested data not found."""
-    pass
 
 
 class HpmError(Exception):
     """HPM.1 error."""
-    pass
 
 
 class IpmiConnectionError(Exception):
