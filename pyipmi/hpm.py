@@ -533,8 +533,8 @@ class RollbackStatus:
             self._from_rsp(rsp)
 
     def _from_rsp(self, rsp: Message) -> None:
-
-        if rsp.completion_estimate:
+        # the Initiate Manual Rollback response has no completion estimate
+        if getattr(rsp, 'completion_estimate', None):
             self.percent_complete = rsp.completion_estimate
 
 
