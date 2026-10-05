@@ -11,6 +11,7 @@ There are two ways to communicate with a server using :abbr:`IPMI (Intelligent P
 Features
 --------
 * native :abbr:`RMCP (Remote Management Control Protocol)` interface (using python libraries only)
+* native :abbr:`RMCP (Remote Management Control Protocol)`\+ interface (IPMI v2.0, encryption requires the `cryptography`_ package)
 * legacy :abbr:`RMCP (Remote Management Control Protocol)` interface (requires `ipmitool`_ to be installed)
 * :abbr:`IPMB (Intelligent Platform Management Bus)` interface (using the `Total Phase`_ Aardvark)
 
@@ -87,4 +88,4 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 .. _Total Phase: http://www.totalphase.com
 .. _ipmitool: http://sourceforge.net/projects/ipmitool/
 .. _IPMI standard: https://www.intel.com/content/dam/www/public/us/en/documents/product-briefs/ipmi-second-gen-interface-spec-v2-rev1-1.pdf
-.. |I2C| replace:: I\ :sup:`2`\ C
+.. |I2C| replace:: I\ :sup:`2`\ C.. _cryptography: https://pypi.org/project/cryptography/

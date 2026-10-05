@@ -6,6 +6,7 @@ Pure Python IPMI Library
 Features
 --------
 * native RMCP interface
+* native RMCP+ interface
 * legacy RMCP interface (using ipmitool as backend)
 * RMCP+ interface (using ipmitool as backend)
 * system (KCS) interface (using ipmitool as backend)
@@ -36,6 +37,11 @@ https://www.kernel.org/doc/html/latest/driver-api/ipmi.html
 
 For legacy RMCP, RMCP+ and system interface (KCS) using ipmitool as backend
 the installation of ipmitool is required.
+
+The native RMCP+ interface needs the `cryptography`_ package for
+encrypted sessions (AES-CBC-128, cipher suites 3 and 17)::
+
+    pip install python-ipmi[rmcpplus]
 
 Installation
 ------------
@@ -145,6 +151,33 @@ ipmitool command:
 
     ipmitool -I open -t 0x20 raw 0x06 0x01
 
+Example with the native RMCP+ interface:
+
+.. code:: python
+
+    import pyipmi
+    import pyipmi.interfaces
+
+    # without cipher_suite the cipher suites 17 and 3 are tried
+    interface = pyipmi.interfaces.create_interface('rmcpplus', cipher_suite=3)
+
+    connection = pyipmi.create_connection(interface)
+
+    connection.target = pyipmi.Target(0x20)
+    connection.session.set_session_type_rmcp('10.0.0.1', port=623)
+    connection.session.set_auth_type_user('admin', 'admin')
+    connection.session.set_priv_level('ADMINISTRATOR')
+
+    connection.open()
+    connection.get_device_id()
+    connection.close()
+
+ipmitool command:
+
+.. code:: shell
+
+    ipmitool -I lanplus -C 3 -H 10.0.0.1 -p 623 -U admin -P admin -L ADMINISTRATOR -t 0x20 raw 0x06 0x01
+
 Compatibility
 -------------
 
@@ -180,6 +213,7 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 .. _Total Phase: http://www.totalphase.com
 .. _ipmitool: http://sourceforge.net/projects/ipmitool/
+.. _cryptography: https://pypi.org/project/cryptography/
 .. |BuildStatus| image:: https://github.com/kontron/python-ipmi/actions/workflows/test.yml/badge.svg
                  :target: https://github.com/kontron/python-ipmi/actions/workflows/test.yml
 .. |PyPiVersion| image:: https://badge.fury.io/py/python-ipmi.svg
