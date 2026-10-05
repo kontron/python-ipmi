@@ -47,14 +47,27 @@ class Dcmi:
                          ENTITY_ID_DCMI_BASEBOARD)
 
         for entity_id in DCMI_ENTITIES:
-            rsp = self.send_message_with_name('GetDcmiSensorInfo',
-                                              sensor_type=1,
-                                              entity_id=entity_id,
-                                              entity_instance=0,
-                                              entity_instance_start=0)
-            # convert the returned raw data in a list of SDR record IDs
-            ids = [msb << 8 | lsb for (lsb, msb) in
-                   zip(rsp.record_ids[0::2], rsp.record_ids[1::2], strict=False)]
-            record_ids.extend(ids)
+            entity_record_ids: list[int] = []
+            start = 0
+            # a response contains at most 8 record IDs, request the next
+            # instances until all are received
+            while True:
+                rsp = self.send_message_with_name('GetDcmiSensorInfo',
+                                                  sensor_type=1,
+                                                  entity_id=entity_id,
+                                                  entity_instance=0,
+                                                  entity_instance_start=start)
+                # convert the returned raw data in a list of SDR record IDs
+                ids = [msb << 8 | lsb for (lsb, msb) in
+                       zip(rsp.record_ids[0::2], rsp.record_ids[1::2], strict=False)]
+                # ignore duplicates in case the BMC counts the instance start
+                # differently
+                new_ids = [i for i in ids if i not in entity_record_ids]
+                entity_record_ids.extend(new_ids)
+                if (not new_ids or len(entity_record_ids) >=
+                        rsp.total_number_of_instances):
+                    break
+                start += len(ids)
+            record_ids.extend(entity_record_ids)
 
         return record_ids
