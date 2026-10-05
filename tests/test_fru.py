@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 import datetime
 import os
+from types import SimpleNamespace
+
 import pytest
 
-from pyipmi.errors import (DecodingError)
+from pyipmi.errors import CompletionCodeError, DecodingError
+from pyipmi.msgs import constants
 
-from pyipmi.fru import (FruData, FruInventory,
+from pyipmi.fru import (Fru, FruData, FruInventory,
                         FruPicmgPowerModuleCapabilityRecord,
                         InventoryCommonHeader, InventoryBoardInfoArea,
                         get_fru_inventory_from_file)
@@ -171,3 +174,69 @@ def test_FruInventory_ignore_checksum_error():
 
     assert inv.board_info_area.manufacturer.string == 'ASRockRack'
     assert inv.product_info_area.manufacturer.string == 'ASRockRack'
+
+
+class FakeFruDevice(Fru):
+    """Answers Read FRU Data like a device with a maximum read length."""
+
+    def __init__(self, data, max_length=32,
+                 cc=constants.CC_CANT_RET_NUM_REQ_BYTES):
+        super().__init__()
+        self.data = data
+        self.max_length = max_length
+        self.cc = cc
+        self.requests = []
+
+    def send_message_with_name(self, name, fru_id, offset, count):
+        assert name == 'ReadFruData'
+        self.requests.append((offset, count))
+        if count > self.max_length:
+            raise CompletionCodeError(self.cc)
+        rsp = SimpleNamespace(data=self.data[offset:offset + count])
+        rsp.count = len(rsp.data)
+        return rsp
+
+
+FRU_DATA = bytes(range(100))
+
+
+def test_read_fru_data():
+    fru = FakeFruDevice(FRU_DATA)
+    assert fru.read_fru_data(offset=0, count=100) == FRU_DATA
+    assert fru.requests == [(0, 32), (32, 32), (64, 32), (96, 4)]
+
+
+@pytest.mark.parametrize('cc', [constants.CC_CANT_RET_NUM_REQ_BYTES,
+                                constants.CC_REQ_DATA_FIELD_EXCEED,
+                                constants.CC_PARAM_OUT_OF_RANGE])
+def test_read_fru_data_reduce_read_length(cc):
+    fru = FakeFruDevice(FRU_DATA, max_length=28, cc=cc)
+    assert fru.read_fru_data(offset=0, count=60) == FRU_DATA[:60]
+    assert fru.requests == [(0, 32), (0, 30), (0, 28), (28, 28), (56, 4)]
+
+    # the reduced length is kept for the following reads
+    fru.requests = []
+    assert fru.read_fru_data(offset=8, count=40) == FRU_DATA[8:48]
+    assert fru.requests == [(8, 28), (36, 12)]
+
+
+def test_read_fru_data_read_length_per_fru_id():
+    fru = FakeFruDevice(FRU_DATA, max_length=28)
+    fru.read_fru_data(offset=0, count=60, fru_id=0)
+    fru.max_length = 32
+    fru.requests = []
+    fru.read_fru_data(offset=0, count=60, fru_id=1)
+    assert fru.requests == [(0, 32), (32, 28)]
+
+
+def test_read_fru_data_read_length_exhausted():
+    fru = FakeFruDevice(FRU_DATA, max_length=0)
+    with pytest.raises(CompletionCodeError):
+        fru.read_fru_data(offset=0, count=8)
+
+
+def test_read_fru_data_other_error():
+    fru = FakeFruDevice(FRU_DATA, max_length=0, cc=constants.CC_TIMEOUT)
+    with pytest.raises(CompletionCodeError):
+        fru.read_fru_data(offset=0, count=8)
+    assert fru.requests == [(0, 8)]

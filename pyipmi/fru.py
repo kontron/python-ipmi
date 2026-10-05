@@ -21,7 +21,8 @@ import codecs
 import datetime
 import os
 
-from .errors import DecodingError, CompletionCodeError
+from .errors import DecodingError, CompletionCodeError, RetryError
+from .helper import ReadLength
 from .msgs import constants
 from .utils import bcd_search, chunks, py3_array_tobytes
 from .fields import FruTypeLengthString
@@ -30,8 +31,11 @@ codecs.register(bcd_search)
 
 
 class Fru:
-    def __init__(self):
+    def __init__(self) -> None:
         self.write_length = 16
+        # read length per FRU device, a reduced length is kept for the
+        # following reads
+        self._fru_read_lengths: dict[int, ReadLength] = {}
 
     def get_fru_inventory_area_info(self, fru_id: int = 0) -> int:
         rsp = self.send_message_with_name('GetFruInventoryAreaInfo',
@@ -55,7 +59,7 @@ class Fru:
 
     def read_fru_data(self, offset: int | None = None,
                       count: int | None = None, fru_id: int = 0) -> bytes:
-        req_size = 32
+        read_length = self._fru_read_lengths.setdefault(fru_id, ReadLength())
         data = array.array('B')
 
         # first check for maximum area size
@@ -67,8 +71,7 @@ class Fru:
             off = offset
 
         while off < area_size:
-            if (off + req_size) > area_size:
-                req_size = area_size - off
+            req_size = min(read_length.length, area_size - off)
 
             try:
                 rsp = self.send_message_with_name('ReadFruData', fru_id=fru_id,
@@ -77,9 +80,10 @@ class Fru:
                 if ex.cc in (constants.CC_CANT_RET_NUM_REQ_BYTES,
                              constants.CC_REQ_DATA_FIELD_EXCEED,
                              constants.CC_PARAM_OUT_OF_RANGE):
-                    req_size -= 2
-                    if req_size <= 0:
-                        raise
+                    try:
+                        read_length.reduce(req_size, 2)
+                    except RetryError:
+                        raise ex from None
                     continue
                 else:
                     raise

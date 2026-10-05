@@ -24,6 +24,10 @@ from .utils import check_completion_code, ByteBuffer
 from .msgs import constants, Message
 
 
+# bytes per read request (Get SDR, Read FRU Data), like ipmitool
+DEFAULT_READ_LENGTH = 32
+
+
 def get_sdr_chunk_helper(send_fn: Callable[[Message], Message], req: Message,
                          reserve_fn: Callable[[], int],
                          retry: int = 5) -> Message:
@@ -51,9 +55,32 @@ def get_sdr_chunk_helper(send_fn: Callable[[Message], Message], req: Message,
     return rsp
 
 
+class ReadLength:
+    """Number of bytes requested per read command (Get SDR, Read FRU Data).
+
+    Starts with `DEFAULT_READ_LENGTH` and is reduced if the device cannot
+    return that many bytes. Use the same instance for all reads from a device,
+    so the reduced length has to be found only once.
+    """
+
+    def __init__(self, length: int = DEFAULT_READ_LENGTH) -> None:
+        self.length = length
+
+    def reduce(self, failed_length: int, step: int) -> None:
+        """Reduce the length after a request of `failed_length` bytes failed.
+
+        Raises RetryError if no bytes are left.
+        """
+        self.length = min(self.length, failed_length - step)
+        if self.length <= 0:
+            raise RetryError()
+
+
 def get_sdr_data_helper(reserve_fn: Callable[[], int], get_fn: Callable,
                         record_id: int,
-                        reservation_id: int | None = None) -> tuple[int, ByteBuffer]:
+                        reservation_id: int | None = None,
+                        read_length: ReadLength | None = None
+                        ) -> tuple[int, ByteBuffer]:
     """Helper function to retrieve the sdr data.
 
     A specified helper function is used to retrieve the chunks.
@@ -63,6 +90,8 @@ def get_sdr_data_helper(reserve_fn: Callable[[], int], get_fn: Callable,
     """
     if reservation_id is None:
         reservation_id = reserve_fn()
+    if read_length is None:
+        read_length = ReadLength()
 
     (next_id, data) = get_fn(reservation_id, record_id, 0, 5)
 
@@ -75,7 +104,6 @@ def get_sdr_data_helper(reserve_fn: Callable[[], int], get_fn: Callable,
     record_data = ByteBuffer(data)
 
     offset = len(record_data)
-    max_req_len = 20
     retry = 20
 
     # now get the other record data
@@ -84,20 +112,16 @@ def get_sdr_data_helper(reserve_fn: Callable[[], int], get_fn: Callable,
         if retry == 0:
             raise RetryError()
 
-        length = max_req_len
-        if (offset + length) > record_length:
-            length = record_length - offset
+        length = min(read_length.length, record_length - offset)
 
         try:
             (next_id, data) = get_fn(reservation_id, record_id, offset, length)
         except CompletionCodeError as e:
-            if e.cc == constants.CC_CANT_RET_NUM_REQ_BYTES:
-                # reduce max length
-                max_req_len -= 4
-                if max_req_len <= 0:
-                    retry = 0
-            else:
+            if e.cc != constants.CC_CANT_RET_NUM_REQ_BYTES:
                 raise CompletionCodeError(e.cc) from e
+            # reduce the length and retry this chunk
+            read_length.reduce(length, 4)
+            continue
 
         record_data.extend(data[:])
         offset = len(record_data)

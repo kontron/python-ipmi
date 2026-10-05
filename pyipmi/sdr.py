@@ -28,7 +28,7 @@ from .utils import check_completion_code, ByteBuffer
 from .msgs import create_request_by_name, Message
 
 from .helper import get_sdr_data_helper, clear_repository_helper
-from .helper import get_sdr_chunk_helper
+from .helper import get_sdr_chunk_helper, ReadLength
 from .state import State
 
 SDR_TYPE_FULL_SENSOR_RECORD = 0x01
@@ -60,7 +60,9 @@ L_CUBERT = 11
 
 class Sdr:
     def __init__(self) -> None:
-        pass
+        # read length of the SDR repository, a reduced length is kept for the
+        # following records
+        self._sdr_read_length = ReadLength()
 
     def get_sdr_repository_info(self) -> SdrRepositoryInfo:
         return SdrRepositoryInfo(
@@ -91,7 +93,7 @@ class Sdr:
                            reservation_id: int | None = None) -> SdrCommon:
         (next_id, record_data) = get_sdr_data_helper(
                 self.reserve_sdr_repository, self._get_sdr_chunk,
-                record_id, reservation_id)
+                record_id, reservation_id, self._sdr_read_length)
         return SdrCommon.from_data(record_data, next_id)
 
     def sdr_repository_entries(self) -> Generator[SdrCommon, None, None]:

@@ -22,7 +22,8 @@ from collections.abc import Generator
 from .utils import check_completion_code
 from .msgs import create_request_by_name
 
-from .helper import get_sdr_data_helper, get_sdr_chunk_helper
+from .helper import (get_sdr_data_helper, get_sdr_chunk_helper,
+                     ReadLength)
 
 from . import sdr
 
@@ -109,6 +110,11 @@ SENSOR_TYPE_VITA_IPMC_RESET_TYPE = 0xf8
 
 
 class Sensor:
+    def __init__(self) -> None:
+        # read length of the device SDRs, a reduced length is kept for the
+        # following records
+        self._device_sdr_read_length = ReadLength()
+
     def reserve_device_sdr_repository(self) -> int:
         rsp = self.send_message_with_name('ReserveDeviceSdrRepository')
         return rsp.reservation_id
@@ -137,7 +143,8 @@ class Sensor:
         (next_id, record_data) = \
             get_sdr_data_helper(self.reserve_device_sdr_repository,
                                 self._get_device_sdr_chunk,
-                                record_id, reservation_id)
+                                record_id, reservation_id,
+                                self._device_sdr_read_length)
 
         return sdr.SdrCommon.from_data(record_data, next_id)
 
