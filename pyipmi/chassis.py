@@ -240,6 +240,9 @@ class ChassisStatus(State):
     chassis_state = []
 
     def _from_response(self, rsp: Message) -> None:
+        # don't append to the lists shared by all instances
+        self.last_event = []
+        self.chassis_state = []
         self.power_on = bool(rsp.current_power_state.power_on)
         self.overload = bool(rsp.current_power_state.power_overload)
         self.interlock = bool(rsp.current_power_state.interlock)
