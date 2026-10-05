@@ -16,10 +16,13 @@
 
 from __future__ import annotations
 
+import logging
+
 from .. import Target
-from ..logger import log
 from ..msgs import create_message, encode_message, decode_message, Message
 from ..session import Session
+
+logger = logging.getLogger(__name__)
 
 
 class Interface:
@@ -67,7 +70,7 @@ class Interface:
 
         Returns the IPMI message response.
         """
-        log().debug('IPMI Request [%s]', req)
+        logger.debug('IPMI Request [%s]', req)
 
         raw_bytes = bytes((req.cmdid,)) + encode_message(req)
         rx_data = self.send_and_receive_raw(req.target, req.lun, req.netfn,
@@ -75,6 +78,6 @@ class Interface:
         rsp = create_message(req.netfn + 1, req.cmdid, req.group_extension)
         decode_message(rsp, rx_data)
 
-        log().debug('IPMI Response [%s])', rsp)
+        logger.debug('IPMI Response [%s])', rsp)
 
         return rsp

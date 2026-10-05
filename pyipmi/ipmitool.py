@@ -23,18 +23,41 @@ import json
 import logging
 import pprint
 import sys
+import textwrap
 import traceback
 from array import array
 from collections.abc import Callable
 
 import pyipmi
 import pyipmi.interfaces
+import pyipmi.logger
 from pyipmi.utils import py3_array_tobytes
 
 
 def auto_int(value: str) -> int:
     """Argument type for numbers, decimal or with 0x prefix."""
     return int(value, 0)
+
+
+def log_level(value: str) -> tuple[str, int]:
+    """Argument type for log levels, [<logger>=]<level>.
+
+    The logger name is relative to 'pyipmi' (e.g. 'interfaces.aardvark'),
+    without a name the level applies to all pyipmi loggers.
+    """
+    name, _, level = value.rpartition('=')
+    if name in ('', 'pyipmi'):
+        name = 'pyipmi'
+    elif not name.startswith('pyipmi.'):
+        name = 'pyipmi.' + name
+
+    if level.isdigit():
+        return (name, int(level))
+    # getLevelName() maps a known level name to its number
+    number = logging.getLevelName(level.upper())
+    if not isinstance(number, int):
+        raise argparse.ArgumentTypeError('invalid log level: %s' % level)
+    return (name, number)
 
 
 def cmd_bmc_info(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -689,11 +712,30 @@ class _CommandGroups:
         return parser
 
 
+def logger_names() -> list[str]:
+    """Return the names of the pyipmi loggers, relative to 'pyipmi'."""
+    return sorted(name.removeprefix('pyipmi.')
+                  for name, logger in logging.root.manager.loggerDict.items()
+                  if name.startswith('pyipmi.')
+                  and isinstance(logger, logging.Logger))
+
+
+def log_level_help() -> str:
+    names = textwrap.fill(', '.join(logger_names()), width=76,
+                          initial_indent='  ', subsequent_indent='  ')
+    return f'''
+loggers (--log-level <logger>=<level>):
+{names}
+  A parent name sets all its children, e.g. 'interfaces', and without a
+  name the level applies to all loggers.
+'''
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog='ipmitool.py',
         description='Pure python IPMI tool',
-        epilog=INTERFACE_OPTIONS_HELP,
+        epilog=INTERFACE_OPTIONS_HELP + log_level_help(),
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.set_defaults(func=None, help_parser=parser)
 
@@ -701,6 +743,11 @@ def build_parser() -> argparse.ArgumentParser:
                         version='ipmitool v%s' % pyipmi.__version__)
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='be verbose')
+    parser.add_argument('--log-level', dest='log_levels',
+                        metavar='[<logger>=]<level>', type=log_level,
+                        action='append', default=[],
+                        help='set the log level of a logger, e.g. '
+                             'interfaces.aardvark=DEBUG (can be repeated)')
     parser.add_argument('-J', '--json', action='store_true',
                         help='print the output as JSON (if supported)')
     parser.add_argument('-I', dest='interface', metavar='<interface>',
@@ -859,6 +906,16 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def setup_logging(verbose: bool,
+                  log_levels: list[tuple[str, int]]) -> None:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter('%(name)s: %(message)s'))
+    pyipmi.logger.add_log_handler(handler)
+    pyipmi.logger.set_log_level(logging.DEBUG if verbose else logging.INFO)
+    for name, level in log_levels:
+        logging.getLogger(name).setLevel(level)
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -867,13 +924,7 @@ def main(argv: list[str] | None = None) -> None:
         args.help_parser.print_help()
         sys.exit(1)
 
-    handler = logging.StreamHandler()
-    if args.verbose:
-        handler.setLevel(logging.DEBUG)
-    else:
-        handler.setLevel(logging.INFO)
-    pyipmi.logger.add_log_handler(handler)
-    pyipmi.logger.set_log_level(logging.DEBUG)
+    setup_logging(args.verbose, args.log_levels)
 
     routing = args.routing
     if args.channel is not None:

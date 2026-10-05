@@ -16,15 +16,17 @@
 
 from __future__ import annotations
 
+import logging
 import queue
 import threading
 import time
 from typing import Any
 from collections.abc import Callable
 
-from ..logger import log
 from .ipmb import IpmbInterface
 from .router import MessageRouter
+
+logger = logging.getLogger(__name__)
 
 try:
     import pyaardvark
@@ -154,7 +156,7 @@ class Aardvark(IpmbInterface):
     def send_frame(self, frame: bytes) -> None:
         i2c_addr = frame[0] >> 1
 
-        log().debug('IPMB TX [%s]', bytes(frame).hex(' '))
+        logger.debug('IPMB TX [%s]', bytes(frame).hex(' '))
         self._call(self._dev.i2c_master_write, i2c_addr, bytes(frame[1:]))
 
     def _read_frame(self, timeout: float) -> bytes | None:

@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
+import argparse
+import logging
+
 import pytest
 
 from pyipmi import ipmitool
-from pyipmi.ipmitool import build_parser, parse_interface_options
+from pyipmi.ipmitool import build_parser, log_level, parse_interface_options
 from pyipmi.sdr import SdrCommon
 
 
@@ -52,6 +55,52 @@ class TestParseInterfaceOptions:
         assert options['slave_address'] == 0x24
 
 
+class TestLogLevel:
+    @pytest.mark.parametrize('value, expected', [
+        ('DEBUG', ('pyipmi', logging.DEBUG)),
+        ('warning', ('pyipmi', logging.WARNING)),
+        ('15', ('pyipmi', 15)),
+        ('pyipmi=ERROR', ('pyipmi', logging.ERROR)),
+        ('interfaces.aardvark=DEBUG',
+         ('pyipmi.interfaces.aardvark', logging.DEBUG)),
+        ('pyipmi.interfaces.router=info',
+         ('pyipmi.interfaces.router', logging.INFO)),
+    ])
+    def test_valid(self, value, expected):
+        assert log_level(value) == expected
+
+    @pytest.mark.parametrize('value', ['', 'LOUD', 'interfaces.rmcp='])
+    def test_invalid(self, value):
+        with pytest.raises(argparse.ArgumentTypeError):
+            log_level(value)
+
+    def test_logger_names(self):
+        names = ipmitool.logger_names()
+        assert 'interfaces.aardvark' in names
+        assert 'interfaces.router' in names
+        assert 'pyipmi' not in names
+
+    def test_help_lists_loggers(self):
+        assert 'interfaces.aardvark' in build_parser().format_help()
+
+    def test_setup_logging(self):
+        loggers = [logging.getLogger(n) for n in
+                   ('pyipmi', 'pyipmi.interfaces.aardvark',
+                    'pyipmi.interfaces.router')]
+        saved = [(lg, lg.level, list(lg.handlers)) for lg in loggers]
+        try:
+            ipmitool.setup_logging(False, [
+                ('pyipmi.interfaces.aardvark', logging.DEBUG),
+                ('pyipmi.interfaces.router', logging.ERROR)])
+            assert not loggers[0].isEnabledFor(logging.DEBUG)
+            assert loggers[1].isEnabledFor(logging.DEBUG)
+            assert not loggers[2].isEnabledFor(logging.WARNING)
+        finally:
+            for lg, level, handlers in saved:
+                lg.setLevel(level)
+                lg.handlers[:] = handlers
+
+
 class TestParser:
     def parse(self, command):
         return build_parser().parse_args(command.split())
@@ -71,6 +120,13 @@ class TestParser:
         assert args.priv_level == 'ADMIN'
         assert args.verbose
         assert args.json
+
+    def test_log_level(self):
+        args = self.parse('--log-level INFO --log-level '
+                          'interfaces.aardvark=DEBUG bmc info')
+        assert args.log_levels == [
+            ('pyipmi', logging.INFO),
+            ('pyipmi.interfaces.aardvark', logging.DEBUG)]
 
     def test_defaults(self):
         args = self.parse('bmc info')

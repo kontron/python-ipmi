@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import shlex
 
@@ -31,10 +32,11 @@ from ..errors import (
     IpmiLongPasswordError,
     AuthenticationError,
 )
-from ..logger import log
 from ..msgs.constants import CC_OK
 from ..utils import py3dec_unic_bytes_fix, py3_array_tobytes
 from .base import Interface
+
+logger = logging.getLogger(__name__)
 
 
 class Ipmitool(Interface):
@@ -219,7 +221,7 @@ class Ipmitool(Interface):
             if rsp:
                 data.extend(rsp)
 
-        log().debug('IPMI RX: {:s}'.format(
+        logger.debug('IPMI RX: {:s}'.format(
             ''.join('%02x ' % b for b in array('B', data))))
 
         return py3_array_tobytes(data)
@@ -333,14 +335,14 @@ class Ipmitool(Interface):
     @staticmethod
     def _run_ipmitool(cmd: str) -> tuple[bytes, int]:
         """Legacy call of ipmitool (will be removed in future)."""
-        log().debug('Running ipmitool "%s"', cmd)
+        logger.debug('Running ipmitool "%s"', cmd)
 
         child = Popen(cmd, shell=True, stdout=PIPE)
         output = child.communicate()[0]
 
-        log().debug('return with rc=%d, output was:\n%s',
-                    child.returncode,
-                    output)
+        logger.debug('return with rc=%d, output was:\n%s',
+                     child.returncode,
+                     output)
 
         if child.returncode == 127:
             raise RuntimeError('ipmitool command not found')

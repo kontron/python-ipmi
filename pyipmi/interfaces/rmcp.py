@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 import socket
 import struct
 import hashlib
@@ -31,13 +32,14 @@ from ..session import Session
 from ..msgs import create_request_by_name, constants, Message
 from ..messaging import ChannelAuthenticationCapabilities
 from ..errors import DecodingError, NotSupportedError, RetryError
-from ..logger import log
 from .base import Interface
 from ..interfaces.ipmb import (IpmbHeaderReq, encode_ipmb_msg,
                                encode_bridged_message, decode_bridged_message,
                                rx_filter)
 from ..utils import (check_completion_code, check_rsp_completion_code,
                      py3_array_tobytes)
+
+logger = logging.getLogger(__name__)
 
 
 CLASS_NORMAL_MSG = 0x00
@@ -439,7 +441,7 @@ class Rmcp(Interface):
         self._sock.settimeout(timeout)
 
     def _send_ipmi_msg(self, data: bytes) -> None:
-        log().debug('IPMI TX: {:s}'.format(
+        logger.debug('IPMI TX: {:s}'.format(
             ' '.join('%02x' % b for b in array('B', data))))
         ipmi = IpmiMsg(self._session)
         tx_data = ipmi.pack(data)
@@ -451,17 +453,17 @@ class Rmcp(Interface):
             raise DecodingError('invalid class field in ASF message')
         msg = IpmiMsg(ignore_sdu_length=ignore_sdu_length)
         data = msg.unpack(pdu)
-        log().debug('IPMI RX: {:s}'.format(
+        logger.debug('IPMI RX: {:s}'.format(
             ' '.join('%02x' % b for b in array('B', data))))
         return data
 
     def _send_asf_msg(self, msg: AsfMsg) -> None:
-        log().debug('ASF TX: msg')
+        logger.debug('ASF TX: msg')
         self._send_rmcp_msg(msg.pack(), RMCP_CLASS_ASF)
 
     def _receive_asf_msg(self, cls: type[AsfMsg]) -> AsfMsg:
         (_, class_of_msg, data) = self._receive_rmcp_msg()
-        log().debug('ASF RX: msg')
+        logger.debug('ASF RX: msg')
         if class_of_msg != RMCP_CLASS_ASF:
             raise DecodingError('invalid class field in ASF message')
         msg = cls()
@@ -534,12 +536,12 @@ class Rmcp(Interface):
         self.ping()
 
         # 1 - Get Channel Authentication Capabilities
-        log().debug('Get Channel Authentication Capabilities')
+        logger.debug('Get Channel Authentication Capabilities')
         caps = self._get_channel_auth_cap(session)
-        log().debug('%s' % caps)
+        logger.debug('%s' % caps)
 
         # 2 - Get Session Challenge
-        log().debug('Get Session Challenge')
+        logger.debug('Get Session Challenge')
         session.auth_type = caps.get_max_auth_type()
         rsp = self._get_session_challenge(session)
         session_challenge = rsp.challenge_string
@@ -548,17 +550,17 @@ class Rmcp(Interface):
         self._session = session
 
         # 3 - Activate Session
-        log().debug('Activate Session')
+        logger.debug('Activate Session')
         rsp = self._activate_session(session, session_challenge)
         self._session.sid = rsp.session_id
         self._session.sequence_number = rsp.initial_inbound_sequence_number
         self._session.activated = True
 
-        log().debug('Set Session Privilege Level')
+        logger.debug('Set Session Privilege Level')
         # 4 - Set Session Privilege Level
         self._set_session_privilege_level(session.priv_level)
 
-        log().debug('Session opened')
+        logger.debug('Session opened')
 
         if self.keep_alive_interval:
             self._stop_keep_alive = call_repeatedly(
@@ -569,10 +571,10 @@ class Rmcp(Interface):
             self._stop_keep_alive()
 
         if self._session.activated is False:
-            log().debug('Session already closed')
+            logger.debug('Session already closed')
             return
 
-        log().debug('Close Session %s' % self._session)
+        logger.debug('Close Session %s' % self._session)
         req = create_request_by_name('CloseSession')
         req.target = self.host_target
         req.session_id = self._session.sid

@@ -16,16 +16,18 @@
 
 from __future__ import annotations
 
+import logging
 import queue
 import threading
 from typing import Any, TYPE_CHECKING
 from collections.abc import Callable
 
 from ..errors import IpmiTimeoutError
-from ..logger import log
 from ..msgs import create_message, encode_message, decode_message, Message
 from ..msgs.constants import CC_INV_CMD, CC_UNSPECIFIED_ERROR
 from .ipmb import IpmbHeaderReq, IpmbHeaderRsp, checksum, encode_ipmb_msg
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .ipmb import IpmbInterface
@@ -163,10 +165,10 @@ class MessageRouter:
         Called from the receive thread of the interface; never blocks.
         """
         if len(frame) < 7:
-            log().debug('IPMB RX message too short [%s]', frame.hex(' '))
+            logger.debug('IPMB RX message too short [%s]', frame.hex(' '))
             return
         if checksum(frame[0:3]) or checksum(frame[3:]):
-            log().debug('IPMB RX checksum error [%s]', frame.hex(' '))
+            logger.debug('IPMB RX checksum error [%s]', frame.hex(' '))
             return
 
         netfn = frame[1] >> 2
@@ -184,7 +186,7 @@ class MessageRouter:
         with self._lock:
             pending = self._pending.pop(key, None)
         if pending is None:
-            log().debug('IPMB RX unexpected response [%s]', frame.hex(' '))
+            logger.debug('IPMB RX unexpected response [%s]', frame.hex(' '))
             return
         pending.frame = frame
         pending.event.set()
@@ -200,7 +202,7 @@ class MessageRouter:
     def _handle_request(self, interface: IpmbInterface, frame: bytes) -> None:
         header = IpmbHeaderReq(data=frame)
         data = frame[6:-1]
-        log().debug('IPMB RX request [%s]', header)
+        logger.debug('IPMB RX request [%s]', header)
 
         handler = self._find_handler(header, data)
         if handler is None:
@@ -211,7 +213,7 @@ class MessageRouter:
             try:
                 rsp_data = handler(interface, header, data)
             except Exception:
-                log().exception('IPMB request handler failed')
+                logger.exception('IPMB request handler failed')
                 rsp_data = bytes((CC_UNSPECIFIED_ERROR,))
             if rsp_data is None:
                 return
@@ -219,7 +221,7 @@ class MessageRouter:
         try:
             interface.send_frame(encode_ipmb_response(header, rsp_data))
         except OSError as e:
-            log().warning('IPMB sending response failed: %s', e)
+            logger.warning('IPMB sending response failed: %s', e)
 
     def _start_worker(self) -> None:
         with self._lock:
