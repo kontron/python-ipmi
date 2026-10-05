@@ -243,3 +243,28 @@ class TestRmcp:
         before = time.monotonic()
         rmcp.send_and_receive_raw(rmcp.host_target, 0, 6, b'\x00')
         assert rmcp._last_request_time >= before
+
+
+class TestAsfPongPack:
+    def test_pack_unpack(self):
+        pong = AsfPong()
+        pong.tag = 0x12
+        pong.supported_entities = 0x81
+        pdu = pong.pack()
+        # ASF header followed by 16 bytes of pong data
+        assert pdu[:8] == b'\x00\x00\x11\xbe\x40\x12\x00\x10'
+        assert len(pdu) == 8 + 16
+
+        m = AsfPong()
+        m.unpack(pdu)
+        assert m.tag == 0x12
+        assert m.supported_entities == 0x81
+
+
+class TestRmcpCloseSession:
+    def test_close_without_session(self):
+        rmcp = Rmcp(keep_alive_interval=0)
+        rmcp._sock = MagicMock(spec=socket.socket)
+        # establishing the session failed, close must not raise
+        rmcp.close_session()
+        rmcp._sock.send.assert_not_called()

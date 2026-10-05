@@ -196,6 +196,7 @@ class AsfPong(AsfMsg):
     DATA_FORMAT = '!IIBB6x'
 
     def __init__(self) -> None:
+        AsfMsg.__init__(self)
         self.asf_type = self.ASF_TYPE_PRESENCE_PONG
         self.oem_iana_enterprise_number = 4542
         self.oem_defined = 0
@@ -203,12 +204,13 @@ class AsfPong(AsfMsg):
         self.supported_interactions = 0
 
     def pack(self) -> bytes:
-        pdu = struct.pack(self.DATA_FORMAT,
-                          self.oem_iana_enterprise_number,
-                          self.oem_defined,
-                          self.supported_entities,
-                          self.supported_interactions)
-        return pdu
+        # the pong data follows the ASF header
+        self.data = struct.pack(self.DATA_FORMAT,
+                                self.oem_iana_enterprise_number,
+                                self.oem_defined,
+                                self.supported_entities,
+                                self.supported_interactions)
+        return AsfMsg.pack(self)
 
     def unpack(self, sdu: bytes) -> None:
         AsfMsg.unpack(self, sdu)
@@ -579,7 +581,8 @@ class Rmcp(Interface):
         if self._stop_keep_alive:
             self._stop_keep_alive()
 
-        if self._session.activated is False:
+        if self._session is None or self._session.activated is False:
+            # never established or already closed
             logger.debug('Session already closed')
             return
 
