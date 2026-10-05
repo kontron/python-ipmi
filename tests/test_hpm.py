@@ -299,7 +299,7 @@ def test_upload_binary():
     ipmi = create_ipmi(b'\x00\x00')
     ipmi.upload_binary(bytes(range(50)))
     assert ipmi.requests == [
-        ('UploadFirmwareBlockReq', b'\x00\x00' + bytes(range(0, 22))),
+        ('UploadFirmwareBlockReq', b'\x00\x00' + bytes(range(22))),
         ('UploadFirmwareBlockReq', b'\x00\x01' + bytes(range(22, 44))),
         ('UploadFirmwareBlockReq', b'\x00\x02' + bytes(range(44, 50))),
     ]
