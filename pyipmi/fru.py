@@ -29,6 +29,9 @@ from .fields import FruTypeLengthString
 
 codecs.register(bcd_search)
 
+# areas are a multiple of 8 bytes
+FRU_AREA_MIN_LENGTH = 8
+
 
 class Fru:
     def __init__(self) -> None:
@@ -101,41 +104,65 @@ class Fru:
         data = self.read_fru_data(offset=0, count=8, fru_id=fru_id)
         return InventoryCommonHeader(data, ignore_checksum=ignore_checksum)
 
-    def _read_fru_area(self, offset: int, fru_id: int = 0) -> bytes:
-        # read the area header
-        data = self.read_fru_data(offset=offset, count=5, fru_id=fru_id)
-        # get the whole area data
-        count = data[1] * 8
-        return self.read_fru_data(offset=offset, count=count, fru_id=fru_id)
+    def _read_fru_area(self, offset: int, fru_id: int = 0,
+                       header: InventoryCommonHeader | None = None) -> bytes:
+        # The first read returns the area length and, if possible, all of the
+        # area data: read up to the start of the next area. For the last area
+        # only its minimal size of 8 bytes is known to be within the FRU data.
+        count = FRU_AREA_MIN_LENGTH
+        if header is not None:
+            next_offsets = [o for o in header.area_offsets() if o > offset]
+            if next_offsets:
+                count = min(next_offsets) - offset
+
+        data = self.read_fru_data(offset=offset, count=count, fru_id=fru_id)
+        length = data[1] * 8
+        if length > len(data):
+            data += self.read_fru_data(offset=offset + len(data),
+                                       count=length - len(data),
+                                       fru_id=fru_id)
+        return data[:length]
+
+    def _get_header(self, fru_id: int, ignore_checksum: bool,
+                    header: InventoryCommonHeader | None
+                    ) -> InventoryCommonHeader:
+        if header is None:
+            header = self.get_fru_inventory_header(
+                fru_id=fru_id, ignore_checksum=ignore_checksum)
+        return header
 
     def get_fru_chassis_area(self, fru_id: int = 0,
-                             ignore_checksum: bool = False) -> InventoryChassisInfoArea:
-        header = self.get_fru_inventory_header(fru_id=fru_id,
-                                               ignore_checksum=ignore_checksum)
+                             ignore_checksum: bool = False,
+                             header: InventoryCommonHeader | None = None
+                             ) -> InventoryChassisInfoArea:
+        header = self._get_header(fru_id, ignore_checksum, header)
         data = self._read_fru_area(offset=header.chassis_info_area_offset,
-                                   fru_id=fru_id)
+                                   fru_id=fru_id, header=header)
         return InventoryChassisInfoArea(data, ignore_checksum=ignore_checksum)
 
     def get_fru_board_area(self, fru_id: int = 0,
-                           ignore_checksum: bool = False) -> InventoryBoardInfoArea:
-        header = self.get_fru_inventory_header(fru_id=fru_id,
-                                               ignore_checksum=ignore_checksum)
+                           ignore_checksum: bool = False,
+                           header: InventoryCommonHeader | None = None
+                           ) -> InventoryBoardInfoArea:
+        header = self._get_header(fru_id, ignore_checksum, header)
         data = self._read_fru_area(offset=header.board_info_area_offset,
-                                   fru_id=fru_id)
+                                   fru_id=fru_id, header=header)
         return InventoryBoardInfoArea(data, ignore_checksum=ignore_checksum)
 
     def get_fru_product_area(self, fru_id: int = 0,
-                             ignore_checksum: bool = False) -> InventoryProductInfoArea:
-        header = self.get_fru_inventory_header(fru_id=fru_id,
-                                               ignore_checksum=ignore_checksum)
+                             ignore_checksum: bool = False,
+                             header: InventoryCommonHeader | None = None
+                             ) -> InventoryProductInfoArea:
+        header = self._get_header(fru_id, ignore_checksum, header)
         data = self._read_fru_area(offset=header.product_info_area_offset,
-                                   fru_id=fru_id)
+                                   fru_id=fru_id, header=header)
         return InventoryProductInfoArea(data, ignore_checksum=ignore_checksum)
 
     def get_fru_multirecord_area(self, fru_id: int = 0,
-                                 ignore_checksum: bool = False) -> InventoryMultiRecordArea:
-        header = self.get_fru_inventory_header(fru_id=fru_id,
-                                               ignore_checksum=ignore_checksum)
+                                 ignore_checksum: bool = False,
+                                 header: InventoryCommonHeader | None = None
+                                 ) -> InventoryMultiRecordArea:
+        header = self._get_header(fru_id, ignore_checksum, header)
 
         # we have to determine the length of the area first
         offset = header.multirecord_area_offset
@@ -143,7 +170,7 @@ class Fru:
 
         while True:
             # read the header
-            data = self.read_fru_data(offset=offset, count=5)
+            data = self.read_fru_data(offset=offset, count=5, fru_id=fru_id)
             end_of_list = bool(data[1] & 0x80)
             length = data[2]
             count += length + 5
@@ -153,7 +180,7 @@ class Fru:
 
         # now read the full area
         offset = header.multirecord_area_offset
-        data = self.read_fru_data(offset=offset, count=count)
+        data = self.read_fru_data(offset=offset, count=count, fru_id=fru_id)
         return InventoryMultiRecordArea(data, ignore_checksum=ignore_checksum)
 
     def get_fru_inventory(self, fru_id: int = 0,
@@ -171,25 +198,29 @@ class Fru:
         if header.chassis_info_area_offset:
             fru.chassis_info_area = self.get_fru_chassis_area(
                 fru_id=fru_id,
-                ignore_checksum=ignore_checksum
+                ignore_checksum=ignore_checksum,
+                header=header
             )
 
         if header.board_info_area_offset:
             fru.board_info_area = self.get_fru_board_area(
                 fru_id=fru_id,
-                ignore_checksum=ignore_checksum
+                ignore_checksum=ignore_checksum,
+                header=header
             )
 
         if header.product_info_area_offset:
             fru.product_info_area = self.get_fru_product_area(
                 fru_id=fru_id,
-                ignore_checksum=ignore_checksum
+                ignore_checksum=ignore_checksum,
+                header=header
             )
 
         if header.multirecord_area_offset:
             fru.multirecord_area = self.get_fru_multirecord_area(
                 fru_id=fru_id,
-                ignore_checksum=ignore_checksum
+                ignore_checksum=ignore_checksum,
+                header=header
             )
 
         return fru
@@ -247,6 +278,15 @@ class InventoryCommonHeader(FruData):
         self.multirecord_area_offset = data[5] * 8 or None
         if sum(data[:8]) % 256 != 0 and ignore_checksum is False:
             raise DecodingError(f'InventoryCommonHeader checksum failed {sum(data) % 0x10}')
+
+    def area_offsets(self) -> list[int]:
+        """Return the offsets of all present areas."""
+        offsets = (self.internal_use_area_offset,
+                   self.chassis_info_area_offset,
+                   self.board_info_area_offset,
+                   self.product_info_area_offset,
+                   self.multirecord_area_offset)
+        return [o for o in offsets if o is not None]
 
 
 class CommonInfoArea(FruData):

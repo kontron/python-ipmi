@@ -186,10 +186,14 @@ class FakeFruDevice(Fru):
         self.max_length = max_length
         self.cc = cc
         self.requests = []
+        self.fru_ids = set()
 
     def send_message_with_name(self, name, fru_id, offset, count):
         assert name == 'ReadFruData'
+        # reading beyond the FRU data is an error on real devices
+        assert offset + count <= len(self.data)
         self.requests.append((offset, count))
+        self.fru_ids.add(fru_id)
         if count > self.max_length:
             raise CompletionCodeError(self.cc)
         rsp = SimpleNamespace(data=self.data[offset:offset + count])
@@ -240,3 +244,44 @@ def test_read_fru_data_other_error():
     with pytest.raises(CompletionCodeError):
         fru.read_fru_data(offset=0, count=8)
     assert fru.requests == [(0, 8)]
+
+
+FRU_BIN_DIR = os.path.join(os.path.dirname(__file__), 'fru_bin')
+
+
+@pytest.mark.parametrize('filename', sorted(os.listdir(FRU_BIN_DIR)))
+def test_get_fru_inventory(filename):
+    path = os.path.join(FRU_BIN_DIR, filename)
+    with open(path, 'rb') as f:
+        fru = FakeFruDevice(f.read())
+    inventory = fru.get_fru_inventory(fru_id=1)
+    expected = get_fru_inventory_from_file(path)
+    if expected.multirecord_area is None:
+        assert inventory.multirecord_area is None
+    else:
+        assert ([bytes(r.raw) for r in inventory.multirecord_area.records]
+                == [bytes(r.raw) for r in expected.multirecord_area.records])
+    for area in ('chassis_info_area', 'board_info_area', 'product_info_area'):
+        if getattr(expected, area) is None:
+            assert getattr(inventory, area) is None
+        else:
+            # the area from file contains all data up to the end of the file
+            data = bytes(getattr(inventory, area).data)
+            assert data == bytes(getattr(expected, area).data)[:len(data)]
+            assert data
+    # the common header is read only once
+    assert fru.requests.count((0, 8)) == 1
+    assert fru.fru_ids == {1}
+
+
+def test_get_fru_inventory_requests():
+    path = os.path.join(FRU_BIN_DIR, 'supermicro_A2SDi-4C-HLN4F.bin')
+    with open(path, 'rb') as f:
+        fru = FakeFruDevice(f.read())
+    fru.get_fru_inventory()
+    assert fru.requests == [
+        (0, 8),                         # common header
+        (8, 8),                         # chassis area, up to the board area
+        (16, 32), (48, 24),             # board area, up to the product area
+        (72, 8), (80, 32), (112, 32), (144, 8),  # product area (last one)
+    ]
