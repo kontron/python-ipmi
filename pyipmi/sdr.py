@@ -303,20 +303,23 @@ class SdrFullSensorRecord(SdrCommon):
         if linearization is not L_LINEAR:
             raise NotImplementedError()
 
+        # inverse of y = (M * x + B * 10^K1) * 10^K2
         raw = ((float(value) * 10**(-1 * self.k2))
-               / self.m) - (self.b * 10**self.k1)
+               - (self.b * 10**self.k1)) / self.m
 
         raw = int(round(raw))
 
+        # the sign of the raw value depends on the offset B and not only on
+        # the sign of the given value
         fmt = self.analog_data_format
         if (fmt == self.DATA_FMT_1S_COMPLEMENT):
-            if value < 0:
+            if raw < 0:
                 raw = (-raw ^ 0x7f) | 0x80
         elif (fmt == self.DATA_FMT_2S_COMPLEMENT):
-            if value < 0:
+            if raw < 0:
                 raw = (-(raw + 1) ^ 0x7f) | 0x80
 
-        if raw > 0xff:
+        if raw < 0 or raw > 0xff:
             raise ValueError()
 
         return raw

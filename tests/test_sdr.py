@@ -202,6 +202,48 @@ class TestSdrFullSensorRecord:
         assert sdr.convert_sensor_value_to_raw(-1) == 255
         assert sdr.convert_sensor_value_to_raw(-127) == 129
 
+    def test_convert_sensor_value_to_raw_with_offset(self):
+        # 3.3VSB voltage sensor (see issue #124)
+        sdr = SdrFullSensorRecord()
+        sdr.analog_data_format = sdr.DATA_FMT_UNSIGNED
+        sdr.m = 16
+        sdr.b = 163
+        sdr.k1 = 0
+        sdr.k2 = -3
+        sdr.linearization = 0
+
+        assert sdr.convert_sensor_value_to_raw(3.843) == 230
+        assert sdr.convert_sensor_value_to_raw(2.739) == 161
+        for raw in (0, 1, 161, 196, 230, 255):
+            value = sdr.convert_sensor_raw_to_value(raw)
+            assert sdr.convert_sensor_value_to_raw(value) == raw
+
+        with pytest.raises(ValueError):
+            sdr.convert_sensor_value_to_raw(0.1)
+        with pytest.raises(ValueError):
+            sdr.convert_sensor_value_to_raw(5.0)
+
+    def test_convert_sensor_value_to_raw_with_offset_signed(self):
+        sdr = SdrFullSensorRecord()
+        sdr.m = 1
+        sdr.b = 10
+        sdr.k1 = 0
+        sdr.k2 = 0
+        sdr.linearization = 0
+
+        sdr.analog_data_format = sdr.DATA_FMT_2S_COMPLEMENT
+        assert sdr.convert_sensor_value_to_raw(5) == 0xfb
+        for raw in range(256):
+            value = sdr.convert_sensor_raw_to_value(raw)
+            assert sdr.convert_sensor_value_to_raw(value) == raw
+
+        sdr.analog_data_format = sdr.DATA_FMT_1S_COMPLEMENT
+        assert sdr.convert_sensor_value_to_raw(5) == 0xfa
+        # 0x00 and 0xff both encode zero in 1's complement
+        for raw in range(255):
+            value = sdr.convert_sensor_raw_to_value(raw)
+            assert sdr.convert_sensor_value_to_raw(value) == raw
+
     def test_decocde(self):
         data = [0x17, 0x00, 0x51, 0x01, 0x35, 0x17, 0x00, 0x51,
                 0x01, 0x35, 0x17, 0x00, 0x51, 0x01, 0x35, 0x32,
