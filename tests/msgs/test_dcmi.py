@@ -21,6 +21,11 @@ from pyipmi.msgs.constants import NETFN_GROUP_EXTENSION
     ('SetAssetTag', 0x08),
     ('GetManagementControllerIdString', 0x09),
     ('SetManagementControllerIdString', 0x0a),
+    ('SetThermalLimit', 0x0b),
+    ('GetThermalLimit', 0x0c),
+    ('GetTemperatureReadings', 0x10),
+    ('SetDcmiConfigurationParameters', 0x12),
+    ('GetDcmiConfigurationParameters', 0x13),
 ])
 def test_message_ids(name, cmdid):
     req = create_request_by_name(name)
@@ -195,3 +200,95 @@ def test_setmanagementcontrolleridstring_decode_rsp():
     decode_message(m, b'\x00\xdc\x04')
     assert m.completion_code == 0
     assert m.total_length == 4
+
+
+def test_setthermallimit_encode_req():
+    m = pyipmi.msgs.dcmi.SetThermalLimitReq()
+    m.entity_id = 0x40
+    m.entity_instance = 1
+    m.exception_actions.enable = 1
+    m.exception_actions.hard_power_off = 1
+    m.temperature_limit = 45
+    m.exception_time = 300
+    assert encode_message(m) == b'\xdc\x40\x01\xc0\x2d\x2c\x01'
+
+
+def test_setthermallimit_encode_req_log_only():
+    m = pyipmi.msgs.dcmi.SetThermalLimitReq()
+    m.entity_id = 0x37
+    m.entity_instance = 1
+    m.exception_actions.enable = 1
+    m.exception_actions.log_event_to_sel = 1
+    m.temperature_limit = 40
+    m.exception_time = 10
+    assert encode_message(m) == b'\xdc\x37\x01\xa0\x28\x0a\x00'
+
+
+def test_setthermallimit_decode_rsp():
+    m = pyipmi.msgs.dcmi.SetThermalLimitRsp()
+    decode_message(m, b'\x00\xdc')
+    assert m.completion_code == 0
+
+
+def test_getthermallimit_encode_req():
+    m = pyipmi.msgs.dcmi.GetThermalLimitReq()
+    m.entity_id = 0x40
+    m.entity_instance = 1
+    assert encode_message(m) == b'\xdc\x40\x01'
+
+
+def test_getthermallimit_decode_rsp():
+    m = pyipmi.msgs.dcmi.GetThermalLimitRsp()
+    decode_message(m, b'\x00\xdc\xa0\x2d\x2c\x01')
+    assert m.completion_code == 0
+    assert m.exception_actions.enable == 1
+    assert m.exception_actions.hard_power_off == 0
+    assert m.exception_actions.log_event_to_sel == 1
+    assert m.temperature_limit == 45
+    assert m.exception_time == 300
+
+
+def test_gettemperaturereadings_encode_req():
+    m = pyipmi.msgs.dcmi.GetTemperatureReadingsReq()
+    m.entity_id = 0x41
+    m.entity_instance = 0
+    m.entity_instance_start = 1
+    assert encode_message(m) == b'\xdc\x01\x41\x00\x01'
+
+
+def test_gettemperaturereadings_decode_rsp():
+    m = pyipmi.msgs.dcmi.GetTemperatureReadingsRsp()
+    decode_message(m, b'\x00\xdc\x02\x02\x2d\x01\x85\x02')
+    assert m.completion_code == 0
+    assert m.total_number_of_instances == 2
+    assert m.number_of_readings == 2
+    assert m.readings.tobytes() == b'\x2d\x01\x85\x02'
+
+
+def test_setdcmiconfigurationparameters_encode_req():
+    m = pyipmi.msgs.dcmi.SetDcmiConfigurationParametersReq()
+    m.parameter_selector = 3
+    m.parameter_data = b'\x40'
+    assert encode_message(m) == b'\xdc\x03\x00\x40'
+
+
+def test_setdcmiconfigurationparameters_decode_rsp():
+    m = pyipmi.msgs.dcmi.SetDcmiConfigurationParametersRsp()
+    decode_message(m, b'\x00\xdc')
+    assert m.completion_code == 0
+
+
+def test_getdcmiconfigurationparameters_encode_req():
+    m = pyipmi.msgs.dcmi.GetDcmiConfigurationParametersReq()
+    m.parameter_selector = 4
+    assert encode_message(m) == b'\xdc\x04\x00'
+
+
+def test_getdcmiconfigurationparameters_decode_rsp():
+    m = pyipmi.msgs.dcmi.GetDcmiConfigurationParametersRsp()
+    decode_message(m, b'\x00\xdc\x01\x05\x01\x3c\x00')
+    assert m.completion_code == 0
+    assert m.specification_conformance.major == 1
+    assert m.specification_conformance.minor == 5
+    assert m.parameter_revision == 1
+    assert m.parameter_data.tobytes() == b'\x3c\x00'
