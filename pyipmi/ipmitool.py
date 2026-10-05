@@ -690,6 +690,211 @@ interface options (-o name=value,...):
 '''
 
 
+DCMI_ENTITY_NAMES = {
+    'inlet': pyipmi.constants.ENTITY_ID_DCMI_AIR_INLET,
+    'cpu': pyipmi.constants.ENTITY_ID_DCMI_CPU,
+    'baseboard': pyipmi.constants.ENTITY_ID_DCMI_BASEBOARD,
+}
+
+DCMI_CAPABILITY_PARAMETERS = (
+    (pyipmi.dcmi.PARAM_SUPPORTED_DCMI_CAPABILITIES,
+     'Supported DCMI capabilities'),
+    (pyipmi.dcmi.PARAM_MANDATORY_PLATFORM_ATTRIBUTES,
+     'Mandatory platform attributes'),
+    (pyipmi.dcmi.PARAM_OPTIONAL_PLATFORM_ATTRIBUTES,
+     'Optional platform attributes'),
+    (pyipmi.dcmi.PARAM_MANAGEABILITY_ACCESS_ATTRIBUTES,
+     'Manageability access attributes'),
+    (pyipmi.dcmi.PARAM_ENHANCED_SYSTEM_POWER_STATISTICS_ATTRIBUTES,
+     'Enhanced system power statistics attributes'),
+)
+
+DCMI_CONFIGURATION_PARAMETERS = {
+    pyipmi.dcmi.CONF_PARAM_ACTIVATE_DHCP: 'Activate DHCP',
+    pyipmi.dcmi.CONF_PARAM_DISCOVERY_CONFIGURATION: 'Discovery configuration',
+    pyipmi.dcmi.CONF_PARAM_DHCP_TIMING_1: 'DHCP timing 1',
+    pyipmi.dcmi.CONF_PARAM_DHCP_TIMING_2: 'DHCP timing 2',
+    pyipmi.dcmi.CONF_PARAM_DHCP_TIMING_3: 'DHCP timing 3',
+}
+
+DCMI_POWER_LIMIT_ACTIONS = {
+    'no_action': pyipmi.dcmi.POWER_LIMIT_EXCEPTION_NO_ACTION,
+    'power_off': pyipmi.dcmi.POWER_LIMIT_EXCEPTION_HARD_POWER_OFF,
+    'sel_logging': pyipmi.dcmi.POWER_LIMIT_EXCEPTION_LOG_EVENT_TO_SEL,
+}
+
+
+def dcmi_entity(value: str) -> int:
+    """Argument type for DCMI entities, name or number."""
+    if value in DCMI_ENTITY_NAMES:
+        return DCMI_ENTITY_NAMES[value]
+    try:
+        return int(value, 0)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            'invalid entity: %s (use %s or a number)'
+            % (value, ', '.join(DCMI_ENTITY_NAMES))) from None
+
+
+def dcmi_entity_name(entity_id: int) -> str:
+    for name, value in DCMI_ENTITY_NAMES.items():
+        if value == entity_id:
+            return name
+    return '0x%02x' % entity_id
+
+
+def hex_bytes(data: bytes) -> str:
+    return ' '.join('%02x' % b for b in data)
+
+
+def cmd_dcmi_discover(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    for selector, name in DCMI_CAPABILITY_PARAMETERS:
+        try:
+            rsp = ipmi.get_dcmi_capabilities(selector)
+        except pyipmi.errors.CompletionCodeError as e:
+            print('%-45s: ERR: CC=0x%02x' % (name, e.cc))
+            continue
+        conformance = rsp.specification_conformence
+        print('%-45s: %s (DCMI %d.%d, revision %d)'
+              % (name, hex_bytes(rsp.parameter_data), conformance.major,
+                 conformance.minor, rsp.parameter_revision))
+
+
+def cmd_dcmi_power_reading(ipmi: pyipmi.Ipmi,
+                           args: argparse.Namespace) -> None:
+    rsp = ipmi.get_power_reading(1)
+    print('Instantaneous power reading : %5d Watts' % rsp.current_power)
+    print('Minimum power               : %5d Watts' % rsp.minimum_power)
+    print('Maximum power               : %5d Watts' % rsp.maximum_power)
+    print('Average power               : %5d Watts' % rsp.average_power)
+    print('Timestamp                   : %d' % rsp.timestamp)
+    print('Sampling period             : %d ms' % rsp.period)
+    print('Power reading state         : %s'
+          % ('activated' if rsp.reading_state & 0x40 else 'deactivated'))
+
+
+def cmd_dcmi_power_get_limit(ipmi: pyipmi.Ipmi,
+                             args: argparse.Namespace) -> None:
+    rsp = ipmi.get_power_limit()
+    actions = {v: k for (k, v) in DCMI_POWER_LIMIT_ACTIONS.items()}
+    print('Exception actions      : %s'
+          % actions.get(rsp.exception_actions,
+                        'OEM 0x%02x' % rsp.exception_actions))
+    print('Power limit            : %d Watts' % rsp.power_limit)
+    print('Correction time        : %d ms' % rsp.correction_time_limit)
+    print('Sampling period        : %d s' % rsp.statistics_sampling_period)
+
+
+def cmd_dcmi_power_set_limit(ipmi: pyipmi.Ipmi,
+                             args: argparse.Namespace) -> None:
+    ipmi.set_power_limit(args.limit, args.correction_time,
+                         args.sampling_period,
+                         DCMI_POWER_LIMIT_ACTIONS[args.action])
+
+
+def cmd_dcmi_power_activate(ipmi: pyipmi.Ipmi,
+                            args: argparse.Namespace) -> None:
+    ipmi.activate_power_limit()
+
+
+def cmd_dcmi_power_deactivate(ipmi: pyipmi.Ipmi,
+                              args: argparse.Namespace) -> None:
+    ipmi.deactivate_power_limit()
+
+
+def cmd_dcmi_sensors(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    for record_id in ipmi.get_dcmi_sensor_record_ids():
+        try:
+            sdr = ipmi.get_repository_sdr(record_id)
+            name = getattr(sdr, 'device_id_string', '')
+        except (pyipmi.errors.CompletionCodeError,
+                pyipmi.errors.DecodingError):
+            name = ''
+        print('0x%04x | %s' % (record_id, name))
+
+
+def cmd_dcmi_get_temp_reading(ipmi: pyipmi.Ipmi,
+                              args: argparse.Namespace) -> None:
+    entities = ([args.entity] if args.entity is not None
+                else DCMI_ENTITY_NAMES.values())
+    for entity_id in entities:
+        try:
+            readings = ipmi.get_temperature_readings(entity_id)
+        except pyipmi.errors.CompletionCodeError as e:
+            print('%-10s | ERR: CC=0x%02x' % (dcmi_entity_name(entity_id),
+                                               e.cc))
+            continue
+        for (instance, temperature) in readings:
+            print('%-10s | %3d | %+4d C' % (dcmi_entity_name(entity_id),
+                                            instance, temperature))
+
+
+def cmd_dcmi_thermalpolicy_get(ipmi: pyipmi.Ipmi,
+                               args: argparse.Namespace) -> None:
+    rsp = ipmi.get_thermal_limit(args.entity, args.instance)
+    actions = rsp.exception_actions
+    print('Exception actions    : %s'
+          % ('enabled' if actions.enable else 'disabled'))
+    print('  Hard power off     : %s'
+          % ('active' if actions.hard_power_off else 'inactive'))
+    print('  Log event to SEL   : %s'
+          % ('active' if actions.log_event_to_sel else 'inactive'))
+    print('Temperature limit    : %d C' % rsp.temperature_limit)
+    print('Exception time       : %d s' % rsp.exception_time)
+
+
+def cmd_dcmi_thermalpolicy_set(ipmi: pyipmi.Ipmi,
+                               args: argparse.Namespace) -> None:
+    ipmi.set_thermal_limit(args.entity, args.instance, args.limit,
+                           args.exception_time,
+                           enable=not args.disable,
+                           hard_power_off=args.power_off,
+                           log_event_to_sel=args.log_sel)
+
+
+def cmd_dcmi_asset_tag(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    print('Asset tag: %s' % ipmi.get_asset_tag())
+
+
+def cmd_dcmi_set_asset_tag(ipmi: pyipmi.Ipmi,
+                           args: argparse.Namespace) -> None:
+    ipmi.set_asset_tag(args.asset_tag)
+
+
+def cmd_dcmi_get_mc_id_string(ipmi: pyipmi.Ipmi,
+                              args: argparse.Namespace) -> None:
+    print('Management controller ID string: %s'
+          % ipmi.get_management_controller_id_string())
+
+
+def cmd_dcmi_set_mc_id_string(ipmi: pyipmi.Ipmi,
+                              args: argparse.Namespace) -> None:
+    ipmi.set_management_controller_id_string(args.id_string)
+
+
+def cmd_dcmi_get_conf_param(ipmi: pyipmi.Ipmi,
+                            args: argparse.Namespace) -> None:
+    selectors = ([args.selector] if args.selector is not None
+                 else DCMI_CONFIGURATION_PARAMETERS)
+    for selector in selectors:
+        name = DCMI_CONFIGURATION_PARAMETERS.get(selector,
+                                                 'Parameter %d' % selector)
+        try:
+            rsp = ipmi.get_dcmi_configuration_parameters(selector)
+        except pyipmi.errors.CompletionCodeError as e:
+            print('%-24s: ERR: CC=0x%02x' % (name, e.cc))
+            continue
+        print('%-24s: %s' % (name, hex_bytes(rsp.parameter_data)))
+
+
+def cmd_dcmi_set_conf_param(ipmi: pyipmi.Ipmi,
+                            args: argparse.Namespace) -> None:
+    # DHCP timing 3 is a 2 byte value, all others are 1 byte values
+    length = 2 if args.selector == pyipmi.dcmi.CONF_PARAM_DHCP_TIMING_3 else 1
+    ipmi.set_dcmi_configuration_parameters(
+        args.selector, args.value.to_bytes(length, 'little'))
+
+
 class _CommandGroups:
     """Helper to build nested subcommands."""
 
@@ -851,6 +1056,82 @@ def build_parser() -> argparse.ArgumentParser:
     sub = group.group('send', 'Send')
     sub.command('heartbeat', cmd_picmg_send_pm_heartbeat,
                 'Send PM heartbeat')
+
+    group = commands.group('dcmi', 'Data Center Manageability Interface '
+                           '(DCMI) commands')
+    group.command('discover', cmd_dcmi_discover,
+                  'Discover the supported DCMI capabilities')
+    group.command('sensors', cmd_dcmi_sensors,
+                  'List the DCMI temperature sensors')
+    p = group.command('get_temp_reading', cmd_dcmi_get_temp_reading,
+                      'Get the temperature readings')
+    p.add_argument('entity', type=dcmi_entity, nargs='?',
+                   help='inlet, cpu, baseboard or entity ID '
+                        '(default: all DCMI entities)')
+
+    sub = group.group('power', 'Platform power management')
+    sub.command('reading', cmd_dcmi_power_reading,
+                'Get the power reading')
+    sub.command('get_limit', cmd_dcmi_power_get_limit,
+                'Get the power limit')
+    p = sub.command('set_limit', cmd_dcmi_power_set_limit,
+                    'Set the power limit')
+    p.add_argument('limit', type=auto_int, help='power limit in watts')
+    p.add_argument('correction_time', type=auto_int,
+                   help='correction time limit in milliseconds')
+    p.add_argument('sampling_period', type=auto_int,
+                   help='statistics sampling period in seconds')
+    p.add_argument('--action', choices=tuple(DCMI_POWER_LIMIT_ACTIONS),
+                   default='no_action',
+                   help='exception action (default: no_action)')
+    sub.command('activate', cmd_dcmi_power_activate,
+                'Activate the power limit')
+    sub.command('deactivate', cmd_dcmi_power_deactivate,
+                'Deactivate the power limit')
+
+    sub = group.group('thermalpolicy', 'Thermal limit policy')
+    p = sub.command('get', cmd_dcmi_thermalpolicy_get,
+                    'Get the thermal limit')
+    p.add_argument('entity', type=dcmi_entity,
+                   help='inlet, cpu, baseboard or entity ID')
+    p.add_argument('instance', type=auto_int, help='entity instance')
+    p = sub.command('set', cmd_dcmi_thermalpolicy_set,
+                    'Set the thermal limit')
+    p.add_argument('entity', type=dcmi_entity,
+                   help='inlet, cpu, baseboard or entity ID')
+    p.add_argument('instance', type=auto_int, help='entity instance')
+    p.add_argument('limit', type=auto_int,
+                   help='temperature limit in degree Celsius')
+    p.add_argument('exception_time', type=auto_int,
+                   help='exception time in seconds')
+    p.add_argument('--power-off', action='store_true',
+                   help='hard power off and log event to SEL')
+    p.add_argument('--log-sel', action='store_true',
+                   help='log event to SEL only')
+    p.add_argument('--disable', action='store_true',
+                   help='disable the exception actions')
+
+    group.command('asset_tag', cmd_dcmi_asset_tag, 'Get the asset tag')
+    p = group.command('set_asset_tag', cmd_dcmi_set_asset_tag,
+                      'Set the asset tag')
+    p.add_argument('asset_tag')
+    group.command('get_mc_id_string', cmd_dcmi_get_mc_id_string,
+                  'Get the management controller identifier string')
+    p = group.command('set_mc_id_string', cmd_dcmi_set_mc_id_string,
+                      'Set the management controller identifier string')
+    p.add_argument('id_string')
+
+    p = group.command('get_conf_param', cmd_dcmi_get_conf_param,
+                      'Get the DCMI configuration parameters')
+    p.add_argument('selector', type=auto_int, nargs='?',
+                   help='parameter selector (default: all)')
+    p = group.command('set_conf_param', cmd_dcmi_set_conf_param,
+                      'Set a DCMI configuration parameter')
+    p.add_argument('selector', type=auto_int,
+                   choices=tuple(DCMI_CONFIGURATION_PARAMETERS),
+                   help='1: activate DHCP, 2: discovery configuration, '
+                        '3-5: DHCP timing 1-3')
+    p.add_argument('value', type=auto_int)
 
     group = commands.group('vita', 'VITA 46.11 commands')
     group.command('properties', cmd_vita_properties, 'Get VSO properties')
