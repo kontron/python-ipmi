@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 
 import pyipmi.msgs.bmc
-import pyipmi.msgs.sel
-import pyipmi.msgs.event
-import pyipmi.msgs.hpm
-import pyipmi.msgs.sensor
 
 from pyipmi.msgs import constants, decode_message, encode_message
 from pyipmi.msgs.picmg import PICMG_IDENTIFIER
