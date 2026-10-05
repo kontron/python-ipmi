@@ -418,5 +418,5 @@ in which case debug, info and warning messages are all recorded in the **'ipmi_d
   It is assumed in all code examples that the instantiation of the ``pyipmi.Ipmi`` object is called **ipmi**, thus **ipmi** will proceed all the methods and attributes of the ``pyipmi.Ipmi`` object.
 
 .. _Total Phase: http://www.totalphase.com
-.. _ipmitool: http://sourceforge.net/projects/ipmitool/
+.. _ipmitool: https://codeberg.org/IPMITool/ipmitool
 .. _commands: https://github.com/kontron/python-ipmi/blob/master/docs/commands.rst
