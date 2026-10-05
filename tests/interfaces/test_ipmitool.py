@@ -53,7 +53,7 @@ class TestIpmitool:
 
         self._interface.rmcp_ping()
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 '
-                                     '-v -U "admin" -P "secret" '
+                                     '-v -U admin -P secret '
                                      'session info all')
 
     def test_send_and_receive_raw_valid(self):
@@ -65,7 +65,7 @@ class TestIpmitool:
         self._interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 '
-                                     '-v -L ADMINISTRATOR -U "admin" -P "secret" '
+                                     '-v -L ADMINISTRATOR -U admin -P secret '
                                      '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
     def test_send_and_receive_raw_lanplus(self):
@@ -80,7 +80,7 @@ class TestIpmitool:
         interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
 
         mock.assert_called_once_with('ipmitool -I lanplus -H 10.0.1.1 -p 623 '
-                                     '-v -L ADMINISTRATOR -U "admin" -P "secret" '
+                                     '-v -L ADMINISTRATOR -U admin -P secret '
                                      '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
     def test_send_and_receive_raw_cipher(self):
@@ -96,7 +96,7 @@ class TestIpmitool:
 
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 '
                                      '-v -L ADMINISTRATOR -C 7 '
-                                     '-U "admin" -P "secret" '
+                                     '-U admin -P secret '
                                      '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
     def test_send_and_receive_raw_no_auth(self):
@@ -112,6 +112,29 @@ class TestIpmitool:
         mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 '
                                      '-v -L ADMINISTRATOR -P "" '
                                      '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
+
+    @pytest.mark.parametrize('username, password', [
+        ('ad$_min', 'pass$_word'),
+        ('admin', 'pa$$word'),
+        ('admin', 'pa"ss word'),
+        ('admin', 'pa`id`ss'),
+        ('admin', "pa'ss"),
+        ('admin', 'pa\\$HOME'),
+        ('admin', 'pass\\'),
+    ])
+    def test_credentials_with_shell_special_chars(self, username, password):
+        self.session.set_auth_type_user(username, password)
+        # replace ipmitool with printf to get every argument on its own line
+        # after the command line was processed by the shell
+        self._interface.IPMITOOL_PATH = 'printf "%s\\n"'
+
+        cmd = self._interface._build_ipmitool_cmd(Target(0x20), 0, 0x6,
+                                                  b'\x01')
+        output, _ = self._interface._run_ipmitool(cmd)
+        args = output.decode().splitlines()
+
+        assert args[args.index('-U') + 1] == username
+        assert args[args.index('-P') + 1] == password
 
     def test_send_and_receive_raw_return_value(self):
         mock = MagicMock()
