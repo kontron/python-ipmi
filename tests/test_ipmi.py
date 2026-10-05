@@ -43,6 +43,14 @@ def test_target_routing():
     assert target.routing[1].channel == 7
 
 
+def test_target_str():
+    assert str(Target()) == 'Target: IPMB: none\n'
+    target = Target(0x82, routing=[(0x81, 0x20, 0), (0x20, 0x82, None)])
+    assert str(target) == ('Target: IPMB: 0x82\n'
+                           ' Routing: Rq: 129 Rs: 32 Ch: 0\n'
+                           ' Routing: Rq: 32 Rs: 130 Ch: None\n')
+
+
 def test_routing():
     routing = Routing(0x82, 0x20, 7)
     assert routing.rq_sa == 0x82

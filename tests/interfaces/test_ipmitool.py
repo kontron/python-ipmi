@@ -42,6 +42,31 @@ class TestIpmitool:
         cmd = self._interface._build_ipmitool_target(target)
         assert cmd == ''
 
+    def test_build_ipmitool_target_routing_1(self):
+        # a single hop is the BMC itself, no bridging
+        target = Target(0x20, routing=[(0x81, 0x20, 0)])
+        cmd = self._interface._build_ipmitool_target(target)
+        assert cmd == ''
+
+    def test_build_ipmitool_target_routing_3_missing_channel(self):
+        # the second hop needs a channel for ipmitool (-b)
+        target = Target(0xa8, routing=[(0x81, 0x20, 0),
+                                       (0x20, 0x82, None),
+                                       (0x20, 0xa8, None)])
+        with pytest.raises(ValueError, match='routing entry 1'):
+            self._interface._build_ipmitool_target(target)
+
+    def test_build_ipmitool_target_routing_2_missing_channel(self):
+        target = Target(routing=[(0x81, 0x20, None), (0x20, 0x82, 0)])
+        with pytest.raises(ValueError, match='routing entry 0'):
+            self._interface._build_ipmitool_target(target)
+
+    def test_build_ipmitool_target_routing_too_long(self):
+        target = Target(routing=[(0x81, 0x20, 0), (0x20, 0x82, 7),
+                                 (0x20, 0x72, 0), (0x72, 0x74, None)])
+        with pytest.raises(RuntimeError, match='at most double bridging'):
+            self._interface._build_ipmitool_target(target)
+
     def test_send_and_receive(self):
         pass
 

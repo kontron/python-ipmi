@@ -153,7 +153,10 @@ class Target:
         self.routing = [Routing(*route) for route in routing]
 
     def __str__(self) -> str:
-        string = 'Target: IPMB: 0x%02x\n' % self.ipmb_address
+        if self.ipmb_address is None:
+            string = 'Target: IPMB: none\n'
+        else:
+            string = 'Target: IPMB: 0x%02x\n' % self.ipmb_address
         if self.routing:
             for route in self.routing:
                 string += ' %s\n' % route

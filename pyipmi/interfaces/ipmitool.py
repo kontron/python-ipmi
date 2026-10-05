@@ -234,6 +234,16 @@ class Ipmitool(Interface):
         return cmd
 
     @staticmethod
+    def _routing_channel(target: Target, index: int) -> int:
+        """Return the channel of a routing entry, ipmitool needs it."""
+        channel = target.routing[index].channel
+        if channel is None:
+            raise ValueError('the ipmitool interface needs the bridge channel '
+                             'of routing entry %d, got None: %s'
+                             % (index, target))
+        return channel
+
+    @staticmethod
     def _build_ipmitool_target(target: Target) -> str:
         cmd = ''
         if target is None:
@@ -241,19 +251,20 @@ class Ipmitool(Interface):
         if target.routing is not None:
             # we have to do bridging here
             if len(target.routing) == 1:
+                # no bridging, the request goes to the BMC itself
                 pass
-            if len(target.routing) == 2:
+            elif len(target.routing) == 2:
                 # ipmitool/shelfmanager does implicit bridging
                 cmd += (' -t 0x%02x' % target.routing[1].rs_sa)
-                cmd += (' -b %d' % target.routing[0].channel)
+                cmd += (' -b %d' % Ipmitool._routing_channel(target, 0))
             elif len(target.routing) == 3:
                 cmd += (' -T 0x%02x' % target.routing[1].rs_sa)
-                cmd += (' -B %d' % target.routing[0].channel)
+                cmd += (' -B %d' % Ipmitool._routing_channel(target, 0))
                 cmd += (' -t 0x%02x' % target.routing[2].rs_sa)
-                cmd += (' -b %d' % target.routing[1].channel)
+                cmd += (' -b %d' % Ipmitool._routing_channel(target, 1))
             else:
-                raise RuntimeError('The impitool interface at most double '
-                                   'briding %s' % target)
+                raise RuntimeError('The ipmitool interface supports at most '
+                                   'double bridging %s' % target)
 
         elif target.ipmb_address:
             cmd += (' -t 0x%02x' % target.ipmb_address)
