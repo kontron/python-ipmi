@@ -94,8 +94,11 @@ def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
 
     print("SDR record ID:    0x%04x" % s.id)
     print("SDR type:         0x%02x" % s.type)
-    print("Device Id string: %s" % s.device_id_string)
-    print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
+    # not all record types have an ID string and entity
+    if hasattr(s, 'device_id_string'):
+        print("Device Id string: %s" % s.device_id_string)
+    if hasattr(s, 'entity_id'):
+        print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
     if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
         (raw, states) = ipmi.get_sensor_reading(s.number, s.owner_lun)
         value = s.convert_sensor_raw_to_value(raw)
@@ -119,6 +122,18 @@ def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
         (raw, states) = ipmi.get_sensor_reading(s.number)
         print("Reading:          %s" % raw)
         print("Reading state:    0x%x" % states)
+    elif s.type is \
+            pyipmi.sdr.SDR_TYPE_MANAGEMENT_CONTROLLER_CONFIRMATION_RECORD:
+        print("Slave address:    0x%02x" % (s.device_slave_address << 1))
+        print("Device ID:        0x%02x" % s.device_id)
+        print("Device revision:  %d" % s.device_revision)
+        print("Channel:          %d" % s.channel_number)
+        print("Firmware:         %d.%02x" % (s.firmware_revision_1,
+                                             s.firmware_revision_2))
+        print("IPMI version:     %d.%d" % (s.ipmi_version & 0xf,
+                                           s.ipmi_version >> 4))
+        print("Manufacturer ID:  0x%05x" % s.manufacturer_id)
+        print("Product ID:       0x%04x" % s.product_id)
 
 
 def cmd_sdr_show_raw(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:

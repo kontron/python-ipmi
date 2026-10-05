@@ -635,8 +635,10 @@ class SdrManagementControllerConfirmationRecord(SdrCommon):
         buffer = ByteBuffer(data[5:])
         self.device_slave_address = buffer.pop_unsigned_int(1) >> 1
         self.device_id = buffer.pop_unsigned_int(1)
-        self.channel_number = buffer.pop_unsigned_int(1)
-        self.firmware_revision_1 = buffer.pop_unsigned_int(1)
+        tmp = buffer.pop_unsigned_int(1)
+        self.channel_number = (tmp >> 4) & 0xf
+        self.device_revision = tmp & 0xf
+        self.firmware_revision_1 = buffer.pop_unsigned_int(1) & 0x7f
         self.firmware_revision_2 = buffer.pop_unsigned_int(1)
         self.ipmi_version = buffer.pop_unsigned_int(1)
         self.manufacturer_id = buffer.pop_unsigned_int(3) & 0xfffff

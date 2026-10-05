@@ -311,6 +311,12 @@ class TestSdrManagementControllerConfirmationRecord():
         assert isinstance(sdr, SdrManagementControllerConfirmationRecord)
         assert str(sdr) == '[45 00 51 13 1b 20 00 01 02 01 51 4a c1 62 06 80 00 ' \
                            '00 00 00 00 00 00 00 00 00 00 00 00 00 00 00]'
+        assert sdr.device_slave_address == 0x10
+        assert sdr.device_id == 0x00
+        assert sdr.channel_number == 0
+        assert sdr.device_revision == 1
+        assert sdr.firmware_revision_1 == 0x02
+        assert sdr.firmware_revision_2 == 0x01
         assert sdr.ipmi_version == 0x51
         assert sdr.manufacturer_id == 0x2c14a
         assert sdr.product_id == 0x8006
