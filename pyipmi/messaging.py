@@ -74,6 +74,13 @@ class Messaging:
         caps = ChannelAuthenticationCapabilities(rsp)
         return caps
 
+    def get_channel_info(self, channel: int) -> ChannelInfo:
+        req = create_request_by_name('GetChannelInfo')
+        req.channel.number = channel
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return ChannelInfo(rsp)
+
     def set_username(self, userid: int = 0, username: str = '') -> None:
         req = create_request_by_name('SetUserName')
         req.userid.userid = userid
@@ -178,6 +185,21 @@ class ChannelAuthenticationCapabilities(State):
         s += '  Auth. types: %s\n' % ' '.join(self.auth_types)
         s += '  Max Auth. type: %s\n' % self.get_max_auth_type()
         return s
+
+
+class ChannelInfo(State):
+
+    def _from_response(self, rsp: Message) -> None:
+        self.channel = rsp.channel.number
+        self.medium_type = rsp.medium.type
+        self.protocol_type = rsp.protocol.type
+        self.session_support = rsp.session.support
+        self.active_session_count = rsp.session.active_count
+        self.vendor_id = rsp.vendor_id
+
+    def __str__(self) -> str:
+        return ('Channel %d: medium 0x%02x protocol 0x%02x'
+                % (self.channel, self.medium_type, self.protocol_type))
 
 
 class UserAccess(State):

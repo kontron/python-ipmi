@@ -285,6 +285,40 @@ class GetChannelAuthenticationCapabilitiesRsp(Message):
 
 
 @register_message_class
+class GetChannelInfoReq(Message):
+    __cmdid__ = constants.CMDID_GET_CHANNEL_INFO
+    __netfn__ = constants.NETFN_APP
+    __fields__ = (
+        Bitfield('channel', 1,
+                 Bitfield.Bit('number', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
+    )
+
+
+@register_message_class
+class GetChannelInfoRsp(Message):
+    __cmdid__ = constants.CMDID_GET_CHANNEL_INFO
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
+        Bitfield('channel', 1,
+                 Bitfield.Bit('number', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
+        Bitfield('medium', 1,
+                 Bitfield.Bit('type', 7, 0),
+                 Bitfield.ReservedBit(1, 0),),
+        Bitfield('protocol', 1,
+                 Bitfield.Bit('type', 5, 0),
+                 Bitfield.ReservedBit(3, 0),),
+        Bitfield('session', 1,
+                 Bitfield.Bit('active_count', 6, 0),
+                 Bitfield.Bit('support', 2, 0),),
+        UnsignedInt('vendor_id', 3, 0),
+        RemainingBytes('auxiliary_info'),
+    )
+
+
+@register_message_class
 class GetSessionChallengeReq(Message):
     __cmdid__ = constants.CMDID_GET_SESSION_CHALLENGE
     __netfn__ = constants.NETFN_APP
