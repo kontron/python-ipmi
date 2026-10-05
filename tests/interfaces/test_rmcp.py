@@ -2,6 +2,7 @@
 
 import array
 import socket
+import time
 from unittest.mock import MagicMock
 import pytest
 from pyipmi.session import Session
@@ -218,3 +219,27 @@ class TestRmcp:
 
     def test_send_and_receive(self):
         pass
+
+    def test_keep_alive_skipped_while_busy(self):
+        rmcp = Rmcp(keep_alive_interval=1)
+        rmcp._get_device_id = MagicMock()
+
+        # a request was sent during the last interval
+        rmcp._last_request_time = time.monotonic() - 0.5
+        rmcp._keep_alive()
+        rmcp._get_device_id.assert_not_called()
+
+        # idle for the whole interval
+        rmcp._last_request_time = time.monotonic() - 1.0
+        rmcp._keep_alive()
+        rmcp._get_device_id.assert_called_once()
+
+    def test_send_and_receive_updates_last_request_time(self):
+        rmcp = Rmcp()
+        rmcp._sock = MagicMock(spec=socket.socket)
+        rmcp._sock.recv.return_value = (
+            b'\x06\x00\xff\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08'
+            b'\x81\x1c\x63\x20\x04\x00\xc1\x1b')
+        before = time.monotonic()
+        rmcp.send_and_receive_raw(rmcp.host_target, 0, 6, b'\x00')
+        assert rmcp._last_request_time >= before

@@ -22,6 +22,7 @@ import struct
 import hashlib
 import random
 import threading
+import time
 from array import array
 from queue import Queue
 from typing import Any
@@ -409,6 +410,7 @@ class Rmcp(Interface):
         self.next_sequence_number = 0
         self.keep_alive_interval = keep_alive_interval
         self._stop_keep_alive = None
+        self._last_request_time = 0.0
         self._q = Queue()
         self.transaction_lock = threading.Lock()
         if quirks_cfg is None:
@@ -526,6 +528,13 @@ class Rmcp(Interface):
         rsp = self.send_and_receive(req)
         check_completion_code(rsp.completion_code)
 
+    def _keep_alive(self) -> None:
+        # every request keeps the session alive, so only send a keep-alive
+        # request if the session was idle for the whole interval
+        idle = time.monotonic() - self._last_request_time
+        if idle >= self.keep_alive_interval:
+            self._get_device_id()
+
     def establish_session(self, session: Session) -> None:
         self._session = None
         self.host = session._rmcp_host
@@ -564,7 +573,7 @@ class Rmcp(Interface):
 
         if self.keep_alive_interval:
             self._stop_keep_alive = call_repeatedly(
-                    self.keep_alive_interval, self._get_device_id)
+                    self.keep_alive_interval, self._keep_alive)
 
     def close_session(self) -> None:
         if self._stop_keep_alive:
@@ -622,6 +631,7 @@ class Rmcp(Interface):
             while retry <= self.max_retries:
                 try:
                     self._send_ipmi_msg(tx_data)
+                    self._last_request_time = time.monotonic()
 
                     received = False
                     received_retry = 0

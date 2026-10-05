@@ -550,7 +550,7 @@ class RmcpPlus(Rmcp):
 
         if self.keep_alive_interval:
             self._stop_keep_alive = call_repeatedly(
-                    self.keep_alive_interval, self._get_device_id)
+                    self.keep_alive_interval, self._keep_alive)
 
     def close_session(self) -> None:
         if self._session is None:
