@@ -274,3 +274,134 @@ class SetManagementControllerIdStringRsp(DcmiMessage):
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('total_length', 1),
     )
+
+
+def _thermal_exception_actions() -> Bitfield:
+    return Bitfield('exception_actions', 1,
+                    Bitfield.ReservedBit(5, 0),
+                    Bitfield.Bit('log_event_to_sel', 1),
+                    Bitfield.Bit('hard_power_off', 1),
+                    Bitfield.Bit('enable', 1))
+
+
+@register_message_class
+class SetThermalLimitReq(DcmiMessage):
+    __cmdid__ = constants.CMDID_SET_THERMAL_LIMIT
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('entity_id', 1),
+        UnsignedInt('entity_instance', 1),
+        _thermal_exception_actions(),
+        UnsignedInt('temperature_limit', 1),
+        UnsignedInt('exception_time', 2),
+    )
+
+
+@register_message_class
+class SetThermalLimitRsp(DcmiMessage):
+    __cmdid__ = constants.CMDID_SET_THERMAL_LIMIT
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+    )
+
+
+@register_message_class
+class GetThermalLimitReq(DcmiMessage):
+    __cmdid__ = constants.CMDID_GET_THERMAL_LIMIT
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('entity_id', 1),
+        UnsignedInt('entity_instance', 1),
+    )
+
+
+@register_message_class
+class GetThermalLimitRsp(DcmiMessage):
+    __cmdid__ = constants.CMDID_GET_THERMAL_LIMIT
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        _thermal_exception_actions(),
+        UnsignedInt('temperature_limit', 1),
+        UnsignedInt('exception_time', 2),
+    )
+
+
+@register_message_class
+class GetTemperatureReadingsReq(DcmiMessage):
+    __cmdid__ = constants.CMDID_GET_TEMPERATURE_READINGS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('sensor_type', 1, 1),
+        UnsignedInt('entity_id', 1),
+        UnsignedInt('entity_instance', 1),
+        UnsignedInt('entity_instance_start', 1),
+    )
+
+
+@register_message_class
+class GetTemperatureReadingsRsp(DcmiMessage):
+    __cmdid__ = constants.CMDID_GET_TEMPERATURE_READINGS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('total_number_of_instances', 1),
+        UnsignedInt('number_of_readings', 1),
+        # pairs of (temperature, entity instance)
+        RemainingBytes('readings'),
+    )
+
+
+@register_message_class
+class SetDcmiConfigurationParametersReq(DcmiMessage):
+    __cmdid__ = constants.CMDID_SET_DCMI_CONFIGURATION_PARAMETERS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('parameter_selector', 1),
+        UnsignedInt('set_selector', 1, 0),
+        RemainingBytes('parameter_data'),
+    )
+
+
+@register_message_class
+class SetDcmiConfigurationParametersRsp(DcmiMessage):
+    __cmdid__ = constants.CMDID_SET_DCMI_CONFIGURATION_PARAMETERS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+    )
+
+
+@register_message_class
+class GetDcmiConfigurationParametersReq(DcmiMessage):
+    __cmdid__ = constants.CMDID_GET_DCMI_CONFIGURATION_PARAMETERS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        UnsignedInt('parameter_selector', 1),
+        UnsignedInt('set_selector', 1, 0),
+    )
+
+
+@register_message_class
+class GetDcmiConfigurationParametersRsp(DcmiMessage):
+    __cmdid__ = constants.CMDID_GET_DCMI_CONFIGURATION_PARAMETERS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
+        Bitfield('specification_conformance', 2,
+                 Bitfield.Bit('major', 8),
+                 Bitfield.Bit('minor', 8)),
+        UnsignedInt('parameter_revision', 1),
+        RemainingBytes('parameter_data'),
+    )
