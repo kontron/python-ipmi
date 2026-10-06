@@ -49,8 +49,9 @@ def test_to_request_function_blinking():
     req = SetFruLedStateReq()
     led = LedState(fru_id=1, led_id=2, color=LedState.COLOR_RED)
     led.override_function = led.FUNCTION_BLINKING
-    led.override_off_duration = 3
-    led.override_on_duration = 4
+    # the durations are in milliseconds, the request in tens of ms
+    led.override_off_duration = 30
+    led.override_on_duration = 40
     led.to_request(req)
 
     assert req.color == LedState.COLOR_RED
@@ -62,7 +63,8 @@ def test_to_request_function_lamp_test():
     req = SetFruLedStateReq()
     led = LedState(fru_id=1, led_id=2, color=LedState.COLOR_RED)
     led.override_function = led.FUNCTION_LAMP_TEST
-    led.lamp_test_duration = 3
+    # the duration is in milliseconds, the request in hundreds of ms
+    led.lamp_test_duration = 300
     led.to_request(req)
 
     assert req.color == LedState.COLOR_RED
@@ -187,14 +189,55 @@ def test_set_led_state():
         ('SetFruLedStateReq', b'\x00\x00\x01\xff\x00\x01')]
 
 
-def test_led_state_to_request_invalid():
+def test_led_state_read_and_write_back():
+    # blinking 300ms off / 400ms on in green
+    ipmi = create_ipmi(b'\x00\x00\x03\x00\x00\x02\x1e\x28\x03')
+    led = ipmi.get_led_state(fru_id=0, led_id=1)
+    led.fru_id, led.led_id = 0, 1
+    req = led.to_request(create_request_by_name('SetFruLedState'))
+    assert (req.led_function, req.on_duration) == (0x1e, 0x28)
+
+
+@pytest.mark.parametrize('function, off, on, lamp_test, encoded', [
+    # the longest durations
+    (LedState.FUNCTION_BLINKING, 2500, 2550, None, (0xfa, 0xff)),
+    (LedState.FUNCTION_LAMP_TEST, None, None, 12700, (0xfb, 0x7f)),
+])
+def test_led_state_to_request_limits(function, off, on, lamp_test, encoded):
     led = LedState(fru_id=0, led_id=1, color=LedState.COLOR_BLUE,
-                   function=LedState.FUNCTION_BLINKING)
-    led.override_off_duration = 0xfc
-    led.override_on_duration = 10
+                   function=function)
+    led.override_off_duration = off
+    led.override_on_duration = on
+    led.lamp_test_duration = lamp_test
+    req = led.to_request(create_request_by_name('SetFruLedState'))
+    assert (req.led_function, req.on_duration) == encoded
+
+
+@pytest.mark.parametrize('function, off, on, lamp_test', [
+    # off duration not set, too short, too long, not a multiple of 10 ms
+    (LedState.FUNCTION_BLINKING, None, 100, None),
+    (LedState.FUNCTION_BLINKING, 0, 100, None),
+    (LedState.FUNCTION_BLINKING, 2510, 100, None),
+    (LedState.FUNCTION_BLINKING, 305, 100, None),
+    # on duration too long
+    (LedState.FUNCTION_BLINKING, 300, 2560, None),
+    # lamp test duration too long, not a multiple of 100 ms
+    (LedState.FUNCTION_LAMP_TEST, None, None, 12800),
+    (LedState.FUNCTION_LAMP_TEST, None, None, 150),
+])
+def test_led_state_to_request_invalid_duration(function, off, on, lamp_test):
+    led = LedState(fru_id=0, led_id=1, color=LedState.COLOR_BLUE,
+                   function=function)
+    led.override_off_duration = off
+    led.override_on_duration = on
+    led.lamp_test_duration = lamp_test
     with pytest.raises(EncodingError):
         led.to_request(create_request_by_name('SetFruLedState'))
 
+
+def test_led_state_to_request_invalid():
+    led = LedState(fru_id=0, led_id=1, color=LedState.COLOR_BLUE,
+                   function=LedState.FUNCTION_BLINKING)
     led.override_function = 99
     with pytest.raises(AssertionError):
         led.to_request(create_request_by_name('SetFruLedState'))

@@ -202,13 +202,13 @@ class Picmg(IpmiMixin):
         Args:
             led: The LED state with ``fru_id``, ``led_id``,
                 ``override_color`` and ``override_function``. A blinking LED
-                needs ``override_off_duration`` and ``override_on_duration``
-                in tens of milliseconds, a lamp test ``lamp_test_duration`` in
-                hundreds of milliseconds, see :meth:`LedState.to_request`.
+                needs ``override_off_duration`` and ``override_on_duration``,
+                a lamp test ``lamp_test_duration``, all in milliseconds. See
+                :meth:`LedState.to_request` for their ranges.
 
         Raises:
-            EncodingError: The off duration of a blinking LED is out of
-                range.
+            EncodingError: A duration is not set, out of range or not a
+                multiple of its step.
 
         Example:
             Switch on the blue LED of FRU 0::
@@ -663,17 +663,38 @@ class FanSpeedProperties(State):
         self.local_control_supported = rsp.properties.local_control_supported
 
 
+def _led_duration(duration: int | None, unit: int, minimum: int,
+                  maximum: int) -> int:
+    """Convert a LED duration in milliseconds to the unit of the request.
+
+    Args:
+        duration: The duration in milliseconds.
+        unit: The unit of the request in milliseconds.
+        minimum: The minimum value in the unit of the request.
+        maximum: The maximum value in the unit of the request.
+
+    Returns:
+        The duration in the unit of the request.
+
+    Raises:
+        EncodingError: The duration is not set, not a multiple of the unit
+            or out of range.
+    """
+    if duration is None or duration % unit \
+            or not minimum <= duration // unit <= maximum:
+        raise EncodingError(f'LED duration {duration} ms is not a multiple '
+                            f'of {unit} ms between {minimum * unit} and '
+                            f'{maximum * unit} ms')
+    return duration // unit
+
+
 class LedState(State):
     """The state of a FRU LED.
 
     The state is returned by :meth:`Picmg.get_led_state` and passed to
     :meth:`Picmg.set_led_state`. The ``FUNCTION_*`` constants are the LED
-    functions, the ``COLOR_*`` constants the colors.
-
-    Note:
-        The durations returned by :meth:`Picmg.get_led_state` are in
-        milliseconds, the durations of :meth:`to_request` are in tens of
-        milliseconds (blinking) and hundreds of milliseconds (lamp test).
+    functions, the ``COLOR_*`` constants the colors. All durations are in
+    milliseconds.
 
     Attributes:
         fru_id (int): The FRU device ID.
@@ -812,9 +833,10 @@ class LedState(State):
     def to_request(self, req: Message) -> Message:
         """Fill a Set FRU LED State request with the override state.
 
-        The durations have to be in the units of the request: the off and on
-        duration of a blinking LED in tens of milliseconds (the off duration
-        1 - 249), the lamp test duration in hundreds of milliseconds.
+        The durations are converted from milliseconds to the units of the
+        request. A blinking LED has an off duration of 10 - 2500 ms and an
+        on duration of 0 - 2550 ms in steps of 10 ms, a lamp test takes
+        0 - 12700 ms in steps of 100 ms.
 
         Args:
             req: The Set FRU LED State request.
@@ -823,7 +845,8 @@ class LedState(State):
             The request.
 
         Raises:
-            EncodingError: The off duration of a blinking LED is out of range.
+            EncodingError: A duration is not set, out of range or not a
+                multiple of its step.
         """
         req.fru_id = self.fru_id
         req.led_id = self.led_id
@@ -836,14 +859,16 @@ class LedState(State):
             req.led_function = picmg.LED_FUNCTION_OFF
             req.on_duration = 0
         elif self.override_function == self.FUNCTION_BLINKING:
-            if self.override_off_duration not in \
-                    picmg.LED_FUNCTION_BLINKING_RANGE:
-                raise EncodingError()
-            req.led_function = self.override_off_duration
-            req.on_duration = self.override_on_duration
+            req.led_function = _led_duration(
+                self.override_off_duration, 10,
+                picmg.LED_FUNCTION_BLINKING_RANGE[0],
+                picmg.LED_FUNCTION_BLINKING_RANGE[-1])
+            req.on_duration = _led_duration(
+                self.override_on_duration, 10, 0, 0xff)
         elif self.override_function == self.FUNCTION_LAMP_TEST:
             req.led_function = picmg.LED_FUNCTION_LAMP_TEST
-            req.on_duration = self.lamp_test_duration
+            req.on_duration = _led_duration(
+                self.lamp_test_duration, 100, 0, 0x7f)
         else:
             raise AssertionError()
 
