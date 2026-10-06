@@ -444,8 +444,8 @@ class RmcpPlus(Rmcp):
     def _rakp(self, session: Session, suite: CipherSuite,
               managed_session_id: int) -> bytes:
         """Do the RAKP handshake, returns the session integrity key."""
-        username = (session.auth_username or '').encode()
-        password = (session.auth_password or '').encode()
+        username = session.auth_username_bytes
+        password = session.auth_password_bytes
         if len(username) > MAX_USER_NAME_LENGTH:
             raise AuthenticationError('user name longer than %d bytes'
                                       % MAX_USER_NAME_LENGTH)

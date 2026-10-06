@@ -263,9 +263,9 @@ class IpmiMsg:
         The password/key is 0 padded to 16-bytes for all specified
         authentication types.
         """
-        password = self.session._auth_password
-        if isinstance(password, str):
-            password = str.encode(password)
+        password = b''
+        if self.session is not None:
+            password = self.session.auth_password_bytes
         return password.ljust(16, b'\x00')
 
     def _pack_auth_code_straight(self) -> bytes:
@@ -499,8 +499,8 @@ class Rmcp(Interface):
         req = create_request_by_name('GetSessionChallenge')
         req.target = self.host_target
         req.authentication.type = session.auth_type
-        if session._auth_username:
-            req.user_name = session._auth_username.ljust(16, '\x00')
+        if session.auth_username:
+            req.user_name = session.auth_username_bytes.ljust(16, b'\x00')
         rsp = self.send_and_receive(req)
         check_rsp_completion_code(rsp)
         return rsp

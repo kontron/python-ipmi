@@ -20,6 +20,14 @@ from __future__ import annotations
 from typing import Any
 
 
+def _to_bytes(value: str | bytes | None) -> bytes:
+    if value is None:
+        return b''
+    if isinstance(value, str):
+        return value.encode()
+    return value
+
+
 class Session:
     AUTH_TYPE_NONE = 0x00
     AUTH_TYPE_MD2 = 0x01
@@ -105,18 +113,29 @@ class Session:
     def _get_auth_type(self) -> int:
         return self._auth_type
 
-    def set_auth_type_user(self, username: str, password: str) -> None:
+    def set_auth_type_user(self, username: str | bytes,
+                           password: str | bytes) -> None:
         self._auth_type = self.AUTH_TYPE_PASSWORD
         self._auth_username = username
         self._auth_password = password
 
     @property
-    def auth_username(self) -> str | None:
+    def auth_username(self) -> str | bytes | None:
         return self._auth_username
 
     @property
-    def auth_password(self) -> str | None:
+    def auth_password(self) -> str | bytes | None:
         return self._auth_password
+
+    @property
+    def auth_username_bytes(self) -> bytes:
+        """The user name as UTF-8 encoded bytes, empty if not set."""
+        return _to_bytes(self._auth_username)
+
+    @property
+    def auth_password_bytes(self) -> bytes:
+        """The password as UTF-8 encoded bytes, empty if not set."""
+        return _to_bytes(self._auth_password)
 
     def establish(self) -> None:
         if hasattr(self.interface, 'establish_session'):
