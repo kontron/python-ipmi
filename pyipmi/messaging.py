@@ -146,7 +146,7 @@ class Messaging(IpmiMixin):
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def get_username(self, userid: int = 0) -> str:
+    def get_username(self, userid: int = 0) -> bytes:
         """Get the name of a user.
 
         Args:
@@ -221,7 +221,7 @@ class Messaging(IpmiMixin):
             ValueError: The password is longer than 16 characters.
         """
         if len(password) > 16:
-            raise ValueError("Password length cannot be greater than 20.")
+            raise ValueError("Password length cannot be greater than 16.")
         req = create_request_by_name('SetUserPassword')
         req.userid.userid = userid
         req.operation.operation = PasswordOperation.SET_PASSWORD

@@ -75,7 +75,7 @@ def test_set_user_password():
 
 def test_set_user_password_too_long():
     ipmi = create_ipmi(b'\x00')
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match='greater than 16'):
         ipmi.set_user_password(2, 'x' * 17)
     assert ipmi.requests == []
 
