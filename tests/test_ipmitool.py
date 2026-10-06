@@ -167,7 +167,7 @@ class TestParser:
         ('picmg portstate get 1 0', 'cmd_picmg_get_portstate'),
         ('picmg portstate getall', 'cmd_picmg_get_portstate_all'),
         ('picmg channel status 1', 'cmd_picmg_getpower_channel_status'),
-        ('picmg channel power 1', 'cmd_picmg_send_channel_power'),
+        ('picmg channel power 1 on 2.5', 'cmd_picmg_send_channel_power'),
         ('picmg send heartbeat', 'cmd_picmg_send_pm_heartbeat'),
         ('vita properties', 'cmd_vita_properties'),
         ('vita led set 0 1 255 0 3', 'cmd_vita_led_set'),

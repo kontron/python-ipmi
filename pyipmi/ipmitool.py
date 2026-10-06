@@ -451,7 +451,8 @@ def cmd_picmg_send_pm_heartbeat(ipmi: pyipmi.Ipmi,
 
 def cmd_picmg_send_channel_power(ipmi: pyipmi.Ipmi,
                                  args: argparse.Namespace) -> None:
-    ipmi.send_channel_power(args.channel)
+    ipmi.send_channel_power(args.channel, args.state == 'on',
+                            args.current_limit)
 
 
 VITA_LED_COLORS = ('reserved', 'BLUE', 'RED', 'GREEN', 'AMBER', 'ORANGE',
@@ -1098,6 +1099,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.command('power', cmd_picmg_send_channel_power,
                     'Send channel power')
     p.add_argument('channel', type=auto_int)
+    p.add_argument('state', choices=('on', 'off'),
+                   help='enable or disable the payload power')
+    p.add_argument('current_limit', type=float,
+                   help='current limit in amperes')
     sub = group.group('send', 'Send')
     sub.command('heartbeat', cmd_picmg_send_pm_heartbeat,
                 'Send PM heartbeat')
