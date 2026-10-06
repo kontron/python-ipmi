@@ -66,9 +66,9 @@ class Fru:
         data = array.array('B')
 
         # first check for maximum area size
-        if offset is None:
+        if offset is None or count is None:
             area_size = self.get_fru_inventory_area_info(fru_id)
-            off = 0
+            off = offset or 0
         else:
             area_size = offset + count
             off = offset

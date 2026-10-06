@@ -218,6 +218,11 @@ def test_read_fru_data():
     assert fru.requests == [(0, 32), (32, 32), (64, 32), (96, 4)]
 
 
+def test_read_fru_data_offset_without_count():
+    fru = FakeFruDevice(FRU_DATA)
+    assert fru.read_fru_data(offset=90) == FRU_DATA[90:]
+
+
 @pytest.mark.parametrize('cc', [constants.CC_CANT_RET_NUM_REQ_BYTES,
                                 constants.CC_REQ_DATA_FIELD_EXCEED,
                                 constants.CC_PARAM_OUT_OF_RANGE])
