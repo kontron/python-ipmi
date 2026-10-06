@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from pyipmi.errors import CompletionCodeError, DecodingError
+from pyipmi.errors import CompletionCodeError, DataNotFound, DecodingError
 from pyipmi.msgs import constants
 
 from pyipmi.fru import (Fru, FruData, FruInventory,
@@ -357,3 +357,15 @@ def test_get_fru_inventory_without_area_info():
     header = fru.get_fru_inventory_header()
     assert header.fru_size is None
     fru.get_fru_inventory()
+
+
+@pytest.mark.parametrize('method', [
+    'get_fru_chassis_area', 'get_fru_board_area', 'get_fru_product_area',
+    'get_fru_multirecord_area',
+])
+def test_get_fru_area_not_present(method):
+    # common header without any area
+    fru = FakeFruDevice(b'\x01\x00\x00\x00\x00\x00\x00\xff')
+    with pytest.raises(DataNotFound):
+        getattr(fru, method)()
+    assert fru.requests == [(0, 8)]
