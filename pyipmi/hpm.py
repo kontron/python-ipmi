@@ -580,8 +580,13 @@ class UpgradeImageHeaderRecord:
         if data:
             self._from_data(data)
 
+    SIGNATURE = b'PICMGFWU'
+
     def _from_data(self, data: bytes) -> None:
         self.signature = data[0:8]
+        if self.signature != self.SIGNATURE:
+            raise HpmError('no HPM.1 upgrade image (invalid signature %s)'
+                           % bytes(self.signature).hex(' '))
 
         for a in self.FORMAT:
             setattr(self, a.field_name, struct.unpack(
