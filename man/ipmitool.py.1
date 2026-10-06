@@ -401,12 +401,20 @@ Request the power channel status
 starting power channel
 
 .SH COMMAND \fI\,'ipmitool.py picmg channel power'\/\fR
-usage: ipmitool.py picmg channel power [\-h] channel
+usage: ipmitool.py picmg channel power [\-h] channel {on,off} current_limit
 
 Send channel power
 
 .TP
 \fBchannel\fR
+
+.TP
+\fB{on,off}\fR
+enable or disable the payload power
+
+.TP
+\fBcurrent_limit\fR
+current limit in amperes
 
 .SH COMMAND \fI\,'ipmitool.py picmg send'\/\fR
 usage: ipmitool.py picmg send [\-h] <command> ...
