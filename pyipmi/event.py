@@ -47,16 +47,38 @@ class Event(IpmiMixin):
 
         Args:
             ipmb_address: The 7-bit IPMB address of the event receiver, e.g.
-                0x10 for the BMC at the 8-bit address 0x20. An 8-bit
-                address is truncated to 7 bits.
-            lun: The LUN of the event receiver.
+                0x10 for the BMC at the 8-bit address 0x20.
+            lun: The LUN of the event receiver (0 - 3).
+
+        Raises:
+            ValueError: The address is not a 7-bit address or the LUN is out
+                of range.
+            CompletionCodeError: The target rejected the request.
+        """
+        if not 0 <= ipmb_address <= 0x7f:
+            raise ValueError('event receiver address 0x%x is not a 7-bit '
+                             'IPMB address' % ipmb_address)
+        if not 0 <= lun <= 3:
+            raise ValueError('event receiver LUN %d is out of range' % lun)
+        req = create_request_by_name('SetEventReceiver')
+        req.event_receiver.ipmb_i2c_slave_address = ipmb_address
+        req.event_receiver.lun = lun
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
+    def disable_event_message_generation(self) -> None:
+        """Disable the event message generation of the target.
+
+        The event receiver address is set to 0xFF, which disables the
+        event messages. :meth:`get_event_receiver` returns the address
+        0x7F then.
 
         Raises:
             CompletionCodeError: The target rejected the request.
         """
         req = create_request_by_name('SetEventReceiver')
-        req.event_receiver.ipmb_i2c_slave_address = ipmb_address
-        req.event_receiver.lun = lun
+        # the address byte 0xFF includes its reserved bit 0
+        req.event_receiver._value = 0xff
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
