@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import os
 
 import pytest
 
@@ -242,6 +243,14 @@ class TestParser:
 
     def test_hpm_check_needs_no_connection(self):
         assert not self.parse('hpm check file.img').needs_connection
+
+    def test_hpm_check_runs_without_connection(self, capsys):
+        path = os.path.join(os.path.dirname(__file__), 'hpm_bin',
+                            'firmware.hpm')
+        ipmitool.main(['hpm', 'check', path])
+        out = capsys.readouterr().out
+        assert 'HPM Upgrade Image header' in out
+        assert 'Upload for Upgrade' in out
 
     def test_invalid_choice(self, capsys):
         with pytest.raises(SystemExit):
