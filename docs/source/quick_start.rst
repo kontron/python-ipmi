@@ -205,7 +205,6 @@ Here are three examples to have a better understanding about the format of the r
           nd4;
         }
         nd2;
-        }
       }
     }
 

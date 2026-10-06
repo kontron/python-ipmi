@@ -378,34 +378,33 @@ class Rmcp(Interface):
                  host_target_address: int = 0x20,
                  keep_alive_interval: int = 1, max_retries: int = 0,
                  quirks_cfg: dict | None = None) -> None:
-        """Native RMCP interface constructor
+        """Native RMCP interface constructor.
 
-        Parameter `quirks_cfg`: a dict of additional configuration parameters
-        for the RMCP object. Supported keys/values are :
+        Args:
+            slave_address: The IPMB address of this requester.
+            host_target_address: The IPMB address of the BMC.
+            keep_alive_interval: The interval in seconds of the requests
+                that keep the session alive, 0 disables them.
+            max_retries: The number of times a request is sent again after
+                a timeout.
+            quirks_cfg: Additional configuration parameters:
 
-        - `rmcp_ignore_sdu_length: bool` whether or not to verify the SDU length
-        of a received IPMI message. If absent or `False` (default), an exception
-        will be raised if there is a mismatch between the received SDU length
-        and the value stored in `payload_length` field of the PDU header. If
-        `True`, ignore the header field `payload_length` and unpack the PDU
-        anyway.
+                - ``rmcp_ignore_sdu_length`` (bool): Don't verify the SDU
+                  length of a received IPMI message. By default a
+                  mismatch between the received SDU length and the
+                  ``payload_length`` field of the PDU header raises an
+                  exception. With True the header field is ignored and the
+                  PDU is unpacked anyway.
+                - ``rmcp_ignore_rq_seq`` (bool): Don't verify the sequence
+                  number of a response. The default is False.
 
-            Example:
+        Example:
+            Create an interface that ignores the SDU length::
 
-            interfaces.create_interface(
-                interface="rmcp",
-                quirks_cfg={'rmcp_ignore_sdu_length': True}
-            )
-
-        - `rmcp_ignore_rq_seq: bool` whether or not to verify the rq_seq field
-        for rx_filter. The default value is `False`.
-
-            Example:
-
-            interfaces.create_interface(
-                interface="rmcp",
-                quirks_cfg={'rmcp_ignore_rq_seq': True}
-            )
+                interfaces.create_interface(
+                    interface="rmcp",
+                    quirks_cfg={'rmcp_ignore_sdu_length': True}
+                )
         """
         self.host: str | None = None
         self.port: int | None = None

@@ -300,15 +300,19 @@ class RmcpPlus(Rmcp):
                  quirks_cfg: dict | None = None,
                  cipher_suite: int | None = None,
                  kg: bytes | None = None) -> None:
-        """Native RMCP+ interface constructor
+        """Native RMCP+ interface constructor.
 
-        Parameter `cipher_suite`: the cipher suite ID (1, 2, 3, 15, 16 or 17)
-        to use. If `None` (default), cipher suite 17 and then 3 are tried.
-
-        Parameter `kg`: the BMC key K_G. If `None` (default), the user
-        password is used as specified for BMCs without a K_G.
-
-        For the other parameters see `Rmcp`.
+        Args:
+            slave_address: See :class:`Rmcp`.
+            host_target_address: See :class:`Rmcp`.
+            keep_alive_interval: See :class:`Rmcp`.
+            max_retries: See :class:`Rmcp`.
+            quirks_cfg: See :class:`Rmcp`.
+            cipher_suite: The cipher suite ID (1, 2, 3, 15, 16 or 17) to
+                use. If None (default), cipher suite 17 and then 3 are
+                tried.
+            kg: The BMC key K_G. If None (default), the user password is
+                used as specified for BMCs without a K_G.
         """
         super().__init__(slave_address=slave_address,
                          host_target_address=host_target_address,

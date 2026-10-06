@@ -125,14 +125,17 @@ class Hpm(IpmiMixin):
         self.send_message_with_name('AbortFirmwareUpgrade')
 
     def initiate_upgrade_action(self, components_mask: int, action: int) -> None:
-        """Initiate Upgrade Action.
+        """Initiate an upgrade action.
 
-        components:
-        action:
-            ACTION_BACKUP_COMPONENT = 0x00
-            ACTION_PREPARE_COMPONENT = 0x01
-            ACTION_UPLOAD_FOR_UPGRADE = 0x02
-            ACTION_UPLOAD_FOR_COMPARE = 0x03
+        Args:
+            components_mask: Bit mask of the components, bit n selects
+                component n.
+            action: One of ``ACTION_BACKUP_COMPONENT``,
+                ``ACTION_PREPARE_COMPONENT``, ``ACTION_UPLOAD_FOR_UPGRADE``
+                or ``ACTION_UPLOAD_FOR_COMPARE``.
+
+        Raises:
+            HpmError: An upload action selects more than one component.
         """
         if action in (ACTION_UPLOAD_FOR_UPGRADE, ACTION_UPLOAD_FOR_COMPARE):
             if self._get_component_count(components_mask) != 1:

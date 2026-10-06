@@ -117,35 +117,40 @@ class Target:
     def set_routing(self, routing: str | list[tuple]) -> None:
         """Set the path over which a target is reachable.
 
-        The path is given as a list of tuples in the form (address,
-        bridge_channel).
+        Each hop of the path is a tuple ``(rq_sa, rs_sa, channel)``: the
+        requester address, the responder address and the channel of the
+        bridge to the next hop. The channel of the last hop is None.
 
-        Example #1: access to an ATCA blade in a chassis
-              slave = 0x81, target = 0x82
-              routing = [(0x81,0x20,0),(0x20,0x82,None)]
+        Args:
+            routing: The list of hops, or its string representation as
+                given on the command line.
 
-        Example #2: access to an AMC in a uTCA chassis
-              slave = 0x81, target = 0x72
-              routing = [(0x81,0x20,0),(0x20,0x82,7),(0x20,0x72,None)]
+        Example #1, access to an ATCA blade in a chassis (slave 0x81,
+        target 0x82)::
 
+            routing = [(0x81, 0x20, 0), (0x20, 0x82, None)]
 
-                         uTCA - MCH                        AMC
-                       .-------------------.             .--------.
-                       |       .-----------|             |        |
-                       | ShMC  | CM        |             | MMC    |
-            channel=0  |       |           |  channel=7  |        |
-        81 ------------| 0x20  |0x82  0x20 |-------------| 0x72   |
-                       |       |           |             |        |
-                       |       |           |             |        |
-                       |       `-----------|             |        |
-                       `-------------------´             `--------´
-          `------------´     `---´        `---------------´
+        Example #2, access to an AMC in a uTCA chassis (slave 0x81,
+        target 0x72)::
 
-        Example #3: access to an AMC in a ATCA AMC carrier
+            routing = [(0x81, 0x20, 0), (0x20, 0x82, 7), (0x20, 0x72, None)]
 
-        slave = 0x81, target = 0x72
-        routing = [(0x81,0x20,0),(0x20,0x8e,7),(0x20,0x80,None)]
+                             uTCA - MCH                        AMC
+                           .-------------------.             .--------.
+                           |       .-----------|             |        |
+                           | ShMC  | CM        |             | MMC    |
+                channel=0  |       |           |  channel=7  |        |
+            81 ------------| 0x20  |0x82  0x20 |-------------| 0x72   |
+                           |       |           |             |        |
+                           |       |           |             |        |
+                           |       `-----------|             |        |
+                           `-------------------´             `--------´
+              `------------´     `---´        `---------------´
 
+        Example #3, access to an AMC in an ATCA AMC carrier (slave 0x81,
+        target 0x72)::
+
+            routing = [(0x81, 0x20, 0), (0x20, 0x8e, 7), (0x20, 0x80, None)]
         """
         if is_string(routing):
             # if type(routing) in [unicode, str]:

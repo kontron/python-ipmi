@@ -104,4 +104,5 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 .. _Total Phase: http://www.totalphase.com
 .. _ipmitool: https://codeberg.org/IPMITool/ipmitool
 .. _IPMI standard: https://www.intel.com/content/dam/www/public/us/en/documents/product-briefs/ipmi-second-gen-interface-spec-v2-rev1-1.pdf
-.. |I2C| replace:: I\ :sup:`2`\ C.. _cryptography: https://pypi.org/project/cryptography/
+.. |I2C| replace:: I\ :sup:`2`\ C
+.. _cryptography: https://pypi.org/project/cryptography/

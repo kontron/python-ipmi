@@ -6,3 +6,4 @@ dist/
 *.egg-info/
 .eggs/
 .venv/
+docs/_build/
