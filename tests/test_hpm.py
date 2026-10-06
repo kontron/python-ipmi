@@ -16,6 +16,7 @@ from pyipmi.hpm import (Hpm, ComponentProperty,
                         UpgradeActionRecordPrepare,
                         UpgradeActionRecordUploadForUpgrade,
                         UpgradeActionRecordUploadForCompare, UpgradeImage,
+                        UpgradeImageHeaderRecord,
                         PROPERTY_GENERAL_PROPERTIES, PROPERTY_CURRENT_VERSION,
                         PROPERTY_DESCRIPTION_STRING, PROPERTY_ROLLBACK_VERSION,
                         PROPERTY_DEFERRED_VERSION, PROPERTY_OEM,
@@ -502,3 +503,8 @@ def test_wait_until_new_firmware_comes_up(fake_time):
     ipmi.interface.send_and_receive.side_effect = send_and_receive
     ipmi.wait_until_new_firmware_comes_up(timeout=5, interval=1)
     assert fake_time.sleeps == [1, 1, 5]
+
+
+def test_upgradeimageheaderrecord_invalid_signature():
+    with pytest.raises(HpmError):
+        UpgradeImageHeaderRecord(b'\x1f\x8b\x08\x00' + bytes(31))
