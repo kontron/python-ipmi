@@ -20,6 +20,24 @@ jobs:
       - name: Lint with ruff
         run: ruff check --output-format=github .
 
+  mypy:
+    name: Type check with mypy
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install mypy==2.4.0
+
+      # the files and options are configured in setup.cfg
+      - name: Type check with mypy
+        run: mypy
+
   codespell:
     name: Check spelling with codespell
     runs-on: ubuntu-24.04
