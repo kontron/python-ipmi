@@ -176,6 +176,47 @@ def test_FruInventory_ignore_checksum_error():
     assert inv.product_info_area.manufacturer.string == 'ASRockRack'
 
 
+def _area_checksum(data, offset):
+    """Return the position of the checksum of an info area."""
+    return offset + data[offset + 1] * 8 - 1
+
+
+def _record_data(data, offset):
+    """Return the position of the last data byte of the first record."""
+    return offset + 5 + data[offset + 2] - 1
+
+
+@pytest.mark.parametrize('filename, position', [
+    # common header checksum
+    ('HP_ProLiant_BL460c_Gen8.bin', lambda d, h: 7),
+    ('HP_ProLiant_BL460c_Gen8.bin',
+     lambda d, h: _area_checksum(d, h.chassis_info_area_offset)),
+    ('HP_ProLiant_BL460c_Gen8.bin',
+     lambda d, h: _area_checksum(d, h.board_info_area_offset)),
+    ('HP_ProLiant_BL460c_Gen8.bin',
+     lambda d, h: _area_checksum(d, h.product_info_area_offset)),
+    # multirecord header checksum
+    ('HP_ProLiant_BL460c_Gen8.bin', lambda d, h: h.multirecord_area_offset + 4),
+    # record data of an unknown, a PICMG and a power module record
+    ('HP_ProLiant_BL460c_Gen8.bin',
+     lambda d, h: _record_data(d, h.multirecord_area_offset)),
+    ('kontron_am4010.bin',
+     lambda d, h: _record_data(d, h.multirecord_area_offset)),
+    ('vadatech_utc017.bin',
+     lambda d, h: _record_data(d, h.multirecord_area_offset)),
+], ids=['header', 'chassis', 'board', 'product', 'record-header',
+        'record-data', 'picmg-record-data', 'power-module-record-data'])
+def test_fru_inventory_ignore_checksum(filename, position):
+    with open(os.path.join(this_file_path, 'fru_bin', filename), 'rb') as f:
+        data = bytearray(f.read())
+    header = InventoryCommonHeader(data[:8])
+    data[position(data, header)] ^= 0x01
+
+    with pytest.raises(DecodingError, match='checksum'):
+        FruInventory(data)
+    FruInventory(data, ignore_checksum=True)
+
+
 class FakeFruDevice(Fru):
     """Answers Read FRU Data like a device with a maximum read length."""
 

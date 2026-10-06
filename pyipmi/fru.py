@@ -605,7 +605,7 @@ class InventoryChassisInfoArea(CommonInfoArea):
     TYPE_RACK_MOUNT_CHASSIS = 23
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
-        CommonInfoArea._from_data(self, data)
+        CommonInfoArea._from_data(self, data, ignore_checksum=ignore_checksum)
         self.type = data[2]
         offset = 3
         self.part_number = FruTypeLengthString(data, offset)
@@ -668,7 +668,7 @@ class InventoryProductInfoArea(CommonInfoArea):
     """
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
-        CommonInfoArea._from_data(self, data)
+        CommonInfoArea._from_data(self, data, ignore_checksum=ignore_checksum)
         self.language_code = data[2]
         offset = 3
         self.manufacturer = FruTypeLengthString(data, offset)
@@ -730,7 +730,9 @@ class FruDataMultiRecord(FruData):
             raise DecodingError('FruDataMultiRecord record checksum failed')
 
     @staticmethod
-    def create_from_record_id(data: Sequence[int]) -> FruDataMultiRecord:
+    def create_from_record_id(data: Sequence[int],
+                              ignore_checksum: bool = False
+                              ) -> FruDataMultiRecord:
         """Decode a record with the class for its record type.
 
         PICMG records are decoded by :class:`FruPicmgRecord`, the other
@@ -739,14 +741,17 @@ class FruDataMultiRecord(FruData):
         Args:
             data: The data of the multirecord area, starting with the
                 record.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum.
 
         Returns:
             The decoded record.
         """
         if data[0] == FruDataMultiRecord.TYPE_OEM_PICMG:
-            return FruPicmgRecord.create_from_record_id(data)
+            return FruPicmgRecord.create_from_record_id(
+                data, ignore_checksum=ignore_checksum)
         else:
-            return FruDataUnknown(data)
+            return FruDataUnknown(data, ignore_checksum=ignore_checksum)
 
 
 class FruDataUnknown(FruDataMultiRecord):
@@ -793,20 +798,25 @@ class FruPicmgRecord(FruDataMultiRecord):
     PICMG_RECORD_ID_CARRIER_BUSED_CONNECTIVITY = 0x31
     PICMG_RECORD_ID_ZONE_3_INTERFACE_DOCUMENTATION = 0x32
 
-    def __init__(self, data: Sequence[int]) -> None:
+    def __init__(self, data: Sequence[int],
+                 ignore_checksum: bool = False) -> None:
         """Decode the PICMG record.
 
         Args:
             data: The data of the multirecord area, starting with the
                 record.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum.
 
         Raises:
             DecodingError: The data is too short or a checksum is wrong.
         """
-        FruDataMultiRecord.__init__(self, data)
+        FruDataMultiRecord.__init__(self, data,
+                                    ignore_checksum=ignore_checksum)
 
     @staticmethod
-    def create_from_record_id(data: Sequence[int]) -> FruPicmgRecord:
+    def create_from_record_id(data: Sequence[int],
+                              ignore_checksum: bool = False) -> FruPicmgRecord:
         """Decode a PICMG record with the class for its PICMG record type.
 
         The Power Module Capability record is decoded by
@@ -816,16 +826,19 @@ class FruPicmgRecord(FruDataMultiRecord):
         Args:
             data: The data of the multirecord area, starting with the
                 record.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum.
 
         Returns:
             The decoded record.
         """
-        picmg_record = FruPicmgRecord(data)
+        picmg_record = FruPicmgRecord(data, ignore_checksum=ignore_checksum)
         if picmg_record.picmg_record_type_id ==\
                 FruPicmgRecord.PICMG_RECORD_ID_MTCA_POWER_MODULE_CAPABILITY:
-            return FruPicmgPowerModuleCapabilityRecord(data)
+            return FruPicmgPowerModuleCapabilityRecord(
+                data, ignore_checksum=ignore_checksum)
 
-        return FruPicmgRecord(data)
+        return picmg_record
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         if len(data) < 10:
@@ -849,7 +862,7 @@ class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         if len(data) < 12:
             raise DecodingError('data too short')
-        FruPicmgRecord._from_data(self, data)
+        FruPicmgRecord._from_data(self, data, ignore_checksum=ignore_checksum)
         maximum_current_output = data[10] | data[11] << 8
         self.maximum_current_output = float(maximum_current_output/10)
 
@@ -874,13 +887,14 @@ class InventoryMultiRecordArea:
             DecodingError: A record is invalid or its checksum is wrong.
         """
         if data:
-            self._from_data(data)
+            self._from_data(data, ignore_checksum=ignore_checksum)
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         self.records = list()
         offset = 0
         while True:
-            record = FruDataMultiRecord.create_from_record_id(data[offset:])
+            record = FruDataMultiRecord.create_from_record_id(
+                data[offset:], ignore_checksum=ignore_checksum)
             self.records.append(record)
             offset += record.length + 5
             if record.end_of_list:
@@ -925,7 +939,8 @@ class FruInventory:
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         self.raw = data
-        self.common_header = InventoryCommonHeader(data[:8])
+        self.common_header = InventoryCommonHeader(
+            data[:8], ignore_checksum=ignore_checksum)
 
         if self.common_header.chassis_info_area_offset:
             self.chassis_info_area = InventoryChassisInfoArea(
