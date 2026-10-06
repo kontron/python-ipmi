@@ -100,10 +100,15 @@ class Ipmitool(Interface):
                 r".*RAKP [0-9]+ HMAC.*")
         self.re_raw_request = re.compile(
                 r".*RAW REQUEST\s*\((\d+)\s*bytes?\)")
-        self._session = None
+        self._session: Session | None = None
 
     def establish_session(self, session: Session) -> None:
         self._session = session
+
+    def _get_session(self) -> Session:
+        if self._session is None:
+            raise RuntimeError('Session needs to be set')
+        return self._session
 
     def rmcp_ping(self) -> None:
 
@@ -112,15 +117,16 @@ class Ipmitool(Interface):
                 'rcmp_ping not supported on "serial-terminal" interface')
 
         # for now this uses impitool..
+        session = self._get_session()
         cmd = self.IPMITOOL_PATH
         cmd += (' -I %s' % self._interface_type)
-        cmd += (' -H %s' % self._session.rmcp_host)
-        cmd += (' -p %s' % self._session.rmcp_port)
+        cmd += (' -H %s' % session.rmcp_host)
+        cmd += (' -p %s' % session.rmcp_port)
         cmd += (' -v')
         cmd += self._build_ipmitool_retries()
-        if self._session.auth_type == Session.AUTH_TYPE_NONE:
+        if session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += (' -A NONE')
-        elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
+        elif session.auth_type == Session.AUTH_TYPE_PASSWORD:
             cmd += self._build_ipmitool_credentials()
         cmd += (' session info all')
 
@@ -319,27 +325,26 @@ class Ipmitool(Interface):
 
     def _build_ipmitool_cmd(self, target: Target, lun: int, netfn: int,
                             raw_bytes: bytes) -> str:
-        if not hasattr(self, '_session'):
-            raise RuntimeError('Session needs to be set')
+        session = self._get_session()
 
         cmd = self.IPMITOOL_PATH
         cmd += (' -I %s' % self._interface_type)
-        cmd += (' -H %s' % self._session.rmcp_host)
-        cmd += (' -p %s' % self._session.rmcp_port)
+        cmd += (' -H %s' % session.rmcp_host)
+        cmd += (' -p %s' % session.rmcp_port)
         cmd += (' -v')
 
-        cmd += self._build_ipmitool_priv_level(self._session.priv_level)
+        cmd += self._build_ipmitool_priv_level(session.priv_level)
 
         if self._cipher:
             cmd += (' -C %s' % self._cipher)
         cmd += self._build_ipmitool_retries()
-        if self._session.auth_type == Session.AUTH_TYPE_NONE:
+        if session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += ' -P ""'
-        elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
+        elif session.auth_type == Session.AUTH_TYPE_PASSWORD:
             cmd += self._build_ipmitool_credentials()
         else:
             raise RuntimeError('Session type %d not supported' %
-                               self._session.auth_type)
+                               session.auth_type)
 
         cmd += self._build_ipmitool_target(target)
         cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)
@@ -349,11 +354,10 @@ class Ipmitool(Interface):
 
     def _build_serial_ipmitool_cmd(self, target: Target, lun: int, netfn: int,
                                    raw_bytes: bytes) -> str:
-        if not hasattr(self, '_session'):
-            raise RuntimeError('Session needs to be set')
+        session = self._get_session()
 
         cmd = (f'{self.IPMITOOL_PATH} -I {self._interface_type} '
-               f'-D {self._session.serial_port}:{self._session.serial_baudrate}')
+               f'-D {session.serial_port}:{session.serial_baudrate}')
 
         cmd += self._build_ipmitool_target(target)
         cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)
