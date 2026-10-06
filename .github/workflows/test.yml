@@ -38,7 +38,7 @@ jobs:
         uses: coverallsapp/github-action@v2
         with:
           github-token: ${{ secrets.github_token }}
-          flag-name: run-${{ matrix.test_number }}
+          flag-name: run-${{ matrix.python-version }}
           parallel: true
           path-to-lcov: coverage.lcov
 
