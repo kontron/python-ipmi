@@ -180,15 +180,23 @@ class FakeFruDevice(Fru):
     """Answers Read FRU Data like a device with a maximum read length."""
 
     def __init__(self, data, max_length=32,
-                 cc=constants.CC_CANT_RET_NUM_REQ_BYTES):
+                 cc=constants.CC_CANT_RET_NUM_REQ_BYTES, fru_size=None,
+                 area_info_cc=None):
         super().__init__()
         self.data = data
         self.max_length = max_length
         self.cc = cc
+        # reported FRU size, the data can be shorter than that
+        self.fru_size = len(data) if fru_size is None else fru_size
+        self.area_info_cc = area_info_cc
         self.requests = []
         self.fru_ids = set()
 
-    def send_message_with_name(self, name, fru_id, offset, count):
+    def send_message_with_name(self, name, fru_id, offset=None, count=None):
+        if name == 'GetFruInventoryAreaInfo':
+            if self.area_info_cc is not None:
+                raise CompletionCodeError(self.area_info_cc)
+            return SimpleNamespace(area_size=self.fru_size)
         assert name == 'ReadFruData'
         # reading beyond the FRU data is an error on real devices
         assert offset + count <= len(self.data)
@@ -285,3 +293,62 @@ def test_get_fru_inventory_requests():
         (16, 32), (48, 24),             # board area, up to the product area
         (72, 8), (80, 32), (112, 32), (144, 8),  # product area (last one)
     ]
+
+
+def _truncated_fru_data():
+    """FRU data like on the Asus ASMB5-iKVM (issue #187).
+
+    The product info area at offset 0x60 declares 80 bytes, but the FRU data
+    ends at 0x70.
+    """
+    path = os.path.join(FRU_BIN_DIR, 'supermicro_A2SDi-4C-HLN4F.bin')
+    with open(path, 'rb') as f:
+        data = bytearray(f.read())
+    header = InventoryCommonHeader(data[:8])
+    offset = header.product_info_area_offset
+    return bytes(data[:offset + 16]), offset
+
+
+def test_get_fru_inventory_area_exceeds_fru_size():
+    data, offset = _truncated_fru_data()
+    fru = FakeFruDevice(data)
+    with pytest.raises(DecodingError,
+                       match=f'product info area at offset 0x{offset:x} '
+                             f'with .* bytes exceeds the FRU size of '
+                             f'{len(data)} bytes'):
+        fru.get_fru_inventory()
+    # nothing is read beyond the end of the FRU data
+    assert all(o + c <= len(data) for o, c in fru.requests)
+    # and the read length is not reduced
+    assert fru._fru_read_lengths[0].length == 32
+
+
+def test_get_fru_area_exceeds_fru_size():
+    data, offset = _truncated_fru_data()
+    fru = FakeFruDevice(data)
+    # the areas before the broken one can still be read
+    header = fru.get_fru_inventory_header()
+    assert header.fru_size == len(data)
+    fru.get_fru_chassis_area(header=header)
+    fru.get_fru_board_area(header=header)
+    with pytest.raises(DecodingError):
+        fru.get_fru_product_area(header=header)
+
+
+def test_get_fru_inventory_area_starts_beyond_fru_size():
+    data, offset = _truncated_fru_data()
+    fru = FakeFruDevice(data, fru_size=offset + 4)
+    with pytest.raises(DecodingError, match='product info area'):
+        fru.get_fru_product_area()
+    assert all(o + c <= offset + 4 for o, c in fru.requests)
+
+
+def test_get_fru_inventory_without_area_info():
+    # devices that do not support Get FRU Inventory Area Info are read
+    # without the size check
+    path = os.path.join(FRU_BIN_DIR, 'supermicro_A2SDi-4C-HLN4F.bin')
+    with open(path, 'rb') as f:
+        fru = FakeFruDevice(f.read(), area_info_cc=constants.CC_INV_CMD)
+    header = fru.get_fru_inventory_header()
+    assert header.fru_size is None
+    fru.get_fru_inventory()
