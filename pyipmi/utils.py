@@ -18,8 +18,8 @@ from __future__ import annotations
 
 import codecs
 from array import array
-from typing import Any, TYPE_CHECKING
-from collections.abc import Generator
+from typing import Any, TYPE_CHECKING, TypeGuard, overload
+from collections.abc import Generator, Iterator, Sequence
 from .msgs import constants
 from .errors import DecodingError, CompletionCodeError
 
@@ -138,18 +138,31 @@ class ByteBuffer:
     def __len__(self) -> int:
         return len(self.array)
 
-    def __getitem__(self, idx: int) -> int:
+    def __iter__(self) -> Iterator[int]:
+        return iter(self.array)
+
+    @overload
+    def __getitem__(self, idx: int) -> int: ...
+
+    @overload
+    def __getitem__(self, idx: slice) -> array: ...
+
+    def __getitem__(self, idx: int | slice) -> int | array:
         return self.array[idx]
+
+
+# raw data given as bytes, list of ints, array or ByteBuffer
+ByteSequence = Sequence[int] | ByteBuffer
 
 
 BCD_MAP = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ', '-', '.']
 
 
-def bcd_encode(input: str, errors: str = 'strict') -> None:
+def bcd_encode(input: str, errors: str = 'strict') -> tuple[bytes, int]:
     raise NotImplementedError()
 
 
-def bcd_decode(encoded_input: Any) -> tuple[str, int]:
+def bcd_decode(encoded_input: Any, errors: str = 'strict') -> tuple[str, int]:
     chars = list()
     try:
         for data in encoded_input:
@@ -166,5 +179,5 @@ def bcd_search(name: str) -> codecs.CodecInfo | None:
     return codecs.CodecInfo(name='bcd+', encode=bcd_encode, decode=bcd_decode)
 
 
-def is_string(string: Any) -> bool:
+def is_string(string: Any) -> TypeGuard[str]:
     return isinstance(string, str)

@@ -15,6 +15,9 @@ class ResponseDecoder:
         if rsp:
             self._from_response(rsp)
 
+    def _from_response(self, rsp: Message) -> None:
+        raise NotImplementedError()
+
 
 class State(DefaultProperties, ResponseDecoder):
     """This is a container that represents a state.

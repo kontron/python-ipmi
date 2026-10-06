@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 from array import array
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from collections.abc import Callable
 
 from . import constants
@@ -46,7 +46,7 @@ class BaseField:
 
 
 class ByteArray(BaseField):
-    def __init__(self, name: str, length: int,
+    def __init__(self, name: str, length: int | None,
                  default: bytes | None = None) -> None:
         BaseField.__init__(self, name, length)
         if default is not None:
@@ -55,6 +55,7 @@ class ByteArray(BaseField):
             self.default = None
 
     def _length(self, obj: Message) -> int:
+        assert self.length is not None
         return self.length
 
     def encode(self, obj: Message, data: ByteBuffer) -> None:
@@ -72,7 +73,8 @@ class ByteArray(BaseField):
             bytes.append(data.pop_unsigned_int(1))
         setattr(obj, self.name, array('B', bytes))
 
-    def create(self) -> array:
+    def create(self) -> array | None:
+        assert self.length is not None
         if self.default is not None:
             return array('B', self.default)
         else:
@@ -97,6 +99,8 @@ class VariableByteArray(ByteArray):
 
 
 class UnsignedInt(BaseField):
+    length: int
+
     def encode(self, obj: Message, data: ByteBuffer) -> None:
         value = getattr(obj, self.name)
         data.push_unsigned_int(value, self.length)
@@ -113,6 +117,8 @@ class UnsignedInt(BaseField):
 
 
 class String(BaseField):
+    length: int
+
     def encode(self, obj: Message, data: ByteBuffer) -> None:
         value = getattr(obj, self.name)
         data.push_string(value)
@@ -201,7 +207,7 @@ class RemainingBytes(BaseField):
         data.extend(a)
 
     def decode(self, obj: Message, data: ByteBuffer) -> None:
-        setattr(obj, self.name, array('B', data[:]))
+        setattr(obj, self.name, array('B', data.array))
         del data.array[:]
 
     def create(self) -> array:
@@ -215,6 +221,8 @@ class Bitfield(BaseField):
             self.name = name
             self._width = width
             self.default = default
+            # set by the Bitfield the bit is added to
+            self.offset = 0
 
     class ReservedBit(Bit):
         counter = 0
@@ -270,7 +278,13 @@ class Bitfield(BaseField):
 
         _value = property(_get_value, _set_value)
 
+        if TYPE_CHECKING:
+            # the bits are created as attributes at runtime
+            def __getattr__(self, name: str) -> Any: ...
+            def __setattr__(self, name: str, value: Any) -> None: ...
+
     reserved_bit_counter = 0
+    length: int
 
     def __init__(self, name: str, length: int, *bits: Bit) -> None:
         BaseField.__init__(self, name, length)
@@ -317,12 +331,25 @@ class EventMessageRevision(UnsignedInt):
         UnsignedInt.__init__(self, 'event_message_rev', 1, value)
 
 
+Field = BaseField | Conditional | Optional
+
+
 class Message:
     RESERVED_FIELD_NAMES = ['cmdid', 'netfn', 'lun', 'group_extension']
 
+    # set by the message definitions, intentionally without a default value
+    __netfn__: int
+    __cmdid__: int
+    __fields__: tuple[Field, ...]
+
     __default_lun__ = 0
-    __group_extension__ = None
+    __group_extension__: int | None = None
     __not_implemented__ = False
+
+    if TYPE_CHECKING:
+        # the message fields are created as attributes at runtime
+        def __getattr__(self, name: str) -> Any: ...
+        def __setattr__(self, name: str, value: Any) -> None: ...
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Message constructor with ([buf], [field=val,...]) prototype.
@@ -341,7 +368,7 @@ class Message:
         # set default lun
         self.lun = self.__default_lun__
 
-        self.data = ''
+        self.data: Any = ''
         if args:
             self._decode(args[0])
         else:
@@ -390,17 +417,17 @@ class Message:
         if not hasattr(self, '__fields__'):
             return
 
-        data = ByteBuffer(data)
+        buf = ByteBuffer(data)
         cc = None
         for field in self.__fields__:
             try:
-                field.decode(self, data)
+                field.decode(self, buf)
             except CompletionCodeError as e:
                 # stop decoding on completion code != 0
                 cc = e.cc
                 break
 
-        if (cc is None or cc == 0) and len(data) > 0:
+        if (cc is None or cc == 0) and len(buf) > 0:
             raise DecodingError('Data has extra bytes')
 
     def _is_request(self) -> bool:
