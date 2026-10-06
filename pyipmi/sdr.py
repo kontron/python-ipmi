@@ -14,6 +14,27 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""Sensor Data Records (SDR) and the SDR repository commands.
+
+Sensor Data Records describe the sensors and devices of a system: e.g.
+the sensor type, the conversion of the raw readings and the thresholds of
+a sensor. The records are stored in the SDR repository of the BMC or in
+the device SDR repository of a controller (see :mod:`pyipmi.sensor`).
+
+The repository commands are the methods of :class:`Sdr`, which are
+available on :class:`pyipmi.Ipmi`. A record is decoded by
+:meth:`SdrCommon.from_data` into the class for its record type, e.g.
+:class:`SdrFullSensorRecord`. The ``SDR_TYPE_*`` constants are the record
+types, the ``L_*`` constants the linearizations of a sensor reading.
+
+Example:
+    Print the full sensor records of the SDR repository::
+
+        for sdr in ipmi.sdr_repository_entries():
+            if isinstance(sdr, pyipmi.sdr.SdrFullSensorRecord):
+                print(sdr.number, sdr.device_id_string)
+"""
+
 from __future__ import annotations
 
 import math
@@ -60,20 +81,46 @@ L_CUBERT = 11
 
 
 class Sdr(IpmiMixin):
+    """SDR repository commands, available on :class:`pyipmi.Ipmi`.
+
+    The records are read in chunks. If the BMC cannot return the requested
+    number of bytes, the chunk size is reduced and kept for the following
+    records.
+    """
+
     def __init__(self) -> None:
+        """Initialize the SDR command group."""
         # read length of the SDR repository, a reduced length is kept for the
         # following records
         self._sdr_read_length = ReadLength()
 
     def get_sdr_repository_info(self) -> SdrRepositoryInfo:
+        """Get the information about the SDR repository.
+
+        Returns:
+            The SDR repository information.
+        """
         return SdrRepositoryInfo(
                 self.send_message_with_name('GetSdrRepositoryInfo'))
 
     def get_sdr_repository_allocation_info(self) -> SdrRepositoryAllocationInfo:
+        """Get the allocation information of the SDR repository.
+
+        Returns:
+            The SDR repository allocation information.
+        """
         return SdrRepositoryAllocationInfo(
                 self.send_message_with_name('GetSdrRepositoryAllocationInfo'))
 
     def reserve_sdr_repository(self) -> int:
+        """Reserve the SDR repository.
+
+        A reservation is needed to read records partially, and to delete records
+        or clear the repository. It is canceled when the repository changes.
+
+        Returns:
+            The reservation ID.
+        """
         rsp = self.send_message_with_name('ReserveSdrRepository')
         return rsp.reservation_id
 
@@ -92,16 +139,33 @@ class Sdr(IpmiMixin):
 
     def get_repository_sdr(self, record_id: int,
                            reservation_id: int | None = None) -> SdrCommon:
+        """Read and decode a record of the SDR repository.
+
+        Args:
+            record_id: The record ID, 0 for the first record.
+            reservation_id: The reservation ID, the repository is reserved if
+                None.
+
+        Returns:
+            The decoded record, its ``next_id`` is the record ID of the next
+            record, 0xffff for the last record.
+
+        Raises:
+            DecodingError: The record data is invalid.
+        """
         (next_id, record_data) = get_sdr_data_helper(
                 self.reserve_sdr_repository, self._get_sdr_chunk,
                 record_id, reservation_id, self._sdr_read_length)
         return SdrCommon.from_data(record_data, next_id)
 
     def sdr_repository_entries(self) -> Generator[SdrCommon, None, None]:
-        """A generator that returns the SDR list.
+        """Return a generator of all records of the SDR repository.
 
-        The Generator starts with ID=0x0000 and ends when ID=0xffff
-        is returned.
+        The repository is reserved once. The records are read starting with
+        record ID 0 until the next record ID is 0xffff.
+
+        Yields:
+            The decoded records.
         """
         reservation_id = self.reserve_sdr_repository()
         record_id = 0
@@ -115,12 +179,34 @@ class Sdr(IpmiMixin):
 
     def get_repository_sdr_list(self,
                                 reservation_id: int | None = None) -> list[SdrCommon]:
-        """Return the complete SDR list."""
+        """Return all records of the SDR repository.
+
+        Args:
+            reservation_id: Not used, the repository is reserved by
+                :meth:`sdr_repository_entries`.
+
+        Returns:
+            The decoded records.
+        """
         return list(self.sdr_repository_entries())
 
     def partial_add_sdr(self, reservation_id: int, record_id: int,
                         offset: int, progress: int, data: bytes) -> int:
+        """Add a part of a record to the SDR repository.
 
+        Args:
+            reservation_id: The reservation ID.
+            record_id: The record ID, 0 for the first part of a new record.
+            offset: The offset of the data in the record.
+            progress: 1 for the last part of the record, 0 otherwise.
+            data: The part of the record data.
+
+        Returns:
+            The record ID of the added record.
+
+        Raises:
+            CompletionCodeError: The BMC rejected the request.
+        """
         req = create_request_by_name('PartialAddSdr')
         req.reservation_id = reservation_id
         req.record_id = record_id
@@ -132,7 +218,14 @@ class Sdr(IpmiMixin):
         return rsp.record_id
 
     def delete_sdr(self, record_id: int) -> int:
-        """Delete the sensor record specified by 'record_id'."""
+        """Delete a record of the SDR repository.
+
+        Args:
+            record_id: The record ID.
+
+        Returns:
+            The record ID of the deleted record.
+        """
         reservation_id = self.reserve_device_sdr_repository()
         rsp = self.send_message_with_name('DeleteSdr',
                                           reservation_id=reservation_id,
@@ -146,6 +239,16 @@ class Sdr(IpmiMixin):
         return rsp.status.erase_in_progress
 
     def clear_sdr_repository(self, retry: int = 5) -> None:
+        """Delete all records of the SDR repository.
+
+        The erase is started and polled until it is completed.
+
+        Args:
+            retry: The number of times the erase status is polled.
+
+        Raises:
+            RetryError: The erase was not completed in time.
+        """
         clear_repository_helper(self.reserve_sdr_repository,
                                 self._clear_sdr_repository, retry)
 
@@ -154,14 +257,50 @@ class Sdr(IpmiMixin):
         return rsp.status.initialization_completed
 
     def start_initialization_agent(self) -> None:
+        """Run the initialization agent.
+
+        The initialization agent initializes the sensors as described by the
+        initialization bits of their records.
+        """
         self._run_initialization_agent(RUN_INITIALIZATION_AGENT)
 
     def get_initialization_agent_status(self) -> int:
+        """Get the status of the initialization agent.
+
+        Returns:
+            1 if the initialization is completed, 0 if it is in progress.
+        """
         return self._run_initialization_agent(GET_INITIALIZATION_AGENT_STATUS)
 
 
 class SdrRepositoryInfo(State):
+    """The information about the SDR repository.
+
+    The ``support_*`` attributes are the supported operations.
+
+    Attributes:
+        sdr_version (int): The SDR version, 0x51 for IPMI v1.5 and v2.0.
+        record_count (int): The number of records.
+        free_space (int): The free space in bytes.
+        most_recent_addition (int): The time of the most recent addition.
+        support_get_allocation_info (int): Get SDR Repository Allocation
+            Info is supported.
+        support_reserve (int): Reserve SDR Repository is supported.
+        support_partial_add (int): Partial Add SDR is supported.
+        support_delete (int): Delete SDR is supported.
+        support_update_type (int): The supported update type, non-modal,
+            modal or both.
+        support_overflow_flag (int): Records could not be added because
+            the repository was full.
+    """
+
     def __init__(self, rsp: Message | None) -> None:
+        """Decode the response.
+
+        Args:
+            rsp: The response of Get SDR Repository Info. Nothing is decoded
+                if it is None.
+        """
         if rsp:
             self._from_response(rsp)
 
@@ -179,7 +318,25 @@ class SdrRepositoryInfo(State):
 
 
 class SdrRepositoryAllocationInfo(State):
+    """The allocation information of the SDR repository.
+
+    Attributes:
+        number_of_units (int): The number of allocation units.
+        unit_size (int): The size of an allocation unit in bytes.
+        free_units (int): The number of free allocation units.
+        largest_free_block (int): The largest free block in allocation
+            units.
+        maximum_record_size (int): The maximum record size in allocation
+            units.
+    """
+
     def __init__(self, rsp: Message | None) -> None:
+        """Decode the response.
+
+        Args:
+            rsp: The response of Get SDR Repository Allocation Info.
+                Nothing is decoded if it is None.
+        """
         if rsp:
             self._from_response(rsp)
 
@@ -192,8 +349,36 @@ class SdrRepositoryAllocationInfo(State):
 
 
 class SdrCommon:
+    """Base class of the Sensor Data Records.
+
+    The records are decoded by :meth:`from_data`. Depending on the record
+    type, a record has the record key (``owner_id``, ``owner_lun`` and the
+    sensor ``number``), the entity (``entity_id`` and ``entity_instance``)
+    and the device ID string (``device_id_string``,
+    ``device_id_string_type`` and ``device_id_string_length``).
+
+    Attributes:
+        data (ByteSequence): The record data.
+        id (int): The record ID.
+        version (int): The SDR version of the record.
+        type (int): The record type, one of the ``SDR_TYPE_*`` constants.
+        length (int): The length of the record body in bytes.
+        next_id (int): The record ID of the next record in the repository,
+            only set if it is known.
+    """
+
     def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
+        """Decode the record.
+
+        Args:
+            data: The record data, starting with the record header. Nothing
+                is decoded if it is None or empty.
+            next_id: The record ID of the next record in the repository.
+
+        Raises:
+            DecodingError: The record data is too short.
+        """
         if data:
             self.data = data
             self._common_header(data)
@@ -205,6 +390,7 @@ class SdrCommon:
             self.next_id = next_id
 
     def __str__(self) -> str:
+        """Return the device ID string, if any, and the record data."""
         if hasattr(self, 'device_id_string'):
             s = '["%s"] [%s]' % \
                  (self.device_id_string,
@@ -243,6 +429,21 @@ class SdrCommon:
 
     @staticmethod
     def from_data(data: ByteSequence, next_id: int | None = None) -> SdrCommon:
+        """Decode a record with the class for its record type.
+
+        Records of an unknown type are decoded by
+        :class:`SdrUnknownSensorRecord`.
+
+        Args:
+            data: The record data, starting with the record header.
+            next_id: The record ID of the next record in the repository.
+
+        Returns:
+            The decoded record.
+
+        Raises:
+            DecodingError: The record data is too short.
+        """
         sdr_type = data[3]
 
         cls = {
@@ -269,6 +470,60 @@ class SdrCommon:
 # SDR type 0x01
 ##################################################
 class SdrFullSensorRecord(SdrCommon):
+    """A Full Sensor Record (type 0x01).
+
+    The record describes an analog sensor and the conversion of its raw
+    readings: ``y = L[(M * x + B * 10^K1) * 10^K2]`` with the linearization
+    ``L``. The ``DATA_FMT_*`` constants are the analog data formats.
+
+    Attributes:
+        initialization (list[str]): The sensor initialization settings:
+            ``'scanning'``, ``'events'``, ``'thresholds'``,
+            ``'hysteresis'``, ``'type'``, ``'default_event_generation'``
+            and ``'default_scanning'``.
+        capabilities (list[str]): The sensor capabilities:
+            ``'ignore_sensor'``, ``'auto_rearm'``, the hysteresis support
+            (``'hysteresis_*'``) and the threshold support
+            (``'threshold_*'``).
+        sensor_type_code (int): The sensor type.
+        event_reading_type_code (int): The event/reading type.
+        assertion_mask (int): The assertion event mask.
+        deassertion_mask (int): The deassertion event mask.
+        discrete_reading_mask (int): The discrete reading mask.
+        units_1 (int): The sensor units 1 byte.
+        units_2 (int): The base unit type code.
+        units_3 (int): The modifier unit type code.
+        analog_data_format (int): The analog data format, one of the
+            ``DATA_FMT_*`` constants.
+        rate_unit (int): The rate unit.
+        modifier_unit (int): How the modifier unit is applied.
+        percentage (int): 1 if the reading is a percentage.
+        linearization (int): The linearization, one of the ``L_*``
+            constants.
+        m (int): The conversion factor M.
+        tolerance (int): The tolerance in +/- half raw counts.
+        b (int): The conversion offset B.
+        accuracy (int): The accuracy in 0.01 percent units.
+        accuracy_exp (int): The accuracy exponent.
+        k1 (int): The exponent of B.
+        k2 (int): The result exponent.
+        analog_characteristic (list[str]): The analog characteristics that
+            are specified: ``'nominal_reading'``, ``'normal_max'`` and
+            ``'normal_min'``.
+        nominal_reading (int): The nominal raw reading.
+        normal_maximum (int): The normal maximum raw reading.
+        normal_minimum (int): The normal minimum raw reading.
+        sensor_maximum_reading (int): The maximum raw reading.
+        sensor_minimum_reading (int): The minimum raw reading.
+        threshold (dict[str, int]): The raw thresholds, with the keys
+            ``'unr'``, ``'ucr'``, ``'unc'``, ``'lnr'``, ``'lcr'`` and
+            ``'lnc'`` (upper/lower non-recoverable, critical and
+            non-critical).
+        hysteresis (dict[str, int]): The raw hysteresis values, with the
+            keys ``'positive_going'`` and ``'negative_going'``.
+        oem (int): The OEM byte.
+    """
+
     DATA_FMT_UNSIGNED = 0
     DATA_FMT_1S_COMPLEMENT = 1
     DATA_FMT_2S_COMPLEMENT = 2
@@ -276,9 +531,20 @@ class SdrFullSensorRecord(SdrCommon):
 
     def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
+        """Decode the record.
+
+        Args:
+            data: The record data, starting with the record header. Nothing
+                is decoded if it is None or empty.
+            next_id: The record ID of the next record in the repository.
+
+        Raises:
+            DecodingError: The record data is too short.
+        """
         super().__init__(data, next_id)
 
     def __str__(self) -> str:
+        """Return the device ID string, the entity and the record data."""
         s = '["%s"] [%s:%s] [%s]' \
                 % (self.device_id_string,
                    self.entity_id,
@@ -287,6 +553,17 @@ class SdrFullSensorRecord(SdrCommon):
         return s
 
     def convert_sensor_raw_to_value(self, raw: int | None) -> float | None:
+        """Convert a raw sensor reading to the value in the sensor unit.
+
+        Args:
+            raw: The raw reading, e.g. of :meth:`pyipmi.Ipmi.get_sensor_reading`.
+
+        Returns:
+            The converted value, None if ``raw`` is None.
+
+        Raises:
+            DecodingError: The linearization is unknown.
+        """
         if raw is None:
             return None
         fmt = self.analog_data_format
@@ -301,6 +578,21 @@ class SdrFullSensorRecord(SdrCommon):
                          + (self.b * 10**self.k1)) * 10**self.k2)
 
     def convert_sensor_value_to_raw(self, value: float) -> int:
+        """Convert a value in the sensor unit to the raw sensor value.
+
+        This is the inverse of :meth:`convert_sensor_raw_to_value`, e.g. to set
+        a threshold. The value is rounded to the next raw value.
+
+        Args:
+            value: The value in the sensor unit.
+
+        Returns:
+            The raw value.
+
+        Raises:
+            NotImplementedError: The sensor is not linear.
+            ValueError: The value is out of the range of the raw values.
+        """
         linearization = self.linearization & 0x7f
 
         if linearization is not L_LINEAR:
@@ -329,6 +621,11 @@ class SdrFullSensorRecord(SdrCommon):
 
     @property
     def lin(self) -> Callable[[float], float]:
+        """The linearization function of the sensor.
+
+        Raises:
+            DecodingError: The linearization is unknown.
+        """
         try:
             return {
                 L_LN: math.log,
@@ -505,11 +802,44 @@ class SdrFullSensorRecord(SdrCommon):
 # SDR type 0x02
 ##################################################
 class SdrCompactSensorRecord(SdrCommon):
+    """A Compact Sensor Record (type 0x02).
+
+    The record describes a sensor without conversion of its readings,
+    typically a discrete sensor.
+
+    Attributes:
+        sensor_initialization (int): The sensor initialization byte.
+        capabilities (int): The sensor capabilities byte.
+        sensor_type_code (int): The sensor type.
+        event_reading_type_code (int): The event/reading type.
+        assertion_mask (int): The assertion event mask.
+        deassertion_mask (int): The deassertion event mask.
+        discrete_reading_mask (int): The discrete reading mask.
+        units_1 (int): The sensor units 1 byte.
+        units_2 (int): The base unit type code.
+        units_3 (int): The modifier unit type code.
+        record_sharing (int): The sensor record sharing bytes.
+        positive_going_hysteresis (int): The positive going hysteresis.
+        negative_going_hysteresis (int): The negative going hysteresis.
+        oem (int): The OEM byte.
+    """
+
     def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
+        """Decode the record.
+
+        Args:
+            data: The record data, starting with the record header. Nothing
+                is decoded if it is None or empty.
+            next_id: The record ID of the next record in the repository.
+
+        Raises:
+            DecodingError: The record data is too short.
+        """
         super().__init__(data, next_id)
 
     def __str__(self) -> str:
+        """Return the device ID string and the record data."""
         s = '["%s"] [%s]' \
             % (self.device_id_string,
                ' '.join(['%02x' % b for b in self.data]))
@@ -546,11 +876,34 @@ class SdrCompactSensorRecord(SdrCommon):
 # SDR type 0x03
 ##################################################
 class SdrEventOnlySensorRecord(SdrCommon):
+    """An Event-Only Sensor Record (type 0x03).
+
+    The record describes a sensor that only generates events and cannot
+    be read.
+
+    Attributes:
+        sensor_type (int): The sensor type.
+        event_reading_type_code (int): The event/reading type.
+        record_sharing (int): The sensor record sharing bytes.
+        oem (int): The OEM byte.
+    """
+
     def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
+        """Decode the record.
+
+        Args:
+            data: The record data, starting with the record header. Nothing
+                is decoded if it is None or empty.
+            next_id: The record ID of the next record in the repository.
+
+        Raises:
+            DecodingError: The record data is too short.
+        """
         super().__init__(data, next_id)
 
     def __str__(self) -> str:
+        """Return that the record is not formatted yet."""
         return 'Not supported yet.'
 
     def _from_data(self, data: ByteSequence) -> None:
@@ -574,11 +927,39 @@ class SdrEventOnlySensorRecord(SdrCommon):
 # SDR type 0x11
 ##################################################
 class SdrFruDeviceLocator(SdrCommon):
+    """A FRU Device Locator Record (type 0x11).
+
+    The record describes where the FRU inventory data of a device is
+    accessed.
+
+    Attributes:
+        device_access_address (int): The 7-bit address of the controller
+            that gives access to the FRU device.
+        fru_device_id (int): The FRU device ID, or the 7-bit I2C address
+            of a non-intelligent FRU device.
+        logical_physical (int): The logical/physical FRU device byte.
+        channel_number (int): The channel number byte.
+        device_type (int): The device type.
+        device_type_modifier (int): The device type modifier.
+        oem (int): The OEM byte.
+    """
+
     def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
+        """Decode the record.
+
+        Args:
+            data: The record data, starting with the record header. Nothing
+                is decoded if it is None or empty.
+            next_id: The record ID of the next record in the repository.
+
+        Raises:
+            DecodingError: The record data is too short.
+        """
         super().__init__(data, next_id)
 
     def __str__(self) -> str:
+        """Return the device ID string and the record data."""
         s = '["%s"] [%s]' \
             % (self.device_id_string,
                ' '.join(['%02x' % b for b in self.data]))
@@ -602,12 +983,38 @@ class SdrFruDeviceLocator(SdrCommon):
 # SDR type 0x12
 ##################################################
 class SdrManagementControllerDeviceLocator(SdrCommon):
+    """A Management Controller Device Locator Record (type 0x12).
+
+    The record describes a management controller on the IPMB.
+
+    Attributes:
+        device_slave_address (int): The 7-bit address of the controller.
+        channel_number (int): The channel number.
+        power_state_notification (int): The power state notification and
+            global initialization byte.
+        global_initialization (int): Always 0, it is part of
+            ``power_state_notification``.
+        device_capabilities (int): The device capabilities byte.
+        oem (int): The OEM byte.
+    """
+
     def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
+        """Decode the record.
+
+        Args:
+            data: The record data, starting with the record header. Nothing
+                is decoded if it is None or empty.
+            next_id: The record ID of the next record in the repository.
+
+        Raises:
+            DecodingError: The record data is too short.
+        """
         super().__init__(
                 data, next_id)
 
     def __str__(self) -> str:
+        """Return the device ID string and the record data."""
         s = '["%s"] [%s]' \
             % (self.device_id_string,
                ' '.join(['%02x' % b for b in self.data]))
@@ -630,8 +1037,37 @@ class SdrManagementControllerDeviceLocator(SdrCommon):
 # SDR type 0x13
 ##################################################
 class SdrManagementControllerConfirmationRecord(SdrCommon):
+    """A Management Controller Confirmation Record (type 0x13).
+
+    The record confirms that a management controller was detected.
+
+    Attributes:
+        device_slave_address (int): The 7-bit address of the controller.
+        device_id (int): The device ID.
+        channel_number (int): The channel number.
+        device_revision (int): The device revision.
+        firmware_revision_1 (int): The major firmware revision.
+        firmware_revision_2 (int): The minor firmware revision, BCD
+            encoded.
+        ipmi_version (int): The IPMI version, BCD encoded with the minor
+            version in the upper nibble.
+        manufacturer_id (int): The manufacturer ID.
+        product_id (int): The product ID.
+        device_guid (int): The device GUID.
+    """
+
     def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
+        """Decode the record.
+
+        Args:
+            data: The record data, starting with the record header. Nothing
+                is decoded if it is None or empty.
+            next_id: The record ID of the next record in the repository.
+
+        Raises:
+            DecodingError: The record data is too short.
+        """
         super().__init__(
                 data, next_id)
 
@@ -654,11 +1090,24 @@ class SdrManagementControllerConfirmationRecord(SdrCommon):
 # SDR type 0xC0
 ##################################################
 class SdrOEMSensorRecord(SdrCommon):
+    """An OEM Record (type 0xC0), only its header is decoded."""
+
     def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
+        """Decode the record.
+
+        Args:
+            data: The record data, starting with the record header. Nothing
+                is decoded if it is None or empty.
+            next_id: The record ID of the next record in the repository.
+
+        Raises:
+            DecodingError: The record data is too short.
+        """
         super().__init__(data, next_id)
 
     def __str__(self) -> str:
+        """Return that the record is not formatted yet."""
         return 'Not supported yet.'
 
     def _from_data(self, data: ByteSequence) -> None:
@@ -670,9 +1119,22 @@ class SdrOEMSensorRecord(SdrCommon):
 
 # Any SDR type not known or not implemented
 class SdrUnknownSensorRecord(SdrCommon):
+    """A record of a type that is not decoded, only its header is."""
+
     def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
+        """Decode the record.
+
+        Args:
+            data: The record data, starting with the record header. Nothing
+                is decoded if it is None or empty.
+            next_id: The record ID of the next record in the repository.
+
+        Raises:
+            DecodingError: The record data is too short.
+        """
         super().__init__(data, next_id)
 
     def __str__(self) -> str:
+        """Return that the record is not formatted yet."""
         return 'Not supported yet.'

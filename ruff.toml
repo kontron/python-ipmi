@@ -31,4 +31,4 @@ convention = "google"
 # Missing docstrings are reported only in the documented modules, add a
 # module to the list when it is documented. The other modules are only
 # checked for the format of the existing docstrings.
-"!pyipmi/{fru,hpm,picmg,vita}.py" = ["D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107"]
+"!pyipmi/{fru,hpm,picmg,sdr,vita}.py" = ["D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107"]
