@@ -88,8 +88,8 @@ class Dcmi(IpmiMixin):
             selector: The parameter, one of the ``PARAM_*`` constants.
 
         Returns:
-            The response with the fields ``specification_conformence`` (bits
-            ``major`` and ``minor``, the DCMI version),
+            The response with the fields ``specification_conformance``
+            (bits ``major`` and ``minor``, the DCMI version),
             ``parameter_revision`` and ``parameter_data``.
         """
         rsp = self.send_message_with_name('GetDcmiCapabilities',

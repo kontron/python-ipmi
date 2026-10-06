@@ -797,7 +797,7 @@ def cmd_dcmi_discover(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
         except pyipmi.errors.CompletionCodeError as e:
             print('%-45s: ERR: CC=0x%02x' % (name, e.cc))
             continue
-        conformance = rsp.specification_conformence
+        conformance = rsp.specification_conformance
         print('%-45s: %s (DCMI %d.%d, revision %d)'
               % (name, hex_bytes(rsp.parameter_data), conformance.major,
                  conformance.minor, rsp.parameter_revision))

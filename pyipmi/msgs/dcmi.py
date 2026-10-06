@@ -15,6 +15,9 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 
+import warnings
+from typing import Any
+
 from . import constants
 from . import register_message_class
 from . import Bitfield
@@ -49,12 +52,20 @@ class GetDcmiCapabilitiesRsp(DcmiMessage):
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
-        Bitfield('specification_conformence', 2,
+        Bitfield('specification_conformance', 2,
                  Bitfield.Bit('major', 8),
                  Bitfield.Bit('minor', 8)),
         UnsignedInt('parameter_revision', 1),
         RemainingBytes('parameter_data'),
     )
+
+    @property
+    def specification_conformence(self) -> Any:
+        """Deprecated, misspelled name of specification_conformance."""
+        warnings.warn('specification_conformence is deprecated, use '
+                      'specification_conformance', DeprecationWarning,
+                      stacklevel=2)
+        return self.specification_conformance
 
 
 @register_message_class

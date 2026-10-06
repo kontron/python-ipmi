@@ -48,10 +48,19 @@ def test_getdcmicapabilities_decode_rsp():
     m = pyipmi.msgs.dcmi.GetDcmiCapabilitiesRsp()
     decode_message(m, b'\x00\xdc\x01\x05\x02\x00\x01\x05')
     assert m.completion_code == 0
-    assert m.specification_conformence.major == 1
-    assert m.specification_conformence.minor == 5
+    assert m.specification_conformance.major == 1
+    assert m.specification_conformance.minor == 5
     assert m.parameter_revision == 2
     assert m.parameter_data == bytearray(b'\x00\x01\x05')
+
+
+def test_getdcmicapabilities_rsp_misspelled_name():
+    # the field was named specification_conformence before
+    m = pyipmi.msgs.dcmi.GetDcmiCapabilitiesRsp()
+    decode_message(m, b'\x00\xdc\x01\x05\x02\x00\x01\x05')
+    with pytest.warns(DeprecationWarning, match='specification_conformance'):
+        conformance = m.specification_conformence
+    assert (conformance.major, conformance.minor) == (1, 5)
 
 
 def test_getpowerreading_encode_req():
