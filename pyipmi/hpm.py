@@ -462,7 +462,7 @@ class ComponentPropertyGeneral(ComponentProperty):
             support.append('reserved')
 
         if cap & self.PREPARATION_SUPPORT_MASK:
-            support.append('prepartion')
+            support.append('preparation')
         if cap & self.COMPARISON_SUPPORT_MASK:
             support.append('comparison')
         if cap & self.DEFERRED_ACTIVATION_SUPPORT_MASK:
