@@ -67,6 +67,31 @@ class TestComponentProperty:
             PROPERTY_DEFERRED_VERSION, (0x3, 0x77))
         assert type(prop) is ComponentPropertyDeferredVersion
 
+    def test_str(self):
+        prop = ComponentProperty().from_data(PROPERTY_GENERAL_PROPERTIES,
+                                             b'\x15')
+        assert str(prop) == ('General: rollback_is_supported, prepartion, '
+                             'deferred_activation')
+
+        prop = ComponentProperty().from_data(PROPERTY_CURRENT_VERSION,
+                                             b'\x01\x40')
+        assert str(prop) == 'Current version: 1.40'
+
+        prop = ComponentProperty().from_data(PROPERTY_DESCRIPTION_STRING,
+                                             b'IPMC\x00\x00')
+        assert str(prop) == 'Description: IPMC'
+
+        prop = ComponentProperty().from_data(PROPERTY_ROLLBACK_VERSION,
+                                             b'\x01\x02')
+        assert str(prop) == 'Rollback version: 1.2'
+
+        prop = ComponentProperty().from_data(PROPERTY_DEFERRED_VERSION,
+                                             b'\x00\x00')
+        assert str(prop) == 'Deferred version: 0.0'
+
+        prop = ComponentPropertyOem(b'\x01\xab')
+        assert str(prop) == 'OEM data: 01 ab'
+
 
 def test_upgradeactionrecord_create_from_data():
     record = UpgradeActionRecord.create_from_data(b'\x00\x08\x02')

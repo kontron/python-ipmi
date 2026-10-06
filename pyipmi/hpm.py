@@ -472,11 +472,17 @@ class ComponentPropertyGeneral(ComponentProperty):
 
         self.general = support
 
+    def __str__(self) -> str:
+        return 'General: %s' % ', '.join(self.general)
+
 
 class ComponentPropertyCurrentVersion(ComponentProperty):
 
     def _from_rsp_data(self, data: bytes) -> None:
         self.version = VersionField(data)
+
+    def __str__(self) -> str:
+        return 'Current version: %s' % self.version
 
 
 class ComponentPropertyDescriptionString(ComponentProperty):
@@ -488,11 +494,17 @@ class ComponentPropertyDescriptionString(ComponentProperty):
         descr = descr.replace('\0', '')
         self.description = descr
 
+    def __str__(self) -> str:
+        return 'Description: %s' % self.description
+
 
 class ComponentPropertyRollbackVersion(ComponentProperty):
 
     def _from_rsp_data(self, data: bytes) -> None:
         self.version = VersionField(data)
+
+    def __str__(self) -> str:
+        return 'Rollback version: %s' % self.version
 
 
 class ComponentPropertyDeferredVersion(ComponentProperty):
@@ -500,11 +512,17 @@ class ComponentPropertyDeferredVersion(ComponentProperty):
     def _from_rsp_data(self, data: bytes) -> None:
         self.version = VersionField(data)
 
+    def __str__(self) -> str:
+        return 'Deferred version: %s' % self.version
+
 
 class ComponentPropertyOem(ComponentProperty):
 
     def _from_rsp_data(self, data: bytes) -> None:
         self.oem_data = data
+
+    def __str__(self) -> str:
+        return 'OEM data: %s' % bytes(self.oem_data).hex(' ')
 
 
 class SelfTestResult(State):
