@@ -14,6 +14,25 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""FRU inventory commands and the decoding of the FRU inventory data.
+
+The FRU (Field Replaceable Unit) inventory data is specified by the IPMI
+Platform Management FRU Information Storage Definition v1.0. It consists
+of a common header and the optional chassis info, board info, product info
+and multirecord areas.
+
+The FRU inventory of a device is read with the methods of :class:`Fru`,
+which are available on :class:`pyipmi.Ipmi`. A FRU file is decoded with
+:func:`get_fru_inventory_from_file`.
+
+Example:
+    Print the board serial number of a device::
+
+        inventory = ipmi.get_fru_inventory()
+        if inventory.board_info_area is not None:
+            print(inventory.board_info_area.serial_number)
+"""
+
 from __future__ import annotations
 
 import array
@@ -36,19 +55,51 @@ FRU_AREA_MIN_LENGTH = 8
 
 
 class Fru(IpmiMixin):
+    """FRU inventory commands, available on :class:`pyipmi.Ipmi`.
+
+    The FRU data is read in chunks. If the device cannot return the
+    requested number of bytes, the chunk size is reduced and kept for the
+    following reads of the FRU device.
+
+    Attributes:
+        write_length: The number of bytes written per Write FRU Data
+            request.
+    """
+
     def __init__(self) -> None:
+        """Initialize the FRU command group."""
         self.write_length = 16
         # read length per FRU device, a reduced length is kept for the
         # following reads
         self._fru_read_lengths: dict[int, ReadLength] = {}
 
     def get_fru_inventory_area_info(self, fru_id: int = 0) -> int:
+        """Return the size of the FRU inventory area.
+
+        Args:
+            fru_id: The FRU device ID.
+
+        Returns:
+            The size of the FRU inventory area in bytes.
+        """
         rsp = self.send_message_with_name('GetFruInventoryAreaInfo',
                                           fru_id=fru_id)
         return rsp.area_size
 
     def write_fru_data(self, data: bytes, offset: int = 0,
                        fru_id: int = 0) -> None:
+        """Write data to the FRU inventory area.
+
+        The data is written in chunks of ``write_length`` bytes.
+
+        Args:
+            data: The data to write.
+            offset: The offset in the FRU inventory area to write to.
+            fru_id: The FRU device ID.
+
+        Raises:
+            Exception: The device wrote fewer bytes than were sent.
+        """
         for chunk in chunks(data, self.write_length):
             write_rsp = self.send_message_with_name('WriteFruData',
                                                     fru_id=fru_id,
@@ -64,6 +115,23 @@ class Fru(IpmiMixin):
 
     def read_fru_data(self, offset: int | None = None,
                       count: int | None = None, fru_id: int = 0) -> bytes:
+        """Read data from the FRU inventory area.
+
+        Args:
+            offset: The offset in the FRU inventory area to read from. If
+                None, the data is read from the start.
+            count: The number of bytes to read. If None, or if ``offset``
+                is None, the data is read up to the end of the FRU
+                inventory area.
+            fru_id: The FRU device ID.
+
+        Returns:
+            The data read.
+
+        Raises:
+            CompletionCodeError: The device rejected a read request, also
+                with the smallest chunk size.
+        """
         read_length = self._fru_read_lengths.setdefault(fru_id, ReadLength())
         data = array.array('B')
 
@@ -99,6 +167,14 @@ class Fru(IpmiMixin):
         return py3_array_tobytes(data)
 
     def read_fru_data_full(self, fru_id: int = 0) -> bytes:
+        """Read the whole FRU inventory area.
+
+        Args:
+            fru_id: The FRU device ID.
+
+        Returns:
+            The data of the FRU inventory area.
+        """
         return self.read_fru_data(fru_id=fru_id)
 
     def _get_fru_size(self, fru_id: int) -> int | None:
@@ -110,6 +186,21 @@ class Fru(IpmiMixin):
 
     def get_fru_inventory_header(self, fru_id: int = 0,
                                  ignore_checksum: bool = False) -> InventoryCommonHeader:
+        """Read the common header of the FRU inventory.
+
+        Args:
+            fru_id: The FRU device ID.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum.
+
+        Returns:
+            The common header, with ``fru_size`` set if the device reports
+            the size of the FRU inventory area.
+
+        Raises:
+            DecodingError: The header is too short or its checksum is
+                wrong.
+        """
         data = self.read_fru_data(offset=0, count=8, fru_id=fru_id)
         header = InventoryCommonHeader(data, ignore_checksum=ignore_checksum)
         header.fru_size = self._get_fru_size(fru_id)
@@ -165,6 +256,24 @@ class Fru(IpmiMixin):
                              ignore_checksum: bool = False,
                              header: InventoryCommonHeader | None = None
                              ) -> InventoryChassisInfoArea:
+        """Read and decode the chassis info area.
+
+        Args:
+            fru_id: The FRU device ID.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum.
+            header: The common header of the FRU inventory, it is read from
+                the device if None. Pass the header to read several areas
+                without reading it again.
+
+        Returns:
+            The decoded chassis info area.
+
+        Raises:
+            DataNotFound: The FRU inventory has no chassis info area.
+            DecodingError: The area is invalid, its checksum is wrong or it
+                exceeds the size of the FRU inventory area.
+        """
         header = self._get_header(fru_id, ignore_checksum, header)
         data = self._read_fru_area(offset=header.chassis_info_area_offset,
                                    fru_id=fru_id, header=header,
@@ -175,6 +284,24 @@ class Fru(IpmiMixin):
                            ignore_checksum: bool = False,
                            header: InventoryCommonHeader | None = None
                            ) -> InventoryBoardInfoArea:
+        """Read and decode the board info area.
+
+        Args:
+            fru_id: The FRU device ID.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum.
+            header: The common header of the FRU inventory, it is read from
+                the device if None. Pass the header to read several areas
+                without reading it again.
+
+        Returns:
+            The decoded board info area.
+
+        Raises:
+            DataNotFound: The FRU inventory has no board info area.
+            DecodingError: The area is invalid, its checksum is wrong or it
+                exceeds the size of the FRU inventory area.
+        """
         header = self._get_header(fru_id, ignore_checksum, header)
         data = self._read_fru_area(offset=header.board_info_area_offset,
                                    fru_id=fru_id, header=header,
@@ -185,6 +312,24 @@ class Fru(IpmiMixin):
                              ignore_checksum: bool = False,
                              header: InventoryCommonHeader | None = None
                              ) -> InventoryProductInfoArea:
+        """Read and decode the product info area.
+
+        Args:
+            fru_id: The FRU device ID.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum.
+            header: The common header of the FRU inventory, it is read from
+                the device if None. Pass the header to read several areas
+                without reading it again.
+
+        Returns:
+            The decoded product info area.
+
+        Raises:
+            DataNotFound: The FRU inventory has no product info area.
+            DecodingError: The area is invalid, its checksum is wrong or it
+                exceeds the size of the FRU inventory area.
+        """
         header = self._get_header(fru_id, ignore_checksum, header)
         data = self._read_fru_area(offset=header.product_info_area_offset,
                                    fru_id=fru_id, header=header,
@@ -195,6 +340,24 @@ class Fru(IpmiMixin):
                                  ignore_checksum: bool = False,
                                  header: InventoryCommonHeader | None = None
                                  ) -> InventoryMultiRecordArea:
+        """Read and decode the multirecord area.
+
+        Args:
+            fru_id: The FRU device ID.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum.
+            header: The common header of the FRU inventory, it is read from
+                the device if None. Pass the header to read several areas
+                without reading it again.
+
+        Returns:
+            The decoded multirecord area.
+
+        Raises:
+            DataNotFound: The FRU inventory has no multirecord area.
+            DecodingError: The area is invalid, its checksum is wrong or it
+                exceeds the size of the FRU inventory area.
+        """
         header = self._get_header(fru_id, ignore_checksum, header)
 
         # we have to determine the length of the area first
@@ -222,7 +385,20 @@ class Fru(IpmiMixin):
 
     def get_fru_inventory(self, fru_id: int = 0,
                           ignore_checksum: bool = False) -> FruInventory:
-        """Get the full parsed FRU inventory data."""
+        """Read and decode the whole FRU inventory.
+
+        Args:
+            fru_id: The FRU device ID.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum.
+
+        Returns:
+            The FRU inventory with all areas that are present.
+
+        Raises:
+            DecodingError: An area is invalid, its checksum is wrong or it
+                exceeds the size of the FRU inventory area.
+        """
         fru = FruInventory()
 
         header = self.get_fru_inventory_header(
@@ -263,6 +439,18 @@ class Fru(IpmiMixin):
 
 def get_fru_inventory_from_file(filename: str,
                                 ignore_checksum: bool = False) -> FruInventory:
+    """Decode the FRU inventory data of a file.
+
+    Args:
+        filename: The name of the file with the binary FRU inventory data.
+        ignore_checksum: Don't raise a DecodingError on a wrong checksum.
+
+    Returns:
+        The decoded FRU inventory.
+
+    Raises:
+        DecodingError: An area is invalid or its checksum is wrong.
+    """
     try:
         file = open(filename, "rb")
     except OSError:
@@ -291,8 +479,25 @@ def _decode_custom_fields(data: Sequence[int]) -> list[FruTypeLengthString]:
 
 
 class FruData:
+    """Base class of the decoded parts of the FRU inventory data.
+
+    Attributes:
+        data: The data the object was decoded from.
+    """
+
     def __init__(self, data: str | Sequence[int] | None = None,
                  ignore_checksum: bool = False) -> None:
+        """Decode the data.
+
+        Args:
+            data: The data as bytes, a sequence of ints or a string of byte
+                values. Nothing is decoded if it is None or empty.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum.
+
+        Raises:
+            DecodingError: The data is invalid or its checksum is wrong.
+        """
         if data:
             if isinstance(data, str):
                 data = [ord(c) for c in data]
@@ -302,7 +507,22 @@ class FruData:
 
 
 class InventoryCommonHeader(FruData):
-    # size of the FRU data, if read from a device that reports it
+    """The common header of the FRU inventory.
+
+    The area offsets are in bytes from the start of the FRU inventory data,
+    they are None if the area is not present.
+
+    Attributes:
+        format_version: The format version of the common header.
+        internal_use_area_offset: The offset of the internal use area.
+        chassis_info_area_offset: The offset of the chassis info area.
+        board_info_area_offset: The offset of the board info area.
+        product_info_area_offset: The offset of the product info area.
+        multirecord_area_offset: The offset of the multirecord area.
+    """
+
+    #: The size of the FRU data if it is read from a device that reports
+    #: it, otherwise None.
     fru_size: int | None = None
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
@@ -328,6 +548,14 @@ class InventoryCommonHeader(FruData):
 
 
 class CommonInfoArea(FruData):
+    """Base class of the chassis, board and product info areas.
+
+    Attributes:
+        format_version: The format version of the area, only version 1 is
+            supported.
+        length: The length of the area in bytes.
+    """
+
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         self.format_version = data[0] & 0x0f
         if self.format_version != 1:
@@ -339,6 +567,19 @@ class CommonInfoArea(FruData):
 
 
 class InventoryChassisInfoArea(CommonInfoArea):
+    """The chassis info area.
+
+    The ``TYPE_*`` constants are the chassis types of the SMBIOS
+    specification.
+
+    Attributes:
+        type (int): The chassis type, one of the ``TYPE_*`` constants.
+        part_number (FruTypeLengthString): The chassis part number.
+        serial_number (FruTypeLengthString): The chassis serial number.
+        custom_chassis_info (list[FruTypeLengthString]): The custom chassis
+            info fields.
+    """
+
     TYPE_OTHER = 1
     TYPE_UNKNOWN = 2
     TYPE_DESKTOP = 3
@@ -375,6 +616,20 @@ class InventoryChassisInfoArea(CommonInfoArea):
 
 
 class InventoryBoardInfoArea(CommonInfoArea):
+    """The board info area.
+
+    Attributes:
+        language_code (int): The language code of the strings.
+        mfg_date (datetime.datetime): The manufacturing date and time.
+        manufacturer (FruTypeLengthString): The board manufacturer.
+        product_name (FruTypeLengthString): The board product name.
+        serial_number (FruTypeLengthString): The board serial number.
+        part_number (FruTypeLengthString): The board part number.
+        fru_file_id (FruTypeLengthString): The FRU file ID.
+        custom_mfg_info (list[FruTypeLengthString]): The custom board info
+            fields.
+    """
+
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         CommonInfoArea._from_data(self, data, ignore_checksum=ignore_checksum)
         self.language_code = data[2]
@@ -396,6 +651,22 @@ class InventoryBoardInfoArea(CommonInfoArea):
 
 
 class InventoryProductInfoArea(CommonInfoArea):
+    """The product info area.
+
+    Attributes:
+        language_code (int): The language code of the strings.
+        manufacturer (FruTypeLengthString): The product manufacturer.
+        name (FruTypeLengthString): The product name.
+        part_number (FruTypeLengthString): The product part or model
+            number.
+        version (FruTypeLengthString): The product version.
+        serial_number (FruTypeLengthString): The product serial number.
+        asset_tag (FruTypeLengthString): The asset tag.
+        fru_file_id (FruTypeLengthString): The FRU file ID.
+        custom_mfg_info (list[FruTypeLengthString]): The custom product
+            info fields.
+    """
+
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         CommonInfoArea._from_data(self, data)
         self.language_code = data[2]
@@ -419,6 +690,18 @@ class InventoryProductInfoArea(CommonInfoArea):
 
 
 class FruDataMultiRecord(FruData):
+    """A record of the multirecord area.
+
+    The ``TYPE_*`` constants are the record type IDs.
+
+    Attributes:
+        record_type_id (int): The record type ID.
+        format_version (int): The format version of the record.
+        end_of_list (bool): True for the last record of the area.
+        length (int): The length of the record data in bytes.
+        raw (Sequence[int]): The record data, without the record header.
+    """
+
     TYPE_POWER_SUPPLY_INFORMATION = 0
     TYPE_DC_OUTPUT = 1
     TYPE_DC_LOAD = 2
@@ -429,6 +712,7 @@ class FruDataMultiRecord(FruData):
     TYPE_OEM_PICMG = 0xc0
 
     def __str__(self) -> str:
+        """Return the record type ID and the record data as hex string."""
         return '%02x: %s' % (self.record_type_id,
                              ' '.join('%02x' % b for b in self.raw))
 
@@ -447,6 +731,18 @@ class FruDataMultiRecord(FruData):
 
     @staticmethod
     def create_from_record_id(data: Sequence[int]) -> FruDataMultiRecord:
+        """Decode a record with the class for its record type.
+
+        PICMG records are decoded by :class:`FruPicmgRecord`, the other
+        records by :class:`FruDataUnknown`.
+
+        Args:
+            data: The data of the multirecord area, starting with the
+                record.
+
+        Returns:
+            The decoded record.
+        """
         if data[0] == FruDataMultiRecord.TYPE_OEM_PICMG:
             return FruPicmgRecord.create_from_record_id(data)
         else:
@@ -454,10 +750,21 @@ class FruDataMultiRecord(FruData):
 
 
 class FruDataUnknown(FruDataMultiRecord):
-    """This class is used to indicate undecoded picmg record."""
+    """A record of a type that is not decoded, only its header is."""
 
 
 class FruPicmgRecord(FruDataMultiRecord):
+    """A PICMG record, an OEM record with the PICMG manufacturer ID.
+
+    The ``PICMG_RECORD_ID_*`` constants are the PICMG record type IDs.
+
+    Attributes:
+        manufacturer_id (int): The manufacturer ID, 0x315A for PICMG.
+        picmg_record_type_id (int): The PICMG record type ID, one of the
+            ``PICMG_RECORD_ID_*`` constants.
+        format_version (int): The format version of the PICMG record.
+    """
+
     PICMG_RECORD_ID_BACKPLANE_PTP_CONNECTIVITY = 0x04
     PICMG_RECORD_ID_ADDRESS_TABLE = 0x10
     PICMG_RECORD_ID_SHELF_POWER_DISTRIBUTION = 0x11
@@ -487,10 +794,32 @@ class FruPicmgRecord(FruDataMultiRecord):
     PICMG_RECORD_ID_ZONE_3_INTERFACE_DOCUMENTATION = 0x32
 
     def __init__(self, data: Sequence[int]) -> None:
+        """Decode the PICMG record.
+
+        Args:
+            data: The data of the multirecord area, starting with the
+                record.
+
+        Raises:
+            DecodingError: The data is too short or a checksum is wrong.
+        """
         FruDataMultiRecord.__init__(self, data)
 
     @staticmethod
     def create_from_record_id(data: Sequence[int]) -> FruPicmgRecord:
+        """Decode a PICMG record with the class for its PICMG record type.
+
+        The Power Module Capability record is decoded by
+        :class:`FruPicmgPowerModuleCapabilityRecord`, the other records by
+        :class:`FruPicmgRecord`.
+
+        Args:
+            data: The data of the multirecord area, starting with the
+                record.
+
+        Returns:
+            The decoded record.
+        """
         picmg_record = FruPicmgRecord(data)
         if picmg_record.picmg_record_type_id ==\
                 FruPicmgRecord.PICMG_RECORD_ID_MTCA_POWER_MODULE_CAPABILITY:
@@ -510,6 +839,13 @@ class FruPicmgRecord(FruDataMultiRecord):
 
 
 class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
+    """The MicroTCA Power Module Capability record.
+
+    Attributes:
+        maximum_current_output (float): The maximum current output in
+            amperes.
+    """
+
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         if len(data) < 12:
             raise DecodingError('data too short')
@@ -519,7 +855,24 @@ class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
 
 
 class InventoryMultiRecordArea:
+    """The multirecord area.
+
+    Attributes:
+        records (list[FruDataMultiRecord]): The records of the area,
+            decoded by :meth:`FruDataMultiRecord.create_from_record_id`.
+    """
+
     def __init__(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
+        """Decode the multirecord area.
+
+        Args:
+            data: The data of the multirecord area.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum.
+
+        Raises:
+            DecodingError: A record is invalid or its checksum is wrong.
+        """
         if data:
             self._from_data(data)
 
@@ -535,11 +888,36 @@ class InventoryMultiRecordArea:
 
 
 class FruInventory:
+    """The decoded FRU inventory data.
+
+    The areas are None if they are not present.
+
+    Attributes:
+        raw (Sequence[int]): The FRU inventory data.
+        common_header (InventoryCommonHeader): The common header.
+    """
+
     def __init__(self, data: Sequence[int] | None = None,
                  ignore_checksum: bool = False) -> None:
+        """Decode the FRU inventory data.
+
+        Args:
+            data: The FRU inventory data. Nothing is decoded if it is None
+                or empty, the areas are added by
+                :meth:`Fru.get_fru_inventory` then.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum.
+
+        Raises:
+            DecodingError: An area is invalid or its checksum is wrong.
+        """
+        #: The chassis info area.
         self.chassis_info_area: InventoryChassisInfoArea | None = None
+        #: The board info area.
         self.board_info_area: InventoryBoardInfoArea | None = None
+        #: The product info area.
         self.product_info_area: InventoryProductInfoArea | None = None
+        #: The multirecord area.
         self.multirecord_area: InventoryMultiRecordArea | None = None
 
         if data:

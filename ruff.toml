@@ -20,9 +20,6 @@ ignore = [
     "B903",   # class could be a dataclass or namedtuple
     "C408",   # dict()/list() calls instead of literals
     "UP031",  # %-style string formatting
-    # missing docstrings, only the format of the existing docstrings is
-    # checked until the modules are documented
-    "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107",
 ]
 
 [lint.pydocstyle]
@@ -31,3 +28,7 @@ convention = "google"
 [lint.per-file-ignores]
 # the tests are not part of the API documentation
 "tests/**" = ["D"]
+# Missing docstrings are reported only in the documented modules, add a
+# module to the list when it is documented. The other modules are only
+# checked for the format of the existing docstrings.
+"!pyipmi/{fru}.py" = ["D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107"]
