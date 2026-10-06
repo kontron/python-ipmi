@@ -25,7 +25,8 @@ from .message import Message
 
 class MessageRegistry:
     def __init__(self) -> None:
-        self.registry = dict()
+        self.registry: dict[str | tuple[int, int, int | None],
+                            type[Message]] = dict()
 
     def register_class(self, cls: type[Message]) -> type[Message]:
         # some sanity checks
