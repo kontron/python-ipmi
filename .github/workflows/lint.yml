@@ -38,6 +38,26 @@ jobs:
       - name: Type check with mypy
         run: mypy
 
+  docs:
+    name: Build the documentation
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y graphviz
+          pip install -r docs/requirements.txt
+
+      # warnings are errors, like on Read the Docs
+      - name: Build the documentation
+        run: sphinx-build -W --keep-going -b html docs/source docs/_build/html
+
   codespell:
     name: Check spelling with codespell
     runs-on: ubuntu-24.04
