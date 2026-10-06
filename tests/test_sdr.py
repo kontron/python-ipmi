@@ -367,3 +367,45 @@ def test_unknown_record_type():
     data = [0x01, 0x0, 0x51, 0x0a, 0x0]
     sdr = SdrCommon.from_data(data, 0xffff)
     assert isinstance(sdr, SdrUnknownSensorRecord)
+
+
+# Full Sensor Record "A2:Vcc 12V" of TestSdrFullSensorRecord.test_decocde
+FULL_SENSOR_RECORD = [
+    0x17, 0x00, 0x51, 0x01, 0x35, 0x17, 0x00, 0x51,
+    0x01, 0x35, 0x17, 0x00, 0x51, 0x01, 0x35, 0x32,
+    0x85, 0x32, 0x1b, 0x1b, 0x00, 0x04, 0x00, 0x00,
+    0x3b, 0x01, 0x00, 0x01, 0x00, 0xd0, 0x07, 0xcc,
+    0xf4, 0xa6, 0xff, 0x00, 0x00, 0xfe, 0xf5, 0x00,
+    0x8e, 0xa5, 0x04, 0x04, 0x00, 0x00, 0x00, 0xca,
+    0x41, 0x32, 0x3a, 0x56, 0x63, 0x63, 0x20, 0x31,
+    0x32, 0x56]
+
+
+def test_full_sensor_record_bit_fields():
+    data = list(FULL_SENSOR_RECORD)
+    # the indexes are the byte numbers of the IPMI specification minus 1
+    data[20] = 0b00101111      # units 1: rate unit 5, modifier unit 3, %
+    data[27] = 0x3f            # accuracy bits 5:0, B bits 9:8 = 0
+    data[28] = 0xf4            # accuracy bits 9:6, accuracy exponent 1
+    data[47] = 0xca            # ID string type 3 (8-bit ASCII), 10 bytes
+    sdr = SdrFullSensorRecord(data)
+    assert sdr.analog_data_format == 0
+    assert sdr.rate_unit == 5
+    assert sdr.modifier_unit == 3
+    assert sdr.percentage == 1
+    assert sdr.accuracy == 0x3ff
+    assert sdr.accuracy_exp == 1
+    assert sdr.device_id_string_type == 3
+    assert sdr.device_id_string == 'A2:Vcc 12V'
+
+
+@pytest.mark.parametrize('capabilities, expected', [
+    (0x00, ['hysteresis_not_supported', 'threshold_not_supported']),
+    (0x14, ['hysteresis_readable', 'threshold_readable']),
+    (0x28, ['hysteresis_read_and_setable', 'threshold_read_and_setable']),
+    (0x3c, ['hysteresis_fixed', 'threshold_fixed']),
+])
+def test_full_sensor_record_threshold_access(capabilities, expected):
+    record = SdrFullSensorRecord()
+    record._decode_capabilities(capabilities)
+    assert record.capabilities == expected

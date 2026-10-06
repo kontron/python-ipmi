@@ -420,7 +420,7 @@ class SdrCommon:
         self.entity_instance = buffer.pop_unsigned_int(1)
 
     def _device_id_string(self, buffer: ByteBuffer) -> None:
-        self.device_id_string_type = (buffer[0] & 0xc0) >> 4
+        self.device_id_string_type = (buffer[0] & 0xc0) >> 6
         self.device_id_string_length = buffer[0] & 0x3f
         field = SdrTypeLengthString(data=buffer[0:1+self.device_id_string_length])
         self.device_id_string = field.string
@@ -677,8 +677,8 @@ class SdrFullSensorRecord(SdrCommon):
         # sensor threshold support
         THRESHOLD_MASK = 0x0C
         THRESHOLD_IS_NOT_SUPPORTED = 0x00
-        THRESHOLD_IS_READABLE = 0x08
-        THRESHOLD_IS_READ_AND_SETTABLE = 0x04
+        THRESHOLD_IS_READABLE = 0x04
+        THRESHOLD_IS_READ_AND_SETTABLE = 0x08
         THRESHOLD_IS_FIXED = 0x0C
         if capabilities & THRESHOLD_MASK == THRESHOLD_IS_NOT_SUPPORTED:
             self.capabilities.append('threshold_not_supported')
@@ -736,8 +736,8 @@ class SdrFullSensorRecord(SdrCommon):
         self.units_2 = buffer.pop_unsigned_int(1)
         self.units_3 = buffer.pop_unsigned_int(1)
         self.analog_data_format = (self.units_1 >> 6) & 0x3
-        self.rate_unit = (self.units_1 >> 3) >> 0x7
-        self.modifier_unit = (self.units_1 >> 1) & 0x2
+        self.rate_unit = (self.units_1 >> 3) & 0x7
+        self.modifier_unit = (self.units_1 >> 1) & 0x3
         self.percentage = self.units_1 & 0x1
         # byte 24
         self.linearization = buffer.pop_unsigned_int(1) & 0x7f
@@ -756,7 +756,7 @@ class SdrFullSensorRecord(SdrCommon):
         acc_accexp = buffer.pop_unsigned_int(1)
         self.b = (b & 0xff) | ((b_acc & 0xc0) << 2)
         self.b = self._convert_complement(self.b, 10)
-        self.accuracy = (b_acc & 0x3f) | ((acc_accexp & 0xf0) << 4)
+        self.accuracy = (b_acc & 0x3f) | ((acc_accexp & 0xf0) << 2)
         self.accuracy_exp = (acc_accexp & 0x0c) >> 2
         # byte 30
         rexp_bexp = buffer.pop_unsigned_int(1)
