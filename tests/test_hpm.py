@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import hashlib
 import os
 import struct
 
@@ -20,7 +21,8 @@ from pyipmi.hpm import (Hpm, ComponentProperty,
                         PROPERTY_GENERAL_PROPERTIES, PROPERTY_CURRENT_VERSION,
                         PROPERTY_DESCRIPTION_STRING, PROPERTY_ROLLBACK_VERSION,
                         PROPERTY_DEFERRED_VERSION, PROPERTY_OEM,
-                        ACTION_PREPARE_COMPONENT, ACTION_UPLOAD_FOR_UPGRADE)
+                        ACTION_BACKUP_COMPONENT, ACTION_PREPARE_COMPONENT,
+                        ACTION_UPLOAD_FOR_UPGRADE, ACTION_UPLOAD_FOR_COMPARE)
 
 from .ipmi_helper import create_ipmi
 
@@ -162,6 +164,69 @@ def test_upgradeactionrecord_upload_str():
         ' Firmware Version: 1.2',
         ' Description:      firmware',
         ' Firmware Length:  3'])
+
+
+def _image_with_actions(tmp_path, actions):
+    """Write an image for device ID 4, manufacturer 15000, product 1701
+    with component 1 and return the filename."""
+    header = (b'PICMGFWU\x00\x04\x98\x3a\x00\xa5\x06' + bytes(5)
+              + b'\x02' + bytes(13))
+    header += bytes(((-sum(header)) & 0xff,))
+    data = header + b''.join(actions)
+    path = tmp_path / 'image.hpm'
+    path.write_bytes(data + hashlib.md5(data).digest())
+    return str(path)
+
+
+UPGRADE_STAGE_RSP = {
+    'InitiateUpgradeAction': b'\x00\x00',
+    'UploadFirmwareBlock': b'\x00\x00',
+    'FinishFirmwareUpload': b'\x00\x00',
+}
+
+
+def _initiated_actions(ipmi):
+    return [data[-1] for (name, data) in ipmi.requests
+            if name == 'InitiateUpgradeActionReq']
+
+
+def test_upgrade_stage_actions(tmp_path):
+    image = UpgradeImage(_image_with_actions(tmp_path, [
+        b'\x00\x02\xfe', b'\x01\x02\xfd', _upload_record(bytes(30))]))
+    ipmi = create_ipmi(UPGRADE_STAGE_RSP)
+    ipmi.upgrade_stage(image, 1)
+    assert _initiated_actions(ipmi) == [
+        ACTION_BACKUP_COMPONENT, ACTION_PREPARE_COMPONENT,
+        ACTION_UPLOAD_FOR_UPGRADE]
+    assert ipmi.requests[-1][0] == 'FinishFirmwareUploadReq'
+
+
+def test_upgrade_stage_compare(tmp_path):
+    image = UpgradeImage(_image_with_actions(tmp_path, [
+        b'\x00\x02\xfe', b'\x01\x02\xfd', _upload_record(bytes(30))]))
+    ipmi = create_ipmi(UPGRADE_STAGE_RSP)
+    ipmi.upgrade_stage(image, 1, compare=True)
+    # backup and prepare are skipped
+    assert _initiated_actions(ipmi) == [ACTION_UPLOAD_FOR_COMPARE]
+    names = [name for (name, _) in ipmi.requests]
+    assert names.count('UploadFirmwareBlockReq') == 2
+    assert names[-1] == 'FinishFirmwareUploadReq'
+
+
+def test_compare_component_from_file(tmp_path):
+    filename = _image_with_actions(tmp_path, [
+        b'\x01\x02\xfd', _upload_record(bytes(30))])
+    ipmi = create_ipmi({
+        **UPGRADE_STAGE_RSP,
+        'AbortFirmwareUpgrade': b'\x00\x00',
+        'GetDeviceId': DEVICE_ID_RSP,
+        'GetTargetUpgradeCapabilities': TARGET_CAPS_RSP,
+    })
+    ipmi.compare_component_from_file(filename, 1)
+    names = [name for (name, _) in ipmi.requests]
+    assert _initiated_actions(ipmi) == [ACTION_UPLOAD_FOR_COMPARE]
+    assert 'ActivateFirmwareReq' not in names
+    assert names[-1] == 'FinishFirmwareUploadReq'
 
 
 def test_upgrade_image():

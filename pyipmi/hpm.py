@@ -342,12 +342,30 @@ class Hpm:
         if support is not True:
             raise HpmError('no supported component in image')
 
-    def upgrade_stage(self, image: UpgradeImage, component: int) -> None:
+    def upgrade_stage(self, image: UpgradeImage, component: int,
+                      compare: bool = False) -> None:
+        """Perform the action records of the image for the component.
+
+        With `compare` the firmware image is uploaded for comparison with
+        the active copy of the component, the backup and prepare actions
+        are skipped.
+        """
         for action in image.actions:
             if action.components & (1 << component) == 0:
                 continue
+            if isinstance(action, UpgradeActionRecordUploadForUpgrade):
+                if compare:
+                    upgrade_action = ACTION_UPLOAD_FOR_COMPARE
+                else:
+                    upgrade_action = ACTION_UPLOAD_FOR_UPGRADE
+            elif compare:
+                continue
+            elif isinstance(action, UpgradeActionRecordBackup):
+                upgrade_action = ACTION_BACKUP_COMPONENT
+            else:
+                upgrade_action = ACTION_PREPARE_COMPONENT
             self.initiate_upgrade_action_and_wait(1 << component,
-                                                  action.action_type)
+                                                  upgrade_action)
             if isinstance(action, UpgradeActionRecordUploadForUpgrade):
                 self.upload_binary(action.firmware_image_data)
                 self.finish_upload_and_wait(component, action.firmware_length)
@@ -387,6 +405,23 @@ class Hpm:
     def install_component_from_file(self, filename: str, component: int) -> None:
         image = UpgradeImage(filename)
         self.install_component_from_image(image, component)
+
+    def compare_component_from_image(self, image: UpgradeImage,
+                                     component: int) -> None:
+        """Compare the firmware of the image with the active copy.
+
+        A mismatch is reported by the Finish Firmware Upload command.
+        """
+        self.abort_firmware_upgrade()
+        if component not in image.header.components:
+            raise HpmError('component=%d not in image' % component)
+        self.preparation_stage(image)
+        self.upgrade_stage(image, component, compare=True)
+
+    def compare_component_from_file(self, filename: str,
+                                    component: int) -> None:
+        image = UpgradeImage(filename)
+        self.compare_component_from_image(image, component)
 
 
 class UpgradeStatus(State):
