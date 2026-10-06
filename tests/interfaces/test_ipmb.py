@@ -140,6 +140,21 @@ def test_rx_filter():
     assert rx_filter(header_req, rx_data)
 
 
+def test_rx_filter_short_message():
+    header_req = IpmbHeaderReq()
+    header_req.rs_lun = 1
+    header_req.rs_sa = 0x72
+    header_req.rq_seq = 2
+    header_req.rq_lun = 0
+    header_req.rq_sa = 0x20
+    header_req.netfn = 6
+    header_req.cmdid = 1
+
+    assert not rx_filter(header_req, b'')
+    assert not rx_filter(header_req, b'\x20')
+    assert not rx_filter(header_req, array('B', [0x20, 0x1c, 0xc4, 0x72, 0x09, 0x01]))
+
+
 def test_rx_filter_config_filter():
     header_req = IpmbHeaderReq()
     header_req.rs_lun = 1

@@ -644,7 +644,8 @@ class Rmcp(Interface):
                         else:
                             rx_data = self._receive_ipmi_msg(self.ignore_sdu_length)
 
-                        if array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE:
+                        if (len(rx_data) > 5 and
+                                array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE):
                             rx_data = decode_bridged_message(rx_data)
                             if not rx_data:
                                 # the forwarded reply is expected in the next packet

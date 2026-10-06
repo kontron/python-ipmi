@@ -25,7 +25,8 @@ from collections.abc import Callable
 from ..errors import IpmiTimeoutError
 from ..msgs import create_message, encode_message, decode_message, Message
 from ..msgs.constants import CC_INV_CMD, CC_UNSPECIFIED_ERROR
-from .ipmb import IpmbHeaderReq, IpmbHeaderRsp, checksum, encode_ipmb_msg
+from .ipmb import (IPMB_MIN_MSG_LEN, IpmbHeaderReq, IpmbHeaderRsp, checksum,
+                   encode_ipmb_msg)
 
 logger = logging.getLogger(__name__)
 
@@ -164,7 +165,7 @@ class MessageRouter:
 
         Called from the receive thread of the interface; never blocks.
         """
-        if len(frame) < 7:
+        if len(frame) < IPMB_MIN_MSG_LEN:
             logger.debug('IPMB RX message too short [%s]', frame.hex(' '))
             return
         if checksum(frame[0:3]) or checksum(frame[3:]):

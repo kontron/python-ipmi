@@ -33,6 +33,9 @@ from .base import Interface
 
 logger = logging.getLogger(__name__)
 
+# rqSA, netFn/rqLUN, checksum, rsSA, rqSeq/rsLUN, cmd, checksum
+IPMB_MIN_MSG_LEN = 7
+
 if TYPE_CHECKING:
     from .router import MessageRouter
 
@@ -258,6 +261,10 @@ def rx_filter(header: IpmbHeaderReq, data: bytes | array, rq_sa: bool = False,
     header: the header to compare with
     data: the received message as bytestring
     """
+    if len(data) < IPMB_MIN_MSG_LEN:
+        logger.debug(f'message too short: {len(data):d} bytes')
+        return False
+
     rsp_header = IpmbHeaderRsp(data=data)
 
     data = array('B', data)
