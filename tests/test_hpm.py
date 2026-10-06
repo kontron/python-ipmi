@@ -6,6 +6,7 @@ import struct
 
 import pytest
 
+import pyipmi
 from pyipmi.errors import HpmError, IpmiTimeoutError
 from pyipmi.hpm import (Hpm, ComponentProperty,
                         ComponentPropertyDescriptionString,
@@ -444,9 +445,9 @@ def test_upload_binary():
     ipmi = create_ipmi(b'\x00\x00')
     ipmi.upload_binary(bytes(range(50)))
     assert ipmi.requests == [
-        ('UploadFirmwareBlockReq', b'\x00\x00' + bytes(range(22))),
-        ('UploadFirmwareBlockReq', b'\x00\x01' + bytes(range(22, 44))),
-        ('UploadFirmwareBlockReq', b'\x00\x02' + bytes(range(44, 50))),
+        ('UploadFirmwareBlockReq', b'\x00\x00' + bytes(range(23))),
+        ('UploadFirmwareBlockReq', b'\x00\x01' + bytes(range(23, 46))),
+        ('UploadFirmwareBlockReq', b'\x00\x02' + bytes(range(46, 50))),
     ]
 
 
@@ -488,10 +489,46 @@ def test_upload_binary_timeout_resends_block():
     ipmi.interface.send_and_receive.side_effect = send_and_receive
     ipmi.upload_binary(bytes(range(50)))
     assert ipmi.requests == [
-        ('UploadFirmwareBlockReq', b'\x00\x00' + bytes(range(22))),
-        ('UploadFirmwareBlockReq', b'\x00\x01' + bytes(range(22, 44))),
-        ('UploadFirmwareBlockReq', b'\x00\x02' + bytes(range(44, 50))),
+        ('UploadFirmwareBlockReq', b'\x00\x00' + bytes(range(23))),
+        ('UploadFirmwareBlockReq', b'\x00\x01' + bytes(range(23, 46))),
+        ('UploadFirmwareBlockReq', b'\x00\x02' + bytes(range(46, 50))),
     ]
+
+
+@pytest.mark.parametrize('max_request_data_size, routing, block_size', [
+    # directly on the IPMB
+    (None, None, 23),
+    # LAN interface directly to the BMC
+    (38, None, 36),
+    # bridged once, the message is on the IPMB
+    (38, [(0x81, 0x20, 0), (0x20, 0x88, None)], 23),
+    # bridged twice, the message is in a Send Message on the IPMB
+    (38, [(0x81, 0x20, 0), (0x20, 0x82, 7), (0x20, 0x72, None)], 15),
+])
+def test_determine_max_block_size(max_request_data_size, routing, block_size):
+    ipmi = create_ipmi(b'\x00\x00')
+    ipmi.interface.MAX_REQUEST_DATA_SIZE = max_request_data_size
+    ipmi.target = pyipmi.Target(0x88, routing=routing)
+    assert ipmi._determine_max_block_size() == block_size
+
+
+def test_upload_binary_reduces_block_size():
+    ipmi = create_ipmi({'UploadFirmwareBlock': [
+        b'\xc7', b'\xc8', b'\x00\x00', b'\x00\x00', b'\x00\x00']})
+    ipmi.upload_binary(bytes(range(50)))
+    assert ipmi.requests == [
+        ('UploadFirmwareBlockReq', b'\x00\x00' + bytes(range(23))),
+        ('UploadFirmwareBlockReq', b'\x00\x00' + bytes(range(22))),
+        ('UploadFirmwareBlockReq', b'\x00\x00' + bytes(range(21))),
+        ('UploadFirmwareBlockReq', b'\x00\x01' + bytes(range(21, 42))),
+        ('UploadFirmwareBlockReq', b'\x00\x02' + bytes(range(42, 50))),
+    ]
+
+
+def test_upload_binary_length_error_after_accepted_block():
+    ipmi = create_ipmi({'UploadFirmwareBlock': [b'\x00\x00', b'\xc7']})
+    with pytest.raises(HpmError, match='CC=0xc7'):
+        ipmi.upload_binary(bytes(50))
 
 
 def test_finish_firmware_upload():
@@ -610,7 +647,7 @@ def test_install_component_from_file(fake_time):
 
     names = [name for (name, _) in ipmi.requests]
     image = UpgradeImage(HPM_FILE)
-    blocks = -(-image.actions[1].firmware_length // 22)
+    blocks = -(-image.actions[1].firmware_length // 23)
     assert names[:6] == [
         'AbortFirmwareUpgradeReq', 'GetDeviceIdReq',
         'GetTargetUpgradeCapabilitiesReq',

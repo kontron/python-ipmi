@@ -27,7 +27,7 @@ from array import array
 from .errors import CompletionCodeError, HpmError, IpmiTimeoutError
 from .msgs import create_request_by_name, Message
 from .msgs import constants
-from .utils import check_completion_code, bcd_search, chunks
+from .utils import check_completion_code, bcd_search
 from .utils import py3dec_unic_bytes_fix, py3_array_tobytes
 from .state import State
 from .fields import VersionField
@@ -52,6 +52,13 @@ IMAGE_ACTION_PREPARE_COMPONENTS = 0x01
 IMAGE_ACTION_UPLOAD_FIRMWARE_IMAGE = 0x02
 
 CC_LONG_DURATION_CMD_IN_PROGRESS = 0x80
+
+# an IPMB message is limited to 32 bytes, this leaves 25 bytes request data
+IPMB_MAX_REQUEST_DATA_SIZE = 25
+# a bridged message is embedded in a Send Message request on the IPMB
+SEND_MESSAGE_OVERHEAD = 8
+# PICMG identifier and block number of the Upload Firmware Block request
+UPLOAD_FIRMWARE_BLOCK_HEADER_SIZE = 2
 
 CC_GET_COMP_PROP_UPGRADE_NOT_SUPPORTED_OVER_INTF = 0x81
 CC_GET_COMP_PROP_INVALID_COMPONENT = 0x82
@@ -153,17 +160,39 @@ class Hpm:
         self.send_message_with_name('UploadFirmwareBlock', number=block_number,
                                     data=data)
 
-    @staticmethod
-    def _determine_max_block_size() -> int:
-        return 22
+    def _determine_max_block_size(self) -> int:
+        """Return the maximum firmware data length of an upload block.
+
+        A message sent directly by the interface is limited by the
+        interface, a bridged message by the IPMB message length. Each
+        additional bridge embeds the message in another Send Message
+        request on the IPMB.
+        """
+        routing = getattr(self.target, 'routing', None)
+        bridges = len(routing) - 1 if routing else 0
+        if bridges > 0:
+            size = IPMB_MAX_REQUEST_DATA_SIZE \
+                - (bridges - 1) * SEND_MESSAGE_OVERHEAD
+        else:
+            size = getattr(self.interface, 'MAX_REQUEST_DATA_SIZE', None)
+            if not isinstance(size, int):
+                size = IPMB_MAX_REQUEST_DATA_SIZE
+        return size - UPLOAD_FIRMWARE_BLOCK_HEADER_SIZE
 
     def upload_binary(self, binary: bytes, timeout: float = 2,
                       interval: float = 0.1, retry: int = 3) -> None:
-        """Upload all firmware blocks from a binary."""
+        """Upload all firmware blocks from a binary.
+
+        If the target rejects the length of the first block, the block size
+        is reduced until a block is accepted.
+        """
         block_number = 0
         block_size = self._determine_max_block_size()
+        block_size_accepted = False
+        offset = 0
 
-        for chunk in chunks(binary, block_size):
+        while offset < len(binary):
+            chunk = binary[offset:offset + block_size]
             # a timed out block is sent again, up to `retry` times
             for attempt in range(retry):
                 try:
@@ -173,6 +202,11 @@ class Hpm:
                         self.wait_for_long_duration_command(
                                 constants.CMDID_HPM_UPLOAD_FIRMWARE_BLOCK,
                                 timeout, interval)
+                    elif (e.cc in (constants.CC_REQ_DATA_INV_LENGTH,
+                                   constants.CC_REQ_DATA_FIELD_EXCEED)
+                          and not block_size_accepted and block_size > 1):
+                        block_size -= 1
+                        chunk = None
                     else:
                         raise HpmError('upload_firmware_block CC=0x%02x'
                                        % e.cc) from e
@@ -182,6 +216,12 @@ class Hpm:
                     continue
                 break
 
+            if chunk is None:
+                # send the block again with the reduced size
+                continue
+
+            block_size_accepted = True
+            offset += len(chunk)
             block_number += 1
             block_number &= 0xff
 
