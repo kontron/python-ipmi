@@ -470,6 +470,28 @@ def test_upload_binary_timeout():
     ipmi.interface.send_and_receive.side_effect = IpmiTimeoutError()
     with pytest.raises(IpmiTimeoutError):
         ipmi.upload_binary(bytes(100), retry=2)
+    # the first block is tried `retry` times
+    assert ipmi.interface.send_and_receive.call_count == 2
+
+
+def test_upload_binary_timeout_resends_block():
+    ipmi = create_ipmi(b'\x00\x00')
+    respond = ipmi.interface.send_and_receive.side_effect
+    errors = [IpmiTimeoutError()]
+
+    def send_and_receive(req):
+        # the second block times out once
+        if req.number == 1 and errors:
+            raise errors.pop()
+        return respond(req)
+
+    ipmi.interface.send_and_receive.side_effect = send_and_receive
+    ipmi.upload_binary(bytes(range(50)))
+    assert ipmi.requests == [
+        ('UploadFirmwareBlockReq', b'\x00\x00' + bytes(range(22))),
+        ('UploadFirmwareBlockReq', b'\x00\x01' + bytes(range(22, 44))),
+        ('UploadFirmwareBlockReq', b'\x00\x02' + bytes(range(44, 50))),
+    ]
 
 
 def test_finish_firmware_upload():
