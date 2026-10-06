@@ -98,7 +98,7 @@ class TypeLengthString:
         self.raw = data[offset+1:offset+1+self.length]
 
         if self.field_type == self.TYPE_BCD_PLUS:
-            self.string = self.raw.decode('bcd+')
+            self.string = bytes(self.raw).decode('bcd+')
         elif self.field_type == self.TYPE_6BIT_ASCII:
             self.string = _unpack6bitascii(self.raw)
         else:
