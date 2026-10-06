@@ -172,7 +172,8 @@ class Ipmitool(Interface):
 
             # Check for error opening ipmi device
             if self.re_could_not_open.match(line):
-                raise RuntimeError(f'ipmitool failed: {output}')
+                raise RuntimeError('ipmitool failed: '
+                                   f'{py3dec_unic_bytes_fix(output)}')
 
             if self.re_long_password.match(line):
                 raise IpmiLongPasswordError(line)
@@ -264,6 +265,7 @@ class Ipmitool(Interface):
     @staticmethod
     def _routing_channel(target: Target, index: int) -> int:
         """Return the channel of a routing entry, ipmitool needs it."""
+        assert target.routing is not None
         channel = target.routing[index].channel
         if channel is None:
             raise ValueError('the ipmitool interface needs the bridge channel '

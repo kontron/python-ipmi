@@ -21,7 +21,7 @@ import threading
 import time
 from array import array
 from typing import TYPE_CHECKING
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 
 from .. import Routing, Target
 from ..errors import IpmiTimeoutError
@@ -62,18 +62,21 @@ class IpmbHeader:
     *-------*--------------*----------*-------*---------------*-------*
     """
 
-    rs_sa = None
-    rs_lun = None
-    rq_sa = None
-    rq_lun = None
-    rq_seq = None
-    netfn = None
-    cmdid = None
-    checksum = None
+    rs_sa: int
+    rs_lun: int
+    rq_sa: int
+    rq_lun: int
+    rq_seq: int
+    netfn: int
+    cmdid: int
+    checksum: int
 
-    def __init__(self, data: bytes | None = None) -> None:
+    def __init__(self, data: Sequence[int] | None = None) -> None:
         if data:
             self.decode(data)
+
+    def decode(self, data: Sequence[int]) -> None:
+        raise NotImplementedError()
 
     def __str__(self) -> str:
         return f'rs_sa=0x{self.rs_sa:02x}, rs_lun={self.rs_lun}, ' \
@@ -97,10 +100,9 @@ class IpmbHeaderReq(IpmbHeader):
         data.append(self.cmdid)
         return py3_array_tobytes(data)
 
-    def decode(self, data: bytes) -> None:
+    def decode(self, data: Sequence[int]) -> None:
         """Decode the header."""
-        msg = array('B')
-        py3_array_frombytes(msg, data)
+        msg = array('B', data)
         self.rs_sa = msg[0]
         self.netfn = msg[1] >> 2
         self.rs_lun = msg[1] & 3
@@ -125,17 +127,17 @@ class IpmbHeaderRsp(IpmbHeader):
         data.append(self.cmdid)
         return py3_array_tobytes(data)
 
-    def decode(self, data: bytes) -> None:
+    def decode(self, data: Sequence[int]) -> None:
         """Decode the header."""
-        data = array('B', data)
-        self.rq_sa = data[0]
-        self.netfn = data[1] >> 2
-        self.rq_lun = data[1] & 3
-        self.checksum = data[2]
-        self.rs_sa = data[3]
-        self.rq_seq = data[4] >> 2
-        self.rs_lun = data[4] & 3
-        self.cmdid = data[5]
+        msg = array('B', data)
+        self.rq_sa = msg[0]
+        self.netfn = msg[1] >> 2
+        self.rq_lun = msg[1] & 3
+        self.checksum = msg[2]
+        self.rs_sa = msg[3]
+        self.rq_seq = msg[4] >> 2
+        self.rs_lun = msg[4] & 3
+        self.cmdid = msg[5]
 
     def from_req_header(self, req_header: IpmbHeaderReq) -> None:
         """Set up the header of the response to the given request.
@@ -218,6 +220,9 @@ def encode_bridged_message(routing: list[Routing], header: IpmbHeaderReq,
     tx_data = encode_ipmb_msg(header, payload)
 
     for bridge in reversed(routing[:-1]):
+        if bridge.channel is None:
+            raise ValueError('bridge channel of routing entry missing: %s'
+                             % bridge)
         tx_data = encode_send_message(tx_data,
                                       rq_sa=bridge.rq_sa,
                                       rs_sa=bridge.rs_sa,
@@ -244,6 +249,12 @@ def decode_bridged_message(rx_data: bytes) -> bytes:
         if len(rx_data) < 6:
             break
     return rx_data
+
+
+def target_ipmb_address(target: Target) -> int:
+    if target.ipmb_address is None:
+        raise ValueError('IPMB address of the target missing: %s' % target)
+    return target.ipmb_address
 
 
 def rx_filter(header: IpmbHeaderReq, data: bytes | array, rq_sa: bool = False,
@@ -404,7 +415,7 @@ class IpmbInterface(Interface):
         header = IpmbHeaderReq()
         header.netfn = 6
         header.rs_lun = 0
-        header.rs_sa = target.ipmb_address
+        header.rs_sa = target_ipmb_address(target)
         header.rq_seq = self.next_sequence_number
         header.rq_lun = 0
         header.rq_sa = self.slave_address
@@ -434,7 +445,7 @@ class IpmbInterface(Interface):
         header = IpmbHeaderReq()
         header.netfn = netfn
         header.rs_lun = lun
-        header.rs_sa = target.ipmb_address
+        header.rs_sa = target_ipmb_address(target)
         header.rq_seq = self._inc_sequence_number()
         header.rq_lun = 0
         header.rq_sa = self.slave_address
