@@ -14,6 +14,23 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""Chassis commands: status, power control and boot options.
+
+The commands are the methods of :class:`Chassis`, which are available on
+:class:`pyipmi.Ipmi`. The ``CONTROL_*`` constants are the options of
+:meth:`Chassis.chassis_control`, the ``BOOT_PARAMETER_*`` constants the
+boot option parameters of :meth:`Chassis.get_system_boot_options` and
+:meth:`Chassis.set_system_boot_options`.
+
+Example:
+    Boot from the network once and power cycle the system::
+
+        from pyipmi.chassis import BootDevice
+
+        ipmi.set_boot_options(BootDevice.PXE, 'efi', False)
+        ipmi.chassis_control_power_cycle()
+"""
+
 from __future__ import annotations
 
 from array import array
@@ -41,6 +58,8 @@ BOOT_PARAMETER_BOOT_INITIATOR_MAILBOX = 7
 
 
 class BootDevice(str, Enum):
+    """The boot devices of the boot flags, the values are their names."""
+
     NO_OVERRIDE = "no override",
     PXE = "pxe",
     DEFAULT_HDD = "default hard drive",
@@ -89,8 +108,12 @@ CONVERT_BOOT_DEVICE_TO_RAW = {
 def data_to_boot_mode(data: array) -> str:
     """Convert the boot flags response data to the boot mode string.
 
-    The data is the response of
-    `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)`.
+    Args:
+        data: The parameter data of
+            `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)`.
+
+    Returns:
+        ``'legacy'`` or ``'efi'``.
     """
     boot_mode_raw = (data[0] >> 5) & 1
     boot_mode = "legacy" if boot_mode_raw == 0 else "efi"
@@ -100,18 +123,30 @@ def data_to_boot_mode(data: array) -> str:
 def data_to_boot_persistency(data: array) -> bool:
     """Convert the boot flags response data to the boot persistency.
 
-    The data is the response of
-    `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)`.
+    Args:
+        data: The parameter data of
+            `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)`.
+
+    Returns:
+        True if the boot options apply to all future boots, False if they
+        apply to the next boot only.
     """
     boot_persistent_raw = (data[0] >> 6) & 1
     return boot_persistent_raw == 1
 
 
 def data_to_boot_device(data: array) -> BootDevice:
-    """Convert the boot flags response data to the boot device string.
+    """Convert the boot flags response data to the boot device.
 
-    The data is the response of
-    `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)`.
+    Args:
+        data: The parameter data of
+            `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)`.
+
+    Returns:
+        The boot device.
+
+    Raises:
+        KeyError: The boot device code is reserved.
     """
     boot_device_raw = (data[1] >> 2) & 0b1111
     return CONVERT_RAW_TO_BOOT_DEVICE[boot_device_raw]
@@ -121,8 +156,20 @@ def boot_options_to_data(boot_device: BootDevice, boot_mode: str,
                          boot_persistency: bool) -> ByteBuffer:
     """Convert the boot device, mode and persistency to boot flags data.
 
-    The data is the request data of
-    `SetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)`.
+    Args:
+        boot_device: The boot device.
+        boot_mode: ``'legacy'`` or ``'efi'``.
+        boot_persistency: True if the boot options apply to all future
+            boots, False if they apply to the next boot only.
+
+    Returns:
+        The parameter data of
+        `SetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)`, the boot flags
+        are marked valid.
+
+    Raises:
+        TypeError: ``boot_persistency`` is not a bool.
+        ValueError: The boot mode or the boot device is unknown.
     """
     if not isinstance(boot_persistency, bool):
         raise TypeError(f"Wrong type for boot_persistency argument: {type(boot_persistency)}, expected bool.")
@@ -152,36 +199,74 @@ def boot_options_to_data(boot_device: BootDevice, boot_mode: str,
 
 
 class Chassis(IpmiMixin):
+    """Chassis commands, available on :class:`pyipmi.Ipmi`."""
+
     def get_chassis_status(self) -> ChassisStatus:
+        """Get the status of the chassis and its power.
+
+        Returns:
+            The chassis status.
+        """
         return ChassisStatus(self.send_message_with_name('GetChassisStatus'))
 
     def chassis_control(self, option: int) -> None:
+        """Control the chassis power.
+
+        Args:
+            option: One of the ``CONTROL_*`` constants: power down, power up,
+                power cycle, hard reset, diagnostic interrupt or soft
+                shutdown.
+
+        Raises:
+            CompletionCodeError: The BMC rejected the request.
+        """
         req = create_request_by_name('ChassisControl')
         req.control.option = option
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
     def chassis_control_power_down(self) -> None:
+        """Power down the chassis."""
         self.chassis_control(CONTROL_POWER_DOWN)
 
     def chassis_control_power_up(self) -> None:
+        """Power up the chassis."""
         self.chassis_control(CONTROL_POWER_UP)
 
     def chassis_control_power_cycle(self) -> None:
+        """Power cycle the chassis."""
         self.chassis_control(CONTROL_POWER_CYCLE)
 
     def chassis_control_hard_reset(self) -> None:
+        """Hard reset the system."""
         self.chassis_control(CONTROL_HARD_RESET)
 
     def chassis_control_diagnostic_interrupt(self) -> None:
+        """Issue a diagnostic interrupt (NMI) to the system."""
         self.chassis_control(CONTROL_DIAGNOSTIC_INTERRUPT)
 
     def chassis_control_soft_shutdown(self) -> None:
+        """Initiate a soft shutdown of the operating system."""
         self.chassis_control(CONTROL_SOFT_SHUTDOWN)
 
     def get_system_boot_options(self, parameter_selector: int = 0,
                                 set_selector: int = 0,
                                 block_selector: int = 0) -> array:
+        """Get a boot option parameter.
+
+        Args:
+            parameter_selector: The parameter, one of the
+                ``BOOT_PARAMETER_*`` constants.
+            set_selector: The set selector of the parameter.
+            block_selector: The block selector of the parameter.
+
+        Returns:
+            The parameter data.
+
+        Raises:
+            CompletionCodeError: The BMC rejected the request, e.g. for an
+                unsupported parameter.
+        """
         req = create_request_by_name('GetSystemBootOptions')
         req.parameter_selector.boot_option_parameter_selector = parameter_selector
         req.set_selector = set_selector
@@ -192,6 +277,17 @@ class Chassis(IpmiMixin):
 
     def set_system_boot_options(self, parameter_selector: int, data: ByteBuffer,
                                 mark_parameter_invalid: int = 0) -> None:
+        """Set a boot option parameter.
+
+        Args:
+            parameter_selector: The parameter, one of the
+                ``BOOT_PARAMETER_*`` constants.
+            data: The parameter data.
+            mark_parameter_invalid: 1 to mark the parameter invalid.
+
+        Raises:
+            CompletionCodeError: The BMC rejected the request.
+        """
         req = create_request_by_name('SetSystemBootOptions')
         req.parameter_selector.parameter_validity = mark_parameter_invalid
         req.parameter_selector.boot_option_parameter_selector = parameter_selector
@@ -200,9 +296,10 @@ class Chassis(IpmiMixin):
         check_rsp_completion_code(rsp)
 
     def get_boot_mode(self) -> str:
-        """Return a string corresponding to the device boot mode.
+        """Return the boot mode of the boot flags.
 
-        Possible values are: legacy, efi.
+        Returns:
+            ``'legacy'`` or ``'efi'``.
         """
         rsp = self.get_system_boot_options(BOOT_PARAMETER_BOOT_FLAGS)
         return data_to_boot_mode(rsp)
@@ -210,37 +307,72 @@ class Chassis(IpmiMixin):
     def get_boot_persistency(self) -> bool:
         """Return whether the boot configuration applies to all boots.
 
-        True if the boot configuration is applied to every future boot,
-        False if it is only applied to the next boot.
+        Returns:
+            True if the boot configuration is applied to every future boot,
+            False if it is only applied to the next boot.
         """
         rsp = self.get_system_boot_options(BOOT_PARAMETER_BOOT_FLAGS)
         return data_to_boot_persistency(rsp)
 
     def get_boot_device(self) -> BootDevice:
-        """Return a string corresponding to the target boot device.
+        """Return the boot device of the boot flags.
 
-        Possible values are listed in the `BootDevice` class.
+        Returns:
+            The boot device.
+
+        Raises:
+            KeyError: The boot device code is reserved.
         """
         rsp = self.get_system_boot_options(BOOT_PARAMETER_BOOT_FLAGS)
         return data_to_boot_device(rsp)
 
     def set_boot_options(self, boot_device: BootDevice, boot_mode: str,
                          boot_persistency: bool) -> None:
+        """Set the boot flags: the boot device, mode and persistency.
+
+        Args:
+            boot_device: The boot device.
+            boot_mode: ``'legacy'`` or ``'efi'``.
+            boot_persistency: True if the boot options apply to all future
+                boots, False if they apply to the next boot only.
+
+        Raises:
+            TypeError: ``boot_persistency`` is not a bool.
+            ValueError: The boot mode or the boot device is unknown.
+        """
         data = boot_options_to_data(boot_device, boot_mode, boot_persistency)
         self.set_system_boot_options(BOOT_PARAMETER_BOOT_FLAGS, data)
 
 
 class ChassisStatus(State):
+    """The status of the chassis and its power."""
+
+    #: The system power is on.
     power_on: bool | None = None
+    #: A power overload was detected.
     overload: bool | None = None
+    #: The power interlock is active.
     interlock: bool | None = None
+    #: A power fault was detected.
     fault: bool | None = None
+    #: A fault of the power control was detected.
     control_fault: bool | None = None
+    #: The power restore policy after an AC power loss: 0 stays off, 1
+    #: restores the previous state, 2 powers up, 3 is unknown.
     restore_policy: int | None = None
+    #: The chassis identify state is reported in ``chassis_id_state``.
     id_cmd_state_info_support: bool | None = None
+    #: The chassis identify state: 0 off, 1 temporary on, 2 indefinite on.
     chassis_id_state: int | None = None
+    #: The front panel button capabilities and disable/enable status, None
+    #: if the BMC does not report them.
     front_panel_button_capabilities: int | None = None
+    #: The causes of the last power event: ``'ac_failed'``,
+    #: ``'overload'``, ``'interlock'``, ``'fault'`` and
+    #: ``'power_on_via_ipmi'``.
     last_event: list[str] = []
+    #: The active chassis states: ``'intrusion'``,
+    #: ``'front_panel_lockout'``, ``'drive_fault'`` and ``'cooling_fault'``.
     chassis_state: list[str] = []
 
     def _from_response(self, rsp: Message) -> None:
