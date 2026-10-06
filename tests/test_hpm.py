@@ -642,8 +642,17 @@ def test_wait_until_new_firmware_comes_up(fake_time):
         return respond(req)
 
     ipmi.interface.send_and_receive.side_effect = send_and_receive
-    ipmi.wait_until_new_firmware_comes_up(timeout=5, interval=1)
+    ipmi.wait_until_new_firmware_comes_up(timeout=50, interval=1)
+    # returns when the controller answers again
     assert fake_time.sleeps == [1, 1, 5]
+
+
+def test_wait_until_new_firmware_comes_up_without_reset(fake_time):
+    ipmi = create_ipmi({'GetUpgradeStatus': b'\x00\x00\x00\x00',
+                        'GetDeviceId': DEVICE_ID_RSP})
+    ipmi.wait_until_new_firmware_comes_up(timeout=5, interval=1)
+    # the answers may be from the old firmware, wait until the timeout
+    assert fake_time.sleeps == [1] * 5 + [5]
 
 
 def test_upgradeimageheaderrecord_invalid_signature():
