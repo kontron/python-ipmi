@@ -346,7 +346,7 @@ def cmd_hpm_capabilities(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
 
 
 def cmd_hpm_check_file(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
-    cap = ipmi.open_upgrade_image(args.file)
+    cap = pyipmi.hpm.UpgradeImage(args.file)
 
     print(cap.header)
     for action in cap.actions:
