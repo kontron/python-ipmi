@@ -377,15 +377,25 @@ class Hpm:
 
     def wait_until_new_firmware_comes_up(self, timeout: float,
                                          interval: float) -> None:
+        """Wait until the controller answers again after the activation.
+
+        Only an answer after the controller was not accessible is from the
+        new firmware, before it may still be the old one. If the controller
+        does not become inaccessible, wait until the timeout.
+        """
+        was_inaccessible = False
         start_time = time.time()
         while time.time() < start_time + timeout:
             try:
                 self.get_upgrade_status()
                 self.get_device_id()
-            except IpmiTimeoutError:
+            except (IpmiTimeoutError, OSError):
+                was_inaccessible = True
                 time.sleep(interval)
-            except OSError:
-                time.sleep(interval)
+                continue
+            if was_inaccessible:
+                break
+            time.sleep(interval)
         time.sleep(5)
 
     def activation_stage(self, image: UpgradeImage, component: int) -> None:
