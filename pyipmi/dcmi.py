@@ -14,6 +14,29 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""DCMI (Data Center Manageability Interface) commands.
+
+DCMI is an IPMI group extension for servers in data centers: power
+readings, power and thermal limits, temperature readings and the asset
+tag and identifier of the management controller.
+
+The commands are the methods of :class:`Dcmi`, which are available on
+:class:`pyipmi.Ipmi`. The ``PARAM_*`` constants are the parameters of
+:meth:`Dcmi.get_dcmi_capabilities`, the ``CONF_PARAM_*`` constants the
+configuration parameters and the ``POWER_LIMIT_EXCEPTION_*`` constants the
+exception actions of a power limit. ``DCMI_ENTITIES`` are the entities of
+the DCMI temperature sensors.
+
+Example:
+    Print the current power consumption and the temperatures::
+
+        print(ipmi.get_power_reading(1).current_power, 'W')
+        for entity_id in pyipmi.dcmi.DCMI_ENTITIES:
+            for instance, temperature in \
+                    ipmi.get_temperature_readings(entity_id):
+                print(entity_id, instance, temperature, 'C')
+"""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -52,12 +75,44 @@ DCMI_ENTITIES = (ENTITY_ID_DCMI_AIR_INLET, ENTITY_ID_DCMI_CPU,
 
 
 class Dcmi(IpmiMixin):
+    """DCMI commands, available on :class:`pyipmi.Ipmi`.
+
+    Several commands return the response message, its fields are listed in
+    the description of the command.
+    """
+
     def get_dcmi_capabilities(self, selector: int) -> Message:
+        """Get a DCMI capabilities parameter.
+
+        Args:
+            selector: The parameter, one of the ``PARAM_*`` constants.
+
+        Returns:
+            The response with the fields ``specification_conformence`` (bits
+            ``major`` and ``minor``, the DCMI version),
+            ``parameter_revision`` and ``parameter_data``.
+        """
         rsp = self.send_message_with_name('GetDcmiCapabilities',
                                           parameter_selector=selector)
         return rsp
 
     def get_power_reading(self, mode: int, attributes: int = 0) -> Message:
+        """Get the power reading of the system.
+
+        Args:
+            mode: 1 for the system power statistics, 2 for the enhanced
+                system power statistics.
+            attributes: The averaging time period of the enhanced system
+                power statistics, 0 for the system power statistics.
+
+        Returns:
+            The response with the fields ``current_power``,
+            ``minimum_power``, ``maximum_power`` and ``average_power`` in
+            watts, ``timestamp`` (seconds since 1970-01-01), ``period``
+            (the statistics reporting period in milliseconds) and
+            ``reading_state`` (bit 6 is set if the power measurement is
+            active).
+        """
         rsp = self.send_message_with_name('GetPowerReading',
                                           mode=mode, attributes=attributes)
         return rsp
@@ -92,6 +147,13 @@ class Dcmi(IpmiMixin):
         return items
 
     def get_dcmi_sensor_record_ids(self) -> list[int]:
+        """Return the SDR record IDs of the DCMI temperature sensors.
+
+        The sensors of all instances of the ``DCMI_ENTITIES`` are returned.
+
+        Returns:
+            The record IDs.
+        """
         def decode(rsp: Message) -> list[tuple[int, int]]:
             # convert the returned raw data in a list of SDR record IDs
             ids = [msb << 8 | lsb for (lsb, msb) in
@@ -109,8 +171,12 @@ class Dcmi(IpmiMixin):
                                  ) -> list[tuple[int, int]]:
         """Return the temperature readings of all instances of an entity.
 
-        Returns a list of (entity instance, temperature in degree Celsius)
-        tuples.
+        Args:
+            entity_id: The entity, one of the ``DCMI_ENTITIES``.
+
+        Returns:
+            A list of (entity instance, temperature in degree Celsius)
+            tuples.
         """
         def decode(rsp: Message) -> list[tuple[int, tuple[int, int]]]:
             readings = []
@@ -126,6 +192,18 @@ class Dcmi(IpmiMixin):
                                        decode)
 
     def get_power_limit(self) -> Message:
+        """Get the power limit.
+
+        Returns:
+            The response with the fields ``exception_actions`` (one of the
+            ``POWER_LIMIT_EXCEPTION_*`` constants), ``power_limit`` in
+            watts, ``correction_time_limit`` in milliseconds and
+            ``statistics_sampling_period`` in seconds.
+
+        Raises:
+            CompletionCodeError: The BMC rejected the request, e.g. if no
+                power limit is set (0x80).
+        """
         return self.send_message_with_name('GetPowerLimit')
 
     def set_power_limit(self, power_limit: int, correction_time_limit: int,
@@ -134,9 +212,16 @@ class Dcmi(IpmiMixin):
                         POWER_LIMIT_EXCEPTION_NO_ACTION) -> None:
         """Set the power limit.
 
-        power_limit: in watts
-        correction_time_limit: in milliseconds
-        statistics_sampling_period: in seconds
+        The limit is applied after :meth:`activate_power_limit`.
+
+        Args:
+            power_limit: The power limit in watts.
+            correction_time_limit: The time in milliseconds after which the
+                exception action is taken if the limit is exceeded.
+            statistics_sampling_period: The sampling period of the power
+                statistics in seconds.
+            exception_actions: The action if the limit is exceeded, one of
+                the ``POWER_LIMIT_EXCEPTION_*`` constants.
         """
         self.send_message_with_name(
                 'SetPowerLimit',
@@ -146,15 +231,29 @@ class Dcmi(IpmiMixin):
                 statistics_sampling_period=statistics_sampling_period)
 
     def activate_power_limit(self) -> None:
+        """Activate the power limit."""
         self.send_message_with_name('ActivateDeactivatePowerLimit',
                                     activation=1)
 
     def deactivate_power_limit(self) -> None:
+        """Deactivate the power limit."""
         self.send_message_with_name('ActivateDeactivatePowerLimit',
                                     activation=0)
 
     def get_thermal_limit(self, entity_id: int,
                           entity_instance: int) -> Message:
+        """Get the thermal limit of an entity.
+
+        Args:
+            entity_id: The entity, one of the ``DCMI_ENTITIES``.
+            entity_instance: The entity instance.
+
+        Returns:
+            The response with the fields ``exception_actions`` (bits
+            ``enable``, ``hard_power_off`` and ``log_event_to_sel``),
+            ``temperature_limit`` in degree Celsius and ``exception_time``
+            in seconds.
+        """
         return self.send_message_with_name('GetThermalLimit',
                                            entity_id=entity_id,
                                            entity_instance=entity_instance)
@@ -163,10 +262,20 @@ class Dcmi(IpmiMixin):
                           temperature_limit: int, exception_time: int,
                           enable: bool = True, hard_power_off: bool = False,
                           log_event_to_sel: bool = False) -> None:
-        """Set the thermal limit.
+        """Set the thermal limit of an entity.
 
-        temperature_limit: in degree Celsius
-        exception_time: in seconds
+        Args:
+            entity_id: The entity, one of the ``DCMI_ENTITIES``.
+            entity_instance: The entity instance.
+            temperature_limit: The temperature limit in degree Celsius.
+            exception_time: The time in seconds after which the exception
+                actions are taken if the limit is exceeded.
+            enable: Enable the exception actions.
+            hard_power_off: Power off the system as exception action.
+            log_event_to_sel: Log an event to the SEL as exception action.
+
+        Raises:
+            CompletionCodeError: The BMC rejected the request.
         """
         req = create_request_by_name('SetThermalLimit')
         req.entity_id = entity_id
@@ -181,12 +290,30 @@ class Dcmi(IpmiMixin):
 
     def get_dcmi_configuration_parameters(self, selector: int,
                                           set_selector: int = 0) -> Message:
+        """Get a DCMI configuration parameter.
+
+        Args:
+            selector: The parameter, one of the ``CONF_PARAM_*`` constants.
+            set_selector: The set selector of the parameter.
+
+        Returns:
+            The response with the fields ``specification_conformance``
+            (bits ``major`` and ``minor``), ``parameter_revision`` and
+            ``parameter_data``.
+        """
         return self.send_message_with_name('GetDcmiConfigurationParameters',
                                            parameter_selector=selector,
                                            set_selector=set_selector)
 
     def set_dcmi_configuration_parameters(self, selector: int, data: bytes,
                                           set_selector: int = 0) -> None:
+        """Set a DCMI configuration parameter.
+
+        Args:
+            selector: The parameter, one of the ``CONF_PARAM_*`` constants.
+            data: The parameter data.
+            set_selector: The set selector of the parameter.
+        """
         self.send_message_with_name('SetDcmiConfigurationParameters',
                                     parameter_selector=selector,
                                     set_selector=set_selector,
@@ -216,10 +343,23 @@ class Dcmi(IpmiMixin):
                                         data=chunk)
 
     def get_asset_tag(self) -> str:
+        """Return the asset tag of the system.
+
+        Returns:
+            The asset tag, invalid UTF-8 bytes are replaced.
+        """
         data = self._get_dcmi_string('GetAssetTag', 0)
         return data.decode('utf-8', errors='replace')
 
     def set_asset_tag(self, asset_tag: str) -> None:
+        """Set the asset tag of the system.
+
+        Args:
+            asset_tag: The asset tag, at most 64 bytes in UTF-8.
+
+        Raises:
+            ValueError: The asset tag is too long.
+        """
         data = asset_tag.encode('utf-8')
         if len(data) > MAX_ASSET_TAG_LENGTH:
             raise ValueError('asset tag is longer than %d bytes'
@@ -227,11 +367,25 @@ class Dcmi(IpmiMixin):
         self._set_dcmi_string('SetAssetTag', data)
 
     def get_management_controller_id_string(self) -> str:
+        """Return the identifier string of the management controller.
+
+        Returns:
+            The identifier string, invalid ASCII bytes are replaced.
+        """
         data = self._get_dcmi_string('GetManagementControllerIdString', 1)
         # the string is null terminated
         return data.split(b'\x00', 1)[0].decode('ascii', errors='replace')
 
     def set_management_controller_id_string(self, id_string: str) -> None:
+        """Set the identifier string of the management controller.
+
+        Args:
+            id_string: The identifier string, at most 63 ASCII characters.
+
+        Raises:
+            ValueError: The identifier string is too long.
+            UnicodeEncodeError: The identifier string is not ASCII.
+        """
         # the string has to be null terminated
         data = id_string.encode('ascii') + b'\x00'
         if len(data) > MAX_MC_ID_STRING_LENGTH:
