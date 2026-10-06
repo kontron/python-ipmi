@@ -659,10 +659,15 @@ def test_install_component_from_file(fake_time):
     assert 'ActivateFirmwareReq' in names
 
 
-def test_install_component_not_in_image():
+@pytest.mark.parametrize('method', ['install_component_from_image',
+                                    'compare_component_from_image'])
+def test_component_not_in_image(method):
     ipmi = create_ipmi(b'\x00\x00')
-    with pytest.raises(HpmError, match='component=0 not in image'):
-        ipmi.install_component_from_image(UpgradeImage(HPM_FILE), 0)
+    with pytest.raises(HpmError, match=r'component=0 not in image '
+                                       r'\(image components: \[1\]\)'):
+        getattr(ipmi, method)(UpgradeImage(HPM_FILE), 0)
+    # nothing is sent to the controller
+    assert ipmi.requests == []
 
 
 def test_wait_until_new_firmware_comes_up(fake_time):

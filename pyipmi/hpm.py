@@ -445,11 +445,17 @@ class Hpm:
             image.header.inaccessibility_timeout, 1)
         self._activation_state_do_self_testing()
 
+    @staticmethod
+    def _check_component_in_image(image: UpgradeImage,
+                                  component: int) -> None:
+        if component not in image.header.components:
+            raise HpmError('component=%d not in image (image components: %s)'
+                           % (component, image.header.components))
+
     def install_component_from_image(self, image: UpgradeImage,
                                      component: int) -> None:
+        self._check_component_in_image(image, component)
         self.abort_firmware_upgrade()
-        if component not in image.header.components:
-            raise HpmError('component=%d not in image' % component)
         self.preparation_stage(image)
         self.upgrade_stage(image, component)
         self.activation_stage(image, component)
@@ -464,9 +470,8 @@ class Hpm:
 
         A mismatch is reported by the Finish Firmware Upload command.
         """
+        self._check_component_in_image(image, component)
         self.abort_firmware_upgrade()
-        if component not in image.header.components:
-            raise HpmError('component=%d not in image' % component)
         self.preparation_stage(image)
         self.upgrade_stage(image, component, compare=True)
 
