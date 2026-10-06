@@ -164,20 +164,23 @@ class Hpm:
         block_size = self._determine_max_block_size()
 
         for chunk in chunks(binary, block_size):
-            try:
-                self.upload_firmware_block(block_number, chunk)
-            except CompletionCodeError as e:
-                if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
-
-                    self.wait_for_long_duration_command(
-                            constants.CMDID_HPM_UPLOAD_FIRMWARE_BLOCK,
-                            timeout, interval)
-                else:
-                    raise HpmError('upload_firmware_block CC=0x%02x' % e.cc) from e
-            except IpmiTimeoutError:
-                retry -= 1
-                if retry == 0:
-                    raise IpmiTimeoutError() from None
+            # a timed out block is sent again, up to `retry` times
+            for attempt in range(retry):
+                try:
+                    self.upload_firmware_block(block_number, chunk)
+                except CompletionCodeError as e:
+                    if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
+                        self.wait_for_long_duration_command(
+                                constants.CMDID_HPM_UPLOAD_FIRMWARE_BLOCK,
+                                timeout, interval)
+                    else:
+                        raise HpmError('upload_firmware_block CC=0x%02x'
+                                       % e.cc) from e
+                except IpmiTimeoutError:
+                    if attempt == retry - 1:
+                        raise IpmiTimeoutError() from None
+                    continue
+                break
 
             block_number += 1
             block_number &= 0xff
