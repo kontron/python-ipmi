@@ -116,7 +116,7 @@ class AddSelEntryReq(Message):
     __cmdid__ = constants.CMDID_ADD_SEL_ENTRY
     __netfn__ = constants.NETFN_STORAGE
     __fields__ = (
-            ByteArray('record_data', 16)
+            ByteArray('record_data', 16),
     )
 
 
@@ -185,7 +185,7 @@ class GetSelTimeRsp(Message):
     __netfn__ = constants.NETFN_STORAGE | 1
     __fields__ = (
             CompletionCode(),
-            Timestamp('timestamp')
+            Timestamp('timestamp'),
     )
 
 
@@ -194,7 +194,7 @@ class SetSelTimeReq(Message):
     __cmdid__ = constants.CMDID_SET_SEL_TIME
     __netfn__ = constants.NETFN_STORAGE
     __fields__ = (
-            Timestamp('timestamp')
+            Timestamp('timestamp'),
     )
 
 
@@ -203,5 +203,5 @@ class SetSelTimeRsp(Message):
     __cmdid__ = constants.CMDID_SET_SEL_TIME
     __netfn__ = constants.NETFN_STORAGE | 1
     __fields__ = (
-            CompletionCode()
+            CompletionCode(),
     )

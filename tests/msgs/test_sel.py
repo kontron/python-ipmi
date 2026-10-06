@@ -38,3 +38,21 @@ def test_getselentry_encode_valid_rsp():
     m.record_data = array('B', b'\x01\x02\x03\x04')
     data = encode_message(m)
     assert data == b'\x00\x02\x01\x01\x02\x03\x04'
+
+
+def test_setseltime_encode_req():
+    m = pyipmi.msgs.sel.SetSelTimeReq()
+    m.timestamp = 0x01020304
+    assert encode_message(m) == b'\x04\x03\x02\x01'
+
+
+def test_setseltime_decode_rsp():
+    m = pyipmi.msgs.sel.SetSelTimeRsp()
+    decode_message(m, b'\x00')
+    assert m.completion_code == 0x00
+
+
+def test_addselentry_encode_req():
+    m = pyipmi.msgs.sel.AddSelEntryReq()
+    m.record_data = array('B', range(16))
+    assert encode_message(m) == bytes(range(16))
