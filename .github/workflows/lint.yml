@@ -36,3 +36,24 @@ jobs:
 
       - name: Check spelling
         run: codespell
+
+  manpage:
+    name: Check man page is up to date
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install argparse-manpage==4.7
+
+      - name: Generate man page
+        run: bin/build_manpage.sh
+
+      # the date in the .TH header changes with every build
+      - name: Check for changes
+        run: git diff --exit-code -I '^\.TH ' man/ipmitool.py.1

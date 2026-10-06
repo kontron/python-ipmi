@@ -1,0 +1,33 @@
+[>DESCRIPTION]
+.B ipmitool.py
+is the command line tool of the python\-ipmi library. It talks to IPMI
+devices over the native RMCP and RMCP+ interfaces, the Linux IPMI and IPMB
+drivers, an IPMB bus adapter or the
+.BR ipmitool (1)
+command as backend.
+.PP
+Despite its name it is not
+.BR ipmitool (1)
+and does not accept the same options and commands.
+
+[EXAMPLES]
+Print the device ID of a BMC over RMCP+ (IPMI v2.0, like \fBipmitool \-I lanplus\fR):
+.PP
+.RS
+ipmitool.py \-I rmcpplus \-H 10.0.0.1 \-U admin \-P admin bmc info
+.RE
+.PP
+List the sensors of a BMC over RMCP (IPMI v1.5):
+.PP
+.RS
+ipmitool.py \-I rmcp \-H 10.0.0.1 \-U admin \-P admin sdr list
+.RE
+.PP
+Print the FRU of the local BMC using the Linux IPMI driver:
+.PP
+.RS
+ipmitool.py \-I ipmidev fru print
+.RE
+
+[SEE ALSO]
+.BR ipmitool (1)
