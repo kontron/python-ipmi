@@ -133,7 +133,7 @@ class Sdr(IpmiMixin):
         req.bytes_to_read = length
 
         rsp = get_sdr_chunk_helper(self.send_message, req,
-                                   self.reserve_device_sdr_repository)
+                                   self.reserve_sdr_repository)
 
         return (rsp.next_record_id, rsp.record_data)
 
@@ -226,7 +226,7 @@ class Sdr(IpmiMixin):
         Returns:
             The record ID of the deleted record.
         """
-        reservation_id = self.reserve_device_sdr_repository()
+        reservation_id = self.reserve_sdr_repository()
         rsp = self.send_message_with_name('DeleteSdr',
                                           reservation_id=reservation_id,
                                           record_id=record_id)

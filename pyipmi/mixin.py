@@ -50,6 +50,3 @@ class IpmiMixin:
 
         # messaging.Messaging
         def get_channel_info(self, channel: int) -> ChannelInfo: ...
-
-        # sensor.Sensor
-        def reserve_device_sdr_repository(self) -> int: ...

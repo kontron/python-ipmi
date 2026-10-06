@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from types import SimpleNamespace
+
 import pytest
 
 from pyipmi.errors import DecodingError
@@ -8,6 +10,8 @@ from pyipmi.sdr import (SdrCommon, SdrFullSensorRecord, SdrCompactSensorRecord,
                         SdrManagementControllerDeviceLocator,
                         SdrManagementControllerConfirmationRecord,
                         SdrUnknownSensorRecord)
+
+from .ipmi_helper import create_ipmi
 
 
 class TestSdrFullSensorRecord:
@@ -409,3 +413,32 @@ def test_full_sensor_record_threshold_access(capabilities, expected):
     record = SdrFullSensorRecord()
     record._decode_capabilities(capabilities)
     assert record.capabilities == expected
+
+
+def test_delete_sdr_reserves_the_sdr_repository():
+    ipmi = create_ipmi({'ReserveSdrRepository': b'\x00\x34\x12',
+                        'DeleteSdr': b'\x00\x05\x00'})
+    assert ipmi.delete_sdr(5) == 5
+    assert ipmi.requests == [('ReserveSdrRepositoryReq', b''),
+                             ('DeleteSdrReq', b'\x34\x12\x05\x00')]
+
+
+def test_get_repository_sdr_canceled_reservation(monkeypatch):
+    monkeypatch.setattr('pyipmi.helper.time', SimpleNamespace(sleep=lambda s: None))
+    # OEM record 0x0001 with 3 bytes record key, the last record
+    header = b'\x01\x00\x51\xc0\x03'
+    ipmi = create_ipmi({
+        'ReserveSdrRepository': [b'\x00\x01\x00', b'\x00\x02\x00'],
+        'GetSdr': [
+            b'\x00\xff\xff' + header,
+            # the reservation is canceled, e.g. by an added record
+            b'\xc5',
+            b'\x00\xff\xff' + b'\x20\x00\x07',
+        ],
+    })
+    sdr = ipmi.get_repository_sdr(1)
+    assert sdr.id == 1
+    assert sdr.number == 7
+    names = [name for (name, _) in ipmi.requests]
+    assert names == ['ReserveSdrRepositoryReq', 'GetSdrReq', 'GetSdrReq',
+                     'ReserveSdrRepositoryReq', 'GetSdrReq']
