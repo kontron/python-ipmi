@@ -23,6 +23,7 @@ import hashlib
 import time
 
 from array import array
+from collections.abc import Sequence
 
 from .errors import CompletionCodeError, HpmError, IpmiTimeoutError
 from .msgs import create_request_by_name, Message
@@ -115,7 +116,7 @@ class Hpm(IpmiMixin):
         for component_id in caps.components:
             prop = self.get_component_property(component_id,
                                                PROPERTY_DESCRIPTION_STRING)
-            if prop is not None:
+            if isinstance(prop, ComponentPropertyDescriptionString):
                 if prop.description == descriptor:
                     return component_id
         return None
@@ -175,8 +176,10 @@ class Hpm(IpmiMixin):
             size = IPMB_MAX_REQUEST_DATA_SIZE \
                 - (bridges - 1) * SEND_MESSAGE_OVERHEAD
         else:
-            size = getattr(self.interface, 'MAX_REQUEST_DATA_SIZE', None)
-            if not isinstance(size, int):
+            max_size = getattr(self.interface, 'MAX_REQUEST_DATA_SIZE', None)
+            if isinstance(max_size, int):
+                size = max_size
+            else:
                 size = IPMB_MAX_REQUEST_DATA_SIZE
         return size - UPLOAD_FIRMWARE_BLOCK_HEADER_SIZE
 
@@ -194,6 +197,7 @@ class Hpm(IpmiMixin):
 
         while offset < len(binary):
             chunk = binary[offset:offset + block_size]
+            block_size_reduced = False
             # a timed out block is sent again, up to `retry` times
             for attempt in range(retry):
                 try:
@@ -207,7 +211,7 @@ class Hpm(IpmiMixin):
                                    constants.CC_REQ_DATA_FIELD_EXCEED)
                           and not block_size_accepted and block_size > 1):
                         block_size -= 1
-                        chunk = None
+                        block_size_reduced = True
                     else:
                         raise HpmError('upload_firmware_block CC=0x%02x'
                                        % e.cc) from e
@@ -217,7 +221,7 @@ class Hpm(IpmiMixin):
                     continue
                 break
 
-            if chunk is None:
+            if block_size_reduced:
                 # send the block again with the reduced size
                 continue
 
@@ -394,7 +398,8 @@ class Hpm(IpmiMixin):
         are skipped.
         """
         for action in image.actions:
-            if action.components & (1 << component) == 0:
+            if action.components is None \
+                    or action.components & (1 << component) == 0:
                 continue
             if isinstance(action, UpgradeActionRecordUploadForUpgrade):
                 if compare:
@@ -410,6 +415,8 @@ class Hpm(IpmiMixin):
             self.initiate_upgrade_action_and_wait(1 << component,
                                                   upgrade_action)
             if isinstance(action, UpgradeActionRecordUploadForUpgrade):
+                assert action.firmware_image_data is not None
+                assert action.firmware_length is not None
                 self.upload_binary(action.firmware_image_data)
                 self.finish_upload_and_wait(component, action.firmware_length)
 
@@ -516,12 +523,16 @@ codecs.register(bcd_search)
 
 
 class ComponentProperty:
-    def __init__(self, data: bytes | None = None) -> None:
+    def __init__(self, data: Sequence[int] | None = None) -> None:
         if (data):
             self._from_rsp_data(data)
 
+    def _from_rsp_data(self, data: Sequence[int]) -> None:
+        raise NotImplementedError()
+
     @staticmethod
-    def from_data(component_id: int, data: bytes) -> ComponentProperty | None:
+    def from_data(component_id: int,
+                  data: str | Sequence[int]) -> ComponentProperty | None:
         if isinstance(data, str):
             data = [ord(c) for c in data]
 
@@ -537,6 +548,7 @@ class ComponentProperty:
             return ComponentPropertyDeferredVersion(data)
         elif component_id in PROPERTY_OEM:
             raise NotImplementedError
+        return None
 
 
 class ComponentPropertyGeneral(ComponentProperty):
@@ -547,7 +559,7 @@ class ComponentPropertyGeneral(ComponentProperty):
     DEFERRED_ACTIVATION_SUPPORT_MASK = 0x10
     PAYLOAD_COLD_RESET_REQ_SUPPORT_MASK = 0x20
 
-    def _from_rsp_data(self, data: bytes) -> None:
+    def _from_rsp_data(self, data: Sequence[int]) -> None:
         support = []
         cap = data[0]
 
@@ -577,7 +589,7 @@ class ComponentPropertyGeneral(ComponentProperty):
 
 class ComponentPropertyCurrentVersion(ComponentProperty):
 
-    def _from_rsp_data(self, data: bytes) -> None:
+    def _from_rsp_data(self, data: Sequence[int]) -> None:
         self.version = VersionField(data)
 
     def __str__(self) -> str:
@@ -586,9 +598,8 @@ class ComponentPropertyCurrentVersion(ComponentProperty):
 
 class ComponentPropertyDescriptionString(ComponentProperty):
 
-    def _from_rsp_data(self, data: bytes) -> None:
-        descr = py3_array_tobytes(array('B', data))
-        descr = py3dec_unic_bytes_fix(descr)
+    def _from_rsp_data(self, data: Sequence[int]) -> None:
+        descr = py3dec_unic_bytes_fix(py3_array_tobytes(array('B', data)))
         # strip '\x00'
         descr = descr.replace('\0', '')
         self.description = descr
@@ -599,7 +610,7 @@ class ComponentPropertyDescriptionString(ComponentProperty):
 
 class ComponentPropertyRollbackVersion(ComponentProperty):
 
-    def _from_rsp_data(self, data: bytes) -> None:
+    def _from_rsp_data(self, data: Sequence[int]) -> None:
         self.version = VersionField(data)
 
     def __str__(self) -> str:
@@ -608,7 +619,7 @@ class ComponentPropertyRollbackVersion(ComponentProperty):
 
 class ComponentPropertyDeferredVersion(ComponentProperty):
 
-    def _from_rsp_data(self, data: bytes) -> None:
+    def _from_rsp_data(self, data: Sequence[int]) -> None:
         self.version = VersionField(data)
 
     def __str__(self) -> str:
@@ -617,7 +628,7 @@ class ComponentPropertyDeferredVersion(ComponentProperty):
 
 class ComponentPropertyOem(ComponentProperty):
 
-    def _from_rsp_data(self, data: bytes) -> None:
+    def _from_rsp_data(self, data: Sequence[int]) -> None:
         self.oem_data = data
 
     def __str__(self) -> str:
@@ -673,6 +684,17 @@ class UpgradeImageHeaderRecord:
         image_header('oem_data_length', '<H', 32, 2),
     ]
 
+    # the FORMAT fields, set by `_from_data()`
+    format_version: int
+    device_id: int
+    product_id: int
+    time: int
+    capabilities: int
+    selftest_timeout: int
+    rollback_timeout: int
+    inaccessibility_timeout: int
+    oem_data_length: int
+
     def __init__(self, data: bytes | None = None) -> None:
         for a in self.FORMAT:
             setattr(self, a.field_name, None)
@@ -695,7 +717,7 @@ class UpgradeImageHeaderRecord:
             data = [ord(c) for c in data]
 
         self.manufacturer_id = data[10] | data[11] << 8 | data[12] << 16
-        self.components = []
+        self.components: list[int] = []
         for i in range(8):
             if data[20] & (1 << i):
                 self.components.append(i)
@@ -711,23 +733,23 @@ class UpgradeImageHeaderRecord:
         self.length = 34 + self.oem_data_length+1
 
     def __str__(self) -> str:
-        str = []
-        str.append("HPM Upgrade Image header")
-        str.append(" Signature:        %s" % self.signature)
-        str.append(" Format Version:   %s" % self.format_version)
-        str.append(" Device ID:        %s" % self.device_id)
-        str.append(" Manufacturer:     %s" % self.manufacturer_id)
-        str.append(" Product ID:       %s" % self.product_id)
-        str.append(" Time:             %s" % self.time)
-        str.append(" Image Cap:        0x%02x" % self.capabilities)
-        str.append(" Components:       %s" % self.components)
-        str.append(" Selftest Timeout: %s" % self.selftest_timeout)
-        str.append(" Rollback Timeout: %s" % self.rollback_timeout)
-        str.append(" Inacc. Timeout:   %s" % self.inaccessibility_timeout)
-        str.append(" Earliest comp.:   %s" % self.earliest_compatible_revision)
-        str.append(" firmware Revision:%s" % self.firmware_revision)
-        str.append(" OEM data len:     %s" % self.oem_data_length)
-        return "\n".join(str)
+        string = []
+        string.append("HPM Upgrade Image header")
+        string.append(" Signature:        %s" % self.signature.decode())
+        string.append(" Format Version:   %s" % self.format_version)
+        string.append(" Device ID:        %s" % self.device_id)
+        string.append(" Manufacturer:     %s" % self.manufacturer_id)
+        string.append(" Product ID:       %s" % self.product_id)
+        string.append(" Time:             %s" % self.time)
+        string.append(" Image Cap:        0x%02x" % self.capabilities)
+        string.append(" Components:       %s" % self.components)
+        string.append(" Selftest Timeout: %s" % self.selftest_timeout)
+        string.append(" Rollback Timeout: %s" % self.rollback_timeout)
+        string.append(" Inacc. Timeout:   %s" % self.inaccessibility_timeout)
+        string.append(" Earliest comp.:   %s" % self.earliest_compatible_revision)
+        string.append(" firmware Revision:%s" % self.firmware_revision)
+        string.append(" OEM data len:     %s" % self.oem_data_length)
+        return "\n".join(string)
 
 
 class UpgradeActionRecord:
@@ -765,11 +787,12 @@ class UpgradeActionRecord:
                            % action_type)
 
     def __str__(self) -> str:
-        str = []
-        str.append("Action Record Type: 0x%x (%s) " %
+        assert self.action is not None and self.components is not None
+        string = []
+        string.append("Action Record Type: 0x%x (%s) " %
                    (self.action, self.ACTIONS[self.action]))
-        str.append(" Components: 0x%02x" % self.components)
-        return "\n".join(str)
+        string.append(" Components: 0x%02x" % self.components)
+        return "\n".join(string)
 
 
 class UpgradeActionRecordBackup(UpgradeActionRecord):
@@ -812,12 +835,12 @@ class UpgradeActionRecordUploadForUpgrade(UpgradeActionRecord):
             self.length += 31 + self.firmware_length
 
     def __str__(self) -> str:
-        str = [UpgradeActionRecord.__str__(self)]
-        str.append(" Firmware Version: %s" % self.firmware_version)
-        str.append(" Description:      %s"
+        string = [UpgradeActionRecord.__str__(self)]
+        string.append(" Firmware Version: %s" % self.firmware_version)
+        string.append(" Description:      %s"
                    % self.firmware_description_string)
-        str.append(" Firmware Length:  %s" % self.firmware_length)
-        return "\n".join(str)
+        string.append(" Firmware Length:  %s" % self.firmware_length)
+        return "\n".join(string)
 
 
 class ImageChecksumRecord:
@@ -834,14 +857,14 @@ HPM_IMAGE_CHECKSUM_SIZE = 16
 
 class UpgradeImage:
     def __init__(self, filename: str | None = None) -> None:
-        self.actions = None
+        self.actions: list[UpgradeActionRecord] = []
 
         if filename:
             self._from_file(filename)
 
     def __str__(self) -> str:
-        str = []
-        return "\n".join(str)
+        string: list[str] = []
+        return "\n".join(string)
 
     def _check_md5_sum(self, filedata: bytes) -> None:
         self.checksum_actual = hashlib.md5(
@@ -867,7 +890,6 @@ class UpgradeImage:
 
         ################################
         # Upgrade Actions
-        self.actions = []
         while (off + HPM_IMAGE_CHECKSUM_SIZE) < len(file_data):
             action = UpgradeActionRecord.create_from_data(file_data[off:])
             self.actions.append(action)
