@@ -21,7 +21,7 @@ import codecs
 import datetime
 import os
 
-from .errors import DecodingError, CompletionCodeError, RetryError
+from .errors import DecodingError, CompletionCodeError, RetryError, DataNotFound
 from .helper import ReadLength
 from .msgs import constants
 from .utils import bcd_search, chunks, py3_array_tobytes
@@ -124,12 +124,14 @@ class Fru:
                                 f'{length} bytes exceeds the FRU size of '
                                 f'{fru_size} bytes')
 
-    def _read_fru_area(self, offset: int, fru_id: int = 0,
+    def _read_fru_area(self, offset: int | None, fru_id: int = 0,
                        header: InventoryCommonHeader | None = None,
                        name: str = 'area') -> bytes:
         # The first read returns the area length and, if possible, all of the
         # area data: read up to the start of the next area. For the last area
         # only its minimal size of 8 bytes is known to be within the FRU data.
+        if offset is None:
+            raise DataNotFound(f'FRU has no {name}')
         count = FRU_AREA_MIN_LENGTH
         if header is not None:
             next_offsets = [o for o in header.area_offsets() if o > offset]
@@ -194,6 +196,8 @@ class Fru:
         header = self._get_header(fru_id, ignore_checksum, header)
 
         # we have to determine the length of the area first
+        if header.multirecord_area_offset is None:
+            raise DataNotFound('FRU has no multirecord area')
         offset = header.multirecord_area_offset
         count = 0
 
