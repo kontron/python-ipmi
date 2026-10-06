@@ -27,6 +27,7 @@ import textwrap
 import traceback
 from array import array
 from collections.abc import Callable
+from typing import Any
 
 import pyipmi
 import pyipmi.interfaces
@@ -204,18 +205,11 @@ def cmd_sdr_show_all(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
 def print_sdr_list_entry(record_id: int, number: int | str | None,
                          id_string: str | None, value: object,
                          states: int | None) -> None:
-    if number:
-        number = str(number)
-    else:
-        number = 'na'
+    number_str = str(number) if number else 'na'
+    states_str = hex(states) if states else 'na'
 
-    if states:
-        states = hex(states)
-    else:
-        states = 'na'
-
-    print("0x%04x | %3s | %-18s | %9s | %s" % (record_id, number,
-                                               id_string, value, states))
+    print("0x%04x | %3s | %-18s | %9s | %s" % (record_id, number_str,
+                                               id_string, value, states_str))
 
 
 def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -237,17 +231,17 @@ def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     for s in iter_fct():
         try:
             number = None
-            value = None
+            value: int | str | None = None
             states = None
 
-            if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
-                (value, states) = ipmi.get_sensor_reading(s.number)
+            if isinstance(s, pyipmi.sdr.SdrFullSensorRecord):
+                (raw, states) = ipmi.get_sensor_reading(s.number)
                 number = s.number
-                if value is not None:
+                if raw is not None:
                     value = format_analog_value(
-                        s.convert_sensor_raw_to_value(value))
+                        s.convert_sensor_raw_to_value(raw))
 
-            elif s.type is pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
+            elif isinstance(s, pyipmi.sdr.SdrCompactSensorRecord):
                 (value, states) = ipmi.get_sensor_reading(s.number)
                 number = s.number
 
@@ -273,23 +267,23 @@ def cmd_fru_print(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     inv = ipmi.get_fru_inventory(args.fru_id)
 
     # Chassis Info Area
-    area = inv.chassis_info_area
-    if area:
+    chassis_area = inv.chassis_info_area
+    if chassis_area:
         print('''
 Chassis Info Area:
   Type:               %(type)d
   Part Number:        %(part_number)s
   Serial Number:      %(serial_number)s
-'''[1:-1] % area.__dict__)
+'''[1:-1] % chassis_area.__dict__)
 
-        if len(area.custom_chassis_info) != 0:
+        if len(chassis_area.custom_chassis_info) != 0:
             print('  Custom Chassis Info Records:')
-            for field in area.custom_chassis_info:
+            for field in chassis_area.custom_chassis_info:
                 print('    %s' % field)
 
     # Board Info Area
-    area = inv.board_info_area
-    if area:
+    board_area = inv.board_info_area
+    if board_area:
         print('''
 Board Info Area:
   Mfg. Date / Time:   %(mfg_date)s
@@ -298,16 +292,16 @@ Board Info Area:
   Serial Number:      %(serial_number)s
   Part Number:        %(part_number)s
   FRU File ID:        %(fru_file_id)s
-'''[1:-1] % area.__dict__)
+'''[1:-1] % board_area.__dict__)
 
-        if len(area.custom_mfg_info) != 0:
+        if len(board_area.custom_mfg_info) != 0:
             print('  Custom Board Info Records:')
-            for field in area.custom_mfg_info:
+            for field in board_area.custom_mfg_info:
                 print('    %s' % field)
 
     # Product Info Area
-    area = inv.product_info_area
-    if area:
+    product_area = inv.product_info_area
+    if product_area:
         print('''
 Product Info Area:
   Manufacturer:       %(manufacturer)s
@@ -317,19 +311,19 @@ Product Info Area:
   Serial Number:      %(serial_number)s
   Asset:              %(asset_tag)s
   FRU File ID:        %(fru_file_id)s
-'''[1:-1] % area.__dict__)
+'''[1:-1] % product_area.__dict__)
 
-        if len(area.custom_mfg_info) != 0:
+        if len(product_area.custom_mfg_info) != 0:
             print('  Custom Board Info Records:')
-            for field in area.custom_mfg_info:
+            for field in product_area.custom_mfg_info:
                 print('    %s' % field)
 
     # Multirecords
-    area = inv.multirecord_area
-    if area:
+    multirecord_area = inv.multirecord_area
+    if multirecord_area:
         print('Multirecord Area:')
         if args.all == 'all':
-            for record in area.records:
+            for record in multirecord_area.records:
                 print('  %s' % record)
         else:
             print('  Skipped. Use "print <fruid> all"')
@@ -367,15 +361,14 @@ def cmd_chassis_status(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     status = ipmi.get_chassis_status()
 
     if args.json:
-        status = {
+        print(json.dumps({
                   'power_on': status.power_on,
                   'overload': status.overload,
                   'interlock': status.interlock,
                   'fault': status.fault,
                   'ctrl_fault': status.control_fault,
                   'restore_policy': status.restore_policy
-                 }
-        print(json.dumps(status))
+                 }))
     else:
 
         print('''
@@ -615,13 +608,11 @@ def cmd_vita_led_set(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     print('LED state has been updated')
 
 
-def parse_interface_options(interface_name: str, options: str | list) -> dict:
-    if options:
-        options = options.split(',')
+def parse_interface_options(interface_name: str,
+                            options: str | None) -> dict[str, Any]:
+    interface_options: dict[str, Any] = {}
 
-    interface_options = {}
-
-    for option in options:
+    for option in options.split(',') if options else []:
         (name, value) = option.split('=', 1)
         if interface_name == 'aardvark':
             if name == 'serial':
@@ -681,14 +672,13 @@ def parse_interface_options(interface_name: str, options: str | list) -> dict:
     return interface_options
 
 
-def create_ipmi_connection(interface_name: str, interface_options: str | list,
+def create_ipmi_connection(interface_name: str, options: str | None,
                            target_address: int,
                            target_routing: str | list | None,
                            rmcp_host: str | None, rmcp_port: int,
                            rmcp_user: str, rmcp_password: str,
-                           rmcp_priv_level: str | None) -> pyipmi.Ipmi:
-    interface_options = parse_interface_options(interface_name,
-                                                interface_options)
+                           rmcp_priv_level: str | None) -> pyipmi.Ipmi | None:
+    interface_options = parse_interface_options(interface_name, options)
 
     try:
         interface = pyipmi.interfaces.create_interface(interface_name,
@@ -1282,7 +1272,7 @@ def main(argv: list[str] | None = None) -> None:
             sys.exit(1)  # interface could not be created, error is printed
 
     try:
-        if args.needs_connection:
+        if ipmi is not None:
             ipmi.open()  # this will open interface and session
         args.func(ipmi, args)
     except pyipmi.errors.CompletionCodeError as e:
@@ -1305,7 +1295,7 @@ def main(argv: list[str] | None = None) -> None:
             traceback.print_exc()
         sys.exit(1)
     finally:
-        if args.needs_connection:
+        if ipmi is not None:
             ipmi.close()  # this will close interface and session
 
 
