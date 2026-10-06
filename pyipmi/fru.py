@@ -20,6 +20,7 @@ import array
 import codecs
 import datetime
 import os
+from collections.abc import Sequence
 
 from .errors import DecodingError, CompletionCodeError, RetryError, DataNotFound
 from .helper import ReadLength
@@ -281,7 +282,7 @@ def get_fru_inventory_from_file(filename: str,
 CUSTOM_FIELD_END = 0xc1
 
 
-def _decode_custom_fields(data: bytes) -> list[FruTypeLengthString]:
+def _decode_custom_fields(data: Sequence[int]) -> list[FruTypeLengthString]:
     offset = 0
     fields = []
     while data[offset] != CUSTOM_FIELD_END:
@@ -292,7 +293,7 @@ def _decode_custom_fields(data: bytes) -> list[FruTypeLengthString]:
 
 
 class FruData:
-    def __init__(self, data: bytes | str | None = None,
+    def __init__(self, data: str | Sequence[int] | None = None,
                  ignore_checksum: bool = False) -> None:
         if data:
             if isinstance(data, str):
@@ -306,7 +307,7 @@ class InventoryCommonHeader(FruData):
     # size of the FRU data, if read from a device that reports it
     fru_size: int | None = None
 
-    def _from_data(self, data: bytes, ignore_checksum: bool = False) -> None:
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         if len(data) < 8:
             raise DecodingError('InventoryCommonHeader length != 8')
         self.format_version = data[0] & 0x0f
@@ -329,7 +330,7 @@ class InventoryCommonHeader(FruData):
 
 
 class CommonInfoArea(FruData):
-    def _from_data(self, data: bytes, ignore_checksum: bool = False) -> None:
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         self.format_version = data[0] & 0x0f
         if self.format_version != 1:
             raise DecodingError('unsupported format version (%d)' %
@@ -364,7 +365,7 @@ class InventoryChassisInfoArea(CommonInfoArea):
     TYPE_RAID_CHASSIS = 22
     TYPE_RACK_MOUNT_CHASSIS = 23
 
-    def _from_data(self, data: bytes, ignore_checksum: bool = False) -> None:
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         CommonInfoArea._from_data(self, data)
         self.type = data[2]
         offset = 3
@@ -376,7 +377,7 @@ class InventoryChassisInfoArea(CommonInfoArea):
 
 
 class InventoryBoardInfoArea(CommonInfoArea):
-    def _from_data(self, data: bytes, ignore_checksum: bool = False) -> None:
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         CommonInfoArea._from_data(self, data, ignore_checksum=ignore_checksum)
         self.language_code = data[2]
         minutes = data[5] << 16 | data[4] << 8 | data[3]
@@ -397,7 +398,7 @@ class InventoryBoardInfoArea(CommonInfoArea):
 
 
 class InventoryProductInfoArea(CommonInfoArea):
-    def _from_data(self, data: bytes, ignore_checksum: bool = False) -> None:
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         CommonInfoArea._from_data(self, data)
         self.language_code = data[2]
         offset = 3
@@ -433,7 +434,7 @@ class FruDataMultiRecord(FruData):
         return '%02x: %s' % (self.record_type_id,
                              ' '.join('%02x' % b for b in self.raw))
 
-    def _from_data(self, data: bytes, ignore_checksum: bool = False) -> None:
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         if len(data) < 5:
             raise DecodingError('data too short')
         self.record_type_id = data[0]
@@ -447,7 +448,7 @@ class FruDataMultiRecord(FruData):
             raise DecodingError('FruDataMultiRecord record checksum failed')
 
     @staticmethod
-    def create_from_record_id(data: bytes) -> FruDataMultiRecord:
+    def create_from_record_id(data: Sequence[int]) -> FruDataMultiRecord:
         if data[0] == FruDataMultiRecord.TYPE_OEM_PICMG:
             return FruPicmgRecord.create_from_record_id(data)
         else:
@@ -487,11 +488,11 @@ class FruPicmgRecord(FruDataMultiRecord):
     PICMG_RECORD_ID_CARRIER_BUSED_CONNECTIVITY = 0x31
     PICMG_RECORD_ID_ZONE_3_INTERFACE_DOCUMENTATION = 0x32
 
-    def __init__(self, data: bytes) -> None:
+    def __init__(self, data: Sequence[int]) -> None:
         FruDataMultiRecord.__init__(self, data)
 
     @staticmethod
-    def create_from_record_id(data: bytes) -> FruPicmgRecord:
+    def create_from_record_id(data: Sequence[int]) -> FruPicmgRecord:
         picmg_record = FruPicmgRecord(data)
         if picmg_record.picmg_record_type_id ==\
                 FruPicmgRecord.PICMG_RECORD_ID_MTCA_POWER_MODULE_CAPABILITY:
@@ -499,7 +500,7 @@ class FruPicmgRecord(FruDataMultiRecord):
 
         return FruPicmgRecord(data)
 
-    def _from_data(self, data: bytes, ignore_checksum: bool = False) -> None:
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         if len(data) < 10:
             raise DecodingError('data too short')
         data = array.array('B', data)
@@ -511,7 +512,7 @@ class FruPicmgRecord(FruDataMultiRecord):
 
 
 class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
-    def _from_data(self, data: bytes, ignore_checksum: bool = False) -> None:
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         if len(data) < 12:
             raise DecodingError('data too short')
         FruPicmgRecord._from_data(self, data)
@@ -520,11 +521,11 @@ class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
 
 
 class InventoryMultiRecordArea:
-    def __init__(self, data: bytes, ignore_checksum: bool = False) -> None:
+    def __init__(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         if data:
             self._from_data(data)
 
-    def _from_data(self, data: bytes, ignore_checksum: bool = False) -> None:
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         self.records = list()
         offset = 0
         while True:
@@ -536,17 +537,17 @@ class InventoryMultiRecordArea:
 
 
 class FruInventory:
-    def __init__(self, data: bytes | None = None,
+    def __init__(self, data: Sequence[int] | None = None,
                  ignore_checksum: bool = False) -> None:
-        self.chassis_info_area = None
-        self.board_info_area = None
-        self.product_info_area = None
-        self.multirecord_area = None
+        self.chassis_info_area: InventoryChassisInfoArea | None = None
+        self.board_info_area: InventoryBoardInfoArea | None = None
+        self.product_info_area: InventoryProductInfoArea | None = None
+        self.multirecord_area: InventoryMultiRecordArea | None = None
 
         if data:
             self._from_data(data, ignore_checksum=ignore_checksum)
 
-    def _from_data(self, data: bytes, ignore_checksum: bool = False) -> None:
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         self.raw = data
         self.common_header = InventoryCommonHeader(data[:8])
 

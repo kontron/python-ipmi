@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import array
+from collections.abc import Sequence
 
 from .errors import DecodingError
 from .utils import py3_array_tobytes
@@ -18,20 +19,20 @@ class VersionField:
     VERSION_FIELD_LEN = 2
     VERSION_WITH_AUX_FIELD_LEN = 6
 
-    def __init__(self, data: bytes | str | None = None) -> None:
-        self.major = None
-        self.minor = None
+    def __init__(self, data: str | Sequence[int] | None = None) -> None:
+        self.major: int | None = None
+        self.minor: int | None = None
         if data:
             self._from_data(data)
 
-    def _from_data(self, data: bytes | str) -> None:
+    def _from_data(self, data: str | Sequence[int]) -> None:
         if isinstance(data, str):
             data = [ord(c) for c in data]
 
-        data = array.array('B', data)
-        self.version = self._decode_data(data[0:2])
-        if len(data) == self.VERSION_WITH_AUX_FIELD_LEN:
-            self.auxiliary = data[2:6]
+        buf = array.array('B', data)
+        self._decode_data(buf[0:2])
+        if len(buf) == self.VERSION_WITH_AUX_FIELD_LEN:
+            self.auxiliary = buf[2:6]
 
     def __str__(self) -> str:
         return self.version_to_string()
@@ -51,7 +52,7 @@ class VersionField:
         return ''.join("%s.%s" % (self.major, self.minor))
 
 
-def _unpack6bitascii(data: bytes) -> str:
+def _unpack6bitascii(data: Sequence[int]) -> str:
     """Unpack the 6bit ascii encoded string."""
     string = ''
     for i in range(0, len(data), 3):
@@ -78,7 +79,7 @@ class TypeLengthString:
     TYPE_6BIT_ASCII = 2
     TYPE_ASCII_OR_UTF16 = 3
 
-    def __init__(self, data: bytes | None = None, offset: int = 0,
+    def __init__(self, data: Sequence[int] | None = None, offset: int = 0,
                  force_lang_eng: bool = False, sdr: bool = False) -> None:
         if data:
             self._from_data(data, offset, force_lang_eng)
@@ -89,7 +90,7 @@ class TypeLengthString:
         else:
             return self.string.replace('\x00', '')
 
-    def _from_data(self, data: bytes, offset: int = 0,
+    def _from_data(self, data: Sequence[int], offset: int = 0,
                    force_lang_eng: bool = False) -> None:
         self.offset = offset
         self.field_type = data[offset] >> 6 & 0x3
@@ -108,13 +109,13 @@ class TypeLengthString:
 
 class FruTypeLengthString(TypeLengthString):
 
-    def __init__(self, data: bytes | None = None, offset: int = 0,
+    def __init__(self, data: Sequence[int] | None = None, offset: int = 0,
                  force_lang_eng: bool = False) -> None:
         super().__init__(data, offset, force_lang_eng, sdr=False)
 
 
 class SdrTypeLengthString(TypeLengthString):
 
-    def __init__(self, data: bytes | None = None, offset: int = 0,
+    def __init__(self, data: Sequence[int] | None = None, offset: int = 0,
                  force_lang_eng: bool = False) -> None:
         super().__init__(data, sdr=True)

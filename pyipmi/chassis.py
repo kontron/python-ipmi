@@ -228,17 +228,17 @@ class Chassis(IpmiMixin):
 
 
 class ChassisStatus(State):
-    power_on = None
-    overload = None
-    interlock = None
-    fault = None
-    control_fault = None
-    restore_policy = None
-    id_cmd_state_info_support = None
-    chassis_id_state = None
-    front_panel_button_capabilities = None
-    last_event = []
-    chassis_state = []
+    power_on: bool | None = None
+    overload: bool | None = None
+    interlock: bool | None = None
+    fault: bool | None = None
+    control_fault: bool | None = None
+    restore_policy: int | None = None
+    id_cmd_state_info_support: bool | None = None
+    chassis_id_state: int | None = None
+    front_panel_button_capabilities: int | None = None
+    last_event: list[str] = []
+    chassis_state: list[str] = []
 
     def _from_response(self, rsp: Message) -> None:
         # don't append to the lists shared by all instances
