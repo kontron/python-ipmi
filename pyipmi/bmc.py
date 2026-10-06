@@ -135,15 +135,15 @@ class Bmc(IpmiMixin):
         return self.i2c_write_read(bus_type, bus_id, channel,
                                    address, count, None)
 
-    def set_watchdog_timer(self, config) -> None:
+    def set_watchdog_timer(self, config: Watchdog) -> None:
         """Set the watchdog timer.
 
         The timer is started with :meth:`reset_watchdog_timer`.
 
         Args:
-            config: The settings of the watchdog timer, e.g. a
-                :class:`Watchdog` object. All attributes except
-                ``is_running`` and ``present_countdown`` have to be set.
+            config: The settings of the watchdog timer. All attributes
+                except ``is_running`` and ``present_countdown`` have to be
+                set.
 
         Raises:
             CompletionCodeError: The controller rejected the settings.
@@ -188,8 +188,6 @@ class Watchdog(State):
     Attributes:
         timer_use (int): The use of the timer, one of the ``TIMER_USE_*``
             constants.
-        dont_stop (bool): Only used to set the timer: keep a running timer
-            running.
         is_running (bool): Only returned: the timer is running.
         dont_log (bool): Don't log the timer expiration in the SEL.
         pre_timeout_interrupt (int): The interrupt before the timeout
@@ -217,6 +215,10 @@ class Watchdog(State):
     TIMEOUT_ACTION_HARD_RESET = 1
     TIMEOUT_ACTION_POWER_DOWN = 2
     TIMEOUT_ACTION_POWER_CYCLE = 3
+
+    #: Only used to set the timer: keep a running timer running. It is not
+    #: returned by :meth:`Bmc.get_watchdog_timer`.
+    dont_stop: bool | None
 
     __properties__ = [
         # (property, description)
