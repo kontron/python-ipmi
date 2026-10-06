@@ -14,6 +14,18 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""BMC device commands: device ID, resets, I2C access and watchdog timer.
+
+The commands are the methods of :class:`Bmc`, which are available on
+:class:`pyipmi.Ipmi`.
+
+Example:
+    Print the device ID and the firmware version of the BMC::
+
+        device_id = ipmi.get_device_id()
+        print(device_id.device_id, device_id.fw_revision)
+"""
+
 from __future__ import annotations
 
 from array import array
@@ -26,21 +38,55 @@ from .mixin import IpmiMixin
 
 
 class Bmc(IpmiMixin):
+    """BMC device commands, available on :class:`pyipmi.Ipmi`."""
+
     def get_device_id(self) -> DeviceId:
+        """Get the device ID of the controller.
+
+        Returns:
+            The device ID, firmware version, IPMI version and supported
+            functions of the controller.
+        """
         return DeviceId(self.send_message_with_name('GetDeviceId'))
 
     def get_device_guid(self) -> DeviceGuid:
+        """Get the GUID of the controller.
+
+        Returns:
+            The device GUID.
+        """
         return DeviceGuid(self.send_message_with_name('GetDeviceGuid'))
 
     def cold_reset(self) -> None:
+        """Cold reset the controller, it is reinitialized."""
         self.send_message_with_name('ColdReset')
 
     def warm_reset(self) -> None:
+        """Warm reset the controller, its state is kept."""
         self.send_message_with_name('WarmReset')
 
     def i2c_write_read(self, bus_type: int, bus_id: int, channel: int,
                        address: int, count: int,
                        data: bytes | None = None) -> array:
+        """Write to and read from a device on an I2C bus of the controller.
+
+        The data is written first, then ``count`` bytes are read.
+
+        Args:
+            bus_type: 0 for a public bus (IPMB), 1 for a private bus.
+            bus_id: The bus ID.
+            channel: The channel number of a public bus.
+            address: The 7-bit I2C address of the device.
+            count: The number of bytes to read.
+            data: The data to write, nothing is written if None or empty.
+
+        Returns:
+            The data read.
+
+        Raises:
+            CompletionCodeError: The controller rejected the request, e.g.
+                because the device did not acknowledge.
+        """
         req = create_request_by_name('MasterWriteRead')
         req.bus_id.type = bus_type
         req.bus_id.id = bus_id
@@ -55,14 +101,53 @@ class Bmc(IpmiMixin):
 
     def i2c_write(self, bus_type: int, bus_id: int, channel: int,
                   address: int, data: bytes) -> None:
+        """Write to a device on an I2C bus of the controller.
+
+        Args:
+            bus_type: 0 for a public bus (IPMB), 1 for a private bus.
+            bus_id: The bus ID.
+            channel: The channel number of a public bus.
+            address: The 7-bit I2C address of the device.
+            data: The data to write.
+
+        Raises:
+            CompletionCodeError: The controller rejected the request.
+        """
         self.i2c_write_read(bus_type, bus_id, channel, address, 0, data)
 
     def i2c_read(self, bus_type: int, bus_id: int, channel: int,
                  address: int, count: int) -> array:
+        """Read from a device on an I2C bus of the controller.
+
+        Args:
+            bus_type: 0 for a public bus (IPMB), 1 for a private bus.
+            bus_id: The bus ID.
+            channel: The channel number of a public bus.
+            address: The 7-bit I2C address of the device.
+            count: The number of bytes to read.
+
+        Returns:
+            The data read.
+
+        Raises:
+            CompletionCodeError: The controller rejected the request.
+        """
         return self.i2c_write_read(bus_type, bus_id, channel,
                                    address, count, None)
 
     def set_watchdog_timer(self, config) -> None:
+        """Set the watchdog timer.
+
+        The timer is started with :meth:`reset_watchdog_timer`.
+
+        Args:
+            config: The settings of the watchdog timer, e.g. a
+                :class:`Watchdog` object. All attributes except
+                ``is_running`` and ``present_countdown`` have to be set.
+
+        Raises:
+            CompletionCodeError: The controller rejected the settings.
+        """
         req = create_request_by_name('SetWatchdogTimer')
         req.timer_use.timer_use = config.timer_use
         req.timer_use.dont_stop = config.dont_stop and 1 or 0
@@ -78,13 +163,50 @@ class Bmc(IpmiMixin):
         check_completion_code(rsp.completion_code)
 
     def get_watchdog_timer(self) -> Watchdog:
+        """Get the settings and the present countdown of the watchdog timer.
+
+        Returns:
+            The watchdog timer, ``dont_stop`` is not set.
+        """
         return Watchdog(self.send_message_with_name('GetWatchdogTimer'))
 
     def reset_watchdog_timer(self) -> None:
+        """Start or restart the watchdog timer with its initial countdown.
+
+        Raises:
+            CompletionCodeError: The timer was not set before (0x80).
+        """
         self.send_message_with_name('ResetWatchdogTimer')
 
 
 class Watchdog(State):
+    """The settings of the watchdog timer.
+
+    The ``TIMER_USE_*`` and ``TIMEOUT_ACTION_*`` constants are the timer
+    uses and the timeout actions.
+
+    Attributes:
+        timer_use (int): The use of the timer, one of the ``TIMER_USE_*``
+            constants.
+        dont_stop (bool): Only used to set the timer: keep a running timer
+            running.
+        is_running (bool): Only returned: the timer is running.
+        dont_log (bool): Don't log the timer expiration in the SEL.
+        pre_timeout_interrupt (int): The interrupt before the timeout
+            action: 0 none, 1 SMI, 2 NMI / diagnostic interrupt, 3 messaging
+            interrupt.
+        timeout_action (int): The action on the timer expiration, one of
+            the ``TIMEOUT_ACTION_*`` constants.
+        pre_timeout_interval (int): The time in seconds before the timeout
+            action at which the pre-timeout interrupt is generated.
+        timer_use_expiration_flags (int): A bit mask with one bit per timer
+            use, bit 1 for BIOS FRB2 up to bit 5 for OEM: the expired timer
+            uses when returned, the flags to clear when set.
+        initial_countdown (int): The countdown value in 100 ms units.
+        present_countdown (int): Only returned: the present countdown value
+            in 100 ms units.
+    """
+
     TIMER_USE_OEM = 5
     TIMER_USE_SMS_OS = 4
     TIMER_USE_OS_LOAD = 3
@@ -123,8 +245,27 @@ class Watchdog(State):
 
 
 class DeviceId(State):
+    """The device ID of a controller.
+
+    Attributes:
+        device_id (int): The device ID.
+        revision (int): The device revision.
+        provides_sdrs (bool): The device provides device SDRs.
+        available (bool): The device firmware, an SDR update or the
+            self-initialization is in progress. Despite its name, the
+            device is in normal operation if this is False.
+        fw_revision (VersionField): The firmware revision.
+        ipmi_version (VersionField): The IPMI version, e.g. 2.0.
+        manufacturer_id (int): The IANA manufacturer ID.
+        product_id (int): The product ID.
+        supported_functions (list[str]): The supported device functions,
+            see :meth:`supports_function`.
+        aux (list[int] | None): The auxiliary firmware revision, None if
+            the controller does not report it.
+    """
 
     def __str__(self) -> str:
+        """Return the device ID fields as one line."""
         string = 'Device ID: %d' % self.device_id
         string += ' revision: %d' % self.revision
         string += ' available: %d' % self.available
@@ -136,10 +277,15 @@ class DeviceId(State):
         return string
 
     def supports_function(self, name: str) -> bool:
-        """Return if a function is supported.
+        """Return whether the device supports a function.
 
-        `name` is one of 'SENSOR', 'SDR_REPOSITORY', 'SEL', 'FRU_INVENTORY',
-        'IPMB_EVENT_RECEIVER', 'IPMB_EVENT_GENERATOR', 'BRIDGE', 'CHASSIS'.
+        Args:
+            name: The function, one of 'SENSOR', 'SDR_REPOSITORY', 'SEL',
+                'FRU_INVENTORY', 'IPMB_EVENT_RECEIVER',
+                'IPMB_EVENT_GENERATOR', 'BRIDGE' or 'CHASSIS', in any case.
+
+        Returns:
+            True if the function is supported.
         """
         return name.lower() in self.supported_functions
 
@@ -179,7 +325,15 @@ class DeviceId(State):
 
 
 class DeviceGuid(State):
+    """The GUID of a controller.
+
+    Attributes:
+        device_guid (Sequence[int]): The 16 bytes of the GUID as returned.
+        device_guid_string (str): The GUID in the usual string format.
+    """
+
     def __str__(self) -> str:
+        """Return the GUID string."""
         return 'Device GUID: %s' % self.device_guid_string
 
     def _from_response(self, rsp: Message) -> None:
