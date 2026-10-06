@@ -3,6 +3,7 @@
 import hashlib
 import os
 import struct
+from unittest import mock
 
 import pytest
 
@@ -656,7 +657,19 @@ def test_install_component_from_file(fake_time):
         'UploadFirmwareBlockReq']
     assert names.count('UploadFirmwareBlockReq') == blocks
     assert 'FinishFirmwareUploadReq' in names
-    assert 'ActivateFirmwareReq' in names
+    # the activation is requested without a rollback override policy
+    assert ('ActivateFirmwareReq', b'\x00') in ipmi.requests
+
+
+def test_activation_stage_waits_with_the_image_timeout():
+    image = UpgradeImage(HPM_FILE)
+    ipmi = create_ipmi(b'\x00\x00')
+    with mock.patch.object(ipmi, 'activate_firmware_and_wait') as activate, \
+            mock.patch.object(ipmi, 'wait_until_new_firmware_comes_up') as wait:
+        ipmi.activation_stage(image, 1)
+    timeout = image.header.inaccessibility_timeout
+    activate.assert_called_once_with(timeout=timeout, interval=1)
+    wait.assert_called_once_with(timeout, 1)
 
 
 @pytest.mark.parametrize('method', ['install_component_from_image',

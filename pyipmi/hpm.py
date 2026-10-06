@@ -704,7 +704,7 @@ class Hpm(IpmiMixin):
             HpmError: The controller rejected the activation.
         """
         self.activate_firmware_and_wait(
-            image.header.inaccessibility_timeout, 1)
+            timeout=image.header.inaccessibility_timeout, interval=1)
         self.wait_until_new_firmware_comes_up(
             image.header.inaccessibility_timeout, 1)
         self._activation_state_do_self_testing()
