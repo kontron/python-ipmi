@@ -120,6 +120,12 @@ def format_analog_value(value: float | None) -> str:
     return '%.3f' % value
 
 
+def format_states(states: int | None) -> str:
+    if states is None:
+        return 'na'
+    return '0x%x' % states
+
+
 def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
 
     print("SDR record ID:    0x%04x" % s.id)
@@ -129,7 +135,7 @@ def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
         print("Device Id string: %s" % s.device_id_string)
     if hasattr(s, 'entity_id'):
         print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
-    if s.type is pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
+    if isinstance(s, pyipmi.sdr.SdrFullSensorRecord):
         (raw, states) = ipmi.get_sensor_reading(s.number, s.owner_lun)
         value = format_analog_value(s.convert_sensor_raw_to_value(raw))
         t_unr = format_analog_value(
@@ -145,19 +151,19 @@ def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
         t_lnr = format_analog_value(
             s.convert_sensor_raw_to_value(s.threshold['lnr']))
         print("Reading value:    %s" % value)
-        print("Reading state:    0x%x" % states)
+        print("Reading state:    %s" % format_states(states))
         print("UNR:              %s" % t_unr)
         print("UCR:              %s" % t_ucr)
         print("UNC:              %s" % t_unc)
         print("LNC:              %s" % t_lnc)
         print("LCR:              %s" % t_lcr)
         print("LNR:              %s" % t_lnr)
-    elif s.type is pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
+    elif isinstance(s, pyipmi.sdr.SdrCompactSensorRecord):
         (raw, states) = ipmi.get_sensor_reading(s.number)
         print("Reading:          %s" % raw)
-        print("Reading state:    0x%x" % states)
-    elif s.type is \
-            pyipmi.sdr.SDR_TYPE_MANAGEMENT_CONTROLLER_CONFIRMATION_RECORD:
+        print("Reading state:    %s" % format_states(states))
+    elif isinstance(s,
+                    pyipmi.sdr.SdrManagementControllerConfirmationRecord):
         print("Slave address:    0x%02x" % (s.device_slave_address << 1))
         print("Device ID:        0x%02x" % s.device_id)
         print("Device revision:  %d" % s.device_revision)
@@ -406,7 +412,11 @@ def cmd_picmg_get_power(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     print(pwr)
 
 
-def print_link_state(p: pyipmi.picmg.LinkDescriptor, s: int) -> None:
+def print_link_state(p: pyipmi.picmg.LinkDescriptor | None,
+                     s: int | None) -> None:
+    if p is None or s is None:
+        print('Port not supported')
+        return
     intf_str = pyipmi.picmg.LinkDescriptor().get_interface_string(p.interface)
     link_str = pyipmi.picmg.LinkDescriptor().get_link_type_string(
             p.type, p.extension, p.sig_class)
@@ -421,7 +431,8 @@ def cmd_picmg_get_portstate_all(ipmi: pyipmi.Ipmi,
         for channel in range(16):
             try:
                 (p, s) = ipmi.get_port_state(channel, interface)
-                print_link_state(p, s)
+                if p is not None:
+                    print_link_state(p, s)
             except pyipmi.errors.CompletionCodeError as e:
                 if e.cc == 0xcc:
                     continue
