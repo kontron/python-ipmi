@@ -191,7 +191,7 @@ def test_get_component_properties():
         ComponentPropertyGeneral, ComponentPropertyCurrentVersion,
         ComponentPropertyDescriptionString, ComponentPropertyDeferredVersion]
     assert props[0].general == ['rollback_backup_not_supported',
-                                'prepartion', 'comparison',
+                                'preparation', 'comparison',
                                 'payload_cold_reset_required']
     assert props[2].description == 'fw'
 
