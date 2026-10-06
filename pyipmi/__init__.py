@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import time
 import ast
-from typing import Any
+from typing import Any, Literal
 
 from . import bmc
 from . import chassis
@@ -94,8 +94,8 @@ class Routing:
 class Target:
     """The Target class represents an IPMI target."""
 
-    routing = None
-    ipmb_address = None
+    routing: list[Routing] | None = None
+    ipmb_address: int | None = None
 
     def __init__(self, ipmb_address: int | None = None,
                  routing: str | list[tuple] | None = None) -> None:
@@ -183,14 +183,14 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         self.requester = requester if requester is not None else NullRequester()
 
         for base in Ipmi.__bases__:
-            base.__init__(self)
+            base.__init__(self)  # type: ignore[misc]
 
     def __enter__(self) -> Ipmi:
         self.open()
         return self
 
     def __exit__(self, exception_type: Any, exception_value: Any,
-                 traceback: Any) -> bool:
+                 traceback: Any) -> Literal[False]:
         self.close()
         return False
 
@@ -259,33 +259,35 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         return self.interface.send_and_receive_raw(self.target, lun, netfn,
                                                    raw_bytes)
 
-    def _get_interface(self) -> Any:
+    @property
+    def interface(self) -> Any:
         try:
             return self._interface
         except AttributeError:
             raise RuntimeError('No interface has been set') from None
 
-    def _get_session(self) -> Session:
+    @interface.setter
+    def interface(self, interface: Any) -> None:
+        self._interface = interface
+
+    @property
+    def session(self) -> Session:
         try:
             return self._session
         except AttributeError:
             raise RuntimeError('No IPMI session has been set') from None
 
-    def _get_target(self) -> Target:
+    @session.setter
+    def session(self, session: Session) -> None:
+        self._session = session
+
+    @property
+    def target(self) -> Target | None:
         try:
             return self._target
         except AttributeError:
             raise RuntimeError('No IPMI target has been set') from None
 
-    def _set_interface(self, interface: Any) -> None:
-        self._interface = interface
-
-    def _set_session(self, session: Session) -> None:
-        self._session = session
-
-    def _set_target(self, target: Target) -> None:
+    @target.setter
+    def target(self, target: Target | None) -> None:
         self._target = target
-
-    target = property(_get_target, _set_target)
-    interface = property(_get_interface, _set_interface)
-    session = property(_get_session, _set_session)

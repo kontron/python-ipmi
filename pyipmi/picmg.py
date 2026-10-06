@@ -21,6 +21,7 @@ from .msgs import create_request_by_name, Message
 from .msgs import picmg
 from .utils import check_completion_code
 from .state import State
+from .mixin import IpmiMixin
 
 from .msgs.picmg import \
         FRU_CONTROL_COLD_RESET, FRU_CONTROL_WARM_RESET, \
@@ -28,7 +29,7 @@ from .msgs.picmg import \
         FRU_ACTIVATION_FRU_ACTIVATE, FRU_ACTIVATION_FRU_DEACTIVATE
 
 
-class Picmg:
+class Picmg(IpmiMixin):
     def get_picmg_properties(self) -> Message:
         return self.send_message_with_name('GetPicmgProperties')
 

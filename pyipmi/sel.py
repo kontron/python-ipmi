@@ -28,9 +28,10 @@ from .event import EVENT_ASSERTION, EVENT_DEASSERTION
 
 from .helper import clear_repository_helper
 from .state import State
+from .mixin import IpmiMixin
 
 
-class Sel:
+class Sel(IpmiMixin):
     def get_sel_entries_count(self) -> int:
         info = SelInfo(self.send_message_with_name('GetSelInfo'))
         return info.entries

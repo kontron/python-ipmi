@@ -30,6 +30,7 @@ from .msgs import create_request_by_name, Message
 from .helper import get_sdr_data_helper, clear_repository_helper
 from .helper import get_sdr_chunk_helper, ReadLength
 from .state import State
+from .mixin import IpmiMixin
 
 SDR_TYPE_FULL_SENSOR_RECORD = 0x01
 SDR_TYPE_COMPACT_SENSOR_RECORD = 0x02
@@ -58,7 +59,7 @@ L_SQRT = 10
 L_CUBERT = 11
 
 
-class Sdr:
+class Sdr(IpmiMixin):
     def __init__(self) -> None:
         # read length of the SDR repository, a reduced length is kept for the
         # following records

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from .msgs import create_request_by_name, Message
 from .utils import check_completion_code
+from .mixin import IpmiMixin
 from .msgs.vita import (VITA_FRU_CONTROL_COLD_RESET,  # noqa: F401
                         VITA_FRU_CONTROL_WARM_RESET,
                         VITA_FRU_CONTROL_GRACEFUL_REBOOT,
@@ -70,7 +71,7 @@ VITA_SITE_TYPES = {
 }
 
 
-class Vita:
+class Vita(IpmiMixin):
     """VITA 46.11 commands of a VSO (VITA Standards Organization) IPMC."""
 
     def get_vita_vso_capabilities(self) -> Message:

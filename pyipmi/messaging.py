@@ -22,6 +22,7 @@ from .session import Session
 from .msgs import create_request_by_name, Message
 from .utils import check_completion_code, check_rsp_completion_code
 from .state import State
+from .mixin import IpmiMixin
 
 
 class PasswordOperation(int, Enum):
@@ -62,7 +63,7 @@ CONVERT_USER_PRIVILEGE_TO_RAW = {
 }
 
 
-class Messaging:
+class Messaging(IpmiMixin):
     def get_channel_authentication_capabilities(
             self, channel: int,
             priv_lvl: int) -> ChannelAuthenticationCapabilities:
