@@ -149,8 +149,8 @@ class Picmg(IpmiMixin):
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
 
-    def get_port_state(self, channel_number: int,
-                       channel_interface: int) -> tuple[LinkDescriptor, int]:
+    def get_port_state(self, channel_number: int, channel_interface: int,
+                       ) -> tuple[LinkDescriptor | None, int | None]:
         req = create_request_by_name('GetPortState')
         req.channel.number = channel_number
         req.channel.interface = channel_interface
@@ -257,6 +257,14 @@ class LinkDescriptor(State):
 
     STATE_DISABLE = picmg.LINK_STATE_DISABLE
     STATE_ENABLE = picmg.LINK_STATE_ENABLE
+
+    channel: int
+    interface: int
+    link_flags: int
+    type: int
+    sig_class: int
+    extension: int
+    grouping_id: int
 
     __properties__ = [
         # (property, description)

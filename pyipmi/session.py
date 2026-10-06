@@ -40,16 +40,16 @@ class Session:
     PRIV_LEVEL_ADMINISTRATOR = 4
     PRIV_LEVEL_OEM = 5
 
-    session_id = None
-    _interface = None
+    session_id: int | None = None
+    _interface: Any = None
     _priv_level = PRIV_LEVEL_ADMINISTRATOR
     _auth_type = AUTH_TYPE_NONE
-    _auth_username = None
-    _auth_password = None
-    _rmcp_host = None
-    _rmcp_port = None
-    _serial_port = None
-    _serial_baudrate = None
+    _auth_username: str | bytes | None = None
+    _auth_password: str | bytes | None = None
+    _rmcp_host: str | None = None
+    _rmcp_port: int | None = None
+    _serial_port: str | None = None
+    _serial_baudrate: int | None = None
 
     def __init__(self) -> None:
         self.established = False
@@ -155,8 +155,8 @@ class Session:
         string += '  Seq: 0x%08x\n' % self.sequence_number
         string += '  Host: %s:%s\n' % (self._rmcp_host, self._rmcp_port)
         string += '  Auth.: %s\n' % self.auth_type
-        string += '  User: %s\n' % self._auth_username
-        string += '  Password: %s\n' % self._auth_password
+        string += '  User: %s\n' % str(self._auth_username)
+        string += '  Password: %s\n' % str(self._auth_password)
         string += '\n'
         return string
 

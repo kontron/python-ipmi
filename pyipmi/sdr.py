@@ -24,7 +24,7 @@ from . import errors
 
 from .errors import DecodingError
 from .fields import SdrTypeLengthString
-from .utils import check_completion_code, ByteBuffer
+from .utils import check_completion_code, ByteBuffer, ByteSequence
 from .msgs import create_request_by_name, Message
 
 from .helper import get_sdr_data_helper, clear_repository_helper
@@ -192,7 +192,7 @@ class SdrRepositoryAllocationInfo(State):
 
 
 class SdrCommon:
-    def __init__(self, data: bytes | None = None,
+    def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
         if data:
             self.data = data
@@ -214,7 +214,7 @@ class SdrCommon:
                  (' '.join(['%02x' % b for b in self.data]))
         return s
 
-    def _common_header(self, data: bytes) -> None:
+    def _common_header(self, data: ByteSequence) -> None:
         buffer = ByteBuffer(data[:])
         try:
             self.id = buffer.pop_unsigned_int(2)
@@ -242,7 +242,7 @@ class SdrCommon:
 #            buffer.pop_string(self.device_id_string_length & 0x3f)
 
     @staticmethod
-    def from_data(data: bytes, next_id: int | None = None) -> SdrCommon:
+    def from_data(data: ByteSequence, next_id: int | None = None) -> SdrCommon:
         sdr_type = data[3]
 
         cls = {
@@ -274,7 +274,7 @@ class SdrFullSensorRecord(SdrCommon):
     DATA_FMT_2S_COMPLEMENT = 2
     DATA_FMT_NONE = 3
 
-    def __init__(self, data: bytes | None = None,
+    def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
         super().__init__(data, next_id)
 
@@ -296,9 +296,9 @@ class SdrFullSensorRecord(SdrCommon):
         elif (fmt == self.DATA_FMT_2S_COMPLEMENT):
             if raw & 0x80:
                 raw = -((raw & 0x7f) ^ 0x7f) - 1
-        raw = float(raw)
 
-        return self.lin((self.m * raw + (self.b * 10**self.k1)) * 10**self.k2)
+        return self.lin((self.m * float(raw)
+                         + (self.b * 10**self.k1)) * 10**self.k2)
 
     def convert_sensor_value_to_raw(self, value: float) -> int:
         linearization = self.linearization & 0x7f
@@ -401,7 +401,7 @@ class SdrFullSensorRecord(SdrCommon):
         if (capabilities & 0x03) == 3:
             pass
 
-    def _from_data(self, data: bytes) -> None:
+    def _from_data(self, data: ByteSequence) -> None:
         buffer = ByteBuffer(data[5:])
         # record key bytes
         self._common_record_key(buffer.pop_slice(3))
@@ -505,7 +505,7 @@ class SdrFullSensorRecord(SdrCommon):
 # SDR type 0x02
 ##################################################
 class SdrCompactSensorRecord(SdrCommon):
-    def __init__(self, data: bytes | None = None,
+    def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
         super().__init__(data, next_id)
 
@@ -515,7 +515,7 @@ class SdrCompactSensorRecord(SdrCommon):
                ' '.join(['%02x' % b for b in self.data]))
         return s
 
-    def _from_data(self, data: bytes) -> None:
+    def _from_data(self, data: ByteSequence) -> None:
         buffer = ByteBuffer(data[5:])
 
         # record key bytes
@@ -546,14 +546,14 @@ class SdrCompactSensorRecord(SdrCommon):
 # SDR type 0x03
 ##################################################
 class SdrEventOnlySensorRecord(SdrCommon):
-    def __init__(self, data: bytes | None = None,
+    def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
         super().__init__(data, next_id)
 
     def __str__(self) -> str:
         return 'Not supported yet.'
 
-    def _from_data(self, data: bytes) -> None:
+    def _from_data(self, data: ByteSequence) -> None:
         buffer = ByteBuffer(data[5:])
 
         # record key bytes
@@ -574,7 +574,7 @@ class SdrEventOnlySensorRecord(SdrCommon):
 # SDR type 0x11
 ##################################################
 class SdrFruDeviceLocator(SdrCommon):
-    def __init__(self, data: bytes | None = None,
+    def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
         super().__init__(data, next_id)
 
@@ -584,7 +584,7 @@ class SdrFruDeviceLocator(SdrCommon):
                ' '.join(['%02x' % b for b in self.data]))
         return s
 
-    def _from_data(self, data: bytes) -> None:
+    def _from_data(self, data: ByteSequence) -> None:
         buffer = ByteBuffer(data[5:])
         self.device_access_address = buffer.pop_unsigned_int(1) >> 1
         self.fru_device_id = buffer.pop_unsigned_int(1)
@@ -602,7 +602,7 @@ class SdrFruDeviceLocator(SdrCommon):
 # SDR type 0x12
 ##################################################
 class SdrManagementControllerDeviceLocator(SdrCommon):
-    def __init__(self, data: bytes | None = None,
+    def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
         super().__init__(
                 data, next_id)
@@ -613,7 +613,7 @@ class SdrManagementControllerDeviceLocator(SdrCommon):
                ' '.join(['%02x' % b for b in self.data]))
         return s
 
-    def _from_data(self, data: bytes) -> None:
+    def _from_data(self, data: ByteSequence) -> None:
         buffer = ByteBuffer(data[5:])
         self.device_slave_address = buffer.pop_unsigned_int(1) >> 1
         self.channel_number = buffer.pop_unsigned_int(1) & 0xf
@@ -630,12 +630,12 @@ class SdrManagementControllerDeviceLocator(SdrCommon):
 # SDR type 0x13
 ##################################################
 class SdrManagementControllerConfirmationRecord(SdrCommon):
-    def __init__(self, data: bytes | None = None,
+    def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
         super().__init__(
                 data, next_id)
 
-    def _from_data(self, data: bytes) -> None:
+    def _from_data(self, data: ByteSequence) -> None:
         buffer = ByteBuffer(data[5:])
         self.device_slave_address = buffer.pop_unsigned_int(1) >> 1
         self.device_id = buffer.pop_unsigned_int(1)
@@ -654,14 +654,14 @@ class SdrManagementControllerConfirmationRecord(SdrCommon):
 # SDR type 0xC0
 ##################################################
 class SdrOEMSensorRecord(SdrCommon):
-    def __init__(self, data: bytes | None = None,
+    def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
         super().__init__(data, next_id)
 
     def __str__(self) -> str:
         return 'Not supported yet.'
 
-    def _from_data(self, data: bytes) -> None:
+    def _from_data(self, data: ByteSequence) -> None:
         buffer = ByteBuffer(data[5:])
 
         # record key bytes
@@ -670,7 +670,7 @@ class SdrOEMSensorRecord(SdrCommon):
 
 # Any SDR type not known or not implemented
 class SdrUnknownSensorRecord(SdrCommon):
-    def __init__(self, data: bytes | None = None,
+    def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
         super().__init__(data, next_id)
 

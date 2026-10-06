@@ -21,7 +21,7 @@ from array import array
 from collections.abc import Generator
 
 from .errors import CompletionCodeError, DecodingError
-from .utils import check_completion_code, ByteBuffer
+from .utils import check_completion_code, ByteBuffer, ByteSequence
 from .msgs import create_request_by_name, Message
 from .msgs import constants
 from .event import EVENT_ASSERTION, EVENT_DEASSERTION
@@ -158,6 +158,12 @@ class SelEntry(State):
     TYPE_OEM_TIMESTAMPED_RANGE = list(range(0xc0, 0xe0))
     TYPE_OEM_NON_TIMESTAMPED_RANGE = list(range(0xe0, 0x100))
 
+    def __init__(self, data: ByteSequence | None = None) -> None:
+        # a SEL entry is decoded from the record data, not from a response
+        super().__init__()
+        if data:
+            self._from_data(data)
+
     def __str__(self) -> str:
         raw = '[%s]' % (' '.join(['0x%02x' % b for b in self.data]))
         string = []
@@ -185,7 +191,7 @@ class SelEntry(State):
             string = 'OEM non-timestamped (0x%02x)' % entry_type
         return string
 
-    def _from_response(self, data: ByteBuffer) -> None:
+    def _from_data(self, data: ByteSequence) -> None:
         if len(data) != 16:
             raise DecodingError('Invalid SEL record length (%d)' % len(data))
 

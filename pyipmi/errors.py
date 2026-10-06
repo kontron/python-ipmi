@@ -54,7 +54,7 @@ class CompletionCodeError(Exception):
             if error_cc == cc[0]:
                 return cc[1]
         # Then search in command specific completion codes
-        if cmdid is not None:
+        if cmdid is not None and netfn is not None:
             command_cc = CC_ERR_CMD_SPECIFIC_DESC.get((netfn, cmdid, group_extension), {})
             descr = command_cc.get(error_cc, "Unknown error description")
             return descr
