@@ -61,7 +61,7 @@ class OpenIpmbLinkDevice:
         self.port = port
         self.cmd_timeout = cmd_timeout
         self.info: dict | None = None
-        self._ser = None
+        self._ser: Any = None
         self._rx_buf = bytearray()
         self._replies: queue.Queue = queue.Queue()
         self._command_lock = threading.Lock()
@@ -232,7 +232,8 @@ class OpenIpmbLinkDevice:
                 self._dispatch(packet)
 
     def _dispatch(self, packet: dict) -> None:
-        listener = self._listeners.get(packet.get('bus'))
+        bus = packet.get('bus')
+        listener = self._listeners.get(bus) if isinstance(bus, int) else None
         if listener is None:
             return
         try:

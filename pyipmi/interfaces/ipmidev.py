@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 try:
     import fcntl
 except ImportError:
-    fcntl = None
+    fcntl = None  # type: ignore[assignment]
 
 
 # definitions of include/uapi/linux/ipmi.h
@@ -139,6 +139,11 @@ class IpmiDev(Interface):
             os.close(self._dev)
             self._dev = None
 
+    def _get_dev(self) -> int:
+        if self._dev is None:
+            raise RuntimeError('Device %s is not open' % self.port)
+        return self._dev
+
     def is_ipmc_accessible(self, target: Target) -> bool:
         try:
             self.send_and_receive_raw(target, 0, constants.NETFN_APP,
@@ -153,6 +158,7 @@ class IpmiDev(Interface):
             raise RuntimeError('ipmidev supports only one bridge, routing: %s'
                                % ', '.join(str(r) for r in routing))
 
+        address: int | None
         if len(routing) == 2:
             channel = routing[0].channel
             address = routing[1].rs_sa
@@ -180,16 +186,17 @@ class IpmiDev(Interface):
         req.msg.cmd = cmdid
         req.msg.data_len = len(data)
         req.msg.data = ctypes.addressof(data_buf)
-        fcntl.ioctl(self._dev, IPMICTL_SEND_COMMAND, req)
+        fcntl.ioctl(self._get_dev(), IPMICTL_SEND_COMMAND, req)
 
     def _receive(self, msgid: int, netfn: int, cmdid: int) -> bytes:
+        dev = self._get_dev()
         deadline = time.monotonic() + self.timeout
         while True:
             timeout = deadline - time.monotonic()
             if timeout <= 0:
                 raise IpmiTimeoutError()
-            r, _, _ = select.select([self._dev], [], [], timeout)
-            if self._dev not in r:
+            r, _, _ = select.select([dev], [], [], timeout)
+            if dev not in r:
                 raise IpmiTimeoutError()
 
             addr_buf = ctypes.create_string_buffer(
@@ -200,7 +207,7 @@ class IpmiDev(Interface):
             recv.addr_len = ctypes.sizeof(addr_buf)
             recv.msg.data = ctypes.addressof(data_buf)
             recv.msg.data_len = IPMI_MAX_MSG_LENGTH
-            fcntl.ioctl(self._dev, IPMICTL_RECEIVE_MSG_TRUNC, recv)
+            fcntl.ioctl(dev, IPMICTL_RECEIVE_MSG_TRUNC, recv)
 
             rx_data = data_buf.raw[:recv.msg.data_len]
             if (recv.recv_type == IPMI_RESPONSE_RECV_TYPE

@@ -20,6 +20,7 @@ from typing import Any
 
 from .ipmitool import Ipmitool
 from .aardvark import Aardvark
+from .base import Interface
 from .ipmbdev import IpmbDev
 from .ipmidev import IpmiDev
 from .mock import Mock
@@ -27,7 +28,7 @@ from .openipmblink import OpenIpmbLink
 from .rmcp import Rmcp
 from .rmcpplus import RmcpPlus
 
-INTERFACES = [
+INTERFACES: list[type[Interface]] = [
     Ipmitool,
     Aardvark,
     IpmbDev,
@@ -42,7 +43,6 @@ INTERFACES = [
 def create_interface(interface: str, *args: Any, **kwargs: Any) -> Any:
     for intf in INTERFACES:
         if intf.NAME == interface:
-            intf = intf(*args, **kwargs)
-            return intf
+            return intf(*args, **kwargs)
 
     raise RuntimeError('unknown interface with name %s' % interface)

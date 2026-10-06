@@ -154,6 +154,7 @@ class MessageRouter:
             interface.send_frame(encode_ipmb_msg(header, payload))
             if not pending.event.wait(timeout):
                 raise IpmiTimeoutError()
+            assert pending.frame is not None
             return pending.frame
         finally:
             with self._lock:
@@ -206,6 +207,7 @@ class MessageRouter:
         logger.debug('IPMB RX request [%s]', header)
 
         handler = self._find_handler(header, data)
+        rsp_data: bytes | None
         if handler is None:
             if self.unhandled_cc is None:
                 return

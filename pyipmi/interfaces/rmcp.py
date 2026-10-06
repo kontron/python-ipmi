@@ -35,7 +35,7 @@ from ..errors import DecodingError, NotSupportedError, RetryError
 from .base import Interface
 from ..interfaces.ipmb import (IpmbHeaderReq, encode_ipmb_msg,
                                encode_bridged_message, decode_bridged_message,
-                               rx_filter)
+                               rx_filter, target_ipmb_address)
 from ..utils import (check_completion_code, check_rsp_completion_code,
                      py3_array_tobytes)
 
@@ -213,6 +213,8 @@ class AsfPong(AsfMsg):
 
     def unpack(self, sdu: bytes) -> None:
         AsfMsg.unpack(self, sdu)
+        # check_header() made sure that the data is present
+        assert self.data is not None
         # header_len = struct.calcsize(self.ASF_HEADER_FORMAT)
         (self.oem_iana_enterprise_number, self.oem_defined,
             self.supported_entities, self.supported_interactions) =\
@@ -229,7 +231,8 @@ class AsfPong(AsfMsg):
     def check_header(self) -> None:
         if self.asf_type != self.ASF_TYPE_PRESENCE_PONG:
             raise DecodingError('type does not match')
-        if len(self.data) != struct.calcsize(self.DATA_FORMAT):
+        if self.data is None \
+                or len(self.data) != struct.calcsize(self.DATA_FORMAT):
             raise DecodingError('Data length mismatch')
 
 
@@ -304,7 +307,7 @@ class IpmiMsg:
         elif auth_type == Session.AUTH_TYPE_PASSWORD:
             pdu += self._pack_auth_code_straight()
         elif auth_type == Session.AUTH_TYPE_MD5:
-            pdu += self._pack_auth_code_md5(sdu)
+            pdu += self._pack_auth_code_md5(sdu or b'')
         else:
             raise NotSupportedError('authentication type %s' % auth_type)
 
@@ -404,15 +407,15 @@ class Rmcp(Interface):
                 quirks_cfg={'rmcp_ignore_rq_seq': True}
             )
         """
-        self.host = None
-        self.port = None
+        self.host: str | None = None
+        self.port: int | None = None
         self.seq_number = 0xff
         self.slave_address = slave_address
         self.host_target = Target(host_target_address)
         self.max_retries = max_retries
         self.next_sequence_number = 0
         self.keep_alive_interval = keep_alive_interval
-        self._stop_keep_alive = None
+        self._stop_keep_alive: Callable[[], None] | None = None
         self._last_request_time = 0.0
         self._timeout: float | None = None
         self.transaction_lock = threading.Lock()
@@ -453,12 +456,12 @@ class Rmcp(Interface):
         tx_data = ipmi.pack(data)
         self._send_rmcp_msg(tx_data, RMCP_CLASS_IPMI)
 
-    def _receive_ipmi_msg(self, ignore_sdu_length: bool = False) -> bytes | None:
+    def _receive_ipmi_msg(self, ignore_sdu_length: bool = False) -> bytes:
         (_, class_of_msg, pdu) = self._receive_rmcp_msg()
         if class_of_msg != RMCP_CLASS_IPMI:
             raise DecodingError('invalid class field in ASF message')
         msg = IpmiMsg(ignore_sdu_length=ignore_sdu_length)
-        data = msg.unpack(pdu)
+        data = msg.unpack(pdu) or b''
         logger.debug('IPMI RX: {:s}'.format(
             ' '.join('%02x' % b for b in array('B', data))))
         return data
@@ -512,7 +515,7 @@ class Rmcp(Interface):
         req.authentication.type = session.auth_type
         req.privilege_level.maximum_requested = session.priv_level
         req.challenge_string = challenge
-        req.session_id = self._session.sid
+        req.session_id = session.sid
         req.initial_outbound_sequence_number = random.randrange(1, 0xffffffff)
         rsp = self.send_and_receive(req)
         check_rsp_completion_code(rsp)
@@ -541,8 +544,8 @@ class Rmcp(Interface):
 
     def establish_session(self, session: Session) -> None:
         self._session = None
-        self.host = session._rmcp_host
-        self.port = session._rmcp_port
+        self.host = session.rmcp_host
+        self.port = session.rmcp_port
         self._sock.connect((self.host, self.port))
 
         # 0 - Ping
@@ -565,9 +568,9 @@ class Rmcp(Interface):
         # 3 - Activate Session
         logger.debug('Activate Session')
         rsp = self._activate_session(session, session_challenge)
-        self._session.sid = rsp.session_id
-        self._session.sequence_number = rsp.initial_inbound_sequence_number
-        self._session.activated = True
+        session.sid = rsp.session_id
+        session.sequence_number = rsp.initial_inbound_sequence_number
+        session.activated = True
 
         logger.debug('Set Session Privilege Level')
         # 4 - Set Session Privilege Level
@@ -646,7 +649,7 @@ class Rmcp(Interface):
         header = IpmbHeaderReq()
         header.netfn = netfn
         header.rs_lun = lun
-        header.rs_sa = target.ipmb_address
+        header.rs_sa = target_ipmb_address(target)
         header.rq_seq = self.next_sequence_number
         header.rq_lun = 0
         header.rq_sa = self.slave_address

@@ -315,6 +315,7 @@ class RmcpPlus(Rmcp):
                          keep_alive_interval=keep_alive_interval,
                          max_retries=max_retries, quirks_cfg=quirks_cfg)
 
+        self.cipher_suites: tuple[int, ...]
         if cipher_suite is None:
             self.cipher_suites = DEFAULT_CIPHER_SUITES
         elif cipher_suite in CIPHER_SUITES:
@@ -334,6 +335,8 @@ class RmcpPlus(Rmcp):
 
     def _send_payload(self, payload_type: int, payload: bytes) -> None:
         if self._keys is not None:
+            # the keys are set when the session is established
+            assert self._session is not None
             self._session.increment_sequence_number()
             pdu = pack_rmcpplus(payload_type, payload, self._session.sid,
                                 self._session.sequence_number, self._keys)
