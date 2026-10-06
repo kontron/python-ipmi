@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import os
 import codecs
 import struct
 import collections
@@ -786,32 +785,26 @@ class UpgradeImage:
         return "\n".join(str)
 
     def _check_md5_sum(self, filedata: bytes) -> None:
-        summer = hashlib.md5()
-        self.checksum_actual \
-            = summer.update(filedata[:-HPM_IMAGE_CHECKSUM_SIZE])
+        self.checksum_actual = hashlib.md5(
+            filedata[:-HPM_IMAGE_CHECKSUM_SIZE]).digest()
         self.checksum_expected = filedata[-HPM_IMAGE_CHECKSUM_SIZE:]
+        if self.checksum_actual != self.checksum_expected:
+            raise HpmError('image MD5 checksum mismatch')
 
     def _from_file(self, filename: str) -> None:
 
-        try:
-            file = open(filename, "rb")
-        except OSError:
-            print('Error open file "%s"' % filename)
-
-        ################################
-        # get file size
-        file_size = os.stat(filename).st_size
-        file_data = file.read(file_size)
-
-        ################################
-        # get image checksum
-        self._check_md5_sum(file_data)
-        # XXX verify checksum
+        with open(filename, "rb") as file:
+            file_data = file.read()
+        file_size = len(file_data)
 
         ################################
         # Upgrade Image Header
         self.header = UpgradeImageHeaderRecord(file_data)
         off = self.header.length
+
+        ################################
+        # verify image checksum
+        self._check_md5_sum(file_data)
 
         ################################
         # Upgrade Actions
@@ -824,5 +817,3 @@ class UpgradeImage:
         ################################
         # Image checksum
         self.checksum = ImageChecksumRecord(file_data[off:file_size])
-
-        file.close()

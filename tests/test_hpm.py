@@ -178,6 +178,15 @@ def _image_with_actions(tmp_path, actions):
     return str(path)
 
 
+def test_upgrade_image_md5_mismatch(tmp_path):
+    filename = _image_with_actions(tmp_path, [b'\x01\x02\xfd'])
+    with open(filename, 'r+b') as f:
+        f.seek(-1, os.SEEK_END)
+        f.write(b'\x00')
+    with pytest.raises(HpmError, match='MD5'):
+        UpgradeImage(filename)
+
+
 UPGRADE_STAGE_RSP = {
     'InitiateUpgradeAction': b'\x00\x00',
     'UploadFirmwareBlock': b'\x00\x00',
