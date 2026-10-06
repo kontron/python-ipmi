@@ -151,6 +151,14 @@ def test_get_led_state_override():
     assert 'LAMP_TEST_EN' in str(led)
 
 
+def test_get_led_state_longest_blinking():
+    # the longest blinking durations: 2500ms off (0xfa) / 2500ms on
+    ipmi = create_ipmi(b'\x00\x00\x01\xfa\xfa\x02')
+    led = ipmi.get_led_state(fru_id=0, led_id=1)
+    assert led.local_function == LedState.FUNCTION_BLINKING
+    assert (led.local_off_duration, led.local_on_duration) == (2500, 2500)
+
+
 @pytest.mark.parametrize('rsp', [
     # invalid local function
     b'\x00\x00\x01\xfc\x00\x02',
