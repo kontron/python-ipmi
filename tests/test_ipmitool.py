@@ -250,7 +250,7 @@ class TestParser:
         ipmitool.main(['hpm', 'check', path])
         out = capsys.readouterr().out
         assert 'HPM Upgrade Image header' in out
-        assert 'Upload for Upgrade' in out
+        assert 'Upload Firmware Image' in out
 
     def test_invalid_choice(self, capsys):
         with pytest.raises(SystemExit):

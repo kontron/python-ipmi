@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import struct
 
 import pytest
 
@@ -14,8 +15,7 @@ from pyipmi.hpm import (Hpm, ComponentProperty,
                         ComponentPropertyRollbackVersion,
                         UpgradeActionRecord, UpgradeActionRecordBackup,
                         UpgradeActionRecordPrepare,
-                        UpgradeActionRecordUploadForUpgrade,
-                        UpgradeActionRecordUploadForCompare, UpgradeImage,
+                        UpgradeActionRecordUploadForUpgrade, UpgradeImage,
                         UpgradeImageHeaderRecord,
                         PROPERTY_GENERAL_PROPERTIES, PROPERTY_CURRENT_VERSION,
                         PROPERTY_DESCRIPTION_STRING, PROPERTY_ROLLBACK_VERSION,
@@ -114,9 +114,54 @@ def test_upgradeactionrecord_create_from_data():
     assert record.firmware_description_string == '012345678901234567890'
     assert record.firmware_length == 4
 
-    record = UpgradeActionRecord.create_from_data(b'\x03\x08\x02')
-    assert record.action == 3
-    assert type(record) is UpgradeActionRecordUploadForCompare
+    record = UpgradeActionRecord.create_from_data(
+        _upload_record(b'\x11\x22\x33'))
+    assert type(record) is UpgradeActionRecordUploadForUpgrade
+    assert record.firmware_version.version_to_string() == '1.2'
+    assert record.firmware_description_string == 'firmware'
+    assert record.firmware_length == 3
+    assert record.firmware_image_data == b'\x11\x22\x33'
+    assert record.length == 3 + 31 + 3
+
+
+def test_upgradeactionrecord_reserved_type():
+    # compare is no action record type, only an Initiate Upgrade Action
+    with pytest.raises(HpmError, match='unsupported ActionRecord type 0x03'):
+        UpgradeActionRecord.create_from_data(b'\x03\x02\xfb')
+
+
+def _upload_record(image, components=0x02):
+    return (bytes((0x02, components, 0))
+            + b'\x01\x02\x00\x00\x00\x00'
+            + b'firmware'.ljust(21, b'\x00')
+            + struct.pack('<L', len(image)) + image)
+
+
+@pytest.mark.parametrize('cls', [
+    UpgradeActionRecordBackup, UpgradeActionRecordPrepare,
+    UpgradeActionRecordUploadForUpgrade,
+])
+def test_upgradeactionrecord_without_data(cls):
+    record = cls()
+    assert record.action is None
+    assert record.components is None
+
+
+def test_upgradeactionrecord_upload_truncated():
+    data = _upload_record(b'\x11\x22\x33')
+    with pytest.raises(HpmError, match='truncated'):
+        UpgradeActionRecord.create_from_data(data[:-1])
+
+
+def test_upgradeactionrecord_upload_str():
+    record = UpgradeActionRecord.create_from_data(
+        _upload_record(b'\x11\x22\x33'))
+    assert str(record) == '\n'.join([
+        'Action Record Type: 0x2 (Upload Firmware Image) ',
+        ' Components: 0x02',
+        ' Firmware Version: 1.2',
+        ' Description:      firmware',
+        ' Firmware Length:  3'])
 
 
 def test_upgrade_image():
@@ -423,7 +468,7 @@ def test_upgrade_image_header_str():
     assert 'Device ID:        4' in s
     assert 'Manufacturer:     15000' in s
     assert str(image.actions[1]).startswith(
-        'Action Record Type: 0x2 (Upload for Upgrade)')
+        'Action Record Type: 0x2 (Upload Firmware Image)')
 
 
 def test_upgrade_action_record_invalid():

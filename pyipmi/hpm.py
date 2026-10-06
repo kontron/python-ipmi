@@ -41,10 +41,16 @@ PROPERTY_ROLLBACK_VERSION = 3
 PROPERTY_DEFERRED_VERSION = 4
 PROPERTY_OEM = list(range(192, 255))
 
+# actions of the Initiate Upgrade Action command
 ACTION_BACKUP_COMPONENT = 0x00
 ACTION_PREPARE_COMPONENT = 0x01
 ACTION_UPLOAD_FOR_UPGRADE = 0x02
 ACTION_UPLOAD_FOR_COMPARE = 0x03
+
+# action types of the upgrade image action records
+IMAGE_ACTION_BACKUP_COMPONENTS = 0x00
+IMAGE_ACTION_PREPARE_COMPONENTS = 0x01
+IMAGE_ACTION_UPLOAD_FIRMWARE_IMAGE = 0x02
 
 CC_LONG_DURATION_CMD_IN_PROGRESS = 0x80
 
@@ -634,32 +640,36 @@ class UpgradeImageHeaderRecord:
 class UpgradeActionRecord:
 
     ACTIONS = (
-        "Backup",
-        "Prepare",
-        "Upload for Upgrade",
-        "Upload for Compare"
+        "Backup Components",
+        "Prepare Components",
+        "Upload Firmware Image",
     )
 
+    HEADER_LENGTH = 3
+
     def __init__(self, data: bytes | None = None) -> None:
-        self.action_type = array('B', data)[0]
+        self.action_type = None
+        self.action = None
+        self.components = None
+        self.checksum = None
+        self.length = self.HEADER_LENGTH
         if data:
             (self.action, self.components, self.checksum) \
                 = struct.unpack('BBB', data[0:3])
-            self.length = 3
+            self.action_type = self.action
 
     @staticmethod
     def create_from_data(data: bytes) -> UpgradeActionRecord:
         action_type = array('B', data)[0]
-        if action_type == ACTION_BACKUP_COMPONENT:
+        if action_type == IMAGE_ACTION_BACKUP_COMPONENTS:
             return UpgradeActionRecordBackup(data)
-        elif action_type == ACTION_PREPARE_COMPONENT:
+        elif action_type == IMAGE_ACTION_PREPARE_COMPONENTS:
             return UpgradeActionRecordPrepare(data)
-        elif action_type == ACTION_UPLOAD_FOR_UPGRADE:
+        elif action_type == IMAGE_ACTION_UPLOAD_FIRMWARE_IMAGE:
             return UpgradeActionRecordUploadForUpgrade(data)
-        elif action_type == ACTION_UPLOAD_FOR_COMPARE:
-            return UpgradeActionRecordUploadForCompare(data)
         else:
-            raise HpmError('unsupported ActionRecord')
+            raise HpmError('unsupported ActionRecord type 0x%02x'
+                           % action_type)
 
     def __str__(self) -> str:
         str = []
@@ -678,21 +688,43 @@ class UpgradeActionRecordPrepare(UpgradeActionRecord):
 
 
 class UpgradeActionRecordUploadForUpgrade(UpgradeActionRecord):
+    """Upload Firmware Image action record.
+
+    The action header is followed by the firmware version (6 bytes), the
+    description string (21 bytes), the firmware length (4 bytes) and the
+    firmware image. The image is uploaded for upgrade or for compare,
+    this is selected by the Initiate Upgrade Action command.
+    """
+
     def __init__(self, data: bytes | None = None) -> None:
         UpgradeActionRecord.__init__(self, data)
+        self.firmware_version = None
+        self.firmware_description_string = None
+        self.firmware_length = None
+        self.firmware_image_data = None
         if data:
             self.firmware_version = \
                 VersionField(
                     data[3:3 + VersionField.VERSION_WITH_AUX_FIELD_LEN])
+            # strip the '\x00' padding
             self.firmware_description_string \
-                = py3dec_unic_bytes_fix(data[9:30])
+                = py3dec_unic_bytes_fix(data[9:30]).rstrip('\0')
             self.firmware_length = struct.unpack('<L', data[30:34])[0]
             self.firmware_image_data = data[34:(34 + self.firmware_length)]
+            if len(self.firmware_image_data) != self.firmware_length:
+                raise HpmError('upload action record: firmware image '
+                               'truncated (%d of %d bytes)'
+                               % (len(self.firmware_image_data),
+                                  self.firmware_length))
             self.length += 31 + self.firmware_length
 
-
-class UpgradeActionRecordUploadForCompare(UpgradeActionRecord):
-    pass
+    def __str__(self) -> str:
+        str = [UpgradeActionRecord.__str__(self)]
+        str.append(" Firmware Version: %s" % self.firmware_version)
+        str.append(" Description:      %s"
+                   % self.firmware_description_string)
+        str.append(" Firmware Length:  %s" % self.firmware_length)
+        return "\n".join(str)
 
 
 class ImageChecksumRecord:
