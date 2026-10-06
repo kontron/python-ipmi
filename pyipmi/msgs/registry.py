@@ -51,7 +51,7 @@ class MessageRegistry:
                                    cls.__name__)
         msg_id = (cls.__netfn__, cls.__cmdid__, cls.__group_extension__)
         if msg_id in self.registry:
-            raise DescriptionError('Message (%d,%d,%d) already registered (%s)'
+            raise DescriptionError('Message (%d,%d,%s) already registered (%s)'
                                    % (msg_id[0], msg_id[1], msg_id[2],
                                       self.registry[msg_id]))
 
