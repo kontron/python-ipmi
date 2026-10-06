@@ -34,6 +34,10 @@ class Interface:
 
     NAME: str | None = None
 
+    # maximum request data length of a message sent directly (not bridged)
+    # by the interface, None for the IPMB default
+    MAX_REQUEST_DATA_SIZE: int | None = None
+
     def open(self) -> None:
         pass
 

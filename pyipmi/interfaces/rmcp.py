@@ -366,6 +366,8 @@ class IpmiMsg:
 
 class Rmcp(Interface):
     NAME = 'rmcp'
+    # 45 bytes LAN message length minus 7 bytes message header and checksums
+    MAX_REQUEST_DATA_SIZE = 38
 
     _session: Session | None = None
 
