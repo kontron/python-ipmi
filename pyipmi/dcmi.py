@@ -23,6 +23,7 @@ from .constants import (ENTITY_ID_DCMI_AIR_INLET, ENTITY_ID_DCMI_CPU,
                         ENTITY_ID_DCMI_BASEBOARD)
 from .msgs import Message, create_request_by_name
 from .utils import check_rsp_completion_code
+from .mixin import IpmiMixin
 
 
 PARAM_SUPPORTED_DCMI_CAPABILITIES = 1
@@ -50,7 +51,7 @@ DCMI_ENTITIES = (ENTITY_ID_DCMI_AIR_INLET, ENTITY_ID_DCMI_CPU,
                  ENTITY_ID_DCMI_BASEBOARD)
 
 
-class Dcmi:
+class Dcmi(IpmiMixin):
     def get_dcmi_capabilities(self, selector: int) -> Message:
         rsp = self.send_message_with_name('GetDcmiCapabilities',
                                           parameter_selector=selector)

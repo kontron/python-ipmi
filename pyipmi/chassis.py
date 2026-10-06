@@ -23,6 +23,7 @@ from enum import Enum
 from .msgs import create_request_by_name, Message
 from .utils import check_completion_code, check_rsp_completion_code, ByteBuffer
 from .state import State
+from .mixin import IpmiMixin
 
 from .msgs.chassis import \
         CONTROL_POWER_DOWN, CONTROL_POWER_UP, CONTROL_POWER_CYCLE, \
@@ -146,7 +147,7 @@ def boot_options_to_data(boot_device: BootDevice, boot_mode: str,
     return data
 
 
-class Chassis:
+class Chassis(IpmiMixin):
     def get_chassis_status(self) -> ChassisStatus:
         return ChassisStatus(self.send_message_with_name('GetChassisStatus'))
 

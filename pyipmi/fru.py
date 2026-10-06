@@ -26,6 +26,7 @@ from .helper import ReadLength
 from .msgs import constants
 from .utils import bcd_search, chunks, py3_array_tobytes
 from .fields import FruTypeLengthString
+from .mixin import IpmiMixin
 
 codecs.register(bcd_search)
 
@@ -33,7 +34,7 @@ codecs.register(bcd_search)
 FRU_AREA_MIN_LENGTH = 8
 
 
-class Fru:
+class Fru(IpmiMixin):
     def __init__(self) -> None:
         self.write_length = 16
         # read length per FRU device, a reduced length is kept for the

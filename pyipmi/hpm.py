@@ -31,6 +31,7 @@ from .utils import check_completion_code, bcd_search
 from .utils import py3dec_unic_bytes_fix, py3_array_tobytes
 from .state import State
 from .fields import VersionField
+from .mixin import IpmiMixin
 
 
 PROPERTY_GENERAL_PROPERTIES = 0
@@ -76,7 +77,7 @@ CC_ABORT_UPGRADE_CANNOT_ABORT = 0x80
 CC_ABORT_UPGRADE_CANNOT_RESUME_OPERATION = 0x81
 
 
-class Hpm:
+class Hpm(IpmiMixin):
 
     @staticmethod
     def _get_component_count(components: int) -> int:

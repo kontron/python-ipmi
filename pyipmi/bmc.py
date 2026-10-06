@@ -22,9 +22,10 @@ from .msgs import create_request_by_name, Message
 from .utils import check_completion_code
 from .state import State
 from .fields import VersionField
+from .mixin import IpmiMixin
 
 
-class Bmc:
+class Bmc(IpmiMixin):
     def get_device_id(self) -> DeviceId:
         return DeviceId(self.send_message_with_name('GetDeviceId'))
 

@@ -18,12 +18,13 @@ from __future__ import annotations
 
 from .utils import check_completion_code
 from .msgs import create_request_by_name
+from .mixin import IpmiMixin
 
 EVENT_ASSERTION = 0
 EVENT_DEASSERTION = 1
 
 
-class Event:
+class Event(IpmiMixin):
     def set_event_receiver(self, ipmb_address: int, lun: int) -> None:
         req = create_request_by_name('SetEventReceiver')
         req.event_receiver.ipmb_i2c_slave_address = ipmb_address

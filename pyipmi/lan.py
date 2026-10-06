@@ -21,6 +21,7 @@ from array import array
 from .errors import CompletionCodeError, DataNotFound
 from .msgs import constants, create_request_by_name
 from .utils import check_rsp_completion_code, ByteBuffer
+from .mixin import IpmiMixin
 
 LAN_PARAMETER_SET_IN_PROGRESS = 0
 LAN_PARAMETER_AUTHENTICATION_TYPE_SUPPORT = 1
@@ -173,7 +174,7 @@ def vlan_to_data(vlan: int) -> ByteBuffer:
 LAN_CHANNEL_SEARCH_RANGE = range(1, 0x0c)
 
 
-class Lan:
+class Lan(IpmiMixin):
     def __init__(self) -> None:
         self._lan_channel: int | None = None
 

@@ -26,6 +26,7 @@ from .helper import (get_sdr_data_helper, get_sdr_chunk_helper,
                      ReadLength)
 
 from . import sdr
+from .mixin import IpmiMixin
 
 
 # THRESHOLD BASED STATES
@@ -109,7 +110,7 @@ SENSOR_TYPE_VITA_PAYLOAD_MODE = 0xf7
 SENSOR_TYPE_VITA_IPMC_RESET_TYPE = 0xf8
 
 
-class Sensor:
+class Sensor(IpmiMixin):
     def __init__(self) -> None:
         # read length of the device SDRs, a reduced length is kept for the
         # following records
