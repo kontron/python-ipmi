@@ -70,7 +70,7 @@ class TestComponentProperty:
     def test_str(self):
         prop = ComponentProperty().from_data(PROPERTY_GENERAL_PROPERTIES,
                                              b'\x15')
-        assert str(prop) == ('General: rollback_is_supported, prepartion, '
+        assert str(prop) == ('General: rollback_is_supported, preparation, '
                              'deferred_activation')
 
         prop = ComponentProperty().from_data(PROPERTY_CURRENT_VERSION,
