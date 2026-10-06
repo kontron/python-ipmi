@@ -220,6 +220,10 @@ def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
         iter_fct = ipmi.sdr_repository_entries
     elif device_id.supports_function('sensor'):
         iter_fct = ipmi.device_sdr_entries
+    else:
+        print("Device supports neither SDR repository nor sensor "
+              "functions", file=sys.stderr)
+        return
 
     print("SDR-ID |     | Device String      |")
     print("=======|=====|====================|====================")
