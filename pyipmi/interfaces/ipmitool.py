@@ -311,8 +311,11 @@ class Ipmitool(Interface):
         # The command is executed by a shell, so the credentials have to be
         # quoted to prevent the shell from interpreting characters like
         # '$', '`', '"' or '\'.
-        return (f' -U {shlex.quote(self._session.auth_username)}'
-                f' -P {shlex.quote(self._session.auth_password)}')
+        session = self._get_session()
+        username = session.auth_username_bytes.decode()
+        password = session.auth_password_bytes.decode()
+        return (f' -U {shlex.quote(username)}'
+                f' -P {shlex.quote(password)}')
 
     def _build_ipmitool_priv_level(self, level: int) -> str:
         LEVELS = {
