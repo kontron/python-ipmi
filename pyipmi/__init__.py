@@ -43,7 +43,7 @@ from .session import Session
 from .utils import check_rsp_completion_code, is_string
 
 try:
-    from version import __version__
+    from .version import __version__
 except ImportError:
     __version__ = 'dev'
 
