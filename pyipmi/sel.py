@@ -57,7 +57,7 @@ class Sel(IpmiMixin):
         return rsp.record_id
 
     def get_and_clear_sel_entry(self, record_id: int) -> SelEntry:
-        """Atomically gets and clears the specified SEL record"""
+        """Atomically get and clear the specified SEL record."""
         while True:
             reservation = self.get_sel_reservation_id()
             try:

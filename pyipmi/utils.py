@@ -54,9 +54,9 @@ def check_completion_code(cc: int) -> None:
 
 
 def check_rsp_completion_code(rsp: Message) -> None:
-    """
-    Check the completion code of a specific response and raise
-    CompletionCodeError in case there's an error.
+    """Check the completion code of a response.
+
+    Raise CompletionCodeError in case there's an error.
 
     This method allows to pass more metadata than the `check_completion_code`
     method to try to interpret command-specific completion codes description in

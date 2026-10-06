@@ -12,6 +12,7 @@ select = [
     "C4",   # flake8-comprehensions
     "PIE",  # flake8-pie
     "UP",   # pyupgrade
+    "D",    # pydocstyle
 ]
 ignore = [
     "E226",   # missing whitespace around arithmetic operator (flake8 default)
@@ -19,4 +20,14 @@ ignore = [
     "B903",   # class could be a dataclass or namedtuple
     "C408",   # dict()/list() calls instead of literals
     "UP031",  # %-style string formatting
+    # missing docstrings, only the format of the existing docstrings is
+    # checked until the modules are documented
+    "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107",
 ]
+
+[lint.pydocstyle]
+convention = "google"
+
+[lint.per-file-ignores]
+# the tests are not part of the API documentation
+"tests/**" = ["D"]

@@ -87,9 +87,10 @@ CONVERT_BOOT_DEVICE_TO_RAW = {
 
 
 def data_to_boot_mode(data: array) -> str:
-    """
-    Convert a `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)` response data
-    into the string representation of the encoded boot mode.
+    """Convert the boot flags response data to the boot mode string.
+
+    The data is the response of
+    `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)`.
     """
     boot_mode_raw = (data[0] >> 5) & 1
     boot_mode = "legacy" if boot_mode_raw == 0 else "efi"
@@ -97,18 +98,20 @@ def data_to_boot_mode(data: array) -> str:
 
 
 def data_to_boot_persistency(data: array) -> bool:
-    """
-    Convert a `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)` response data
-    into the boolean representation of the encoded boot persistency.
+    """Convert the boot flags response data to the boot persistency.
+
+    The data is the response of
+    `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)`.
     """
     boot_persistent_raw = (data[0] >> 6) & 1
     return boot_persistent_raw == 1
 
 
 def data_to_boot_device(data: array) -> BootDevice:
-    """
-    Convert a `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)` response data
-    into the string representation of the encoded boot device.
+    """Convert the boot flags response data to the boot device string.
+
+    The data is the response of
+    `GetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)`.
     """
     boot_device_raw = (data[1] >> 2) & 0b1111
     return CONVERT_RAW_TO_BOOT_DEVICE[boot_device_raw]
@@ -116,9 +119,10 @@ def data_to_boot_device(data: array) -> BootDevice:
 
 def boot_options_to_data(boot_device: BootDevice, boot_mode: str,
                          boot_persistency: bool) -> ByteBuffer:
-    """
-    Convert a boot mode (string), boot device (string) and boot persistency (bool)
-    into a `SetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)` request data.
+    """Convert the boot device, mode and persistency to boot flags data.
+
+    The data is the request data of
+    `SetSystemBootOptions(BOOT_PARAMETER_BOOT_FLAGS)`.
     """
     if not isinstance(boot_persistency, bool):
         raise TypeError(f"Wrong type for boot_persistency argument: {type(boot_persistency)}, expected bool.")
@@ -196,8 +200,7 @@ class Chassis(IpmiMixin):
         check_rsp_completion_code(rsp)
 
     def get_boot_mode(self) -> str:
-        """
-        Return a string corresponding to the device boot mode.
+        """Return a string corresponding to the device boot mode.
 
         Possible values are: legacy, efi.
         """
@@ -205,16 +208,16 @@ class Chassis(IpmiMixin):
         return data_to_boot_mode(rsp)
 
     def get_boot_persistency(self) -> bool:
-        """
-        Return True if the boot configuration is to be applied to every future
-        boot, False if it will only be applied to the next boot.
+        """Return whether the boot configuration applies to all boots.
+
+        True if the boot configuration is applied to every future boot,
+        False if it is only applied to the next boot.
         """
         rsp = self.get_system_boot_options(BOOT_PARAMETER_BOOT_FLAGS)
         return data_to_boot_persistency(rsp)
 
     def get_boot_device(self) -> BootDevice:
-        """
-        Return a string corresponding to the target boot device.
+        """Return a string corresponding to the target boot device.
 
         Possible values are listed in the `BootDevice` class.
         """

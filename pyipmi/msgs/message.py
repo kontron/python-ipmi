@@ -352,14 +352,12 @@ class Message:
         def __setattr__(self, name: str, value: Any) -> None: ...
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        """Message constructor with ([buf], [field=val,...]) prototype.
+        """Create a message, optionally decoded from a buffer.
 
-        Arguments:
-
-        buf -- option message buffer to decode
-
-        Optional keyword arguments corresponds to members to set (matching
-        fields in self.__fields__, or 'data').
+        Args:
+            *args: An optional message buffer to decode.
+            **kwargs: The values of the fields to set, matching the fields
+                in `__fields__` or 'data'.
         """
         # create message fields
         if hasattr(self, '__fields__'):

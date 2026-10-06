@@ -222,9 +222,7 @@ class Fru(IpmiMixin):
 
     def get_fru_inventory(self, fru_id: int = 0,
                           ignore_checksum: bool = False) -> FruInventory:
-        """
-        Get the full parsed FRU inventory data.
-        """
+        """Get the full parsed FRU inventory data."""
         fru = FruInventory()
 
         header = self.get_fru_inventory_header(

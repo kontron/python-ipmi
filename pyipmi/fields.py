@@ -65,9 +65,10 @@ def _unpack6bitascii(data: Sequence[int]) -> str:
 
 
 class TypeLengthString:
-    """
-    This is the TYPE/LENGTH BYTE FORMAT field representation according the
-    Platform Management FRU Information Storage Definition v1.0.
+    """A field in the TYPE/LENGTH BYTE FORMAT.
+
+    The format is specified by the Platform Management FRU Information
+    Storage Definition v1.0.
 
     In addition the difference to the 'FRU Information Storage Definition' to
     the variant used in Type/Length for the Device ID String used in the SDR.
