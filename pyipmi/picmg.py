@@ -14,6 +14,27 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""PICMG commands of AdvancedTCA and MicroTCA systems.
+
+The PICMG 3.0 (AdvancedTCA) and MTCA.0 (MicroTCA) specifications define
+IPMI commands of the PICMG group extension: FRU control and activation,
+power levels, fans, LEDs, E-Keying of the backplane ports and the power
+channels of a MicroTCA power module.
+
+The commands are the methods of :class:`Picmg`, which are available on
+:class:`pyipmi.Ipmi`.
+
+Example:
+    Read the port state of fabric channel 1::
+
+        from pyipmi.picmg import LinkDescriptor
+
+        link, state = ipmi.get_port_state(1, LinkDescriptor.INTERFACE_FABRIC)
+        if link is not None:
+            print(link.get_link_type_string(link.type, link.extension,
+                                            link.sig_class), state)
+"""
+
 from __future__ import annotations
 
 from .errors import DecodingError, EncodingError
@@ -30,43 +51,127 @@ from .msgs.picmg import \
 
 
 class Picmg(IpmiMixin):
+    """PICMG commands, available on :class:`pyipmi.Ipmi`.
+
+    The ``*_LOCK_*`` constants are the controls of
+    :meth:`set_fru_activation_policy`.
+    """
     def get_picmg_properties(self) -> Message:
+        """Get the PICMG properties of the IPM controller.
+
+        Returns:
+            The response with the fields ``extension_version`` (the PICMG
+            extension version), ``max_fru_device_id`` and ``fru_device_id``
+            (the FRU device ID of the IPM controller).
+        """
         return self.send_message_with_name('GetPicmgProperties')
 
     def fru_control(self, fru_id: int, option: int) -> bytes:
+        """Control a FRU, e.g. reset it.
+
+        Args:
+            fru_id: The FRU device ID.
+            option: One of the ``FRU_CONTROL_*`` constants of
+                ``pyipmi.msgs.picmg``.
+
+        Returns:
+            The remaining response data after the PICMG identifier.
+
+        Raises:
+            CompletionCodeError: The controller rejected the request, e.g. for
+                an option the FRU does not support.
+        """
         rsp = self.send_message_with_name('FruControl', fru_id=fru_id,
                                           option=option)
         return rsp.rsp_data
 
     def fru_control_cold_reset(self, fru_id: int = 0) -> None:
+        """Cold reset a FRU.
+
+        Args:
+            fru_id: The FRU device ID.
+        """
         self.fru_control(fru_id, FRU_CONTROL_COLD_RESET)
 
     def fru_control_warm_reset(self, fru_id: int = 0) -> None:
+        """Warm reset a FRU.
+
+        Args:
+            fru_id: The FRU device ID.
+        """
         self.fru_control(fru_id, FRU_CONTROL_WARM_RESET)
 
     def fru_control_graceful_reboot(self, fru_id: int = 0) -> None:
+        """Gracefully reboot a FRU.
+
+        Args:
+            fru_id: The FRU device ID.
+        """
         self.fru_control(fru_id, FRU_CONTROL_GRACEFUL_REBOOT)
 
     def fru_control_diagnostic_interrupt(self, fru_id: int = 0) -> bytes:
+        """Issue a diagnostic interrupt to a FRU.
+
+        Args:
+            fru_id: The FRU device ID.
+
+        Returns:
+            The remaining response data after the PICMG identifier.
+        """
         return self.fru_control(fru_id, FRU_CONTROL_ISSUE_DIAGNOSTIC_INTERRUPT)
 
     def get_power_level(self, fru_id: int, power_type: int) -> PowerLevel:
+        """Get the power levels of a FRU.
+
+        Args:
+            fru_id: The FRU device ID.
+            power_type: The power type, 0 for the steady state power draw
+                levels, 1 for the desired steady state draw levels, 2 for the
+                early power draw levels and 3 for the desired early levels.
+
+        Returns:
+            The power levels.
+        """
         rsp = self.send_message_with_name('GetPowerLevel',
                                           fru_id=fru_id,
                                           power_type=power_type)
         return PowerLevel(rsp)
 
     def get_fan_speed_properties(self, fru_id: int) -> FanSpeedProperties:
+        """Get the fan speed properties of a fan tray.
+
+        Args:
+            fru_id: The FRU device ID of the fan tray.
+
+        Returns:
+            The fan speed properties.
+        """
         rsp = self.send_message_with_name('GetFanSpeedProperties',
                                           fru_id=fru_id)
         return FanSpeedProperties(rsp)
 
     def set_fan_level(self, fru_id: int, fan_level: int) -> None:
+        """Set the fan level of a fan tray.
+
+        Args:
+            fru_id: The FRU device ID of the fan tray.
+            fan_level: The fan level, between the minimum and maximum speed
+                level of :meth:`get_fan_speed_properties`.
+        """
         self.send_message_with_name('SetFanLevel',
                                     fru_id=fru_id,
                                     fan_level=fan_level)
 
     def get_fan_level(self, fru_id: int) -> tuple:
+        """Get the fan level of a fan tray.
+
+        Args:
+            fru_id: The FRU device ID of the fan tray.
+
+        Returns:
+            A tuple of the override fan level and the local control fan level,
+            which is None if the fan tray does not report it.
+        """
         rsp = self.send_message_with_name('GetFanLevel', fru_id=fru_id)
         local_control_fan_level = None
         if rsp.data:
@@ -74,12 +179,46 @@ class Picmg(IpmiMixin):
         return (rsp.override_fan_level, local_control_fan_level)
 
     def get_led_state(self, fru_id: int, led_id: int) -> LedState:
+        """Get the state of a FRU LED.
+
+        Args:
+            fru_id: The FRU device ID.
+            led_id: The LED ID.
+
+        Returns:
+            The LED state, the durations are in milliseconds.
+
+        Raises:
+            DecodingError: The LED function in the response is invalid.
+        """
         rsp = self.send_message_with_name('GetFruLedState',
                                           fru_id=fru_id,
                                           led_id=led_id)
         return LedState(rsp)
 
     def set_led_state(self, led: LedState) -> None:
+        """Set the state of a FRU LED.
+
+        Args:
+            led: The LED state with ``fru_id``, ``led_id``,
+                ``override_color`` and ``override_function``. A blinking LED
+                needs ``override_off_duration`` and ``override_on_duration``
+                in tens of milliseconds, a lamp test ``lamp_test_duration`` in
+                hundreds of milliseconds, see :meth:`LedState.to_request`.
+
+        Raises:
+            EncodingError: The off duration of a blinking LED is out of
+                range.
+
+        Example:
+            Switch on the blue LED of FRU 0::
+
+                from pyipmi.picmg import LedState
+
+                ipmi.set_led_state(LedState(fru_id=0, led_id=0,
+                                            color=LedState.COLOR_BLUE,
+                                            function=LedState.FUNCTION_ON))
+        """
         req = create_request_by_name('SetFruLedState')
         req = led.to_request(req)
         rsp = self.send_message(req)
@@ -91,9 +230,19 @@ class Picmg(IpmiMixin):
                                     control=control)
 
     def set_fru_activation(self, fru_id: int) -> None:
+        """Activate a FRU.
+
+        Args:
+            fru_id: The FRU device ID.
+        """
         self._set_fru_activation(fru_id, FRU_ACTIVATION_FRU_ACTIVATE)
 
     def set_fru_deactivation(self, fru_id: int) -> None:
+        """Deactivate a FRU.
+
+        Args:
+            fru_id: The FRU device ID.
+        """
         self._set_fru_activation(fru_id, FRU_ACTIVATION_FRU_DEACTIVATE)
 
     ACTIVATION_LOCK_SET = 0
@@ -102,6 +251,14 @@ class Picmg(IpmiMixin):
     DEACTIVATION_LOCK_CLEAR = 3
 
     def set_fru_activation_policy(self, fru_id: int, ctrl: int) -> None:
+        """Set or clear the activation or deactivation lock of a FRU.
+
+        Args:
+            fru_id: The FRU device ID.
+            ctrl: One of ``ACTIVATION_LOCK_SET``, ``ACTIVATION_LOCK_CLEAR``,
+                ``DEACTIVATION_LOCK_SET`` or ``DEACTIVATION_LOCK_CLEAR``. For
+                other values the request changes nothing.
+        """
         req = create_request_by_name('SetFruActivationPolicy')
         req.fru_id = fru_id
 
@@ -122,18 +279,45 @@ class Picmg(IpmiMixin):
         check_completion_code(rsp.completion_code)
 
     def set_fru_activation_lock(self, fru_id: int) -> None:
+        """Set the activation lock of a FRU.
+
+        Args:
+            fru_id: The FRU device ID.
+        """
         self.set_fru_activation_policy(fru_id, self.ACTIVATION_LOCK_SET)
 
     def clear_fru_activation_lock(self, fru_id: int) -> None:
+        """Clear the activation lock of a FRU.
+
+        Args:
+            fru_id: The FRU device ID.
+        """
         self.set_fru_activation_policy(fru_id, self.ACTIVATION_LOCK_CLEAR)
 
     def set_fru_deactivation_lock(self, fru_id: int) -> None:
+        """Set the deactivation lock of a FRU.
+
+        Args:
+            fru_id: The FRU device ID.
+        """
         self.set_fru_activation_policy(fru_id, self.DEACTIVATION_LOCK_SET)
 
     def clear_fru_deactivation_lock(self, fru_id: int) -> None:
+        """Clear the deactivation lock of a FRU.
+
+        Args:
+            fru_id: The FRU device ID.
+        """
         self.set_fru_activation_policy(fru_id, self.DEACTIVATION_LOCK_CLEAR)
 
     def set_port_state(self, link_descr: LinkDescriptor, state: int) -> None:
+        """Enable or disable a link of a backplane port (E-Keying).
+
+        Args:
+            link_descr: The link.
+            state: ``LinkDescriptor.STATE_ENABLE`` or
+                ``LinkDescriptor.STATE_DISABLE``.
+        """
         req = create_request_by_name('SetPortState')
         req.link_info.channel = link_descr.channel
         req.link_info.interface = link_descr.interface
@@ -151,6 +335,17 @@ class Picmg(IpmiMixin):
 
     def get_port_state(self, channel_number: int, channel_interface: int,
                        ) -> tuple[LinkDescriptor | None, int | None]:
+        """Get the state of a link of a backplane port (E-Keying).
+
+        Args:
+            channel_number: The channel number.
+            channel_interface: The interface, one of the ``INTERFACE_*``
+                constants of :class:`LinkDescriptor`.
+
+        Returns:
+            A tuple of the link and its state (``LinkDescriptor.STATE_*``),
+            both None if the port is not supported.
+        """
         req = create_request_by_name('GetPortState')
         req.channel.number = channel_number
         req.channel.interface = channel_interface
@@ -174,12 +369,25 @@ class Picmg(IpmiMixin):
         return (link, state)
 
     def get_pm_global_status(self) -> GlobalStatus:
+        """Get the global status of a MicroTCA power module.
+
+        Returns:
+            The global status.
+        """
         rsp = self.send_message_with_name('GetPowerChannelStatus',
                                           starting_power_channel_number=1,
                                           power_channel_count=1)
         return GlobalStatus(rsp)
 
     def get_power_channel_status(self, start: int) -> PowerChannelStatus:
+        """Get the status of a power channel of a MicroTCA power module.
+
+        Args:
+            start: The power channel number.
+
+        Returns:
+            The status of the power channel.
+        """
         rsp = self.send_message_with_name('GetPowerChannelStatus',
                                           starting_power_channel_number=start,
                                           power_channel_count=1)
@@ -188,6 +396,19 @@ class Picmg(IpmiMixin):
     def send_channel_power(self, channel: int, enable: bool,
                            current_limit: float, primary_pm: int = 1,
                            backup_pm: int = 0) -> Message:
+        """Enable or disable a power channel of a MicroTCA power module.
+
+        Args:
+            channel: The power channel number.
+            enable: True to enable the power channel, False to disable it.
+            current_limit: The current limit in amperes, it is sent in units
+                of 0.1 A.
+            primary_pm: The primary power module of the channel.
+            backup_pm: The backup power module of the channel.
+
+        Returns:
+            The response of the power module.
+        """
         rsp = self.send_message_with_name('SendPowerChannelControl',
                                           channel=channel,
                                           control=5 if enable else 4,
@@ -198,11 +419,25 @@ class Picmg(IpmiMixin):
         return rsp
 
     def send_pm_heartbeat(self) -> Message:
+        """Send a heartbeat to a MicroTCA power module.
+
+        Returns:
+            The response of the power module.
+        """
         rsp = self.send_message_with_name('SendPmHeartbeat')
         return rsp
 
     def set_signaling_class(self, interface: int, channel: int,
                             signaling_class: int) -> None:
+        """Set the signaling class of a channel.
+
+        Args:
+            interface: The interface, one of the ``INTERFACE_*`` constants of
+                :class:`LinkDescriptor`.
+            channel: The channel number.
+            signaling_class: The signaling class, one of the
+                ``SIGNALING_CLASS_*`` constants of :class:`LinkDescriptor`.
+        """
         req = create_request_by_name('SetSignalingClass')
         req.channel_info.channel_number = channel
         req.channel_info.interface = interface
@@ -211,6 +446,17 @@ class Picmg(IpmiMixin):
         check_completion_code(rsp.completion_code)
 
     def get_signaling_class(self, interface: int, channel: int) -> int:
+        """Get the signaling class of a channel.
+
+        Args:
+            interface: The interface, one of the ``INTERFACE_*`` constants of
+                :class:`LinkDescriptor`.
+            channel: The channel number.
+
+        Returns:
+            The signaling class, one of the ``SIGNALING_CLASS_*`` constants of
+            :class:`LinkDescriptor`.
+        """
         req = create_request_by_name('GetSignalingClass')
         req.channel_info.channel_number = channel
         req.channel_info.interface = interface
@@ -220,6 +466,14 @@ class Picmg(IpmiMixin):
 
 
 class LinkDescriptor(State):
+    """A link of a backplane port, used for E-Keying.
+
+    The class constants are the values of the attributes: ``INTERFACE_*``,
+    ``TYPE_*`` and ``TYPE_EXT_*`` (link type and extension),
+    ``SIGNALING_CLASS_*``, ``FLAGS_*`` (link flags) and ``STATE_*`` (port
+    state).
+    """
+
     # TODO dont duplicate exports, import them instead
     INTERFACE_BASE = picmg.LINK_INTERFACE_BASE
     INTERFACE_FABRIC = picmg.LINK_INTERFACE_FABRIC
@@ -258,12 +512,20 @@ class LinkDescriptor(State):
     STATE_DISABLE = picmg.LINK_STATE_DISABLE
     STATE_ENABLE = picmg.LINK_STATE_ENABLE
 
+    #: The channel number.
     channel: int
+    #: The interface, one of the ``INTERFACE_*`` constants.
     interface: int
+    #: The ports of the channel that are part of the link, one bit per
+    #: port, see the ``FLAGS_*`` constants.
     link_flags: int
+    #: The link type, one of the ``TYPE_*`` constants.
     type: int
+    #: The signaling class, one of the ``SIGNALING_CLASS_*`` constants.
     sig_class: int
+    #: The link type extension, one of the ``TYPE_EXT_*`` constants.
     extension: int
+    #: The link grouping ID.
     grouping_id: int
 
     __properties__ = [
@@ -285,6 +547,14 @@ class LinkDescriptor(State):
     ]
 
     def get_interface_string(self, interf: int) -> str:
+        """Return the name of an interface.
+
+        Args:
+            interf: The interface, one of the ``INTERFACE_*`` constants.
+
+        Returns:
+            The name of the interface, 'unknown' for an unknown interface.
+        """
         for desc in self.INTERFACE_DESCR_STRING:
             if desc[0] == interf:
                 return desc[1]
@@ -331,6 +601,17 @@ class LinkDescriptor(State):
     ]
 
     def get_link_type_string(self, link_type: int, ext: int, cls: int = 0) -> str:
+        """Return the name of a link type.
+
+        Args:
+            link_type: The link type, one of the ``TYPE_*`` constants.
+            ext: The link type extension, one of the ``TYPE_EXT_*`` constants.
+            cls: The signaling class, one of the ``SIGNALING_CLASS_*``
+                constants.
+
+        Returns:
+            The name of the link type, 'unknown' for an unknown link type.
+        """
         for desc in self.LINK_TYPE_DESCR_STRING:
             if desc[0] == link_type and desc[1] == ext and desc[2] == cls:
                 return desc[3]
@@ -338,6 +619,21 @@ class LinkDescriptor(State):
 
 
 class PowerLevel(State):
+    """The power levels of a FRU.
+
+    The power draw of a level is its value times ``power_mulitplier``
+    tenths of a watt.
+
+    Attributes:
+        dynamic_power_configuration (int): 1 if the FRU supports dynamic
+            power configuration.
+        power_level (int): The current power level, 0 if the FRU has no
+            power.
+        delay_to_stable (int): The delay to stable power in tenths of a
+            second.
+        power_mulitplier (int): The power multiplier in tenths of a watt.
+        power_levels (Sequence[int]): The power draw values of the levels.
+    """
 
     def _from_response(self, rsp: Message) -> None:
         self.dynamic_power_configuration = \
@@ -349,6 +645,16 @@ class PowerLevel(State):
 
 
 class FanSpeedProperties(State):
+    """The fan speed properties of a fan tray.
+
+    Attributes:
+        minimum_speed_level (int): The minimum fan level.
+        maximum_speed_level (int): The maximum fan level.
+        normal_operation_level (int): The fan level of the normal
+            operation.
+        local_control_supported (int): 1 if the fan tray supports local
+            control of the fan level.
+    """
 
     def _from_response(self, rsp: Message) -> None:
         self.minimum_speed_level = rsp.minimum_speed_level
@@ -358,6 +664,38 @@ class FanSpeedProperties(State):
 
 
 class LedState(State):
+    """The state of a FRU LED.
+
+    The state is returned by :meth:`Picmg.get_led_state` and passed to
+    :meth:`Picmg.set_led_state`. The ``FUNCTION_*`` constants are the LED
+    functions, the ``COLOR_*`` constants the colors.
+
+    Note:
+        The durations returned by :meth:`Picmg.get_led_state` are in
+        milliseconds, the durations of :meth:`to_request` are in tens of
+        milliseconds (blinking) and hundreds of milliseconds (lamp test).
+
+    Attributes:
+        fru_id (int): The FRU device ID.
+        led_id (int): The LED ID.
+        local_state_available (bool): The LED has a local control state.
+        override_enabled (bool): The override state is active.
+        lamp_test_enabled (bool): A lamp test is active.
+        local_function (int): The function of the local control state.
+        local_off_duration (int): The off duration of the blinking local
+            control state.
+        local_on_duration (int): The on duration of the blinking local
+            control state.
+        local_color (int): The color of the local control state.
+        override_function (int): The function of the override state.
+        override_off_duration (int): The off duration of the blinking
+            override state.
+        override_on_duration (int): The on duration of the blinking
+            override state.
+        override_color (int): The color of the override state.
+        lamp_test_duration (int): The duration of the lamp test.
+    """
+
     COLOR_BLUE = picmg.LED_COLOR_BLUE
     COLOR_RED = picmg.LED_COLOR_RED
     COLOR_GREEN = picmg.LED_COLOR_GREEN
@@ -391,6 +729,21 @@ class LedState(State):
     def __init__(self, rsp: Message | None = None, fru_id: int | None = None,
                  led_id: int | None = None, color: int | None = None,
                  function: int | None = None) -> None:
+        """Create the LED state, from a response or from the arguments.
+
+        Args:
+            rsp: The response of Get FRU LED State, it is decoded if it is
+                not None.
+            fru_id: The FRU device ID.
+            led_id: The LED ID.
+            color: The color of the override state, one of the ``COLOR_*``
+                constants.
+            function: The function of the override state, one of the
+                ``FUNCTION_*`` constants.
+
+        Raises:
+            DecodingError: The LED function in the response is invalid.
+        """
         super().__init__(rsp)
         if fru_id is not None:
             self.fru_id = fru_id
@@ -402,6 +755,7 @@ class LedState(State):
             self.override_function = function
 
     def __str__(self) -> str:
+        """Return the flags, functions and colors of the LED state."""
         string = '[flags '
         string += self.local_state_available and ' LOCAL_STATE' or ''
         string += self.override_enabled and ' OVR_EN' or ''
@@ -456,6 +810,21 @@ class LedState(State):
             self.lamp_test_duration = res.lamp_test_duration * 100
 
     def to_request(self, req: Message) -> Message:
+        """Fill a Set FRU LED State request with the override state.
+
+        The durations have to be in the units of the request: the off and on
+        duration of a blinking LED in tens of milliseconds (the off duration
+        1 - 249), the lamp test duration in hundreds of milliseconds.
+
+        Args:
+            req: The Set FRU LED State request.
+
+        Returns:
+            The request.
+
+        Raises:
+            EncodingError: The off duration of a blinking LED is out of range.
+        """
         req.fru_id = self.fru_id
         req.led_id = self.led_id
         req.color = self.override_color
@@ -482,6 +851,16 @@ class LedState(State):
 
 
 class GlobalStatus(State):
+    """The global status of a MicroTCA power module.
+
+    Attributes:
+        role (int): The role of the power module, 1 for primary, 0 for
+            redundant.
+        management_power_good (bool): The management power is good.
+        payload_power_good (bool): The payload power is good.
+        unidentified_fault (bool): An unidentified fault occurred.
+    """
+
     __properties__ = [
         # (property, description)
         ('role', ''),
@@ -501,6 +880,21 @@ class GlobalStatus(State):
 
 
 class PowerChannelStatus(State):
+    """The status of a power channel of a MicroTCA power module.
+
+    The status flags are 1 if set.
+
+    Attributes:
+        present (int): A module is present on the channel.
+        management_power (int): The management power is on.
+        management_power_overcurrent (int): The management power is
+            overcurrent.
+        enable (int): The channel is enabled.
+        payload_power (int): The payload power is on.
+        payload_power_overcurrent (int): The payload power is overcurrent.
+        pwr_on (int): The PWR_ON signal is active.
+    """
+
     __properties__ = [
         # (property, description)
         ('present', ''),
