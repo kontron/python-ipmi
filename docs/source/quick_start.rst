@@ -125,7 +125,7 @@ Some devices do not answer exactly as the IPMI specification expects. The native
 
 The supported quirks are:
 
-* ``rmcp_ignore_rq_seq`` - do not check the sequence number of a response against the request. Use this if a response is rejected although it arrives, e.g. with ``RetryError: Max retry while checking received data against request header``. Some shelf managers and carrier managers (e.g. VadaTech) replace the sequence number of bridged requests in their responses.
+* ``rmcp_ignore_rq_seq`` - do not check the sequence number of a response against the request. Use this if requests time out although the device answers; the debug log then shows ``discarding message that does not match the request``. Some shelf managers and carrier managers (e.g. VadaTech) replace the sequence number of bridged requests in their responses.
 * ``rmcp_ignore_sdu_length`` - do not check the payload length of received IPMI v1.5 messages against the length field of the message header. Use this for devices that send a wrong length. With ``rmcpplus`` this only affects the messages before the session is established.
 
 Run with debug logging (``logging.basicConfig(level=logging.DEBUG)``) to see why a response was rejected, e.g. ``sequence number mismatch``.

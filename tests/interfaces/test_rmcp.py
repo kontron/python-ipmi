@@ -8,7 +8,8 @@ import pytest
 from pyipmi.session import Session
 from pyipmi.interfaces.rmcp import (AsfMsg, AsfPing, AsfPong, IpmiMsg, RmcpMsg, Rmcp)
 from pyipmi.utils import py3_array_tobytes
-from pyipmi.errors import DecodingError
+from pyipmi.errors import DecodingError, RetryError
+from pyipmi.interfaces.ipmb import IpmbHeaderReq, encode_ipmb_msg
 
 
 class TestRmcpMsg:
@@ -243,6 +244,69 @@ class TestRmcp:
         before = time.monotonic()
         rmcp.send_and_receive_raw(rmcp.host_target, 0, 6, b'\x00')
         assert rmcp._last_request_time >= before
+
+
+def _rmcp_rsp(seq, data=b'\x00\xaa'):
+    """Return an unauthenticated RMCP packet with a Get Device ID response."""
+    header = IpmbHeaderReq()
+    header.netfn = 7
+    header.rs_lun = 0
+    header.rs_sa = 0x81
+    header.rq_seq = seq
+    header.rq_lun = 0
+    header.rq_sa = 0x20
+    header.cmdid = 1
+    msg = encode_ipmb_msg(header, data)
+    return (b'\x06\x00\xff\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            + bytes([len(msg)]) + msg)
+
+
+class TestRmcpLateResponse:
+    """A late response of an earlier request must not break later ones."""
+
+    def _rmcp(self, max_retries=0):
+        rmcp = Rmcp(max_retries=max_retries)
+        rmcp._sock = MagicMock(spec=socket.socket)
+        rmcp._timeout = 2.0
+        rmcp.host = 'test'
+        return rmcp
+
+    def _next_seq(self, rmcp):
+        return (rmcp.next_sequence_number + 1) % 64
+
+    def test_late_response_is_discarded(self):
+        rmcp = self._rmcp()
+        seq = self._next_seq(rmcp)
+        rmcp._sock.recv.side_effect = [_rmcp_rsp(seq - 1, b'\x00\x11'),
+                                       _rmcp_rsp(seq, b'\x00\x22')]
+        assert rmcp.send_and_receive_raw(rmcp.host_target, 0, 6,
+                                         b'\x01') == b'\x00\x22'
+
+    def test_next_request_after_late_response(self):
+        rmcp = self._rmcp()
+        seq = self._next_seq(rmcp)
+        rmcp._sock.recv.side_effect = [_rmcp_rsp(seq - 1),
+                                       _rmcp_rsp(seq, b'\x00\x22'),
+                                       _rmcp_rsp(seq + 1, b'\x00\x33')]
+        rmcp.send_and_receive_raw(rmcp.host_target, 0, 6, b'\x01')
+        assert rmcp.send_and_receive_raw(rmcp.host_target, 0, 6,
+                                         b'\x01') == b'\x00\x33'
+
+    def test_socket_timeout(self):
+        rmcp = self._rmcp(max_retries=1)
+        rmcp._sock.recv.side_effect = TimeoutError()
+        with pytest.raises(RetryError):
+            rmcp.send_and_receive_raw(rmcp.host_target, 0, 6, b'\x01')
+        # the request is sent again for each retry
+        assert rmcp._sock.send.call_count == 2
+
+    def test_only_unrelated_messages_times_out(self):
+        rmcp = self._rmcp()
+        rmcp._timeout = 0.05
+        seq = self._next_seq(rmcp)
+        rmcp._sock.recv.side_effect = lambda size: _rmcp_rsp(seq - 1)
+        with pytest.raises(RetryError):
+            rmcp.send_and_receive_raw(rmcp.host_target, 0, 6, b'\x01')
 
 
 class TestAsfPongPack:

@@ -24,7 +24,6 @@ import random
 import threading
 import time
 from array import array
-from queue import Queue
 from typing import Any
 from collections.abc import Callable
 
@@ -413,7 +412,7 @@ class Rmcp(Interface):
         self.keep_alive_interval = keep_alive_interval
         self._stop_keep_alive = None
         self._last_request_time = 0.0
-        self._q = Queue()
+        self._timeout: float | None = None
         self.transaction_lock = threading.Lock()
         if quirks_cfg is None:
             quirks_cfg = {}
@@ -442,6 +441,7 @@ class Rmcp(Interface):
         return (rmcp.seq_number, rmcp.class_of_msg, sdu)
 
     def set_timeout(self, timeout: float) -> None:
+        self._timeout = timeout
         self._sock.settimeout(timeout)
 
     def _send_ipmi_msg(self, data: bytes) -> None:
@@ -594,10 +594,38 @@ class Rmcp(Interface):
         check_completion_code(rsp.completion_code)
         self._session.activated = False
 
-#        self._q.join()
-
     def _inc_sequence_number(self) -> None:
         self.next_sequence_number = (self.next_sequence_number + 1) % 64
+
+    def _receive_response(self, header: IpmbHeaderReq) -> bytes:
+        """Receive the response that matches the request `header`.
+
+        Requests are serialized by the transaction lock, so a message that
+        does not match is the late response of an earlier request (e.g. one
+        that timed out) and is discarded. Raises TimeoutError if the
+        response is not received within the timeout.
+        """
+        deadline = None
+        if self._timeout is not None:
+            deadline = time.monotonic() + self._timeout
+
+        while True:
+            if deadline is not None and time.monotonic() >= deadline:
+                raise TimeoutError()
+
+            rx_data = self._receive_ipmi_msg(self.ignore_sdu_length)
+
+            if (len(rx_data) > 5 and
+                    array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE):
+                rx_data = decode_bridged_message(rx_data)
+                if not rx_data:
+                    # the forwarded reply is expected in the next packet
+                    continue
+
+            if rx_filter(header, rx_data, rq_seq=not self.ignore_rq_seq):
+                return rx_data
+
+            logger.debug('discarding message that does not match the request')
 
     def _send_and_receive(self, target: Target, lun: int, netfn: int,
                           cmdid: int, payload: bytes) -> bytes:
@@ -635,38 +663,8 @@ class Rmcp(Interface):
                 try:
                     self._send_ipmi_msg(tx_data)
                     self._last_request_time = time.monotonic()
-
-                    received = False
-                    received_retry = 0
-                    while received is False and received_retry <= self.max_retries:
-                        if not self._q.empty():
-                            rx_data = self._q.get()
-                        else:
-                            rx_data = self._receive_ipmi_msg(self.ignore_sdu_length)
-
-                        if (len(rx_data) > 5 and
-                                array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE):
-                            rx_data = decode_bridged_message(rx_data)
-                            if not rx_data:
-                                # the forwarded reply is expected in the next packet
-                                # so we do not increment the retry counter as
-                                # it's not really a retry
-                                continue
-
-                        received = rx_filter(header, rx_data,
-                                             rq_seq=not self.ignore_rq_seq)
-
-                        if not received:
-                            self._q.put(rx_data)
-
-                        received_retry += 1
-
-                    if not received:
-                        raise RetryError("Max retry while checking received"
-                                         "data against request header for rmcp"
-                                         f"host {self.host}")
+                    rx_data = self._receive_response(header)
                     break
-
                 except TimeoutError:
                     retry += 1
 
