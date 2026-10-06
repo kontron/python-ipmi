@@ -53,6 +53,21 @@ def test_datatobootdevice():
     assert data_to_boot_device(array('B', [0b11000000, 0b00000100, 0, 0, 0])) == BootDevice.PXE
 
 
+@pytest.mark.parametrize('raw, device', [
+    (0b1000, BootDevice.REMOTE_CD),
+    (0b1001, BootDevice.PRIMARY_REMOTE),
+])
+def test_datatobootdevice_remote_media(raw, device):
+    assert data_to_boot_device(array('B', [0b10000000, raw << 2, 0, 0, 0])) \
+        == device
+
+
+@pytest.mark.parametrize('device', list(BootDevice))
+def test_bootdevice_round_trip(device):
+    data = boot_options_to_data(device, 'efi', False)
+    assert data_to_boot_device(data.array) == device
+
+
 def test_bootoptionstodata():
     assert boot_options_to_data("bios setup", "efi", True).array == array('B', [0b11100000, 0b00011000, 0, 0, 0])
 

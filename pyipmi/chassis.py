@@ -83,8 +83,8 @@ CONVERT_RAW_TO_BOOT_DEVICE = {
     5:  BootDevice.CD,
     6:  BootDevice.BIOS,
     7:  BootDevice.REMOTE_USB,
-    8:  BootDevice.PRIMARY_REMOTE,
-    9:  BootDevice.REMOTE_CD,
+    8:  BootDevice.REMOTE_CD,
+    9:  BootDevice.PRIMARY_REMOTE,
     11: BootDevice.REMOTE_HDD,
     15: BootDevice.PRIMARY_USB
 }
