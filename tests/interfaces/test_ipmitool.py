@@ -226,6 +226,61 @@ class TestIpmitool:
         with pytest.raises(RuntimeError):
             Ipmitool(cipher='666')
 
+    def test_send_and_receive_raw_retries_timeout(self):
+        interface = Ipmitool(interface_type='lanplus', cipher='3',
+                             retries=1, timeout=2)
+        interface.establish_session(self.session)
+
+        mock = MagicMock()
+        mock.return_value = (b'', 0)
+        interface._run_ipmitool = mock
+
+        target = Target(0x20)
+        interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
+
+        mock.assert_called_once_with('ipmitool -I lanplus -H 10.0.1.1 -p 623 '
+                                     '-v -L ADMINISTRATOR -C 3 -R 1 -N 2 '
+                                     '-U admin -P secret '
+                                     '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
+
+    def test_send_and_receive_raw_retries_zero(self):
+        interface = Ipmitool(retries=0)
+        interface.establish_session(self.session)
+
+        mock = MagicMock()
+        mock.return_value = (b'', 0)
+        interface._run_ipmitool = mock
+
+        interface.send_and_receive_raw(Target(0x20), 0, 0x6, b'\x01')
+
+        mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 '
+                                     '-v -L ADMINISTRATOR -R 0 '
+                                     '-U admin -P secret '
+                                     '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
+
+    def test_rmcp_ping_retries_timeout(self):
+        interface = Ipmitool(retries=1, timeout=2)
+        interface.establish_session(self.session)
+
+        mock = MagicMock()
+        mock.return_value = (b'', 0)
+        interface._run_ipmitool = mock
+
+        interface.rmcp_ping()
+        mock.assert_called_once_with('ipmitool -I lan -H 10.0.1.1 -p 623 '
+                                     '-v -R 1 -N 2 -U admin -P secret '
+                                     'session info all')
+
+    @pytest.mark.parametrize('kwargs', [
+        {'interface_type': 'open', 'retries': 1},
+        {'interface_type': 'serial-terminal', 'timeout': 1},
+        {'retries': -1},
+        {'timeout': 0},
+    ])
+    def test_ipmitool_retries_timeout_invalid(self, kwargs):
+        with pytest.raises(RuntimeError):
+            Ipmitool(**kwargs)
+
     def test_parse_output_rsp(self):
         test_str = b' 12 34 56 78 \r\n d0 0f af fe de ad be ef\naa 55\r\nbb    \n'
         cc, rsp = self._interface._parse_output(test_str)

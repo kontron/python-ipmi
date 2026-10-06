@@ -633,6 +633,10 @@ def parse_interface_options(interface_name: str, options: str | list) -> dict:
                 interface_options['interface_type'] = value
             elif name == 'cipher':
                 interface_options['cipher'] = value
+            elif name == 'retries':
+                interface_options['retries'] = int(value)
+            elif name == 'timeout':
+                interface_options['timeout'] = int(value)
             else:
                 print('Warning: unknown option %s' % name)
         elif interface_name == 'ipmbdev':
@@ -707,6 +711,8 @@ interface options (-o name=value,...):
   ipmitool:
     interface_type     interface type to be used (lan, lanplus, serial, open)
     cipher             cipher to be used (0-255)
+    retries=<n>        number of retries for lan/lanplus (ipmitool -R)
+    timeout=<sec>      timeout of each try for lan/lanplus (ipmitool -N)
   ipmbdev:
     port=<path>        path to Linux IPMB device (default /dev/ipmb-0)
   ipmidev:

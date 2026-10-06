@@ -910,6 +910,8 @@ interface options (\-o name=value,...):
   ipmitool:
     interface_type     interface type to be used (lan, lanplus, serial, open)
     cipher             cipher to be used (0\-255)
+    retries=<n>        number of retries for lan/lanplus (ipmitool \-R)
+    timeout=<sec>      timeout of each try for lan/lanplus (ipmitool \-N)
   ipmbdev:
     port=<path>        path to Linux IPMB device (default /dev/ipmb\-0)
   ipmidev:

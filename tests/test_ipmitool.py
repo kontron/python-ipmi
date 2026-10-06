@@ -42,6 +42,11 @@ class TestParseInterfaceOptions:
         assert options['interface_type'] == 'abcd'
         assert options['cipher'] == '55'
 
+    def test_options_ipmitool_retries_timeout(self):
+        options = parse_interface_options('ipmitool', 'retries=1,timeout=2')
+        assert options['retries'] == 1
+        assert options['timeout'] == 2
+
     def test_options_ipmbdev(self):
         options = parse_interface_options('ipmbdev', 'port=/dev/ipmb0')
         assert options['port'] == '/dev/ipmb0'

@@ -53,7 +53,16 @@ class Ipmitool(Interface):
     IPMITOOL_PATH = 'ipmitool'
     supported_interfaces = ['lan', 'lanplus', 'serial-terminal', 'open']
 
-    def __init__(self, interface_type: str = 'lan', cipher: int | None = None) -> None:
+    def __init__(self, interface_type: str = 'lan', cipher: int | None = None,
+                 retries: int | None = None,
+                 timeout: int | None = None) -> None:
+        """Create the interface.
+
+        `retries` and `timeout` are passed to ipmitool as `-R` (number of
+        retries) and `-N` (timeout of each try in seconds) and are only
+        supported by the lan and lanplus interface types. If not given the
+        ipmitool defaults are used.
+        """
         if interface_type in self.supported_interfaces:
             self._interface_type = interface_type
         else:
@@ -64,6 +73,18 @@ class Ipmitool(Interface):
                                cipher)
         else:
             self._cipher = cipher
+
+        if (retries is not None or timeout is not None) and \
+                interface_type not in ('lan', 'lanplus'):
+            raise RuntimeError('retries and timeout are not supported by '
+                               'interface type %s' % interface_type)
+        if retries is not None and int(retries) < 0:
+            raise RuntimeError('retries %s must not be negative' % retries)
+        if timeout is not None and int(timeout) < 1:
+            raise RuntimeError('timeout %s must be at least 1 second' %
+                               timeout)
+        self._retries = None if retries is None else int(retries)
+        self._timeout = None if timeout is None else int(timeout)
 
         self.re_completion_code = re.compile(
                 r"Unable to send RAW command \(.*rsp=(0x[0-9a-f]+)\)")
@@ -96,6 +117,7 @@ class Ipmitool(Interface):
         cmd += (' -H %s' % self._session.rmcp_host)
         cmd += (' -p %s' % self._session.rmcp_port)
         cmd += (' -v')
+        cmd += self._build_ipmitool_retries()
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += (' -A NONE')
         elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
@@ -271,6 +293,14 @@ class Ipmitool(Interface):
 
         return cmd
 
+    def _build_ipmitool_retries(self) -> str:
+        cmd = ''
+        if self._retries is not None:
+            cmd += ' -R %d' % self._retries
+        if self._timeout is not None:
+            cmd += ' -N %d' % self._timeout
+        return cmd
+
     def _build_ipmitool_credentials(self) -> str:
         # The command is executed by a shell, so the credentials have to be
         # quoted to prevent the shell from interpreting characters like
@@ -302,6 +332,7 @@ class Ipmitool(Interface):
 
         if self._cipher:
             cmd += (' -C %s' % self._cipher)
+        cmd += self._build_ipmitool_retries()
         if self._session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += ' -P ""'
         elif self._session.auth_type == Session.AUTH_TYPE_PASSWORD:
