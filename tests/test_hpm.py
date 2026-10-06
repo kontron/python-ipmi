@@ -413,6 +413,20 @@ def test_and_wait_controller_in_reset(method):
     getattr(ipmi, method)()
 
 
+@pytest.mark.parametrize('kwargs, sleeps', [
+    # the timeout is used for the wait
+    ({'timeout': 1, 'interval': 0.25}, [0.25] * 4),
+    # the default timeout is 60 seconds
+    ({'interval': 10}, [10] * 6),
+])
+def test_initiate_manual_rollback_and_wait_timeout(fake_time, kwargs, sleeps):
+    # the rollback stays in progress
+    ipmi = create_ipmi({'InitiateManualRollback': b'\x80',
+                        'GetUpgradeStatus': b'\x00\x00\x33\x80'})
+    ipmi.initiate_manual_rollback_and_wait(**kwargs)
+    assert fake_time.sleeps == sleeps
+
+
 def test_wait_for_long_duration_command_timeout(fake_time):
     ipmi = create_ipmi(b'\x00\x00\x31\x80')
     ipmi.wait_for_long_duration_command(0x31, timeout=1, interval=0.25)

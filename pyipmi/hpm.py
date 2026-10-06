@@ -496,7 +496,7 @@ class Hpm(IpmiMixin):
         return RollbackStatus(
             self.send_message_with_name('InitiateManualRollback'))
 
-    def initiate_manual_rollback_and_wait(self, timeout: float = 2,
+    def initiate_manual_rollback_and_wait(self, timeout: float = 60,
                                           interval: float = 0.1) -> None:
         """Initiate a rollback to the backup firmware and wait for it.
 
@@ -516,7 +516,7 @@ class Hpm(IpmiMixin):
             if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
                 self.wait_for_long_duration_command(
                             constants.CMDID_HPM_INITIATE_MANUAL_ROLLBACK,
-                            60, interval)
+                            timeout, interval)
             else:
                 raise HpmError('initiate_manual_rollback CC=0x%02x' % e.cc) from e
         except IpmiTimeoutError:
