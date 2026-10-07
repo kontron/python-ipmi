@@ -368,7 +368,22 @@ class TestSdrShow:
         assert 'Firmware:         2.01' in out
         assert 'IPMI version:     1.5' in out
         assert 'Manufacturer ID:  0x2c14a' in out
+        assert 'Manufacturer Name: Unknown' in out
         assert 'Product ID:       0x8006' in out
+
+    def test_mc_confirmation_record_manufacturer_name(self, capsys):
+        # manufacturer ID 15000
+        data = [0x45, 0x00, 0x51, 0x13, 0x1b, 0x20, 0x00, 0x01,
+                0x02, 0x01, 0x51, 0x98, 0x3a, 0x00, 0x06, 0x80,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+        record = SdrCommon.from_data(data)
+        assert record.manufacturer_name == 'Kontron'
+        ipmitool.sdr_show(None, record)
+
+        out = capsys.readouterr().out
+        assert 'Manufacturer ID:  0x03a98' in out
+        assert 'Manufacturer Name: Kontron' in out
 
     @pytest.mark.parametrize('data', [
         # OEM record

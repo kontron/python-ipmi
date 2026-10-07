@@ -176,6 +176,7 @@ def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
         print("IPMI version:     %d.%d" % (s.ipmi_version & 0xf,
                                            s.ipmi_version >> 4))
         print("Manufacturer ID:  0x%05x" % s.manufacturer_id)
+        print("Manufacturer Name: %s" % (s.manufacturer_name or 'Unknown'))
         print("Product ID:       0x%04x" % s.product_id)
 
 

@@ -51,6 +51,7 @@ from .msgs import create_request_by_name, Message
 from .helper import get_sdr_data_helper, clear_repository_helper
 from .helper import get_sdr_chunk_helper, ReadLength
 from .state import State
+from .constants import manufacturer_name
 from .mixin import IpmiMixin
 
 SDR_TYPE_FULL_SENSOR_RECORD = 0x01
@@ -1052,6 +1053,9 @@ class SdrManagementControllerConfirmationRecord(SdrCommon):
         ipmi_version (int): The IPMI version, BCD encoded with the minor
             version in the upper nibble.
         manufacturer_id (int): The manufacturer ID.
+        manufacturer_name (str | None): The name of a well known
+            manufacturer, see :func:`pyipmi.constants.manufacturer_name`.
+            None for other manufacturers.
         product_id (int): The product ID.
         device_guid (int): The device GUID.
     """
@@ -1082,6 +1086,7 @@ class SdrManagementControllerConfirmationRecord(SdrCommon):
         self.firmware_revision_2 = buffer.pop_unsigned_int(1)
         self.ipmi_version = buffer.pop_unsigned_int(1)
         self.manufacturer_id = buffer.pop_unsigned_int(3) & 0xfffff
+        self.manufacturer_name = manufacturer_name(self.manufacturer_id)
         self.product_id = buffer.pop_unsigned_int(2)
         self.device_guid = buffer.pop_unsigned_int(16)
 
