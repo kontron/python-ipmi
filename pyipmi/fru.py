@@ -41,6 +41,7 @@ import datetime
 from collections.abc import Sequence
 
 from .errors import DecodingError, CompletionCodeError, RetryError, DataNotFound
+from .constants import manufacturer_name
 from .helper import ReadLength
 from .msgs import constants
 from .utils import bcd_search, chunks, py3_array_tobytes
@@ -789,6 +790,10 @@ class FruDataMultiRecord(FruData):
         manufacturer_id (int | None): The IANA manufacturer ID of an OEM
             record (``TYPE_OEM``), from the first three bytes of the
             record data. None for other records.
+        manufacturer_name (str | None): The name of a well known
+            manufacturer of an OEM record, see
+            :func:`pyipmi.constants.manufacturer_name`. None for other
+            manufacturers and records.
     """
 
     TYPE_POWER_SUPPLY_INFORMATION = 0
@@ -813,7 +818,10 @@ class FruDataMultiRecord(FruData):
         """Return the record type ID and the manufacturer of an OEM record."""
         record_type = '%02x' % self.record_type_id
         if self.manufacturer_id is not None:
-            record_type += ' (OEM, manufacturer ID %d)' % self.manufacturer_id
+            manufacturer = '%d' % self.manufacturer_id
+            if self.manufacturer_name is not None:
+                manufacturer += ' = %s' % self.manufacturer_name
+            record_type += ' (OEM, manufacturer ID %s)' % manufacturer
         return record_type
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
@@ -833,9 +841,11 @@ class FruDataMultiRecord(FruData):
             raise DecodingError('FruDataMultiRecord record checksum failed')
         # an OEM record starts with the manufacturer ID, LS byte first
         self.manufacturer_id: int | None = None
+        self.manufacturer_name: str | None = None
         if self.record_type_id in self.TYPE_OEM and len(self.raw) >= 3:
             self.manufacturer_id = \
                 self.raw[0] | self.raw[1] << 8 | self.raw[2] << 16
+            self.manufacturer_name = manufacturer_name(self.manufacturer_id)
 
     @staticmethod
     def create_from_record_id(data: Sequence[int],

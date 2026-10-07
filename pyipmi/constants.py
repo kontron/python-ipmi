@@ -14,6 +14,8 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+from __future__ import annotations
+
 # Entity ID assignments
 ENTITY_ID_CPU = 0x03
 ENTITY_ID_BASEBOARD = 0x07
@@ -33,3 +35,36 @@ ENTITY_ID_PICMG_SHELF_FRU_INFORMATION = 0xf2
 ENTITY_ID_VITA_FRONT_BOARD = 0xa0
 ENTITY_ID_VITA_REAR_TRANSITION_MODULE = 0xc0
 ENTITY_ID_VITA_XMC = 0xc1
+
+# Names of well known manufacturers by their IANA private enterprise number,
+# which IPMI uses as manufacturer ID, e.g. in OEM FRU multirecords
+MANUFACTURER_NAMES = {
+    2: 'IBM',
+    9: 'Cisco',
+    11: 'Hewlett-Packard',
+    42: 'Sun Microsystems',
+    311: 'Microsoft',
+    343: 'Intel',
+    674: 'Dell',
+    2011: 'Huawei',
+    3704: 'AMD',
+    4314: 'Xilinx',
+    4770: 'VITA',
+    10876: 'Super Micro Computer',
+    12634: 'PICMG',
+    15000: 'Kontron',
+    19046: 'Lenovo',
+}
+
+
+def manufacturer_name(manufacturer_id: int) -> str | None:
+    """Return the name of a well known manufacturer.
+
+    Args:
+        manufacturer_id: The IANA private enterprise number of the
+            manufacturer.
+
+    Returns:
+        The name of the manufacturer, None if it is not well known.
+    """
+    return MANUFACTURER_NAMES.get(manufacturer_id)

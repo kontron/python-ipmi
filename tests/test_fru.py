@@ -128,7 +128,9 @@ def test_fru_inventory_from_file_4():
     assert [r.end_of_list for r in records] == [False, False, True]
     # the manufacturer ID of the OEM records is 11, Hewlett-Packard
     assert [r.manufacturer_id for r in records] == [11, 11, 11]
-    assert str(records[2]) == 'd0 (OEM, manufacturer ID 11): 0b 00 00 02 0b 00 00'
+    assert [r.manufacturer_name for r in records] == ['Hewlett-Packard'] * 3
+    assert str(records[2]) == ('d0 (OEM, manufacturer ID 11 = Hewlett-Packard): '
+                               '0b 00 00 02 0b 00 00')
 
 
 def test_board_area():
@@ -445,7 +447,9 @@ def test_multirecord_picmg_manufacturer_id():
     record = get_fru_inventory_from_file(fru_file).multirecord_area.records[0]
     assert isinstance(record, FruPicmgRecord)
     assert record.manufacturer_id == 0x315a
-    assert str(record).startswith('c0 (OEM, manufacturer ID 12634): 5a 31 00')
+    assert record.manufacturer_name == 'PICMG'
+    assert str(record).startswith(
+        'c0 (OEM, manufacturer ID 12634 = PICMG): 5a 31 00')
 
 
 def _multirecord(record_type, data):
@@ -459,6 +463,7 @@ def test_multirecord_not_oem():
     record = FruDataMultiRecord.create_from_record_id(
         _multirecord(0x05, b'\x01\x02\x03'))
     assert record.manufacturer_id is None
+    assert record.manufacturer_name is None
     assert str(record) == '05: 01 02 03'
 
 
@@ -720,7 +725,7 @@ def test_fmc_main_definition():
             record.p2_a_num_signals, record.p2_b_num_signals) == (26, 0, 0, 0)
     assert (record.p1_gbt_num_trcv, record.p2_gbt_num_trcv) == (4, 0)
     assert record.tck_max_clock == 0
-    assert str(record) == ('fa (OEM, manufacturer ID 4770) FMC Main '
+    assert str(record) == ('fa (OEM, manufacturer ID 4770 = VITA) FMC Main '
                            'Definition: single width, P1 HPC, P2 not fitted, '
                            'clock M2C, P1 26/0 signals, P2 0/0 signals, '
                            'P1 4 GBT, P2 0 GBT, TCK 0 MHz')
@@ -731,7 +736,7 @@ def test_fmc_i2c_device_definition():
     assert isinstance(record, FruFmcI2cDeviceDefinition)
     assert record.subtype == 0x10
     assert record.devices == [('AD7291', [1])]
-    assert str(record) == ('fa (OEM, manufacturer ID 4770) FMC I2C '
+    assert str(record) == ('fa (OEM, manufacturer ID 4770 = VITA) FMC I2C '
                            'Devices: AD7291 (1)')
 
 
@@ -788,3 +793,12 @@ def test_fmc_record_without_vita_id():
     record = FruDataMultiRecord.create_from_record_id(
         _oem_record(0xfa, b'\x0c\x15\x00\x00\x00\x00\x0a\x00'))
     assert type(record) is FruDataUnknown
+
+
+def test_multirecord_unknown_manufacturer():
+    # an OEM record of a manufacturer that is not well known
+    record = FruDataMultiRecord.create_from_record_id(
+        _multirecord(0xd0, b'\x39\x30\x00\x01'))
+    assert record.manufacturer_id == 12345
+    assert record.manufacturer_name is None
+    assert str(record) == 'd0 (OEM, manufacturer ID 12345): 39 30 00 01'

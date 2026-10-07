@@ -215,7 +215,7 @@ class TestParser:
             self.parse('fru print-file')
 
     @pytest.mark.parametrize('extra, expected, not_expected', [
-        (['all'], 'd0 (OEM, manufacturer ID 11)', 'Skipped'),
+        (['all'], 'd0 (OEM, manufacturer ID 11 = Hewlett-Packard)', 'Skipped'),
         ([], 'Skipped. Use "print-file <filename> all"', 'OEM'),
     ])
     def test_fru_print_file_runs_without_connection(self, capsys, extra,
