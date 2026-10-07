@@ -673,7 +673,7 @@ class Rmcp(Interface):
     def _receive_ipmi_msg(self, ignore_sdu_length: bool = False) -> bytes:
         (_, class_of_msg, pdu) = self._receive_rmcp_msg()
         if class_of_msg != RMCP_CLASS_IPMI:
-            raise DecodingError('invalid class field in ASF message')
+            raise DecodingError('invalid class field in IPMI message')
         msg = IpmiMsg(ignore_sdu_length=ignore_sdu_length)
         data = msg.unpack(pdu) or b''
         logger.debug('IPMI RX: {:s}'.format(

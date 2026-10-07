@@ -250,6 +250,16 @@ class TestRmcp:
         rmcp.send_and_receive_raw(rmcp.host_target, 0, 6, b'\x00')
         assert rmcp._last_request_time >= before
 
+    def test_receive_ipmi_msg_invalid_class(self):
+        rmcp = Rmcp()
+        rmcp._sock = MagicMock(spec=socket.socket)
+        # an ASF pong instead of an IPMI message
+        rmcp._sock.recv.return_value = (
+            b'\x06\x00\xff\x06\x00\x00\x11\xbe\x40\x00\x00\x10'
+            + bytes(16))
+        with pytest.raises(DecodingError, match='class field in IPMI message'):
+            rmcp._receive_ipmi_msg()
+
     def test_close(self):
         rmcp = Rmcp()
         rmcp.open()
