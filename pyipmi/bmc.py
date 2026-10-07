@@ -34,6 +34,7 @@ from .msgs import create_request_by_name, Message
 from .utils import check_completion_code
 from .state import State
 from .fields import VersionField
+from .constants import manufacturer_name
 from .mixin import IpmiMixin
 
 
@@ -259,6 +260,9 @@ class DeviceId(State):
         fw_revision (VersionField): The firmware revision.
         ipmi_version (VersionField): The IPMI version, e.g. 2.0.
         manufacturer_id (int): The IANA manufacturer ID.
+        manufacturer_name (str | None): The name of a well known
+            manufacturer, see :func:`pyipmi.constants.manufacturer_name`.
+            None for other manufacturers.
         product_id (int): The product ID.
         supported_functions (list[str]): The supported device functions,
             see :meth:`supports_function`.
@@ -304,6 +308,7 @@ class DeviceId(State):
             (rsp.ipmi_version & 0xf, (rsp.ipmi_version >> 4) & 0xf))
 
         self.manufacturer_id = rsp.manufacturer_id
+        self.manufacturer_name = manufacturer_name(self.manufacturer_id)
         self.product_id = rsp.product_id
 
         self.supported_functions = []

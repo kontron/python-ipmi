@@ -69,11 +69,13 @@ Device Revision:    %(revision)s
 Firmware Revision:  %(fw_revision)s
 IPMI Version:       %(ipmi_version)s
 Manufacturer ID:    %(manufacturer_id)d (0x%(manufacturer_id)04x)
+Manufacturer Name:  %(manufacturer)s
 Product ID:         %(product_id)d (0x%(product_id)04x)
 Device Available:   %(available)d
 Provides SDRs:      %(provides_sdrs)d
 Additional Device Support:
-'''[1:-1] % device_id.__dict__)
+'''[1:-1] % dict(device_id.__dict__,
+                 manufacturer=device_id.manufacturer_name or 'Unknown'))
 
     functions = (
             ('SENSOR', 'Sensor Device'),

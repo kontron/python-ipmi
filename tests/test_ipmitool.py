@@ -14,6 +14,8 @@ from pyipmi.msgs import create_response_by_name, decode_message
 from pyipmi.ipmitool import build_parser, log_level, parse_interface_options
 from pyipmi.sdr import SdrCommon
 
+from .ipmi_helper import create_ipmi
+
 
 class TestParseInterfaceOptions:
     def test_options_aardvark(self):
@@ -551,3 +553,15 @@ def test_cmd_fru_read(tmp_path, capsys):
     assert filename.read_bytes() == bytes(range(256))
     assert capsys.readouterr().out == (
         'Read 256 bytes from FRU 1 to %s\n' % filename)
+
+
+@pytest.mark.parametrize('manufacturer, name', [
+    (b'\x98\x3a\x00', 'Kontron'),
+    (b'\x39\x30\x00', 'Unknown'),
+])
+def test_bmc_info_manufacturer_name(capsys, manufacturer, name):
+    ipmi = create_ipmi(b'\x00\x04\x00\x01\x00\x02\x00' + manufacturer
+                       + b'\xa5\x06')
+    ipmitool.cmd_bmc_info(ipmi, None)
+    out = capsys.readouterr().out
+    assert 'Manufacturer Name:  %s\n' % name in out

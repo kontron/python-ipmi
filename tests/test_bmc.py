@@ -39,9 +39,18 @@ def test_deviceid_object():
     assert str(dev.fw_revision) == '5.67'
     assert str(dev.ipmi_version) == '1.5'
     assert dev.manufacturer_id == 5649426
+    # not a well known manufacturer
+    assert dev.manufacturer_name is None
     assert dev.product_id == 21828
 
     assert dev.aux is None
+
+
+def test_deviceid_manufacturer_name():
+    rsp = pyipmi.msgs.bmc.GetDeviceIdRsp()
+    # manufacturer ID 15000
+    decode_message(rsp, b'\x00\x04\x00\x01\x00\x02\x00\x98\x3a\x00\xa5\x06')
+    assert DeviceId(rsp).manufacturer_name == 'Kontron'
 
 
 def test_deviceid_object_with_aux():
