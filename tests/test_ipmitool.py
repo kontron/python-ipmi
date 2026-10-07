@@ -580,3 +580,6 @@ def test_bmc_info_manufacturer_name(capsys, manufacturer, name):
     ipmitool.cmd_bmc_info(ipmi, None)
     out = capsys.readouterr().out
     assert 'Manufacturer Name:  %s\n' % name in out
+    # the IDs are shown in decimal and hex
+    assert 'Device ID:          4 (0x04)\n' in out
+    assert 'Product ID:         1701 (0x06a5)\n' in out

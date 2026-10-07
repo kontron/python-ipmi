@@ -64,7 +64,7 @@ def log_level(value: str) -> tuple[str, int]:
 def cmd_bmc_info(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     device_id = ipmi.get_device_id()
     print('''
-Device ID:          %(device_id)s
+Device ID:          %(device_id)d (0x%(device_id)02x)
 Device Revision:    %(revision)s
 Firmware Revision:  %(fw_revision)s
 IPMI Version:       %(ipmi_version)s
