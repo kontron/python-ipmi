@@ -7,9 +7,8 @@ the source code.
 Connection
 ----------
 
-A connection to an IPMI device is an :class:`pyipmi.Ipmi` object. It is
-created for an interface (see :ref:`api-interfaces`) and sends the
-requests to its :class:`pyipmi.Target`.
+.. automodule:: pyipmi
+   :no-members:
 
 .. autofunction:: pyipmi.create_connection
 

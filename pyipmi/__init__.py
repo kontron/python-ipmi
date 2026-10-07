@@ -14,6 +14,33 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""A pure Python IPMI library.
+
+A connection to an IPMI device is an :class:`Ipmi` object, created by
+:func:`create_connection` for an interface (see
+:func:`pyipmi.interfaces.create_interface`).
+The connection sends the requests to its :class:`Target`, the BMC or a
+controller behind it, which is reached over the :class:`Routing` hops of
+the target. The IPMI commands are the methods of :class:`Ipmi`, which
+inherits them from the command groups of the modules, e.g.
+:mod:`pyipmi.bmc` and :mod:`pyipmi.sdr`.
+
+Example:
+    Print the device ID of a BMC over RMCP+::
+
+        import pyipmi
+        import pyipmi.interfaces
+
+        interface = pyipmi.interfaces.create_interface('rmcpplus')
+        ipmi = pyipmi.create_connection(interface)
+        ipmi.session.set_session_type_rmcp('10.0.0.1', port=623)
+        ipmi.session.set_auth_type_user('admin', 'admin')
+        ipmi.target = pyipmi.Target(ipmb_address=0x20)
+
+        with ipmi:
+            print(ipmi.get_device_id())
+"""
+
 from __future__ import annotations
 
 import time
@@ -49,6 +76,19 @@ except ImportError:
 
 
 def create_connection(interface: Any) -> Ipmi:
+    """Create a connection for an interface.
+
+    The connection gets a new :class:`pyipmi.session.Session` for the
+    interface. The target is not set, assign it to :attr:`Ipmi.target`
+    before sending requests.
+
+    Args:
+        interface: The interface, e.g. created by
+            :func:`pyipmi.interfaces.create_interface`.
+
+    Returns:
+        The connection.
+    """
     session = Session()
     session.interface = interface
     return Ipmi(interface=interface, session=session)
@@ -78,9 +118,17 @@ class NullRequester:
 
 
 class Routing:
-    """The Target class represents an IPMI target."""
+    """One hop of the path to a target, see :meth:`Target.set_routing`."""
 
     def __init__(self, rq_sa: int, rs_sa: int, channel: int | None) -> None:
+        """Initialize the hop.
+
+        Args:
+            rq_sa: The requester slave address.
+            rs_sa: The responder slave address.
+            channel: The channel of the bridge to the next hop, None for
+                the last hop.
+        """
         self.rq_sa = rq_sa
         self.rs_sa = rs_sa
         self.channel = channel
@@ -99,11 +147,14 @@ class Target:
 
     def __init__(self, ipmb_address: int | None = None,
                  routing: str | list[tuple] | None = None) -> None:
-        """Initializer for the Target class.
+        """Initialize the target.
 
-        `ipmb_address` is the IPMB target address
-        `routing` is the bridging information used to build send message
-        commands.
+        Args:
+            ipmb_address: The IPMB address of the target, e.g. 0x20 for
+                the BMC.
+            routing: The path over which the target is reachable, used to
+                build the bridged Send Message requests, see
+                :meth:`set_routing`.
         """
         if ipmb_address:
             self.ipmb_address = ipmb_address
@@ -112,6 +163,10 @@ class Target:
             self.set_routing(routing)
 
     def set_routing_information(self, routing: str | list[tuple]) -> None:
+        """Set the path over which a target is reachable.
+
+        An alias of :meth:`set_routing`.
+        """
         self.set_routing(routing)
 
     def set_routing(self, routing: str | list[tuple]) -> None:
@@ -171,10 +226,32 @@ class Target:
 class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
            sdr.Sdr, sensor.Sensor, event.Event, sel.Sel, lan.Lan,
            messaging.Messaging, vita.Vita):
+    """A connection to an IPMI device.
+
+    The IPMI commands are the methods of this class, which it inherits
+    from the command groups, e.g. :meth:`get_device_id` from the one of
+    :mod:`pyipmi.bmc`. The requests are sent over the interface to
+    the target.
+
+    The connection is a context manager, which opens the interface and
+    establishes the session on entry and closes them on exit. Set up the
+    session before, see the example of :mod:`pyipmi`.
+    """
 
     def __init__(self, interface: Any = None, target: Target | None = None,
                  session: Session | None = None,
                  requester: Any = None) -> None:
+        """Initialize the connection.
+
+        Args:
+            interface: The interface the requests are sent over.
+            target: The target of the requests.
+            session: The session, a new one if not given. The interface
+                of the session is set to ``interface``.
+            requester: The requester of the requests, needed by interfaces
+                that send the requests on the IPMB, a
+                :class:`NullRequester` if not given.
+        """
         self._interface = interface
 
         # we need a session, set if not passed
@@ -200,20 +277,39 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         return False
 
     def open(self) -> None:
+        """Open the interface and establish the session."""
         self.interface.open()
         if self.session is not None:
             self.session.establish()
 
     def close(self) -> None:
+        """Close the session and the interface."""
         if self.session is not None:
             self.session.close()
         self.interface.close()
 
     def is_ipmc_accessible(self) -> bool:
+        """Check if the target answers.
+
+        Returns:
+            True if the target answers. Depending on the interface, False
+            is returned or an exception is raised if it does not.
+        """
         return self.interface.is_ipmc_accessible(self.target)
 
     def wait_until_ipmb_is_accessible(self, timeout: float,
                                       interval: float = 0.25) -> None:
+        """Wait until the target is accessible.
+
+        Args:
+            timeout: The time to wait in seconds.
+            interval: The time between the checks in seconds.
+
+        Raises:
+            IpmiTimeoutError: The target is not accessible after the
+                timeout, if the interface raises it, see
+                :meth:`is_ipmc_accessible`.
+        """
         start_time = time.time()
         while time.time() < start_time + (timeout):
             try:
@@ -224,6 +320,21 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         self.is_ipmc_accessible()
 
     def send_message(self, req: Message, retry: int = 3) -> Message:
+        """Send a request to the target and return the response.
+
+        The request is sent again if the target is busy. The completion
+        code of the response is not checked.
+
+        Args:
+            req: The request message.
+            retry: The number of tries.
+
+        Returns:
+            The response message.
+
+        Raises:
+            RetryError: No response after ``retry`` tries.
+        """
         req.target = self.target
         req.requester = self.requester
         rsp = None
@@ -243,6 +354,20 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
 
     def send_message_with_name(self, name: str, *args: Any,
                                **kwargs: Any) -> Message:
+        """Send a request by its name and return the response.
+
+        Args:
+            name: The name of the request, e.g. ``'GetDeviceId'``.
+            *args: Not used.
+            **kwargs: The fields of the request, set as attributes.
+
+        Returns:
+            The response message.
+
+        Raises:
+            CompletionCodeError: The completion code of the response is
+                not successful.
+        """
         req = create_request_by_name(name)
 
         for key, value in kwargs.items():
@@ -253,19 +378,22 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         return rsp
 
     def raw_command(self, lun: int, netfn: int, raw_bytes: bytes) -> bytes:
-        """Send the raw command data and return the raw response.
+        """Send a raw request to the target and return the raw response.
 
-        lun: the logical unit number
-        netfn: the network function
-        raw_bytes: the raw message as bytestring
+        Args:
+            lun: The logical unit number.
+            netfn: The network function.
+            raw_bytes: The request, starting with the command ID.
 
-        Returns the response as bytestring.
+        Returns:
+            The response, starting with the completion code.
         """
         return self.interface.send_and_receive_raw(self.target, lun, netfn,
                                                    raw_bytes)
 
     @property
     def interface(self) -> Any:
+        """The interface the requests are sent over."""
         try:
             return self._interface
         except AttributeError:
@@ -277,6 +405,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
 
     @property
     def session(self) -> Session:
+        """The session of the connection."""
         try:
             return self._session
         except AttributeError:
@@ -288,6 +417,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
 
     @property
     def target(self) -> Target | None:
+        """The target of the requests."""
         try:
             return self._target
         except AttributeError:
