@@ -1,0 +1,9 @@
+FRU data files from the tests of frugy, the FRU generator of the MicroTCA
+Technology Lab at DESY: https://github.com/MicroTCA-Tech-Lab/frugy
+(tests/bin_files). They are distributed under the BSD-3-Clause license
+of frugy, see LICENSE.txt.
+
+opalkelly_default.bin and opalkelly_default_2k.bin are the default FRU
+data of Opal Kelly boards. They do not conform to the IPMI FRU
+specification: the multirecords have no end of list flag and the list
+ends with records with wrong checksums.

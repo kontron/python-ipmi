@@ -304,9 +304,26 @@ def test_read_fru_data_other_error():
 
 
 FRU_BIN_DIR = os.path.join(os.path.dirname(__file__), 'fru_bin')
+FRUGY_DIR = os.path.join(FRU_BIN_DIR, 'frugy')
+
+# FRU data that does not conform to the specification
+NON_CONFORMING = ('frugy/opalkelly_default.bin',
+                  'frugy/opalkelly_default_2k.bin')
 
 
-@pytest.mark.parametrize('filename', sorted(os.listdir(FRU_BIN_DIR)))
+def _fru_bin_files():
+    """Return the paths of the FRU data files relative to FRU_BIN_DIR."""
+    paths = []
+    for root, _, files in os.walk(FRU_BIN_DIR):
+        for name in files:
+            if name.endswith('.bin'):
+                paths.append(os.path.relpath(os.path.join(root, name),
+                                             FRU_BIN_DIR))
+    return sorted(paths)
+
+
+@pytest.mark.parametrize('filename', [f for f in _fru_bin_files()
+                                      if f not in NON_CONFORMING])
 def test_get_fru_inventory(filename):
     path = os.path.join(FRU_BIN_DIR, filename)
     with open(path, 'rb') as f:
@@ -572,3 +589,81 @@ def test_multirecord_area_record_exceeds_data():
         FruInventory(data)
     with pytest.raises(DecodingError):
         FruInventory(data, ignore_checksum=True)
+
+
+@pytest.mark.parametrize('filename, area, manufacturer, name, serial_number', [
+    ('ADRV9375-N.bin', 'board_info_area', 'Analog Devices',
+     'Narrow Tuning Range AD9375 Eval', '0000'),
+    ('caen-fmc-pico-1m4.bin', 'board_info_area', 'CAEN ELS s.r.l.',
+     'FMC-Pico-1M4', '20160173'),
+    ('damc-fmc2zup.bin', 'board_info_area', 'DESY/CAEN ELS',
+     'DAMC-FMC2ZUP-11EG', '21Y01W0000'),
+    ('damc-fmc2zup.bin', 'product_info_area', 'DESY/CAEN ELS',
+     'DAMC-FMC2ZUP-11EG', '21Y01W0000'),
+    ('drtm-rtm-evalkit.bin', 'product_info_area', 'TUL/DESY',
+     'DRTM-RTM-EvalKit', 'N/A'),
+    ('xilinx_vhk158.bin', 'board_info_area', 'XILINX', 'VEK385',
+     '519101A01220'),
+])
+def test_frugy_info_areas(filename, area, manufacturer, name, serial_number):
+    # the expected values are from the frugy examples the files were
+    # generated from
+    inventory = get_fru_inventory_from_file(os.path.join(FRUGY_DIR, filename))
+    info = getattr(inventory, area)
+    name_field = info.product_name if area == 'board_info_area' else info.name
+    assert (info.manufacturer.string, name_field.string,
+            info.serial_number.string) == (manufacturer, name, serial_number)
+
+
+def test_frugy_internal_use_area():
+    inventory = get_fru_inventory_from_file(
+        os.path.join(FRUGY_DIR, 'caen-fmc-pico-1m4.bin'))
+    area = inventory.internal_use_area
+    assert area.format_version == 1
+    assert area.internal_use_data == bytes.fromhex(
+        '50 00 00 00 50 e1 e2 ca c0 71 2c f2 a5 16 0a 31 c0 cf 29 b3 eb 11 0a '
+        '31 8f f0 f2 30 ba 12 0a 31 29 ce 84 32 93 14 0a 31 a9 82 4a 32 2a 56 '
+        '0d 2c c2 fb 24 ae a8 4c 0d 2c 0b 8c 85 2c e0 47 0d 2c 95 be 9a 2d 63 '
+        '4b 0d 2c 3e 45 68 2d 0c 5b 98 5e 02 02 00 00')
+
+
+@pytest.mark.parametrize('filename, records', [
+    # DC load/output records and the FMC record of VITA (0x0012a2)
+    ('ADRV9375-N.bin', [(0x01, None)] * 3 + [(0x02, None)] * 3
+     + [(0xfa, 0x0012a2)] * 2),
+    # PICMG records (0x00315a)
+    ('damc-fmc2zup.bin', [(0xc0, 0x00315a)] * 3),
+    # Xilinx OEM records (0x0010da)
+    ('xilinx_vhk158.bin', [(0xd2, 0x0010da), (0xd2, 0x0010da),
+                           (0xd3, 0x0010da)]),
+])
+def test_frugy_multirecords(filename, records):
+    inventory = get_fru_inventory_from_file(os.path.join(FRUGY_DIR, filename))
+    assert [(r.record_type_id, r.manufacturer_id)
+            for r in inventory.multirecord_area.records] == records
+
+
+@pytest.mark.parametrize('filename', ['opalkelly_default.bin',
+                                      'opalkelly_default_2k.bin'])
+def test_opalkelly_non_conforming(filename):
+    path = os.path.join(FRUGY_DIR, filename)
+    # the multirecords have no end of list flag, the list ends with records
+    # with wrong checksums
+    with pytest.raises(DecodingError, match='checksum'):
+        get_fru_inventory_from_file(path)
+
+    inventory = get_fru_inventory_from_file(path, ignore_checksum=True)
+    assert inventory.board_info_area.manufacturer.string \
+        == 'Opal Kelly Incorporated'
+    # DC load, DC output and the FMC record
+    assert [r.record_type_id for r in inventory.multirecord_area.records[:7]] \
+        == [0x02, 0x02, 0x02, 0x01, 0x01, 0x01, 0xfa]
+
+
+def test_opalkelly_multirecords_end_at_next_area():
+    # the multirecord area at offset 8 is followed by the board area at 144
+    inventory = get_fru_inventory_from_file(
+        os.path.join(FRUGY_DIR, 'opalkelly_default_2k.bin'),
+        ignore_checksum=True)
+    records = inventory.multirecord_area.records
+    assert sum(r.length + 5 for r in records) == 144 - 8
