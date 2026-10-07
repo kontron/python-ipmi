@@ -415,7 +415,7 @@ class Ipmitool(Interface):
 
         cmd += self._build_ipmitool_priv_level(session.priv_level)
 
-        if self._cipher:
+        if self._cipher is not None:
             cmd += (' -C %s' % self._cipher)
         cmd += self._build_ipmitool_retries()
         if session.auth_type == Session.AUTH_TYPE_NONE:

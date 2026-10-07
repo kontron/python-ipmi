@@ -107,6 +107,22 @@ class TestIpmitool:
                                      '-v -L ADMINISTRATOR -U admin -P secret '
                                      '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
 
+    def test_send_and_receive_raw_cipher_0(self):
+        interface = Ipmitool(interface_type='lanplus', cipher=0)
+        interface.establish_session(self.session)
+
+        mock = MagicMock()
+        mock.return_value = (b'', 0)
+        interface._run_ipmitool = mock
+
+        target = Target(0x20)
+        interface.send_and_receive_raw(target, 0, 0x6, b'\x01')
+
+        mock.assert_called_once_with('ipmitool -I lanplus -H 10.0.1.1 -p 623 '
+                                     '-v -L ADMINISTRATOR -C 0 '
+                                     '-U admin -P secret '
+                                     '-t 0x20 -l 0 raw 0x06 0x01 2>&1')
+
     def test_send_and_receive_raw_cipher(self):
         interface = Ipmitool(cipher='7')
         interface.establish_session(self.session)
