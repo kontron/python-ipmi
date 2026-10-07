@@ -138,21 +138,21 @@ def test_ipmi_with_statemetn():
         assert isinstance(ipmi.requester, NullRequester)
 
 
-def test_wait_until_ipmb_is_accessible():
+def test_wait_until_target_is_accessible():
     ipmi = create_connection(interfaces.create_interface('mock'))
-    ipmi.interface.is_ipmc_accessible = MagicMock(
+    ipmi.interface.is_target_accessible = MagicMock(
         side_effect=(IpmiTimeoutError(), False, True))
-    ipmi.wait_until_ipmb_is_accessible(timeout=10, interval=0)
+    ipmi.wait_until_target_is_accessible(timeout=10, interval=0)
     # returns as soon as the target is accessible
-    assert ipmi.interface.is_ipmc_accessible.call_count == 3
+    assert ipmi.interface.is_target_accessible.call_count == 3
 
 
-def test_wait_until_ipmb_is_accessible_timeout():
+def test_wait_until_target_is_accessible_timeout():
     ipmi = create_connection(interfaces.create_interface('mock'))
-    ipmi.interface.is_ipmc_accessible = MagicMock(
+    ipmi.interface.is_target_accessible = MagicMock(
         side_effect=IpmiTimeoutError())
     with pytest.raises(IpmiTimeoutError):
-        ipmi.wait_until_ipmb_is_accessible(timeout=0.05, interval=0.01)
+        ipmi.wait_until_target_is_accessible(timeout=0.05, interval=0.01)
 
 
 def test_ipmi_send_message_retry():
@@ -250,3 +250,20 @@ def test_ipmi_send_message_with_name_deprecated():
     req = ipmi.send_message.call_args.args[0]
     assert isinstance(req, GetSensorReadingReq)
     assert req.sensor_number == 5
+
+
+def test_ipmi_is_ipmc_accessible_deprecated():
+    ipmi = create_connection(interfaces.create_interface('mock'))
+    ipmi.interface.is_target_accessible = MagicMock(return_value=True)
+    with pytest.warns(DeprecationWarning, match='is_target_accessible'):
+        assert ipmi.is_ipmc_accessible() is True
+    ipmi.interface.is_target_accessible.assert_called_once_with(ipmi.target)
+
+
+def test_ipmi_wait_until_ipmb_is_accessible_deprecated():
+    ipmi = create_connection(interfaces.create_interface('mock'))
+    ipmi.interface.is_target_accessible = MagicMock(return_value=True)
+    with pytest.warns(DeprecationWarning,
+                      match='wait_until_target_is_accessible'):
+        ipmi.wait_until_ipmb_is_accessible(timeout=10, interval=0)
+    ipmi.interface.is_target_accessible.assert_called_once()

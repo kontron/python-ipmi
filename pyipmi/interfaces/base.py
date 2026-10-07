@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 
 from .. import Target
 from ..msgs import create_message, encode_message, decode_message, Message
@@ -50,8 +51,29 @@ class Interface:
     def close_session(self) -> None:
         pass
 
-    def is_ipmc_accessible(self, target: Target) -> bool:
+    def is_target_accessible(self, target: Target) -> bool:
+        """Check if the target answers.
+
+        Args:
+            target: The target.
+
+        Returns:
+            True if the target answers.
+        """
+        # an interface which implements only the old name
+        if type(self).is_ipmc_accessible is not Interface.is_ipmc_accessible:
+            warnings.warn('is_ipmc_accessible is deprecated, implement '
+                          'is_target_accessible', DeprecationWarning,
+                          stacklevel=2)
+            return self.is_ipmc_accessible(target)
         raise NotImplementedError()
+
+    def is_ipmc_accessible(self, target: Target) -> bool:
+        """Deprecated, the old name of :meth:`is_target_accessible`."""
+        warnings.warn('is_ipmc_accessible is deprecated, use '
+                      'is_target_accessible', DeprecationWarning,
+                      stacklevel=2)
+        return self.is_target_accessible(target)
 
     def send_and_receive_raw(self, target: Target, lun: int, netfn: int,
                              raw_bytes: bytes) -> bytes:

@@ -411,7 +411,7 @@ class IpmbInterface(Interface):
         """Send a request and return the complete response message."""
         return self._router.request(self, header, payload, self.timeout)
 
-    def is_ipmc_accessible(self, target: Target) -> bool:
+    def is_target_accessible(self, target: Target) -> bool:
         header = IpmbHeaderReq()
         header.netfn = 6
         header.rs_lun = 0

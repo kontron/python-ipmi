@@ -15,7 +15,7 @@ class Mock(Interface):
     def __init__(self) -> None:
         pass
 
-    def is_ipmc_accessible(self, target: Target) -> Any:
+    def is_target_accessible(self, target: Target) -> Any:
         pass
 
     def send_and_receive_raw(self, target: Target, lun: int, netfn: int,

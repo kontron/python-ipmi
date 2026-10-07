@@ -134,7 +134,7 @@ class Ipmitool(Interface):
         if rc:
             raise IpmiTimeoutError()
 
-    def is_ipmc_accessible(self, target: Target) -> bool:
+    def is_target_accessible(self, target: Target) -> bool:
         try:
             self.rmcp_ping()
             accessible = True

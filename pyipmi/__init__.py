@@ -289,17 +289,24 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
             self.session.close()
         self.interface.close()
 
-    def is_ipmc_accessible(self) -> bool:
+    def is_target_accessible(self) -> bool:
         """Check if the target answers.
 
         Returns:
             True if the target answers. Depending on the interface, False
             is returned or an exception is raised if it does not.
         """
-        return self.interface.is_ipmc_accessible(self.target)
+        return self.interface.is_target_accessible(self.target)
 
-    def wait_until_ipmb_is_accessible(self, timeout: float,
-                                      interval: float = 0.25) -> None:
+    def is_ipmc_accessible(self) -> bool:
+        """Deprecated, the old name of :meth:`is_target_accessible`."""
+        warnings.warn('is_ipmc_accessible is deprecated, use '
+                      'is_target_accessible', DeprecationWarning,
+                      stacklevel=2)
+        return self.is_target_accessible()
+
+    def wait_until_target_is_accessible(self, timeout: float,
+                                        interval: float = 0.25) -> None:
         """Wait until the target is accessible.
 
         Args:
@@ -309,18 +316,26 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         Raises:
             IpmiTimeoutError: The target is not accessible after the
                 timeout, if the interface raises it, see
-                :meth:`is_ipmc_accessible`.
+                :meth:`is_target_accessible`.
         """
         start_time = time.time()
         while time.time() < start_time + (timeout):
             try:
-                if self.is_ipmc_accessible():
+                if self.is_target_accessible():
                     return
             except IpmiTimeoutError:
                 pass
             time.sleep(interval)
 
-        self.is_ipmc_accessible()
+        self.is_target_accessible()
+
+    def wait_until_ipmb_is_accessible(self, timeout: float,
+                                      interval: float = 0.25) -> None:
+        """Deprecated, use :meth:`wait_until_target_is_accessible`."""
+        warnings.warn('wait_until_ipmb_is_accessible is deprecated, use '
+                      'wait_until_target_is_accessible', DeprecationWarning,
+                      stacklevel=2)
+        self.wait_until_target_is_accessible(timeout, interval)
 
     def send_message(self, req: Message, retry: int = 3) -> Message:
         """Send a request to the target and return the response.

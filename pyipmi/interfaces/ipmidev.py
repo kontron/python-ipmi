@@ -144,7 +144,7 @@ class IpmiDev(Interface):
             raise RuntimeError('Device %s is not open' % self.port)
         return self._dev
 
-    def is_ipmc_accessible(self, target: Target) -> bool:
+    def is_target_accessible(self, target: Target) -> bool:
         try:
             self.send_and_receive_raw(target, 0, constants.NETFN_APP,
                                       bytes((constants.CMDID_GET_DEVICE_ID,)))

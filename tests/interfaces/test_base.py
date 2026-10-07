@@ -31,7 +31,33 @@ def test_not_implemented():
     with pytest.raises(NotImplementedError):
         intf.send_and_receive_raw(pyipmi.Target(0x20), 0, 6, b'\x01')
     with pytest.raises(NotImplementedError):
+        intf.is_target_accessible(pyipmi.Target(0x20))
+    with pytest.raises(NotImplementedError), \
+            pytest.warns(DeprecationWarning):
         intf.is_ipmc_accessible(pyipmi.Target(0x20))
+
+
+class NewNameStub(Interface):
+    def is_target_accessible(self, target):
+        return True
+
+
+class OldNameStub(Interface):
+    """An interface outside of the library with the deprecated name."""
+
+    def is_ipmc_accessible(self, target):
+        return True
+
+
+def test_is_ipmc_accessible_deprecated():
+    with pytest.warns(DeprecationWarning, match='use is_target_accessible'):
+        assert NewNameStub().is_ipmc_accessible(pyipmi.Target(0x20))
+
+
+def test_is_target_accessible_old_name_implemented():
+    with pytest.warns(DeprecationWarning,
+                      match='implement is_target_accessible'):
+        assert OldNameStub().is_target_accessible(pyipmi.Target(0x20))
 
 
 class RawStub(Interface):
