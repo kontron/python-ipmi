@@ -102,3 +102,19 @@ def test_bad_length_is_ignored(driver):
     finally:
         intf.close()
         router.close()
+
+
+def test_is_target_accessible_sequence_number():
+    intf = IpmbDev(slave_address=0x20)
+    sequence_numbers = []
+
+    def request(header, payload):
+        sequence_numbers.append(header.rq_seq)
+        return b''
+
+    intf._request = request
+    intf.is_target_accessible(pyipmi.Target(0x72))
+    intf.is_target_accessible(pyipmi.Target(0x72))
+    # each request has its own sequence number, the next request too
+    assert sequence_numbers[0] != sequence_numbers[1]
+    assert intf.next_sequence_number == sequence_numbers[1]

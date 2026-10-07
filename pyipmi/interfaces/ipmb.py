@@ -544,7 +544,7 @@ class IpmbInterface(Interface):
         header.netfn = 6
         header.rs_lun = 0
         header.rs_sa = target_ipmb_address(target)
-        header.rq_seq = self.next_sequence_number
+        header.rq_seq = self._inc_sequence_number()
         header.rq_lun = 0
         header.rq_sa = self.slave_address
         header.cmdid = 1
