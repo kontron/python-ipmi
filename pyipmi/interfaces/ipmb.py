@@ -14,6 +14,19 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""IPMB messages and the base class of the IPMB interfaces.
+
+The Intelligent Platform Management Bus (IPMB) is the I2C bus between the
+management controllers. :class:`IpmbInterface` is the base class of the
+interfaces that are directly connected to an IPMB:
+:class:`~pyipmi.interfaces.Aardvark`, :class:`~pyipmi.interfaces.IpmbDev`
+and :class:`~pyipmi.interfaces.OpenIpmbLink`.
+
+The functions encode and decode IPMB messages, including the bridged
+messages embedded in Send Message requests. The RMCP interface uses them
+too.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -41,7 +54,15 @@ if TYPE_CHECKING:
 
 
 def checksum(data: Iterable[int]) -> int:
-    """Calculate the checksum."""
+    """Calculate the IPMB checksum.
+
+    Args:
+        data: The bytes to calculate the checksum of.
+
+    Returns:
+        The checksum, so that the sum of the bytes and the checksum is 0
+        modulo 256.
+    """
     csum = 0
     for b in data:
         csum += b
@@ -49,17 +70,22 @@ def checksum(data: Iterable[int]) -> int:
 
 
 class IpmbHeader:
-    """Representation of the IPMI message header.
+    """Representation of the IPMB message header.
 
-    Request:
-    *-------*--------------*----------*-------*---------------*-------*
-    | rs_sa | netfn/rs_lun | checksum | rq_sa | rq_seq/rq_lun | cmdid |
-    *-------*--------------*----------*-------*---------------*-------*
+    The field names are the same for the request and the response, only the
+    order on the bus differs.
 
-    Response:
-    *-------*--------------*----------*-------*---------------*-------*
-    | rq_sa | netfn/rq_lun | checksum | rs_sa | rq_seq/rs_lun | cmdid |
-    *-------*--------------*----------*-------*---------------*-------*
+    Request::
+
+        *-------*--------------*----------*-------*---------------*-------*
+        | rs_sa | netfn/rs_lun | checksum | rq_sa | rq_seq/rq_lun | cmdid |
+        *-------*--------------*----------*-------*---------------*-------*
+
+    Response::
+
+        *-------*--------------*----------*-------*---------------*-------*
+        | rq_sa | netfn/rq_lun | checksum | rs_sa | rq_seq/rs_lun | cmdid |
+        *-------*--------------*----------*-------*---------------*-------*
     """
 
     rs_sa: int
@@ -72,13 +98,25 @@ class IpmbHeader:
     checksum: int
 
     def __init__(self, data: Sequence[int] | None = None) -> None:
+        """Initialize the header.
+
+        Args:
+            data: The message to decode the header from, the fields are not
+                set if not given.
+        """
         if data:
             self.decode(data)
 
     def decode(self, data: Sequence[int]) -> None:
+        """Decode the header from the first 6 bytes of a message.
+
+        Args:
+            data: The message.
+        """
         raise NotImplementedError()
 
     def __str__(self) -> str:
+        """Return the fields of the header."""
         return f'rs_sa=0x{self.rs_sa:02x}, rs_lun={self.rs_lun}, ' \
                f'rq_sa=0x{self.rq_sa:02x}, rq_lun={self.rq_lun}, ' \
                f'rq_seq={self.rq_seq}, ' \
@@ -90,7 +128,12 @@ class IpmbHeaderReq(IpmbHeader):
     """Representation of the IPMI request message header."""
 
     def encode(self) -> bytes:
-        """Encode the header."""
+        """Encode the header.
+
+        Returns:
+            The first 6 bytes of the message, including the header
+            checksum.
+        """
         data = array('B')
         data.append(self.rs_sa)
         data.append(self.netfn << 2 | self.rs_lun)
@@ -101,7 +144,11 @@ class IpmbHeaderReq(IpmbHeader):
         return py3_array_tobytes(data)
 
     def decode(self, data: Sequence[int]) -> None:
-        """Decode the header."""
+        """Decode the header from the first 6 bytes of a message.
+
+        Args:
+            data: The message.
+        """
         msg = array('B', data)
         self.rs_sa = msg[0]
         self.netfn = msg[1] >> 2
@@ -117,7 +164,12 @@ class IpmbHeaderRsp(IpmbHeader):
     """Representation of the IPMI response message header."""
 
     def encode(self) -> bytes:
-        """Encode the header."""
+        """Encode the header.
+
+        Returns:
+            The first 6 bytes of the message, including the header
+            checksum.
+        """
         data = array('B')
         data.append(self.rq_sa)
         data.append(self.netfn << 2 | self.rq_lun)
@@ -128,7 +180,11 @@ class IpmbHeaderRsp(IpmbHeader):
         return py3_array_tobytes(data)
 
     def decode(self, data: Sequence[int]) -> None:
-        """Decode the header."""
+        """Decode the header from the first 6 bytes of a message.
+
+        Args:
+            data: The message.
+        """
         msg = array('B', data)
         self.rq_sa = msg[0]
         self.netfn = msg[1] >> 2
@@ -143,7 +199,11 @@ class IpmbHeaderRsp(IpmbHeader):
         """Set up the header of the response to the given request.
 
         The fields keep their meaning (rq_sa is the requester), encode()
-        puts them in the response order.
+        puts them in the response order. The network function is the one of
+        the response.
+
+        Args:
+            req_header: The header of the request.
         """
         self.rs_lun = req_header.rs_lun
         self.rs_sa = req_header.rs_sa
@@ -158,10 +218,12 @@ def encode_ipmb_msg(header: IpmbHeaderReq | IpmbHeaderRsp,
                     data: bytes | None) -> bytes:
     """Encode an IPMB message.
 
-    header: IPMB header object
-    data: IPMI message data as bytestring
+    Args:
+        header: The header of the message.
+        data: The message data after the command ID, None for no data.
 
-    Returns the message as bytestring.
+    Returns:
+        The message, including both checksums.
     """
     msg = array('B')
     py3_array_frombytes(msg, header.encode())
@@ -175,16 +237,18 @@ def encode_ipmb_msg(header: IpmbHeaderReq | IpmbHeaderRsp,
 
 def encode_send_message(payload: bytes, rq_sa: int, rs_sa: int, channel: int,
                         seq: int, tracking: int = 1) -> bytes:
-    """Encode a send message command and embed the message to be send.
+    """Encode a Send Message request that embeds a message.
 
-    payload: the message to be send as bytestring
-    rq_sa: the requester source address
-    rs_sa: the responder source address
-    channel: the channel
-    seq: the sequence number
-    tracking: tracking
+    Args:
+        payload: The message to embed, a complete IPMB message.
+        rq_sa: The requester slave address.
+        rs_sa: The responder slave address, the bridge.
+        channel: The channel the bridge sends the message on.
+        seq: The sequence number.
+        tracking: The tracking request of the Send Message request.
 
-    Returns an encode send message as bytestring
+    Returns:
+        The Send Message request as IPMB message.
     """
     req = create_request_by_name('SendMessage')
     req.channel.number = channel
@@ -205,14 +269,25 @@ def encode_send_message(payload: bytes, rq_sa: int, rs_sa: int, channel: int,
 
 def encode_bridged_message(routing: list[Routing], header: IpmbHeaderReq,
                            payload: bytes, seq: int) -> bytes:
-    """Encode a (multi-)bridged command and embed the message to be send.
+    """Encode a (multi-)bridged request.
 
-    routing:
-    payload: the message to be send as bytestring
-    header:
-    seq: the sequence number
+    The request is addressed with the last hop of the routing and embedded
+    in a Send Message request for each of the other hops, from the last to
+    the first.
 
-    Returns the encoded send message as bytestring
+    Args:
+        routing: The hops to the target, see
+            :meth:`pyipmi.Target.set_routing`.
+        header: The header of the request, its rq_sa and rs_sa are set
+            from the last hop.
+        payload: The request data after the command ID.
+        seq: The sequence number of the Send Message requests.
+
+    Returns:
+        The message to send to the first hop.
+
+    Raises:
+        ValueError: The channel of a hop, except the last, is missing.
     """
     # change header requester addresses for bridging
     header.rq_sa = routing[-1].rq_sa
@@ -233,11 +308,19 @@ def encode_bridged_message(routing: list[Routing], header: IpmbHeaderReq,
 
 
 def decode_bridged_message(rx_data: bytes) -> bytes:
-    """Decode a (multi-)bridged command.
+    """Decode a (multi-)bridged response.
 
-    rx_data: the received message as bytestring
+    The Send Message responses around the response are removed, as long as
+    the message is a Send Message response.
 
-    Returns the decoded message as bytestring
+    Args:
+        rx_data: The received IPMB message.
+
+    Returns:
+        The embedded response message.
+
+    Raises:
+        CompletionCodeError: A Send Message response failed.
     """
     while array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE:
         rsp = create_message(constants.NETFN_APP + 1,
@@ -252,6 +335,17 @@ def decode_bridged_message(rx_data: bytes) -> bytes:
 
 
 def target_ipmb_address(target: Target) -> int:
+    """Return the IPMB address of a target.
+
+    Args:
+        target: The target.
+
+    Returns:
+        The IPMB address.
+
+    Raises:
+        ValueError: The target has no IPMB address.
+    """
     if target.ipmb_address is None:
         raise ValueError('IPMB address of the target missing: %s' % target)
     return target.ipmb_address
@@ -260,17 +354,23 @@ def target_ipmb_address(target: Target) -> int:
 def rx_filter(header: IpmbHeaderReq, data: bytes | array, rq_sa: bool = False,
               rs_sa: bool = False, rq_lun: bool = False,
               rs_lun: bool = True, rq_seq: bool = True) -> bool:
-    """Check if the message in rx_data matches to the information in header.
+    """Check if a received message is the response to a request.
 
-    The following checks are done:
-      - Header checksum
-      - Payload checksum
-      - NetFn matching
-      - LUN matching
-      - Command Id matching
+    The checksums, the network function (of the response) and the command
+    ID are always checked, the other fields as selected. Mismatches are
+    logged.
 
-    header: the header to compare with
-    data: the received message as bytestring
+    Args:
+        header: The header of the request.
+        data: The received message.
+        rq_sa: Check the requester slave address.
+        rs_sa: Check the responder slave address.
+        rq_lun: Check the requester LUN.
+        rs_lun: Check the responder LUN.
+        rq_seq: Check the sequence number.
+
+    Returns:
+        True if the message matches.
     """
     if len(data) < IPMB_MIN_MSG_LEN:
         logger.debug(f'message too short: {len(data):d} bytes')
@@ -324,10 +424,22 @@ class IpmbInterface(Interface):
     A subclass implements `send_frame()` and passes each received message to
     `_receive_frame()`. Interfaces that have to poll the hardware implement
     `_read_frame()` and start the receive thread with `_start_receiver()`.
+
+    A request is sent directly to the IPMB address of the target, the
+    routing of the target is not used. It is tried up to ``max_retries``
+    times, each try waits ``timeout`` seconds for the response.
     """
 
     def __init__(self, slave_address: int = 0x20,
                  router: MessageRouter | None = None) -> None:
+        """Initialize the interface.
+
+        Args:
+            slave_address: The own IPMB address, the requester address of
+                the requests.
+            router: The router of the received messages, a router of the
+                interface that ignores incoming requests if not given.
+        """
         # imported here, the router module depends on this module
         from .router import MessageRouter
 
@@ -343,11 +455,15 @@ class IpmbInterface(Interface):
 
     @property
     def router(self) -> MessageRouter:
+        """The router of the received messages.
+
+        Setting None sets the default router, which ignores incoming
+        requests.
+        """
         return self._router
 
     @router.setter
     def router(self, router: MessageRouter | None) -> None:
-        """Set the router, None sets the default router."""
         self._router = router if router is not None else self._default_router
 
     @property
@@ -404,6 +520,7 @@ class IpmbInterface(Interface):
                 self._receive_frame(frame)
 
     def close(self) -> None:
+        """Stop the worker thread of the default router."""
         self._default_router.close()
 
     def _request(self, header: IpmbHeaderReq,
@@ -412,6 +529,17 @@ class IpmbInterface(Interface):
         return self._router.request(self, header, payload, self.timeout)
 
     def is_target_accessible(self, target: Target) -> bool:
+        """Check if the target answers a Get Device ID request.
+
+        Args:
+            target: The target.
+
+        Returns:
+            True, the target answered.
+
+        Raises:
+            IpmiTimeoutError: The target did not answer.
+        """
         header = IpmbHeaderReq()
         header.netfn = 6
         header.rs_lun = 0
@@ -432,14 +560,18 @@ class IpmbInterface(Interface):
                           cmdid: int, payload: bytes) -> bytes:
         """Send a request and receive the response.
 
-        target: IPMI target
-        lun: logical unit number
-        netfn: network function
-        cmdid: command id
-        payload: IPMI message payload as bytestring
+        Args:
+            target: The target.
+            lun: The logical unit number.
+            netfn: The network function.
+            cmdid: The command ID.
+            payload: The request data after the command ID.
 
-        Returns the response data as bytestring, starting with the
-        completion code.
+        Returns:
+            The response data, starting with the completion code.
+
+        Raises:
+            IpmiTimeoutError: No response after ``max_retries`` tries.
         """
         # assemble IPMB header
         header = IpmbHeaderReq()
@@ -471,6 +603,20 @@ class IpmbInterface(Interface):
 
     def send_and_receive_raw(self, target: Target, lun: int, netfn: int,
                              raw_bytes: bytes) -> bytes:
+        """Send a raw request and return the raw response.
+
+        Args:
+            target: The target.
+            lun: The logical unit number.
+            netfn: The network function.
+            raw_bytes: The request, starting with the command ID.
+
+        Returns:
+            The response, starting with the completion code.
+
+        Raises:
+            IpmiTimeoutError: No response after ``max_retries`` tries.
+        """
         return self._send_and_receive(target=target,
                                       lun=lun,
                                       netfn=netfn,

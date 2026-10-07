@@ -14,6 +14,29 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""Routing of the IPMB messages of the IPMB interfaces.
+
+The IPMB interfaces (:class:`pyipmi.interfaces.ipmb.IpmbInterface`)
+pass the received messages to a :class:`MessageRouter`. It matches the
+responses to the pending requests and answers the incoming requests with
+the registered handlers, so a program can also act as an IPMB device,
+e.g. a BMC.
+
+Example:
+    Answer Get Device ID requests on bus 0 of an openipmblink bridge::
+
+        def get_device_id(req):
+            rsp = create_message(NETFN_APP + 1, CMDID_GET_DEVICE_ID, None)
+            rsp.completion_code = 0
+            ...
+            return rsp
+
+        router = MessageRouter()
+        router.register_handler(NETFN_APP, CMDID_GET_DEVICE_ID,
+                                get_device_id)
+        intf = OpenIpmbLink(port='/dev/ttyACM1', bus=0, router=router)
+"""
+
 from __future__ import annotations
 
 import logging
@@ -40,8 +63,12 @@ MessageHandler = Callable[[Message], 'Message | None']
 def encode_ipmb_response(req_header: IpmbHeaderReq, data: bytes) -> bytes:
     """Encode the IPMB response to a request.
 
-    req_header: header of the received request
-    data: response data as bytestring, starting with the completion code
+    Args:
+        req_header: The header of the received request.
+        data: The response data, starting with the completion code.
+
+    Returns:
+        The IPMB response message, starting with the rqSA.
     """
     header = IpmbHeaderRsp()
     header.rq_sa = req_header.rq_sa
@@ -73,13 +100,17 @@ class MessageRouter:
 
     Request handlers run in a worker thread of the router, never in the
     receive thread of an interface. A handler may therefore send requests
-    itself, e.g. to forward a request to another bus.
-
-    unhandled_cc: completion code of the response to requests without a
-                  handler. None ignores these requests.
+    itself, e.g. to forward a request to another bus. The worker thread is
+    started with the first incoming request.
     """
 
     def __init__(self, unhandled_cc: int | None = CC_INV_CMD) -> None:
+        """Initialize the router.
+
+        Args:
+            unhandled_cc: The completion code of the response to requests
+                without a handler. None ignores these requests.
+        """
         self.unhandled_cc = unhandled_cc
         self._handlers: dict[tuple[int, int, int | None], RawHandler] = {}
         self._pending: dict[tuple, _PendingRequest] = {}
@@ -104,7 +135,20 @@ class MessageRouter:
 
         The handler is called with the interface, the request header and the
         request data (without the checksum). It returns the response data,
-        starting with the completion code, or None to send no response.
+        starting with the completion code, or None to send no response. If
+        the handler raises an exception, the response has the completion
+        code 0xff (unspecified error).
+
+        A handler registered with a group extension is used for the
+        requests whose first data byte is the group extension, e.g. of
+        PICMG or DCMI, before a handler registered without one.
+
+        Args:
+            netfn: The network function of the requests.
+            cmdid: The command ID of the requests.
+            handler: The handler.
+            group_extension: The group extension of the requests, None
+                for all requests of the command.
         """
         self._handlers[(netfn, cmdid, group_extension)] = handler
 
@@ -114,7 +158,16 @@ class MessageRouter:
         """Register a handler for incoming requests as IPMI messages.
 
         The handler is called with the decoded request message and returns
-        the response message, or None to send no response.
+        the response message, or None to send no response. If the
+        completion code of the response is not 0, only the completion code
+        is sent. See :meth:`register_raw_handler`.
+
+        Args:
+            netfn: The network function of the requests.
+            cmdid: The command ID of the requests.
+            handler: The handler.
+            group_extension: The group extension of the requests, None
+                for all requests of the command.
         """
         def raw_handler(interface: IpmbInterface, header: IpmbHeaderReq,
                         data: bytes) -> bytes | None:
@@ -131,6 +184,14 @@ class MessageRouter:
 
     def unregister_handler(self, netfn: int, cmdid: int,
                            group_extension: int | None = None) -> None:
+        """Remove the handler of a command, if registered.
+
+        Args:
+            netfn: The network function of the requests.
+            cmdid: The command ID of the requests.
+            group_extension: The group extension the handler was
+                registered with.
+        """
         self._handlers.pop((netfn, cmdid, group_extension), None)
 
     @staticmethod
@@ -142,8 +203,17 @@ class MessageRouter:
                 payload: bytes | None, timeout: float) -> bytes:
         """Send a request on the interface and wait for its response.
 
-        Returns the complete IPMB response message, starting with rqSA.
-        Raises IpmiTimeoutError if no response is received.
+        Args:
+            interface: The interface the request is sent on.
+            header: The IPMB header of the request.
+            payload: The request data, None for no data.
+            timeout: The time to wait for the response in seconds.
+
+        Returns:
+            The complete IPMB response message, starting with the rqSA.
+
+        Raises:
+            IpmiTimeoutError: No response was received.
         """
         key = self._pending_key(interface, header.rs_sa, header.netfn,
                                 header.cmdid, header.rq_seq, header.rs_lun)
@@ -165,6 +235,13 @@ class MessageRouter:
         """Handle a message received on the interface.
 
         Called from the receive thread of the interface; never blocks.
+        Messages that are too short or have an invalid checksum are
+        dropped. A response is passed to the matching pending request, a
+        request is queued for the worker thread.
+
+        Args:
+            interface: The interface the message was received on.
+            frame: The IPMB message, starting with the rsSA.
         """
         if len(frame) < IPMB_MIN_MSG_LEN:
             logger.debug('IPMB RX message too short [%s]', frame.hex(' '))

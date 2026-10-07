@@ -16,11 +16,32 @@
 
 """Native RMCP+ (IPMI v2.0 LAN) interface.
 
-The session is established with the RAKP handshake (IPMI v2.0, section
-13.31/13.32). Afterwards all IPMI messages are sent as RMCP+ payloads,
-authenticated and/or encrypted according to the negotiated cipher suite.
+:class:`RmcpPlus` is the interface for IPMI v2.0 sessions over LAN, like
+``ipmitool -I lanplus``. It extends the IPMI v1.5 interface
+:class:`pyipmi.interfaces.Rmcp`.
+
+The session is established with the Open Session Request and the RAKP
+handshake (IPMI v2.0, sections 13.17 to 13.23, 13.31 and 13.32).
+Afterwards all IPMI messages are sent as RMCP+ payloads, authenticated
+and/or encrypted according to the negotiated cipher suite, see
+:data:`CIPHER_SUITES`. The supported algorithms are:
+
+- authentication: RAKP-HMAC-SHA1 and RAKP-HMAC-SHA256
+- integrity: none, HMAC-SHA1-96 and HMAC-SHA256-128
+- confidentiality: none and AES-CBC-128
 
 AES-CBC-128 (confidentiality) needs the optional `cryptography` package.
+
+Example:
+    Open an RMCP+ session with cipher suite 3::
+
+        interface = pyipmi.interfaces.create_interface('rmcpplus',
+                                                       cipher_suite=3)
+        ipmi = pyipmi.create_connection(interface)
+        ipmi.session.set_session_type_rmcp('10.0.0.1', port=623)
+        ipmi.session.set_auth_type_user('admin', 'admin')
+        ipmi.target = pyipmi.Target(ipmb_address=0x20)
+        ipmi.open()
 """
 
 from __future__ import annotations
@@ -100,6 +121,18 @@ INTEGRITY_ALGORITHMS: dict[int, tuple[Callable, int]] = {
 
 @dataclass(frozen=True)
 class CipherSuite:
+    """A cipher suite, the algorithms of a session (IPMI v2.0, table 22-20).
+
+    Attributes:
+        id: The cipher suite ID.
+        authentication: The authentication algorithm of the RAKP
+            handshake, one of the ``AUTH_ALGO_RAKP_*`` constants.
+        integrity: The integrity algorithm, one of the
+            ``INTEGRITY_ALGO_*`` constants.
+        confidentiality: The confidentiality algorithm, one of the
+            ``CONFIDENTIALITY_ALGO_*`` constants.
+    """
+
     id: int
     authentication: int
     integrity: int
@@ -153,6 +186,11 @@ def _aes_cipher(key: bytes, iv: bytes) -> Any:
 
 
 def aes_available() -> bool:
+    """Check if AES-CBC-128 is available.
+
+    Returns:
+        True if the `cryptography` package is installed.
+    """
     try:
         _aes_cipher(bytes(AES_BLOCK_SIZE), bytes(AES_BLOCK_SIZE))
     except NotSupportedError:
@@ -161,9 +199,21 @@ def aes_available() -> bool:
 
 
 class SessionKeys:
-    """Keys of an established RMCP+ session (IPMI v2.0, section 13.32)."""
+    """Keys of an established RMCP+ session (IPMI v2.0, section 13.32).
+
+    K1 is the key of the integrity algorithm, K2 the key of the
+    confidentiality algorithm (its first 16 bytes for AES-CBC-128). Both
+    are generated from the session integrity key (SIK) with the hash of
+    the authentication algorithm.
+    """
 
     def __init__(self, suite: CipherSuite, sik: bytes) -> None:
+        """Generate the keys K1 and K2.
+
+        Args:
+            suite: The negotiated cipher suite.
+            sik: The session integrity key of the RAKP handshake.
+        """
         self.suite = suite
         digest = AUTH_ALGORITHMS[suite.authentication][0]
         n = digest().digest_size
@@ -172,21 +222,48 @@ class SessionKeys:
 
     @property
     def authenticated(self) -> bool:
+        """True if the payloads are authenticated (an integrity code)."""
         return self.suite.integrity != INTEGRITY_ALGO_NONE
 
     @property
     def encrypted(self) -> bool:
+        """True if the payloads are encrypted."""
         return self.suite.confidentiality != CONFIDENTIALITY_ALGO_NONE
 
     def auth_code(self, data: bytes) -> bytes:
+        """Calculate the integrity code (AuthCode) of a message.
+
+        Args:
+            data: The message, from the AuthType up to the Next Header
+                field of the session trailer.
+
+        Returns:
+            The HMAC with key K1, truncated to :attr:`auth_code_length`.
+        """
         (digest, length) = INTEGRITY_ALGORITHMS[self.suite.integrity]
         return hmac.new(self.k1, data, digest).digest()[:length]
 
     @property
     def auth_code_length(self) -> int:
+        """The length of the integrity code in bytes."""
         return INTEGRITY_ALGORITHMS[self.suite.integrity][1]
 
     def encrypt(self, data: bytes) -> bytes:
+        """Encrypt a payload with AES-CBC-128.
+
+        The payload is padded with the confidentiality pad and encrypted
+        with a random initialization vector.
+
+        Args:
+            data: The payload.
+
+        Returns:
+            The initialization vector followed by the encrypted payload.
+
+        Raises:
+            NotSupportedError: The `cryptography` package is not
+                installed.
+        """
         # confidentiality pad: 1, 2, 3, ... followed by the pad length
         pad_length = (-(len(data) + 1)) % AES_BLOCK_SIZE
         data += bytes(range(1, pad_length + 1)) + bytes([pad_length])
@@ -195,6 +272,21 @@ class SessionKeys:
         return iv + encryptor.update(data) + encryptor.finalize()
 
     def decrypt(self, data: bytes) -> bytes:
+        """Decrypt a payload encrypted with AES-CBC-128.
+
+        Args:
+            data: The initialization vector followed by the encrypted
+                payload.
+
+        Returns:
+            The payload without the confidentiality pad.
+
+        Raises:
+            DecodingError: The length or the confidentiality pad is
+                invalid.
+            NotSupportedError: The `cryptography` package is not
+                installed.
+        """
         if len(data) < 2 * AES_BLOCK_SIZE or len(data) % AES_BLOCK_SIZE:
             raise DecodingError('invalid encrypted payload length %d'
                                 % len(data))
@@ -216,7 +308,24 @@ RMCPPLUS_NEXT_HEADER = 0x07
 def pack_rmcpplus(payload_type: int, payload: bytes, session_id: int = 0,
                   sequence_number: int = 0,
                   keys: SessionKeys | None = None) -> bytes:
-    """Pack an RMCP+ session header, payload and session trailer."""
+    """Pack an RMCP+ session header, payload and session trailer.
+
+    Without keys, or if the cipher suite of the keys uses neither
+    integrity nor confidentiality, the message has no session trailer
+    and the payload is sent in the clear.
+
+    Args:
+        payload_type: The payload type, one of the ``PAYLOAD_TYPE_*``
+            constants.
+        payload: The payload.
+        session_id: The session ID of the managed system, 0 outside of a
+            session.
+        sequence_number: The session sequence number.
+        keys: The keys of the session, None outside of a session.
+
+    Returns:
+        The RMCP+ message, without the RMCP header.
+    """
     if keys is not None and keys.encrypted:
         payload = keys.encrypt(payload)
         payload_type |= PAYLOAD_ENCRYPTED
@@ -241,7 +350,22 @@ def unpack_rmcpplus(pdu: bytes, keys: SessionKeys | None = None
                     ) -> tuple[int, int, int, bytes]:
     """Unpack and verify an RMCP+ message.
 
-    Returns (payload_type, session_id, sequence_number, payload).
+    The integrity code is checked and the payload decrypted with the keys
+    of the session.
+
+    Args:
+        pdu: The RMCP+ message, without the RMCP header.
+        keys: The keys of the session, None outside of a session.
+
+    Returns:
+        A tuple ``(payload_type, session_id, sequence_number, payload)``,
+        the payload type without the encrypted and authenticated bits.
+
+    Raises:
+        DecodingError: The message is invalid, or not authenticated or
+            encrypted as expected by the keys.
+        AuthenticationError: The integrity check failed, or the payload
+            is not authenticated within an authenticated session.
     """
     if len(pdu) < RMCPPLUS_HEADER_LENGTH:
         raise DecodingError('short RMCP+ header')
@@ -290,7 +414,13 @@ def _algorithm_payload(payload_type: int, algorithm: int) -> bytes:
 
 
 class RmcpPlus(Rmcp):
-    """Native RMCP+ (IPMI v2.0 LAN, a.k.a. "lanplus") interface."""
+    """Native RMCP+ (IPMI v2.0 LAN, a.k.a. "lanplus") interface.
+
+    The session is established by :meth:`establish_session`, which is
+    called by :meth:`pyipmi.Ipmi.open`. Before the session is established
+    the messages are sent as IPMI v1.5 messages, see
+    :class:`pyipmi.interfaces.Rmcp`.
+    """
 
     NAME = 'rmcpplus'
 
@@ -300,7 +430,7 @@ class RmcpPlus(Rmcp):
                  quirks_cfg: dict | None = None,
                  cipher_suite: int | None = None,
                  kg: bytes | None = None) -> None:
-        """Native RMCP+ interface constructor.
+        """Initialize the RMCP+ interface.
 
         Args:
             slave_address: See :class:`Rmcp`.
@@ -313,6 +443,9 @@ class RmcpPlus(Rmcp):
                 tried.
             kg: The BMC key K_G. If None (default), the user password is
                 used as specified for BMCs without a K_G.
+
+        Raises:
+            NotSupportedError: The cipher suite is not supported.
         """
         super().__init__(slave_address=slave_address,
                          host_target_address=host_target_address,
@@ -512,6 +645,34 @@ class RmcpPlus(Rmcp):
         return sik
 
     def establish_session(self, session: Session) -> None:
+        """Establish an IPMI v2.0 session with the BMC.
+
+        The BMC is pinged and asked for its authentication capabilities.
+        Then the cipher suites are tried in order with the Open Session
+        Request until the BMC accepts one, the cipher suites with
+        AES-CBC-128 only if the `cryptography` package is installed. The
+        RAKP handshake authenticates the user and generates the session
+        keys. Finally, the privilege level of the session is set and, if
+        configured, the keep alive thread is started.
+
+        Args:
+            session: The session with the host, the port, the user and
+                the privilege level. Its session ID and sequence number
+                are set.
+
+        Raises:
+            IpmiConnectionError: The BMC does not answer the RMCP ping.
+            NotSupportedError: The BMC does not support IPMI v2.0, or
+                only cipher suites with AES-CBC-128 are configured and
+                the `cryptography` package is not installed.
+            MessageStatusCodeError: The BMC rejected the Open Session
+                Request or a RAKP message, e.g. none of the cipher
+                suites is accepted.
+            AuthenticationError: The user name is too long or the
+                authentication failed, e.g. with a wrong password.
+            IpmiLongPasswordError: The password is longer than 20 bytes.
+            DecodingError: An invalid response was received.
+        """
         self._session = None
         self._keys = None
         self.host = session.rmcp_host
@@ -560,6 +721,10 @@ class RmcpPlus(Rmcp):
                     self.keep_alive_interval, self._keep_alive)
 
     def close_session(self) -> None:
+        """Stop the keep alive thread and close the session.
+
+        The session keys are removed, also if closing the session fails.
+        """
         if self._session is None:
             if self._stop_keep_alive:
                 self._stop_keep_alive()

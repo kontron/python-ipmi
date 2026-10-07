@@ -14,6 +14,23 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""Interface for the Linux IPMI driver.
+
+:class:`IpmiDev` sends the requests through the character device of the
+ipmi_devintf driver, e.g. ``/dev/ipmi0``, with the ioctls of
+``include/uapi/linux/ipmi.h``. The ctypes structures of this module are
+the structures of that header.
+
+Example:
+    Get the device ID of the local BMC::
+
+        interface = pyipmi.interfaces.create_interface('ipmidev')
+        ipmi = pyipmi.create_connection(interface)
+        ipmi.target = pyipmi.Target(ipmb_address=0x20)
+        with ipmi:
+            print(ipmi.get_device_id())
+"""
+
 from __future__ import annotations
 
 import ctypes
@@ -49,6 +66,8 @@ IPMI_RESPONSE_RECV_TYPE = 1
 
 
 class IpmiMsg(ctypes.Structure):
+    """The message of a request or response, ``struct ipmi_msg``."""
+
     _fields_ = [
         ('netfn', ctypes.c_ubyte),
         ('cmd', ctypes.c_ubyte),
@@ -58,6 +77,8 @@ class IpmiMsg(ctypes.Structure):
 
 
 class IpmiReq(ctypes.Structure):
+    """A request to send, ``struct ipmi_req``."""
+
     _fields_ = [
         ('addr', ctypes.c_void_p),
         ('addr_len', ctypes.c_uint),
@@ -67,6 +88,8 @@ class IpmiReq(ctypes.Structure):
 
 
 class IpmiRecv(ctypes.Structure):
+    """A received message, ``struct ipmi_recv``."""
+
     _fields_ = [
         ('recv_type', ctypes.c_int),
         ('addr', ctypes.c_void_p),
@@ -77,6 +100,8 @@ class IpmiRecv(ctypes.Structure):
 
 
 class IpmiSystemInterfaceAddr(ctypes.Structure):
+    """The address of the BMC, ``struct ipmi_system_interface_addr``."""
+
     _fields_ = [
         ('addr_type', ctypes.c_int),
         ('channel', ctypes.c_short),
@@ -85,6 +110,8 @@ class IpmiSystemInterfaceAddr(ctypes.Structure):
 
 
 class IpmiIpmbAddr(ctypes.Structure):
+    """The address of an IPMB target, ``struct ipmi_ipmb_addr``."""
+
     _fields_ = [
         ('addr_type', ctypes.c_int),
         ('channel', ctypes.c_short),
@@ -122,6 +149,16 @@ class IpmiDev(Interface):
     BMC_ADDRESS = 0x20
 
     def __init__(self, port: str = '/dev/ipmi0', timeout: float = 10.0) -> None:
+        """Create the interface.
+
+        Args:
+            port: The character device of the driver.
+            timeout: The time to wait for a response in seconds.
+
+        Raises:
+            RuntimeError: The fcntl module is not available, e.g. on
+                Windows.
+        """
         if fcntl is None:
             raise RuntimeError('No fcntl module found. You can not '
                                'use this interface.')
@@ -132,9 +169,11 @@ class IpmiDev(Interface):
         self._lock = threading.Lock()
 
     def open(self) -> None:
+        """Open the character device."""
         self._dev = os.open(self.port, os.O_RDWR)
 
     def close(self) -> None:
+        """Close the character device, if it is open."""
         if self._dev is not None:
             os.close(self._dev)
             self._dev = None
@@ -145,6 +184,14 @@ class IpmiDev(Interface):
         return self._dev
 
     def is_target_accessible(self, target: Target) -> bool:
+        """Check if the target answers a Get Device ID request.
+
+        Args:
+            target: The target.
+
+        Returns:
+            True if the target answers, False on a timeout.
+        """
         try:
             self.send_and_receive_raw(target, 0, constants.NETFN_APP,
                                       bytes((constants.CMDID_GET_DEVICE_ID,)))
@@ -222,6 +269,26 @@ class IpmiDev(Interface):
 
     def send_and_receive_raw(self, target: Target, lun: int, netfn: int,
                              raw_bytes: bytes) -> bytes:
+        """Send a raw request to the target and return the raw response.
+
+        The request is sent to the BMC, or bridged by the BMC to the
+        target, see :class:`IpmiDev`. Messages received from the driver
+        which are not the response to the request are dropped.
+
+        Args:
+            target: The target of the request.
+            lun: The logical unit number.
+            netfn: The network function.
+            raw_bytes: The request, starting with the command ID.
+
+        Returns:
+            The response, starting with the completion code.
+
+        Raises:
+            RuntimeError: The interface is not open, or the routing of
+                the target has more than one bridge.
+            IpmiTimeoutError: No response within the timeout.
+        """
         if self._dev is None:
             raise RuntimeError('interface is not open')
 

@@ -14,6 +14,23 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""Interface for the IPMB buses of an openipmblink bridge.
+
+The bridge is connected over a serial port, which needs the pyserial
+package. :class:`OpenIpmbLink` is the interface for one bus of the bridge,
+:class:`OpenIpmbLinkDevice` the serial connection shared by the buses.
+
+Example:
+    Get the device ID of the BMC on bus 0 of the bridge::
+
+        interface = pyipmi.interfaces.create_interface(
+            'openipmblink', slave_address=0x24, port='/dev/ttyACM1', bus=0)
+        ipmi = pyipmi.create_connection(interface)
+        ipmi.target = pyipmi.Target(ipmb_address=0x20)
+        with ipmi:
+            print(ipmi.get_device_id())
+"""
+
 from __future__ import annotations
 
 import json
@@ -37,7 +54,7 @@ except ImportError:
 
 
 class OpenIpmbLinkError(IOError):
-    pass
+    """The bridge failed or did not reply."""
 
 
 class OpenIpmbLinkDevice:
@@ -58,6 +75,13 @@ class OpenIpmbLinkDevice:
     _devices_lock = threading.Lock()
 
     def __init__(self, port: str, cmd_timeout: float = 1.0) -> None:
+        """Initialize the device, it is opened by :meth:`open`.
+
+        Args:
+            port: The serial port, a device path or a pyserial URL.
+            cmd_timeout: The time to wait for the reply to a command in
+                seconds.
+        """
         self.port = port
         self.cmd_timeout = cmd_timeout
         self.info: dict | None = None
@@ -73,7 +97,14 @@ class OpenIpmbLinkDevice:
 
     @classmethod
     def acquire(cls, port: str) -> OpenIpmbLinkDevice:
-        """Return the open device of the port, open it on first use."""
+        """Return the open device of the port, open it on first use.
+
+        Args:
+            port: The serial port, a device path or a pyserial URL.
+
+        Returns:
+            The device, release it with :meth:`release`.
+        """
         with cls._devices_lock:
             device = cls._devices.get(port)
             if device is None:
@@ -94,6 +125,16 @@ class OpenIpmbLinkDevice:
         self.close()
 
     def open(self) -> None:
+        """Open the serial port and start the receive thread.
+
+        The bridge is pinged to check the protocol version, its reply is
+        stored in :attr:`info`.
+
+        Raises:
+            RuntimeError: The pyserial package is not installed.
+            OpenIpmbLinkError: The bridge did not reply or has another
+                protocol version.
+        """
         if serial is None:
             raise RuntimeError('No pyserial module found. You can not '
                                'use this interface.')
@@ -128,6 +169,7 @@ class OpenIpmbLinkDevice:
                      info.get('board'))
 
     def close(self) -> None:
+        """Stop the receive thread and close the serial port."""
         self._stop.set()
         if self._reader is not None:
             self._cancel_read()
@@ -156,6 +198,13 @@ class OpenIpmbLinkDevice:
 
         The listener is called with the message and the receive time stamp
         of the bridge. It is called in the receive thread and must not block.
+
+        Args:
+            bus: The bus number.
+            listener: The listener.
+
+        Raises:
+            OpenIpmbLinkError: The bus already has a listener.
         """
         with self._listeners_lock:
             if bus in self._listeners:
@@ -163,14 +212,39 @@ class OpenIpmbLinkDevice:
             self._listeners[bus] = listener
 
     def remove_listener(self, bus: int) -> None:
+        """Remove the listener of the bus, if there is one.
+
+        Args:
+            bus: The bus number.
+        """
         with self._listeners_lock:
             self._listeners.pop(bus, None)
 
     def has_listener(self, bus: int) -> bool:
+        """Check if the bus has a listener.
+
+        Args:
+            bus: The bus number.
+
+        Returns:
+            True if the bus has a listener.
+        """
         return bus in self._listeners
 
     def command(self, cmd: str, **params: Any) -> dict:
-        """Send a command to the bridge and return its reply."""
+        """Send a command to the bridge and return its reply.
+
+        Args:
+            cmd: The command.
+            **params: The parameters of the command.
+
+        Returns:
+            The reply packet.
+
+        Raises:
+            OpenIpmbLinkError: No reply within the command timeout, or the
+                bridge reported an error.
+        """
         with self._command_lock:
             # drop late replies of commands that timed out
             while not self._replies.empty():
@@ -255,7 +329,7 @@ class OpenIpmbLink(IpmbInterface):
     the serial port.
 
     Incoming requests are ignored by default. To answer them, set a
-    `MessageRouter` with registered handlers, e.g.:
+    `MessageRouter` with registered handlers, e.g.::
 
         router = MessageRouter()
         router.register_handler(NETFN_APP, CMDID_GET_DEVICE_ID, handler)
@@ -267,6 +341,20 @@ class OpenIpmbLink(IpmbInterface):
     def __init__(self, slave_address: int = 0x20,
                  port: str = '/dev/ttyACM1', bus: int = 0,
                  router: MessageRouter | None = None) -> None:
+        """Initialize the interface.
+
+        Args:
+            slave_address: The own IPMB address, set on the bus of the
+                bridge when the interface is opened.
+            port: The data serial port of the bridge, a device path or a
+                pyserial URL, e.g. ``socket://localhost:5555``.
+            bus: The bus number of the bridge.
+            router: The router of the received messages, see
+                :class:`~pyipmi.interfaces.ipmb.IpmbInterface`.
+
+        Raises:
+            RuntimeError: The pyserial package is not installed.
+        """
         if serial is None:
             raise RuntimeError('No pyserial module found. You can not '
                                'use this interface.')
@@ -277,6 +365,12 @@ class OpenIpmbLink(IpmbInterface):
         self._device: OpenIpmbLinkDevice | None = None
 
     def open(self) -> None:
+        """Open the bridge and set the own address on the bus.
+
+        Raises:
+            OpenIpmbLinkError: The bridge failed, or the bus is already
+                used by another interface.
+        """
         device = OpenIpmbLinkDevice.acquire(self.port)
         try:
             self._check_status(device.command('set_addr', bus=self.bus,
@@ -288,6 +382,7 @@ class OpenIpmbLink(IpmbInterface):
         self._device = device
 
     def close(self) -> None:
+        """Release the bridge, it is closed if no other bus uses it."""
         if self._device is not None:
             self._device.remove_listener(self.bus)
             self._device.release()
@@ -301,6 +396,15 @@ class OpenIpmbLink(IpmbInterface):
             raise OpenIpmbLinkError('bridge status: %s' % status)
 
     def send_frame(self, frame: bytes) -> None:
+        """Send a complete IPMB message, starting with rsSA.
+
+        Args:
+            frame: The message.
+
+        Raises:
+            OpenIpmbLinkError: The interface is not open or the bridge
+                failed to send the message.
+        """
         if self._device is None:
             raise OpenIpmbLinkError('interface is not open')
 

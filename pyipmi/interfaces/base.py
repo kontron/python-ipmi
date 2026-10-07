@@ -14,6 +14,13 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""The base class of the interfaces.
+
+:class:`Interface` defines the methods an interface provides to
+:class:`pyipmi.Ipmi` and :class:`pyipmi.session.Session`. A new interface
+is derived from it and implements at least :meth:`send_and_receive_raw`.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -29,8 +36,19 @@ logger = logging.getLogger(__name__)
 class Interface:
     """Base class of all interfaces.
 
-    It defines the methods used by `pyipmi.Ipmi` and `pyipmi.Session`.
-    An interface has to implement at least `send_and_receive_raw()`.
+    It defines the methods used by :class:`pyipmi.Ipmi` and
+    :class:`pyipmi.session.Session`. An interface has to implement at
+    least :meth:`send_and_receive_raw`. The other methods do nothing by
+    default, except :meth:`is_target_accessible`, which is not
+    implemented, and :meth:`send_and_receive`, which encodes the request
+    and sends it with :meth:`send_and_receive_raw`.
+
+    Attributes:
+        NAME: The name of the interface for
+            :func:`pyipmi.interfaces.create_interface`.
+        MAX_REQUEST_DATA_SIZE: The maximum request data length of a
+            message sent directly (not bridged) by the interface, None
+            for the IPMB default.
     """
 
     NAME: str | None = None
@@ -40,25 +58,49 @@ class Interface:
     MAX_REQUEST_DATA_SIZE: int | None = None
 
     def open(self) -> None:
-        pass
+        """Open the interface.
+
+        Called by :meth:`pyipmi.Ipmi.open`. Does nothing by default.
+        """
 
     def close(self) -> None:
-        pass
+        """Close the interface.
+
+        Called by :meth:`pyipmi.Ipmi.close`. Does nothing by default.
+        """
 
     def establish_session(self, session: Session) -> None:
-        pass
+        """Establish the session.
+
+        Called by :meth:`pyipmi.session.Session.establish`. Does nothing
+        by default, for interfaces without a session.
+
+        Args:
+            session: The session with the host and the credentials.
+        """
 
     def close_session(self) -> None:
-        pass
+        """Close the session.
+
+        Called by :meth:`pyipmi.session.Session.close`. Does nothing by
+        default.
+        """
 
     def is_target_accessible(self, target: Target) -> bool:
         """Check if the target answers.
+
+        An interface implements it, if it supports the check. An interface
+        which implements only the deprecated :meth:`is_ipmc_accessible` is
+        still called by it, with a DeprecationWarning.
 
         Args:
             target: The target.
 
         Returns:
             True if the target answers.
+
+        Raises:
+            NotImplementedError: The interface does not implement it.
         """
         # an interface which implements only the old name
         if type(self).is_ipmc_accessible is not Interface.is_ipmc_accessible:
@@ -77,24 +119,36 @@ class Interface:
 
     def send_and_receive_raw(self, target: Target, lun: int, netfn: int,
                              raw_bytes: bytes) -> bytes:
-        """Interface function to send and receive raw message.
+        """Send a raw request to the target and return the raw response.
 
-        target: IPMI target
-        lun: logical unit number
-        netfn: network function
-        raw_bytes: RAW bytes as bytestring, starting with the command id
+        Every interface has to implement it.
 
-        Returns the IPMI message response bytestring, starting with the
-        completion code.
+        Args:
+            target: The target of the request.
+            lun: The logical unit number.
+            netfn: The network function.
+            raw_bytes: The request, starting with the command ID.
+
+        Returns:
+            The response, starting with the completion code.
+
+        Raises:
+            NotImplementedError: The interface does not implement it.
         """
         raise NotImplementedError()
 
     def send_and_receive(self, req: Message) -> Message:
-        """Interface function to send and receive an IPMI message.
+        """Send a request message and return the response message.
 
-        req: IPMI message request
+        The request is encoded and sent with :meth:`send_and_receive_raw`
+        to the target, LUN and network function of the request, and the
+        response is decoded. An interface may override it.
 
-        Returns the IPMI message response.
+        Args:
+            req: The request message.
+
+        Returns:
+            The response message. Its completion code is not checked.
         """
         logger.debug('IPMI Request [%s]', req)
 

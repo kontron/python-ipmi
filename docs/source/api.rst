@@ -31,10 +31,14 @@ Connection
 Interfaces
 ----------
 
+.. automodule:: pyipmi.interfaces
+   :no-members:
+
 .. autofunction:: pyipmi.interfaces.create_interface
 
 .. autoclass:: pyipmi.interfaces.base.Interface
    :members:
+   :exclude-members: NAME, MAX_REQUEST_DATA_SIZE
 
 .. autoclass:: pyipmi.interfaces.Rmcp
    :no-members:

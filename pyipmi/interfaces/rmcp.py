@@ -14,6 +14,32 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""Native RMCP interface, IPMI v1.5 over LAN.
+
+The :class:`Rmcp` interface sends IPMI messages in RMCP packets over UDP
+to a BMC, like ``ipmitool -I lan``. Establishing the session starts with
+an ASF presence ping, then the IPMI v1.5 session is activated with the
+authentication type (none, straight password or MD5) that the BMC
+supports. Requests to targets behind the BMC are bridged with Send
+Message requests.
+
+The packets are built by :class:`RmcpMsg` (the RMCP header),
+:class:`AsfMsg` with :class:`AsfPing` and :class:`AsfPong` (the ASF
+messages) and :class:`IpmiMsg` (the IPMI v1.5 session header).
+
+Example:
+    Get the device ID of a BMC::
+
+        interface = pyipmi.interfaces.create_interface('rmcp')
+        ipmi = pyipmi.create_connection(interface)
+        ipmi.session.set_session_type_rmcp('10.0.0.1', port=623)
+        ipmi.session.set_auth_type_user('admin', 'admin')
+        ipmi.target = pyipmi.Target(ipmb_address=0x20)
+
+        with ipmi:
+            print(ipmi.get_device_id())
+"""
+
 from __future__ import annotations
 
 import logging
@@ -53,6 +79,19 @@ RMCP_CLASS_OEM = 0x08
 
 def call_repeatedly(interval: float, func: Callable[..., Any],
                     *args: Any) -> Callable[[], None]:
+    """Call a function repeatedly in a background thread.
+
+    The first call is after ``interval`` seconds. A TimeoutError raised by
+    the function is ignored.
+
+    Args:
+        interval: The time between the calls in seconds.
+        func: The function to call.
+        *args: The arguments of the function.
+
+    Returns:
+        A function that stops the calls.
+    """
     stopped = threading.Event()
 
     def loop() -> None:
@@ -71,6 +110,12 @@ def call_repeatedly(interval: float, func: Callable[..., Any],
 
 
 class RmcpMsg:
+    """The RMCP header of a packet.
+
+    The header contains the version, the sequence number and the class of
+    the message, e.g. ASF or IPMI.
+    """
+
     RMCP_HEADER_FORMAT = '!BxBB'
     ASF_RMCP_V_1_0 = 6
     version: int | None = None
@@ -78,10 +123,26 @@ class RmcpMsg:
     class_of_msg: int | None = None
 
     def __init__(self, class_of_msg: int | None = None) -> None:
+        """Initialize the RMCP header.
+
+        Args:
+            class_of_msg: The class of the message, e.g.
+                ``RMCP_CLASS_IPMI``.
+        """
         if class_of_msg is not None:
             self.class_of_msg = class_of_msg
 
     def pack(self, sdu: bytes | None, seq_number: int) -> bytes:
+        """Build the packet with the RMCP header.
+
+        Args:
+            sdu: The data that follows the header, e.g. an IPMI message.
+            seq_number: The RMCP sequence number, 0xff for messages that
+                are not acknowledged.
+
+        Returns:
+            The packet.
+        """
         pdu = struct.pack(self.RMCP_HEADER_FORMAT, self.ASF_RMCP_V_1_0,
                           seq_number, self.class_of_msg)
         if sdu is not None:
@@ -89,6 +150,17 @@ class RmcpMsg:
         return pdu
 
     def unpack(self, pdu: bytes) -> bytes:
+        """Decode the RMCP header of a packet.
+
+        Args:
+            pdu: The packet.
+
+        Returns:
+            The data that follows the header.
+
+        Raises:
+            DecodingError: The RMCP version is not 1.0.
+        """
         header_len = struct.calcsize(self.RMCP_HEADER_FORMAT)
         header = pdu[:header_len]
         (self.version, self.seq_number, self.class_of_msg) = \
@@ -102,6 +174,12 @@ class RmcpMsg:
 
 
 class AsfMsg:
+    """An ASF message, the data of an RMCP packet of the ASF class.
+
+    The header contains the IANA enterprise number (4542 for ASF), the
+    message type, the message tag and the data length.
+    """
+
     ASF_HEADER_FORMAT = '!IBBxB'
 
     ASF_TYPE_PRESENCE_PONG = 0x40
@@ -110,12 +188,18 @@ class AsfMsg:
     asf_type = 0
 
     def __init__(self) -> None:
+        """Initialize the ASF message without data."""
         self.iana_enterprise_number = 4542
         self.tag = 0
         self.data: bytes | None = None
         self.sdu: bytes | None = None
 
     def pack(self) -> bytes:
+        """Build the ASF message.
+
+        Returns:
+            The ASF header followed by the data.
+        """
         if self.data:
             data_len = len(self.data)
         else:
@@ -132,6 +216,16 @@ class AsfMsg:
         return pdu
 
     def unpack(self, sdu: bytes) -> None:
+        """Decode an ASF message.
+
+        Args:
+            sdu: The ASF message.
+
+        Raises:
+            DecodingError: The length of the message does not match the
+                data length of the header, or the header is invalid for
+                the message type.
+        """
         self.sdu = sdu
         header_len = struct.calcsize(self.ASF_HEADER_FORMAT)
 
@@ -153,6 +247,7 @@ class AsfMsg:
             self.check_header()
 
     def __str__(self) -> str:
+        """Return the data, or the whole message, as hex bytes."""
         if self.data:
             return ' '.join('%02x' % b for b in array('B', self.data))
         if self.sdu:
@@ -161,6 +256,18 @@ class AsfMsg:
 
     @staticmethod
     def from_data(sdu: bytes) -> AsfMsg:
+        """Decode an ASF message into the class for its type.
+
+        Args:
+            sdu: The ASF message.
+
+        Returns:
+            The :class:`AsfPing` or :class:`AsfPong` message.
+
+        Raises:
+            DecodingError: The message type is not supported or the
+                message is invalid.
+        """
         asf = AsfMsg()
         asf.unpack(sdu)
 
@@ -178,24 +285,41 @@ class AsfMsg:
 
 
 class AsfPing(AsfMsg):
+    """The ASF Presence Ping message, which has no data."""
+
     def __init__(self) -> None:
+        """Initialize the ping message."""
         AsfMsg.__init__(self)
         self.asf_type = self.ASF_TYPE_PRESENCE_PING
 
     def check_header(self) -> None:
+        """Check the header of a decoded ping message.
+
+        Raises:
+            DecodingError: The type is not Presence Ping or the message
+                has data.
+        """
         if self.asf_type != self.ASF_TYPE_PRESENCE_PING:
             raise DecodingError('type does not match')
         if self.data:
             raise DecodingError('Data length is not zero')
 
     def __str__(self) -> str:
+        """Return the message as string."""
         return 'ping: ' + super(AsfMsg, self).__str__()
 
 
 class AsfPong(AsfMsg):
+    """The ASF Presence Pong message, the answer to a Presence Ping.
+
+    The data contains the OEM IANA enterprise number, OEM defined data and
+    the supported entities and interactions, e.g. if IPMI is supported.
+    """
+
     DATA_FORMAT = '!IIBB6x'
 
     def __init__(self) -> None:
+        """Initialize the pong message."""
         AsfMsg.__init__(self)
         self.asf_type = self.ASF_TYPE_PRESENCE_PONG
         self.oem_iana_enterprise_number = 4542
@@ -204,6 +328,11 @@ class AsfPong(AsfMsg):
         self.supported_interactions = 0
 
     def pack(self) -> bytes:
+        """Build the pong message.
+
+        Returns:
+            The ASF header followed by the pong data.
+        """
         # the pong data follows the ASF header
         self.data = struct.pack(self.DATA_FORMAT,
                                 self.oem_iana_enterprise_number,
@@ -213,6 +342,14 @@ class AsfPong(AsfMsg):
         return AsfMsg.pack(self)
 
     def unpack(self, sdu: bytes) -> None:
+        """Decode a pong message.
+
+        Args:
+            sdu: The ASF message.
+
+        Raises:
+            DecodingError: The message is not a valid pong message.
+        """
         AsfMsg.unpack(self, sdu)
         # check_header() made sure that the data is present
         assert self.data is not None
@@ -224,12 +361,25 @@ class AsfPong(AsfMsg):
         self.check_data()
 
     def check_data(self) -> None:
+        """Check the data of a decoded pong message.
+
+        Raises:
+            DecodingError: The OEM defined data is set for the ASF IANA
+                enterprise number, or the reserved supported interactions
+                are set.
+        """
         if self.oem_iana_enterprise_number == 4542 and self.oem_defined != 0:
             raise DecodingError('SDU malformed')
         if self.supported_interactions != 0:
             raise DecodingError('SDU malformed')
 
     def check_header(self) -> None:
+        """Check the header of a decoded pong message.
+
+        Raises:
+            DecodingError: The type is not Presence Pong or the data
+                length is wrong.
+        """
         if self.asf_type != self.ASF_TYPE_PRESENCE_PONG:
             raise DecodingError('type does not match')
         if self.data is None \
@@ -238,11 +388,27 @@ class AsfPong(AsfMsg):
 
 
 class IpmiMsg:
+    """The IPMI v1.5 session header of an IPMI message over LAN.
+
+    The header contains the authentication type, the session sequence
+    number, the session ID, the authentication code (if the
+    authentication type is not none) and the length of the IPMI message.
+    """
+
     HEADER_FORMAT_NO_AUTH = '!BIIB'
     HEADER_FORMAT_AUTH = '!BII16BB'
 
     def __init__(self, session: Session | None = None,
                  ignore_sdu_length: bool = False) -> None:
+        """Initialize the session header.
+
+        Args:
+            session: The session, which provides the authentication type,
+                the session ID, the sequence number and the password. None
+                for a message outside of a session.
+            ignore_sdu_length: Don't check the message length of the
+                header when unpacking a message.
+        """
         self.session = session
         self.ignore_sdu_length = ignore_sdu_length
 
@@ -286,6 +452,20 @@ class IpmiMsg:
         return hashlib.md5(auth_code).digest()
 
     def pack(self, sdu: bytes | None) -> bytes:
+        """Build the IPMI message with the session header.
+
+        The sequence number of an activated session is incremented.
+
+        Args:
+            sdu: The IPMI message.
+
+        Returns:
+            The session header followed by the IPMI message.
+
+        Raises:
+            NotSupportedError: The authentication type of the session is
+                not supported.
+        """
         if sdu is not None:
             data_len = len(sdu)
         else:
@@ -320,6 +500,18 @@ class IpmiMsg:
         return pdu
 
     def unpack(self, pdu: bytes) -> bytes | None:
+        """Decode the session header of an IPMI message.
+
+        Args:
+            pdu: The session header followed by the IPMI message.
+
+        Returns:
+            The IPMI message, None if it is empty.
+
+        Raises:
+            DecodingError: The length of the message does not match the
+                header, unless ``ignore_sdu_length`` is set.
+        """
         auth_type = array('B', pdu)[0]
 
         if auth_type != 0:
@@ -362,13 +554,22 @@ class IpmiMsg:
         return sdu
 
     def check_data(self) -> None:
-        pass
+        """Check the data of a decoded message, nothing to check."""
 
     def check_header(self) -> None:
-        pass
+        """Check the header of a decoded message, nothing to check."""
 
 
 class Rmcp(Interface):
+    """The native RMCP interface, IPMI v1.5 over LAN.
+
+    The host and the port of the BMC and the user are taken from the
+    session (see :meth:`pyipmi.session.Session.set_session_type_rmcp`),
+    when it is established. While the session is open, a Get Device ID
+    request is sent to keep it alive if no other request was sent in the
+    keep-alive interval.
+    """
+
     NAME = 'rmcp'
     # 45 bytes LAN message length minus 7 bytes message header and checksums
     MAX_REQUEST_DATA_SIZE = 38
@@ -379,7 +580,7 @@ class Rmcp(Interface):
                  host_target_address: int = 0x20,
                  keep_alive_interval: int = 1, max_retries: int = 0,
                  quirks_cfg: dict | None = None) -> None:
-        """Native RMCP interface constructor.
+        """Initialize the interface.
 
         Args:
             slave_address: The IPMB address of this requester.
@@ -426,11 +627,12 @@ class Rmcp(Interface):
         self.ignore_rq_seq = quirks_cfg.get('rmcp_ignore_rq_seq', False)
 
     def open(self) -> None:
+        """Create the UDP socket, with a timeout of 2 seconds."""
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.set_timeout(2.0)
 
     def close(self) -> None:
-        pass
+        """Close the interface, nothing to do."""
 
     def _send_rmcp_msg(self, sdu: bytes | None, class_of_msg: int) -> None:
         rmcp = RmcpMsg(class_of_msg)
@@ -446,6 +648,11 @@ class Rmcp(Interface):
         return (rmcp.seq_number, rmcp.class_of_msg, sdu)
 
     def set_timeout(self, timeout: float) -> None:
+        """Set the time to wait for a response.
+
+        Args:
+            timeout: The timeout in seconds.
+        """
         self._timeout = timeout
         self._sock.settimeout(timeout)
 
@@ -480,6 +687,13 @@ class Rmcp(Interface):
         return msg
 
     def ping(self) -> None:
+        """Send an ASF Presence Ping and wait for the Presence Pong.
+
+        Raises:
+            IpmiConnectionError: The BMC does not answer or the connection
+                is refused.
+            DecodingError: The answer is not a valid Presence Pong.
+        """
         ping = AsfPing()
         try:
             self._send_asf_msg(ping)
@@ -552,6 +766,22 @@ class Rmcp(Interface):
             self._get_device_id()
 
     def establish_session(self, session: Session) -> None:
+        """Establish an IPMI v1.5 session with the BMC.
+
+        Connect to the host and port of the session, ping the BMC, get the
+        channel authentication capabilities, get the session challenge
+        with the strongest supported authentication type, activate the
+        session and set the privilege level. Then start the keep-alive
+        requests, if enabled.
+
+        Args:
+            session: The session, which provides the host, the port, the
+                user and the privilege level.
+
+        Raises:
+            IpmiConnectionError: The BMC does not answer the ping.
+            CompletionCodeError: A request of the session setup failed.
+        """
         self._session = None
         self.host = session.rmcp_host
         self.port = session.rmcp_port
@@ -592,6 +822,14 @@ class Rmcp(Interface):
                     self.keep_alive_interval, self._keep_alive)
 
     def close_session(self) -> None:
+        """Stop the keep-alive requests and close the session.
+
+        Nothing is sent if the session was never established or is
+        already closed.
+
+        Raises:
+            CompletionCodeError: The Close Session request failed.
+        """
         if self._stop_keep_alive:
             self._stop_keep_alive()
 
@@ -616,8 +854,10 @@ class Rmcp(Interface):
 
         Requests are serialized by the transaction lock, so a message that
         does not match is the late response of an earlier request (e.g. one
-        that timed out) and is discarded. Raises TimeoutError if the
-        response is not received within the timeout.
+        that timed out) and is discarded.
+
+        Raises:
+            TimeoutError: The response is not received within the timeout.
         """
         deadline = None
         if self._timeout is not None:
@@ -643,15 +883,23 @@ class Rmcp(Interface):
 
     def _send_and_receive(self, target: Target, lun: int, netfn: int,
                           cmdid: int, payload: bytes) -> bytes:
-        """Send and receive data using RMCP interface.
+        """Send a request and receive the response.
 
-        target:
-        lun:
-        netfn:
-        cmdid:
-        raw_bytes: IPMI message payload as bytestring
+        The request is bridged with Send Message requests if the target
+        has a routing.
 
-        Returns the received data as array.
+        Args:
+            target: The target of the request.
+            lun: The logical unit number.
+            netfn: The network function.
+            cmdid: The command ID.
+            payload: The request data.
+
+        Returns:
+            The response data, starting with the completion code.
+
+        Raises:
+            RetryError: No response after ``max_retries`` retries.
         """
         self._inc_sequence_number()
 
@@ -690,14 +938,19 @@ class Rmcp(Interface):
 
     def send_and_receive_raw(self, target: Target, lun: int, netfn: int,
                              raw_bytes: bytes) -> bytes:
-        """Interface function to send and receive raw message.
+        """Send a raw request and return the raw response.
 
-        target: IPMI target
-        lun: logical unit number
-        netfn: network function
-        raw_bytes: RAW bytes as bytestring
+        Args:
+            target: The target of the request.
+            lun: The logical unit number.
+            netfn: The network function.
+            raw_bytes: The request, starting with the command ID.
 
-        Returns the IPMI message response bytestring.
+        Returns:
+            The response, starting with the completion code.
+
+        Raises:
+            RetryError: No response after ``max_retries`` retries.
         """
         return self._send_and_receive(target=target,
                                       lun=lun,

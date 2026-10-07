@@ -14,6 +14,24 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""Interface which sends the requests with the ipmitool program.
+
+:class:`Ipmitool` runs ``ipmitool raw`` for each request and parses its
+output. The host, the credentials and the serial port are taken from the
+session.
+
+Example:
+    Get the device ID of a BMC over LAN with ipmitool ``-I lanplus``::
+
+        interface = pyipmi.interfaces.create_interface(
+            'ipmitool', interface_type='lanplus')
+        ipmi = pyipmi.create_connection(interface)
+        ipmi.session.set_session_type_rmcp('10.0.0.1', port=623)
+        ipmi.session.set_auth_type_user('admin', 'admin')
+        ipmi.target = pyipmi.Target(ipmb_address=0x20)
+        with ipmi:
+            print(ipmi.get_device_id())
+"""
 
 from __future__ import annotations
 
@@ -47,6 +65,10 @@ class Ipmitool(Interface):
     It uses the session information to assemble the correct ipmitool
     parameters. Therefore, a session has to be established before any request
     can be sent.
+
+    A target is addressed with the ipmitool options ``-t`` and ``-b`` for
+    a routing with one bridge, and additionally ``-T`` and ``-B`` for a
+    routing with two bridges.
     """
 
     NAME = 'ipmitool'
@@ -62,6 +84,17 @@ class Ipmitool(Interface):
         retries) and `-N` (timeout of each try in seconds) and are only
         supported by the lan and lanplus interface types. If not given the
         ipmitool defaults are used.
+
+        Args:
+            interface_type: The ipmitool interface (``-I``): ``'lan'``,
+                ``'lanplus'``, ``'serial-terminal'`` or ``'open'``.
+            cipher: The cipher suite ID (``-C``), the ipmitool default if
+                not given.
+            retries: The number of retries (``-R``).
+            timeout: The timeout of each try in seconds (``-N``).
+
+        Raises:
+            RuntimeError: An argument is not supported or out of range.
         """
         if interface_type in self.supported_interfaces:
             self._interface_type = interface_type
@@ -103,6 +136,13 @@ class Ipmitool(Interface):
         self._session: Session | None = None
 
     def establish_session(self, session: Session) -> None:
+        """Keep the session for the ipmitool options.
+
+        Nothing is sent, ipmitool establishes a session for each request.
+
+        Args:
+            session: The session with the host and the credentials.
+        """
         self._session = session
 
     def _get_session(self) -> Session:
@@ -111,7 +151,13 @@ class Ipmitool(Interface):
         return self._session
 
     def rmcp_ping(self) -> None:
+        """Check if the BMC answers, with ``ipmitool session info all``.
 
+        Raises:
+            RuntimeError: The interface type is ``'serial-terminal'``, the
+                session is not set or ipmitool is not found.
+            IpmiTimeoutError: ipmitool failed.
+        """
         if self._interface_type == 'serial-terminal':
             raise RuntimeError(
                 'rcmp_ping not supported on "serial-terminal" interface')
@@ -135,6 +181,14 @@ class Ipmitool(Interface):
             raise IpmiTimeoutError()
 
     def is_target_accessible(self, target: Target) -> bool:
+        """Check if the BMC answers, see :meth:`rmcp_ping`.
+
+        Args:
+            target: Not used, the BMC of the session is checked.
+
+        Returns:
+            True if the BMC answers, False if ipmitool failed.
+        """
         try:
             self.rmcp_ping()
             accessible = True
@@ -224,6 +278,27 @@ class Ipmitool(Interface):
 
     def send_and_receive_raw(self, target: Target, lun: int, netfn: int,
                              raw_bytes: bytes) -> bytes:
+        """Send a raw request with ``ipmitool raw``, return the response.
+
+        Args:
+            target: The target of the request.
+            lun: The logical unit number.
+            netfn: The network function.
+            raw_bytes: The request, starting with the command ID.
+
+        Returns:
+            The response, starting with the completion code. If ipmitool
+            reports no completion code, the completion code is 0.
+
+        Raises:
+            IpmiTimeoutError: ipmitool timed out.
+            IpmiConnectionError: ipmitool could not establish a session.
+            IpmiLongPasswordError: The password is too long for ipmitool.
+            AuthenticationError: The authentication failed.
+            RuntimeError: ipmitool failed otherwise, is not found, or the
+                target or the session is not supported.
+            ValueError: A bridge channel of the routing is None.
+        """
         if self._interface_type in ['lan', 'lanplus']:
             cmd = self._build_ipmitool_cmd(target, lun, netfn, raw_bytes)
         elif self._interface_type in ['open']:

@@ -14,6 +14,22 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""Interface for the Total Phase Aardvark I2C/SPI host adapter.
+
+The interface needs the pyaardvark package.
+
+Example:
+    Get the device ID of the BMC on the IPMB connected to the first
+    adapter::
+
+        interface = pyipmi.interfaces.create_interface(
+            'aardvark', slave_address=0x24, port=0)
+        ipmi = pyipmi.create_connection(interface)
+        ipmi.target = pyipmi.Target(ipmb_address=0x20)
+        with ipmi:
+            print(ipmi.get_device_id())
+"""
+
 from __future__ import annotations
 
 import logging
@@ -77,6 +93,23 @@ class Aardvark(IpmbInterface):
                  enable_target_power: bool | None = None,
                  enable_fastmode: bool | None = None,
                  router: MessageRouter | None = None) -> None:
+        """Initialize the interface.
+
+        Args:
+            slave_address: The own IPMB address, the adapter is enabled as
+                I2C slave with it.
+            port: The port number of the adapter.
+            serial_number: The serial number of the adapter, used instead
+                of the port if given.
+            enable_i2c_pullups: Enable the I2C pull-up resistors.
+            enable_target_power: Enable the target power pins.
+            enable_fastmode: Use 400 kHz instead of 100 kHz on the I2C bus.
+            router: The router of the received messages, see
+                :class:`~pyipmi.interfaces.ipmb.IpmbInterface`.
+
+        Raises:
+            RuntimeError: The pyaardvark package is not installed.
+        """
         if pyaardvark is None:
             raise RuntimeError('No pyaardvark module found. You can not '
                                'use this interface.')
@@ -90,6 +123,7 @@ class Aardvark(IpmbInterface):
         self._calls: queue.Queue = queue.Queue()
 
     def open(self) -> None:
+        """Open the adapter, configure it and start the receive thread."""
         self._dev = pyaardvark.open(self.port, self.serial_number)
         self._dev.enable_i2c_slave(self.slave_address >> 1)
 
@@ -106,6 +140,7 @@ class Aardvark(IpmbInterface):
         self._start_receiver()
 
     def close(self) -> None:
+        """Stop the receive thread and close the adapter."""
         self._stop_receiver()
         self._run_calls()
         self._dev.close()
@@ -141,19 +176,45 @@ class Aardvark(IpmbInterface):
             pass
 
     def enable_pullups(self, enabled: bool) -> None:
+        """Enable or disable the I2C pull-up resistors.
+
+        Args:
+            enabled: True to enable them.
+        """
         self._call(setattr, self._dev, 'i2c_pullups', enabled)
 
     def enable_target_power(self, enabled: bool) -> None:
+        """Enable or disable the target power pins.
+
+        Args:
+            enabled: True to enable them.
+        """
         self._call(setattr, self._dev, 'target_power', enabled)
 
     def enable_fastmode(self, enabled: bool) -> None:
+        """Set the I2C bitrate to 400 kHz or 100 kHz.
+
+        Args:
+            enabled: True for 400 kHz, False for 100 kHz.
+        """
         bitrate = 400 if enabled else 100
         self._call(setattr, self._dev, 'i2c_bitrate', bitrate)
 
     def raw_write(self, address: int, data: bytes) -> None:
+        """Write data to an I2C slave as master.
+
+        Args:
+            address: The 7-bit I2C address.
+            data: The data.
+        """
         self._call(self._dev.i2c_master_write, address, data)
 
     def send_frame(self, frame: bytes) -> None:
+        """Send a complete IPMB message, starting with rsSA.
+
+        Args:
+            frame: The message.
+        """
         i2c_addr = frame[0] >> 1
 
         logger.debug('IPMB TX [%s]', bytes(frame).hex(' '))

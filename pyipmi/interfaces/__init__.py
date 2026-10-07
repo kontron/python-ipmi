@@ -14,6 +14,33 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
+"""The interfaces over which the IPMI requests are sent.
+
+An interface is created by :func:`create_interface` with its name and
+passed to :func:`pyipmi.create_connection`. All interfaces are derived
+from :class:`pyipmi.interfaces.base.Interface`. The available interfaces
+are:
+
+================  ==========================================================
+Name              Class
+================  ==========================================================
+``rmcp``          :class:`Rmcp`, IPMI v1.5 over LAN (RMCP)
+``rmcpplus``      :class:`RmcpPlus`, IPMI v2.0 over LAN (RMCP+)
+``ipmitool``      :class:`Ipmitool`, the ``raw`` command of ipmitool
+``ipmidev``       :class:`IpmiDev`, the Linux IPMI driver (``/dev/ipmi0``)
+``ipmbdev``       :class:`IpmbDev`, the Linux IPMB device driver
+``aardvark``      :class:`Aardvark`, the Total Phase Aardvark I2C adapter
+``openipmblink``  :class:`OpenIpmbLink`, the openipmblink IPMB bridge
+``mock``          :class:`Mock`, a dummy interface for tests
+================  ==========================================================
+
+Example:
+    Create an RMCP+ interface::
+
+        interface = pyipmi.interfaces.create_interface('rmcpplus')
+        ipmi = pyipmi.create_connection(interface)
+"""
+
 from __future__ import annotations
 
 from typing import Any
@@ -41,6 +68,20 @@ INTERFACES: list[type[Interface]] = [
 
 
 def create_interface(interface: str, *args: Any, **kwargs: Any) -> Any:
+    """Create an interface by its name.
+
+    Args:
+        interface: The name of the interface, the ``NAME`` of its class,
+            e.g. ``'rmcpplus'``.
+        *args: Passed to the constructor of the interface class.
+        **kwargs: Passed to the constructor of the interface class.
+
+    Returns:
+        The interface.
+
+    Raises:
+        RuntimeError: There is no interface with this name.
+    """
     for intf in INTERFACES:
         if intf.NAME == interface:
             return intf(*args, **kwargs)
