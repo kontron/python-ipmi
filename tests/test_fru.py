@@ -446,3 +446,20 @@ def test_multirecord_oem_too_short():
 
 def test_multirecord_type_oem():
     assert FruDataMultiRecord.TYPE_OEM == list(range(0xc0, 0x100))
+
+
+def test_fru_inventory_from_missing_file(tmp_path, capsys):
+    with pytest.raises(FileNotFoundError):
+        get_fru_inventory_from_file(str(tmp_path / 'missing.bin'))
+    # the error is raised, not printed
+    assert capsys.readouterr().out == ''
+
+
+@pytest.mark.skipif(os.name != 'posix' or os.geteuid() == 0,
+                    reason='needs file permissions')
+def test_fru_inventory_from_unreadable_file(tmp_path):
+    fru_file = tmp_path / 'fru.bin'
+    fru_file.write_bytes(b'\x01\x00\x00\x01\x00\x00\x00\xfe')
+    fru_file.chmod(0)
+    with pytest.raises(PermissionError):
+        get_fru_inventory_from_file(str(fru_file))

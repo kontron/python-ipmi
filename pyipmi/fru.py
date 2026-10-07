@@ -38,7 +38,6 @@ from __future__ import annotations
 import array
 import codecs
 import datetime
-import os
 from collections.abc import Sequence
 
 from .errors import DecodingError, CompletionCodeError, RetryError, DataNotFound
@@ -449,19 +448,11 @@ def get_fru_inventory_from_file(filename: str,
         The decoded FRU inventory.
 
     Raises:
+        OSError: The file cannot be read.
         DecodingError: An area is invalid or its checksum is wrong.
     """
-    try:
-        file = open(filename, "rb")
-    except OSError:
-        print('Error open file "%s"' % filename)
-
-    ################################
-    # get file size
-    file_size = os.stat(filename).st_size
-    file_data = file.read(file_size)
-    data = array.array('B', file_data)
-    file.close()
+    with open(filename, 'rb') as file:
+        data = array.array('B', file.read())
     return FruInventory(data, ignore_checksum=ignore_checksum)
 
 
