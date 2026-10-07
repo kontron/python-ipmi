@@ -632,7 +632,14 @@ class Rmcp(Interface):
         self.set_timeout(2.0)
 
     def close(self) -> None:
-        """Close the interface, nothing to do."""
+        """Close the UDP socket.
+
+        The session is closed before by :meth:`close_session`.
+        """
+        # not created if the interface was never opened
+        sock = getattr(self, '_sock', None)
+        if sock is not None:
+            sock.close()
 
     def _send_rmcp_msg(self, sdu: bytes | None, class_of_msg: int) -> None:
         rmcp = RmcpMsg(class_of_msg)

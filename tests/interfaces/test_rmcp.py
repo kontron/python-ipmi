@@ -245,6 +245,16 @@ class TestRmcp:
         rmcp.send_and_receive_raw(rmcp.host_target, 0, 6, b'\x00')
         assert rmcp._last_request_time >= before
 
+    def test_close(self):
+        rmcp = Rmcp()
+        rmcp.open()
+        sock = rmcp._sock
+        rmcp.close()
+        assert sock.fileno() == -1
+
+    def test_close_not_opened(self):
+        Rmcp().close()
+
     @pytest.mark.parametrize('exc, msg', [
         (TimeoutError, 'no response to RMCP ping from 10.0.0.1:623'),
         (ConnectionRefusedError, 'connection to 10.0.0.1:623 refused'),

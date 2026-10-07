@@ -127,6 +127,9 @@ class FakeBmc:
     def connect(self, address):
         pass
 
+    def close(self):
+        self.closed = True
+
     def settimeout(self, timeout):
         pass
 
