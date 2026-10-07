@@ -372,11 +372,18 @@ class OpenIpmbLink(IpmbInterface):
                 used by another interface.
         """
         device = OpenIpmbLinkDevice.acquire(self.port)
+        # claim the bus first, so the address of a bus used by another
+        # interface is not changed
+        try:
+            device.add_listener(self.bus, self._on_rx)
+        except Exception:
+            device.release()
+            raise
         try:
             self._check_status(device.command('set_addr', bus=self.bus,
                                               addr=self.slave_address))
-            device.add_listener(self.bus, self._on_rx)
         except Exception:
+            device.remove_listener(self.bus)
             device.release()
             raise
         self._device = device

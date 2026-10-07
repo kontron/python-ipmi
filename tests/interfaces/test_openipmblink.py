@@ -42,6 +42,7 @@ class FakeBridge:
         self.version = version
         self.responder = responder
         self.addrs = [0x22, 0x22]
+        self.set_addr_status = 'ok'
         self.written = []
         self.out = bytearray()
         self.lock = threading.Lock()
@@ -68,8 +69,10 @@ class FakeBridge:
                              'buses': [{'addr': a, 'dropped': 0}
                                        for a in self.addrs]})
             elif cmd['cmd'] == 'set_addr':
-                self.addrs[cmd['bus']] = cmd['addr']
-                self._reply({'rsp': 'set_addr', 'status': 'ok'})
+                if self.set_addr_status == 'ok':
+                    self.addrs[cmd['bus']] = cmd['addr']
+                self._reply({'rsp': 'set_addr',
+                             'status': self.set_addr_status})
             elif cmd['cmd'] == 'send':
                 self._send(cmd['bus'], bytes.fromhex(cmd['msg']))
 
@@ -160,9 +163,23 @@ def test_buses_share_device(bridge, interfaces):
 
 
 def test_bus_in_use(bridge, interfaces):
-    interfaces(bus=0)
+    intf = interfaces(slave_address=0x24, bus=0)
+    with pytest.raises(OpenIpmbLinkError):
+        OpenIpmbLink(slave_address=0x26, bus=0).open()
+    # the address and the listener of the open interface are kept
+    assert bridge.addrs[0] == 0x24
+    assert intf._device.has_listener(0)
+    assert {'cmd': 'set_addr', 'bus': 0, 'addr': 0x26} not in bridge.written
+
+
+def test_open_set_addr_fails(bridge, interfaces):
+    bridge.set_addr_status = 'error'
     with pytest.raises(OpenIpmbLinkError):
         OpenIpmbLink(bus=0).open()
+    assert bridge.closed
+    # the bus is free again
+    bridge.set_addr_status = 'ok'
+    interfaces(bus=0)
 
 
 def test_send_and_receive_raw(bridge, interfaces):
