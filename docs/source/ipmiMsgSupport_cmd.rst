@@ -72,7 +72,7 @@ This section describes the commands used to support the system messaging interfa
 .. note::
  
    - O/M - Optional/Mandatory command as stated by the IPMI standard
-   - Support - Supported command by **send_message_with_name** method
+   - Support - Supported command by **send_message_by_name** method
    - API - High level API support implemented in this library
 
 Establish Session

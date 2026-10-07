@@ -155,7 +155,7 @@ class Sensor(IpmiMixin):
         Returns:
             The reservation ID.
         """
-        rsp = self.send_message_with_name('ReserveDeviceSdrRepository')
+        rsp = self.send_message_by_name('ReserveDeviceSdrRepository')
         return rsp.reservation_id
 
     def _get_device_sdr_chunk(self, reservation_id: int, record_id: int,
@@ -232,8 +232,8 @@ class Sensor(IpmiMixin):
         Args:
             sensor_number: The sensor number.
         """
-        self.send_message_with_name('RearmSensorEvents',
-                                    sensor_number=sensor_number)
+        self.send_message_by_name('RearmSensorEvents',
+                                  sensor_number=sensor_number)
 
     def get_sensor_reading(self, sensor_number: int,
                            lun: int = 0) -> tuple[int | None, int | None]:
@@ -253,9 +253,9 @@ class Sensor(IpmiMixin):
             threshold sensor or the asserted states of a discrete sensor in
             bits 0-14. They are None if the sensor does not report them.
         """
-        rsp = self.send_message_with_name('GetSensorReading',
-                                          sensor_number=sensor_number,
-                                          lun=lun)
+        rsp = self.send_message_by_name('GetSensorReading',
+                                        sensor_number=sensor_number,
+                                        lun=lun)
 
         reading = rsp.sensor_reading
         if rsp.config.initial_update_in_progress:
@@ -319,9 +319,9 @@ class Sensor(IpmiMixin):
             ``'ucr'``, ``'unc'``, ``'lnc'``, ``'lcr'`` and ``'lnr'``
             (upper/lower non-recoverable, critical and non-critical).
         """
-        rsp = self.send_message_with_name('GetSensorThresholds',
-                                          sensor_number=sensor_number,
-                                          lun=lun)
+        rsp = self.send_message_by_name('GetSensorThresholds',
+                                        sensor_number=sensor_number,
+                                        lun=lun)
 
         thresholds = {}
         threshold_list = ('unr', 'ucr', 'unc', 'lnc', 'lcr', 'lnr')

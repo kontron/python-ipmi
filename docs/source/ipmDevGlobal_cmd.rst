@@ -26,7 +26,7 @@ This section describes the high level :abbr:`API (Application Programming Interf
 .. note::
  
    - O/M - Optional/Mandatory command as stated by the IPMI standard
-   - Support - Supported command by **send_message_with_name** method
+   - Support - Supported command by **send_message_by_name** method
    - API - High level API support implemented in this library
 
 Get Device ID Command

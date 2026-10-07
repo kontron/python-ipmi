@@ -48,7 +48,7 @@ class Bmc(IpmiMixin):
             The device ID, firmware version, IPMI version and supported
             functions of the controller.
         """
-        return DeviceId(self.send_message_with_name('GetDeviceId'))
+        return DeviceId(self.send_message_by_name('GetDeviceId'))
 
     def get_device_guid(self) -> DeviceGuid:
         """Get the GUID of the controller.
@@ -56,15 +56,15 @@ class Bmc(IpmiMixin):
         Returns:
             The device GUID.
         """
-        return DeviceGuid(self.send_message_with_name('GetDeviceGuid'))
+        return DeviceGuid(self.send_message_by_name('GetDeviceGuid'))
 
     def cold_reset(self) -> None:
         """Cold reset the controller, it is reinitialized."""
-        self.send_message_with_name('ColdReset')
+        self.send_message_by_name('ColdReset')
 
     def warm_reset(self) -> None:
         """Warm reset the controller, its state is kept."""
-        self.send_message_with_name('WarmReset')
+        self.send_message_by_name('WarmReset')
 
     def i2c_write_read(self, bus_type: int, bus_id: int, channel: int,
                        address: int, count: int,
@@ -169,7 +169,7 @@ class Bmc(IpmiMixin):
         Returns:
             The watchdog timer, ``dont_stop`` is not set.
         """
-        return Watchdog(self.send_message_with_name('GetWatchdogTimer'))
+        return Watchdog(self.send_message_by_name('GetWatchdogTimer'))
 
     def reset_watchdog_timer(self) -> None:
         """Start or restart the watchdog timer with its initial countdown.
@@ -177,7 +177,7 @@ class Bmc(IpmiMixin):
         Raises:
             CompletionCodeError: The timer was not set before (0x80).
         """
-        self.send_message_with_name('ResetWatchdogTimer')
+        self.send_message_by_name('ResetWatchdogTimer')
 
 
 class Watchdog(State):

@@ -448,7 +448,7 @@ Sending IPMI commands
 You can send an :abbr:`IPMI (Intelligent Platform Management Interface)` message using the predefined command name
 
 +------------------------------------------------------------+
-| **send_message_with_name(name, *args, **kwargs)**          |
+| **send_message_by_name(name, *args, **kwargs)**            |
 +------------------------------------------------------------+
 
 where the ``name`` argument represents the string name of the command as listed in the last column of table from `commands`_. For commands which do not require data to be sent name is the only argument to be passed.
@@ -458,7 +458,7 @@ The following example requests the device ID:
 
 .. code:: python
 
-  ipmi.send_message_with_name('GetDeviceId')
+  ipmi.send_message_by_name('GetDeviceId')
 
 .. note::
 

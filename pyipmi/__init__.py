@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import time
 import ast
+import warnings
 from typing import Any, Literal
 
 from . import bmc
@@ -357,8 +358,8 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
 
         return rsp
 
-    def send_message_with_name(self, name: str, *args: Any,
-                               **kwargs: Any) -> Message:
+    def send_message_by_name(self, name: str, *args: Any,
+                             **kwargs: Any) -> Message:
         """Send a request by its name and return the response.
 
         Args:
@@ -381,6 +382,14 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         rsp = self.send_message(req)
         check_rsp_completion_code(rsp)
         return rsp
+
+    def send_message_with_name(self, name: str, *args: Any,
+                               **kwargs: Any) -> Message:
+        """Deprecated, the old name of :meth:`send_message_by_name`."""
+        warnings.warn('send_message_with_name is deprecated, use '
+                      'send_message_by_name', DeprecationWarning,
+                      stacklevel=2)
+        return self.send_message_by_name(name, *args, **kwargs)
 
     def raw_command(self, lun: int, netfn: int, raw_bytes: bytes) -> bytes:
         """Send a raw request to the target and return the raw response.

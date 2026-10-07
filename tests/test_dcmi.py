@@ -36,11 +36,11 @@ class TestDcmi:
             create_rsp(1, [0x34, 0x12]),
             create_rsp(0, []),
         ]
-        self.ipmi.send_message_with_name = MagicMock(side_effect=rsps)
+        self.ipmi.send_message_by_name = MagicMock(side_effect=rsps)
 
         assert self.ipmi.get_dcmi_sensor_record_ids() == [0x0001, 0x0002,
                                                            0x1234]
-        assert self.ipmi.send_message_with_name.call_count == 3
+        assert self.ipmi.send_message_by_name.call_count == 3
 
     def test_get_dcmi_sensor_record_ids_more_than_8_instances(self):
         rsps = [
@@ -51,12 +51,12 @@ class TestDcmi:
             create_rsp(0, []),
             create_rsp(0, []),
         ]
-        self.ipmi.send_message_with_name = MagicMock(side_effect=rsps)
+        self.ipmi.send_message_by_name = MagicMock(side_effect=rsps)
 
         assert self.ipmi.get_dcmi_sensor_record_ids() == \
             list(range(0x10, 0x1a))
 
-        calls = self.ipmi.send_message_with_name.call_args_list
+        calls = self.ipmi.send_message_by_name.call_args_list
         assert len(calls) == 4
         assert calls[0].kwargs['entity_instance_start'] == 0
         assert calls[1].kwargs['entity_instance_start'] == 8
@@ -70,7 +70,7 @@ class TestDcmi:
             create_rsp(0, []),
             create_rsp(0, []),
         ]
-        self.ipmi.send_message_with_name = MagicMock(side_effect=rsps)
+        self.ipmi.send_message_by_name = MagicMock(side_effect=rsps)
 
         assert self.ipmi.get_dcmi_sensor_record_ids() == list(range(1, 10))
 
@@ -82,7 +82,7 @@ class TestDcmi:
             create_rsp(0, []),
             create_rsp(0, []),
         ]
-        self.ipmi.send_message_with_name = MagicMock(side_effect=rsps)
+        self.ipmi.send_message_by_name = MagicMock(side_effect=rsps)
 
         assert self.ipmi.get_dcmi_sensor_record_ids() == [1, 2]
 
@@ -95,33 +95,33 @@ class TestDcmi:
         ]
         for rsp in rsps:
             rsp.readings = rsp.record_ids
-        self.ipmi.send_message_with_name = MagicMock(side_effect=rsps)
+        self.ipmi.send_message_by_name = MagicMock(side_effect=rsps)
 
         readings = self.ipmi.get_temperature_readings(0x40)
 
         assert readings[:2] == [(1, 45), (2, -5)]
         assert readings[-1] == (9, 38)
         assert len(readings) == 9
-        calls = self.ipmi.send_message_with_name.call_args_list
+        calls = self.ipmi.send_message_by_name.call_args_list
         assert calls[0].args == ('GetTemperatureReadings',)
         assert calls[0].kwargs['entity_id'] == 0x40
         assert calls[1].kwargs['entity_instance_start'] == 8
 
     def test_set_power_limit(self):
-        self.ipmi.send_message_with_name = MagicMock()
+        self.ipmi.send_message_by_name = MagicMock()
         self.ipmi.set_power_limit(300, 1000, 5,
                                   dcmi.POWER_LIMIT_EXCEPTION_HARD_POWER_OFF)
-        self.ipmi.send_message_with_name.assert_called_once_with(
+        self.ipmi.send_message_by_name.assert_called_once_with(
             'SetPowerLimit', exception_actions=1, power_limit=300,
             correction_time_limit=1000, statistics_sampling_period=5)
 
     def test_activate_deactivate_power_limit(self):
-        self.ipmi.send_message_with_name = MagicMock()
+        self.ipmi.send_message_by_name = MagicMock()
         self.ipmi.activate_power_limit()
-        self.ipmi.send_message_with_name.assert_called_with(
+        self.ipmi.send_message_by_name.assert_called_with(
             'ActivateDeactivatePowerLimit', activation=1)
         self.ipmi.deactivate_power_limit()
-        self.ipmi.send_message_with_name.assert_called_with(
+        self.ipmi.send_message_by_name.assert_called_with(
             'ActivateDeactivatePowerLimit', activation=0)
 
     def test_set_thermal_limit(self):
@@ -143,10 +143,10 @@ class TestDcmi:
         assert e.value.cc_desc == 'temperature limit out of range'
 
     def test_set_dcmi_configuration_parameters(self):
-        self.ipmi.send_message_with_name = MagicMock()
+        self.ipmi.send_message_by_name = MagicMock()
         self.ipmi.set_dcmi_configuration_parameters(
             dcmi.CONF_PARAM_DHCP_TIMING_1, b'\x40')
-        self.ipmi.send_message_with_name.assert_called_once_with(
+        self.ipmi.send_message_by_name.assert_called_once_with(
             'SetDcmiConfigurationParameters', parameter_selector=3,
             set_selector=0, parameter_data=b'\x40')
 
@@ -178,7 +178,7 @@ class TestDcmiStrings:
 
     def test_get_asset_tag(self):
         bmc = FakeStringBmc(b'asset tag with more than 16 chars')
-        self.ipmi.send_message_with_name = bmc
+        self.ipmi.send_message_by_name = bmc
 
         assert self.ipmi.get_asset_tag() == 'asset tag with more than 16 chars'
         assert bmc.requests == [('GetAssetTag', 0, 0),
@@ -188,14 +188,14 @@ class TestDcmiStrings:
 
     def test_get_asset_tag_empty(self):
         bmc = FakeStringBmc()
-        self.ipmi.send_message_with_name = bmc
+        self.ipmi.send_message_by_name = bmc
 
         assert self.ipmi.get_asset_tag() == ''
         assert len(bmc.requests) == 1
 
     def test_set_asset_tag(self):
         bmc = FakeStringBmc()
-        self.ipmi.send_message_with_name = bmc
+        self.ipmi.send_message_by_name = bmc
 
         self.ipmi.set_asset_tag('a' * 20)
 
@@ -209,14 +209,14 @@ class TestDcmiStrings:
 
     def test_get_management_controller_id_string(self):
         bmc = FakeStringBmc(b'my-bmc\x00')
-        self.ipmi.send_message_with_name = bmc
+        self.ipmi.send_message_by_name = bmc
 
         assert self.ipmi.get_management_controller_id_string() == 'my-bmc'
         assert bmc.requests[0] == ('GetManagementControllerIdString', 0, 1)
 
     def test_set_management_controller_id_string(self):
         bmc = FakeStringBmc()
-        self.ipmi.send_message_with_name = bmc
+        self.ipmi.send_message_by_name = bmc
 
         self.ipmi.set_management_controller_id_string('my-bmc')
 

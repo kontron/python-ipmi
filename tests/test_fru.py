@@ -241,7 +241,7 @@ class FakeFruDevice(Fru):
         self.requests = []
         self.fru_ids = set()
 
-    def send_message_with_name(self, name, fru_id, offset=None, count=None):
+    def send_message_by_name(self, name, fru_id, offset=None, count=None):
         if name == 'GetFruInventoryAreaInfo':
             if self.area_info_cc is not None:
                 raise CompletionCodeError(self.area_info_cc)

@@ -82,8 +82,8 @@ class Fru(IpmiMixin):
         Returns:
             The size of the FRU inventory area in bytes.
         """
-        rsp = self.send_message_with_name('GetFruInventoryAreaInfo',
-                                          fru_id=fru_id)
+        rsp = self.send_message_by_name('GetFruInventoryAreaInfo',
+                                        fru_id=fru_id)
         return rsp.area_size
 
     def write_fru_data(self, data: bytes, offset: int = 0,
@@ -101,10 +101,10 @@ class Fru(IpmiMixin):
             Exception: The device wrote fewer bytes than were sent.
         """
         for chunk in chunks(data, self.write_length):
-            write_rsp = self.send_message_with_name('WriteFruData',
-                                                    fru_id=fru_id,
-                                                    offset=offset,
-                                                    data=chunk)
+            write_rsp = self.send_message_by_name('WriteFruData',
+                                                  fru_id=fru_id,
+                                                  offset=offset,
+                                                  data=chunk)
 
             # check if device wrote the same number of bytes sent
             if write_rsp.count_written != len(chunk):
@@ -147,8 +147,8 @@ class Fru(IpmiMixin):
             req_size = min(read_length.length, area_size - off)
 
             try:
-                rsp = self.send_message_with_name('ReadFruData', fru_id=fru_id,
-                                                  offset=off, count=req_size)
+                rsp = self.send_message_by_name('ReadFruData', fru_id=fru_id,
+                                                offset=off, count=req_size)
             except CompletionCodeError as ex:
                 if ex.cc in (constants.CC_CANT_RET_NUM_REQ_BYTES,
                              constants.CC_REQ_DATA_FIELD_EXCEED,

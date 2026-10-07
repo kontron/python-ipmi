@@ -121,7 +121,7 @@ class Hpm(IpmiMixin):
         Returns:
             The HPM.1 version and the components of the controller.
         """
-        rsp = self.send_message_with_name('GetTargetUpgradeCapabilities')
+        rsp = self.send_message_by_name('GetTargetUpgradeCapabilities')
         return TargetUpgradeCapabilities(rsp)
 
     def get_component_property(self, component_id: int,
@@ -140,9 +140,9 @@ class Hpm(IpmiMixin):
                 a property the component does not have.
             NotImplementedError: The property is an OEM property.
         """
-        rsp = self.send_message_with_name('GetComponentProperties',
-                                          id=component_id,
-                                          selector=property_id)
+        rsp = self.send_message_by_name('GetComponentProperties',
+                                        id=component_id,
+                                        selector=property_id)
         return ComponentProperty.from_data(property_id, rsp.data)
 
     def get_component_properties(self,
@@ -194,7 +194,7 @@ class Hpm(IpmiMixin):
         Raises:
             CompletionCodeError: The upgrade cannot be aborted.
         """
-        self.send_message_with_name('AbortFirmwareUpgrade')
+        self.send_message_by_name('AbortFirmwareUpgrade')
 
     def initiate_upgrade_action(self, components_mask: int, action: int) -> None:
         """Initiate an upgrade action.
@@ -213,8 +213,8 @@ class Hpm(IpmiMixin):
             if self._get_component_count(components_mask) != 1:
                 raise HpmError("more than 1 component not support for action")
 
-        self.send_message_with_name('InitiateUpgradeAction',
-                                    components=components_mask, action=action)
+        self.send_message_by_name('InitiateUpgradeAction',
+                                  components=components_mask, action=action)
 
     def initiate_upgrade_action_and_wait(self, components_mask: int, action: int,
                                          timeout: float = 2,
@@ -255,8 +255,8 @@ class Hpm(IpmiMixin):
         if isinstance(data, str):
             data = [ord(c) for c in data]
 
-        self.send_message_with_name('UploadFirmwareBlock', number=block_number,
-                                    data=data)
+        self.send_message_by_name('UploadFirmwareBlock', number=block_number,
+                                  data=data)
 
     def _determine_max_block_size(self) -> int:
         """Return the maximum firmware data length of an upload block.
@@ -352,9 +352,9 @@ class Hpm(IpmiMixin):
             CompletionCodeError: The command is still in progress (0x80) or the
                 controller rejected it.
         """
-        return self.send_message_with_name('FinishFirmwareUpload',
-                                           component_id=component,
-                                           image_length=length)
+        return self.send_message_by_name('FinishFirmwareUpload',
+                                         component_id=component,
+                                         image_length=length)
 
     def finish_upload_and_wait(self, component: int, length: int,
                                timeout: float = 2,
@@ -387,7 +387,7 @@ class Hpm(IpmiMixin):
         Returns:
             The command in progress and its completion code.
         """
-        return UpgradeStatus(self.send_message_with_name('GetUpgradeStatus'))
+        return UpgradeStatus(self.send_message_by_name('GetUpgradeStatus'))
 
     def wait_for_long_duration_command(self, expected_cmd: int, timeout: float,
                                        interval: float) -> None:
@@ -473,7 +473,7 @@ class Hpm(IpmiMixin):
             The self test result.
         """
         return SelfTestResult(
-            self.send_message_with_name('QuerySelftestResults'))
+            self.send_message_by_name('QuerySelftestResults'))
 
     def query_rollback_status(self) -> RollbackStatus:
         """Get the status of a rollback.
@@ -482,7 +482,7 @@ class Hpm(IpmiMixin):
             The rollback status.
         """
         return RollbackStatus(
-            self.send_message_with_name('QueryRollbackStatus'))
+            self.send_message_by_name('QueryRollbackStatus'))
 
     def initiate_manual_rollback(self) -> RollbackStatus:
         """Initiate a rollback to the backup firmware.
@@ -495,7 +495,7 @@ class Hpm(IpmiMixin):
                 controller rejected it.
         """
         return RollbackStatus(
-            self.send_message_with_name('InitiateManualRollback'))
+            self.send_message_by_name('InitiateManualRollback'))
 
     def initiate_manual_rollback_and_wait(self, timeout: float = 60,
                                           interval: float = 0.1) -> None:

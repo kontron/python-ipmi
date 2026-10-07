@@ -207,7 +207,7 @@ class Chassis(IpmiMixin):
         Returns:
             The chassis status.
         """
-        return ChassisStatus(self.send_message_with_name('GetChassisStatus'))
+        return ChassisStatus(self.send_message_by_name('GetChassisStatus'))
 
     def chassis_control(self, option: int) -> None:
         """Control the chassis power.

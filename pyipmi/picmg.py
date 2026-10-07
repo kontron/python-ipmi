@@ -64,7 +64,7 @@ class Picmg(IpmiMixin):
             extension version), ``max_fru_device_id`` and ``fru_device_id``
             (the FRU device ID of the IPM controller).
         """
-        return self.send_message_with_name('GetPicmgProperties')
+        return self.send_message_by_name('GetPicmgProperties')
 
     def fru_control(self, fru_id: int, option: int) -> bytes:
         """Control a FRU, e.g. reset it.
@@ -81,8 +81,8 @@ class Picmg(IpmiMixin):
             CompletionCodeError: The controller rejected the request, e.g. for
                 an option the FRU does not support.
         """
-        rsp = self.send_message_with_name('FruControl', fru_id=fru_id,
-                                          option=option)
+        rsp = self.send_message_by_name('FruControl', fru_id=fru_id,
+                                        option=option)
         return rsp.rsp_data
 
     def fru_control_cold_reset(self, fru_id: int = 0) -> None:
@@ -132,9 +132,9 @@ class Picmg(IpmiMixin):
         Returns:
             The power levels.
         """
-        rsp = self.send_message_with_name('GetPowerLevel',
-                                          fru_id=fru_id,
-                                          power_type=power_type)
+        rsp = self.send_message_by_name('GetPowerLevel',
+                                        fru_id=fru_id,
+                                        power_type=power_type)
         return PowerLevel(rsp)
 
     def get_fan_speed_properties(self, fru_id: int) -> FanSpeedProperties:
@@ -146,8 +146,8 @@ class Picmg(IpmiMixin):
         Returns:
             The fan speed properties.
         """
-        rsp = self.send_message_with_name('GetFanSpeedProperties',
-                                          fru_id=fru_id)
+        rsp = self.send_message_by_name('GetFanSpeedProperties',
+                                        fru_id=fru_id)
         return FanSpeedProperties(rsp)
 
     def set_fan_level(self, fru_id: int, fan_level: int) -> None:
@@ -158,9 +158,9 @@ class Picmg(IpmiMixin):
             fan_level: The fan level, between the minimum and maximum speed
                 level of :meth:`get_fan_speed_properties`.
         """
-        self.send_message_with_name('SetFanLevel',
-                                    fru_id=fru_id,
-                                    fan_level=fan_level)
+        self.send_message_by_name('SetFanLevel',
+                                  fru_id=fru_id,
+                                  fan_level=fan_level)
 
     def get_fan_level(self, fru_id: int) -> tuple:
         """Get the fan level of a fan tray.
@@ -172,7 +172,7 @@ class Picmg(IpmiMixin):
             A tuple of the override fan level and the local control fan level,
             which is None if the fan tray does not report it.
         """
-        rsp = self.send_message_with_name('GetFanLevel', fru_id=fru_id)
+        rsp = self.send_message_by_name('GetFanLevel', fru_id=fru_id)
         local_control_fan_level = None
         if rsp.data:
             local_control_fan_level = rsp.data[0]
@@ -191,9 +191,9 @@ class Picmg(IpmiMixin):
         Raises:
             DecodingError: The LED function in the response is invalid.
         """
-        rsp = self.send_message_with_name('GetFruLedState',
-                                          fru_id=fru_id,
-                                          led_id=led_id)
+        rsp = self.send_message_by_name('GetFruLedState',
+                                        fru_id=fru_id,
+                                        led_id=led_id)
         return LedState(rsp)
 
     def set_led_state(self, led: LedState) -> None:
@@ -225,9 +225,9 @@ class Picmg(IpmiMixin):
         check_completion_code(rsp.completion_code)
 
     def _set_fru_activation(self, fru_id: int, control: int) -> None:
-        self.send_message_with_name('SetFruActivation',
-                                    fru_id=fru_id,
-                                    control=control)
+        self.send_message_by_name('SetFruActivation',
+                                  fru_id=fru_id,
+                                  control=control)
 
     def set_fru_activation(self, fru_id: int) -> None:
         """Activate a FRU.
@@ -374,9 +374,9 @@ class Picmg(IpmiMixin):
         Returns:
             The global status.
         """
-        rsp = self.send_message_with_name('GetPowerChannelStatus',
-                                          starting_power_channel_number=1,
-                                          power_channel_count=1)
+        rsp = self.send_message_by_name('GetPowerChannelStatus',
+                                        starting_power_channel_number=1,
+                                        power_channel_count=1)
         return GlobalStatus(rsp)
 
     def get_power_channel_status(self, start: int) -> PowerChannelStatus:
@@ -388,9 +388,9 @@ class Picmg(IpmiMixin):
         Returns:
             The status of the power channel.
         """
-        rsp = self.send_message_with_name('GetPowerChannelStatus',
-                                          starting_power_channel_number=start,
-                                          power_channel_count=1)
+        rsp = self.send_message_by_name('GetPowerChannelStatus',
+                                        starting_power_channel_number=start,
+                                        power_channel_count=1)
         return PowerChannelStatus(rsp)
 
     def send_channel_power(self, channel: int, enable: bool,
@@ -409,13 +409,13 @@ class Picmg(IpmiMixin):
         Returns:
             The response of the power module.
         """
-        rsp = self.send_message_with_name('SendPowerChannelControl',
-                                          channel=channel,
-                                          control=5 if enable else 4,
-                                          current_limit=int(current_limit * 10),
-                                          primary_pm=primary_pm,
-                                          backup_pm=backup_pm
-                                          )
+        rsp = self.send_message_by_name('SendPowerChannelControl',
+                                        channel=channel,
+                                        control=5 if enable else 4,
+                                        current_limit=int(current_limit * 10),
+                                        primary_pm=primary_pm,
+                                        backup_pm=backup_pm
+                                        )
         return rsp
 
     def send_pm_heartbeat(self) -> Message:
@@ -424,7 +424,7 @@ class Picmg(IpmiMixin):
         Returns:
             The response of the power module.
         """
-        rsp = self.send_message_with_name('SendPmHeartbeat')
+        rsp = self.send_message_by_name('SendPmHeartbeat')
         return rsp
 
     def set_signaling_class(self, interface: int, channel: int,

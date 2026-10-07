@@ -116,7 +116,7 @@ class Vita(IpmiMixin):
             ``standard``), ``specification_revision``, ``max_fru_id`` and
             ``ipmc_fru_device_id``.
         """
-        return self.send_message_with_name('VitaGetVsoCapabilities')
+        return self.send_message_by_name('VitaGetVsoCapabilities')
 
     def get_vita_fru_address_info(self, fru_id: int = 0) -> Message:
         """Get the address information of a FRU.
@@ -130,8 +130,8 @@ class Vita(IpmiMixin):
             ``VITA_SITE_TYPES``) and ``address_on_channel_7``, which is
             None if the IPMC does not report it.
         """
-        return self.send_message_with_name('VitaGetFruAddressInfo',
-                                           fru_id=fru_id)
+        return self.send_message_by_name('VitaGetFruAddressInfo',
+                                         fru_id=fru_id)
 
     def vita_fru_control(self, fru_id: int, option: int) -> None:
         """Control a FRU, e.g. reset it.
@@ -147,8 +147,8 @@ class Vita(IpmiMixin):
             CompletionCodeError: The IPMC rejected the request, e.g. for an
                 option the FRU does not support.
         """
-        self.send_message_with_name('VitaFruControl', fru_id=fru_id,
-                                    option=option)
+        self.send_message_by_name('VitaFruControl', fru_id=fru_id,
+                                  option=option)
 
     def set_vita_fru_activation(self, fru_id: int) -> None:
         """Activate a FRU.
@@ -156,8 +156,8 @@ class Vita(IpmiMixin):
         Args:
             fru_id: The FRU device ID.
         """
-        self.send_message_with_name('VitaSetFruActivation', fru_id=fru_id,
-                                    control=VITA_FRU_ACTIVATE)
+        self.send_message_by_name('VitaSetFruActivation', fru_id=fru_id,
+                                  control=VITA_FRU_ACTIVATE)
 
     def set_vita_fru_deactivation(self, fru_id: int) -> None:
         """Deactivate a FRU.
@@ -165,8 +165,8 @@ class Vita(IpmiMixin):
         Args:
             fru_id: The FRU device ID.
         """
-        self.send_message_with_name('VitaSetFruActivation', fru_id=fru_id,
-                                    control=VITA_FRU_DEACTIVATE)
+        self.send_message_by_name('VitaSetFruActivation', fru_id=fru_id,
+                                  control=VITA_FRU_DEACTIVATE)
 
     def get_vita_fru_state_policy(self, fru_id: int) -> Message:
         """Get the FRU state policy bits of a FRU.
@@ -180,8 +180,8 @@ class Vita(IpmiMixin):
             ``commanded_deactivation_ignored`` and
             ``default_activation_locked``.
         """
-        return self.send_message_with_name('VitaGetFruStatePolicy',
-                                           fru_id=fru_id)
+        return self.send_message_by_name('VitaGetFruStatePolicy',
+                                         fru_id=fru_id)
 
     def set_vita_fru_state_policy(self, fru_id: int, mask: int,
                                   value: int) -> None:
@@ -218,8 +218,8 @@ class Vita(IpmiMixin):
             The response with the field ``led_count``, the number of LEDs
             of the FRU.
         """
-        return self.send_message_with_name('VitaGetFruLedProperties',
-                                           fru_id=fru_id)
+        return self.send_message_by_name('VitaGetFruLedProperties',
+                                         fru_id=fru_id)
 
     def get_vita_led_color_capabilities(self, fru_id: int,
                                         led_id: int) -> Message:
@@ -237,8 +237,8 @@ class Vita(IpmiMixin):
             ``VITA_LED_COLOR_*`` value) and ``flags``, which is None if the
             IPMC does not report it.
         """
-        return self.send_message_with_name('VitaGetFruLedCapabilities',
-                                           fru_id=fru_id, led_id=led_id)
+        return self.send_message_by_name('VitaGetFruLedCapabilities',
+                                         fru_id=fru_id, led_id=led_id)
 
     def get_vita_led_state(self, fru_id: int, led_id: int) -> Message:
         """Get the state of a LED.
@@ -256,8 +256,8 @@ class Vita(IpmiMixin):
             ``lamp_test_duration`` are None if the IPMC does not report
             them.
         """
-        return self.send_message_with_name('VitaGetFruLedState',
-                                           fru_id=fru_id, led_id=led_id)
+        return self.send_message_by_name('VitaGetFruLedState',
+                                         fru_id=fru_id, led_id=led_id)
 
     def set_vita_led_state(self, fru_id: int, led_id: int, function: int,
                            on_duration: int = 0,
@@ -276,6 +276,6 @@ class Vita(IpmiMixin):
                 milliseconds.
             color: One of the ``VITA_LED_COLOR_*`` values.
         """
-        self.send_message_with_name('VitaSetFruLedState', fru_id=fru_id,
-                                    led_id=led_id, function=function,
-                                    on_duration=on_duration, color=color)
+        self.send_message_by_name('VitaSetFruLedState', fru_id=fru_id,
+                                  led_id=led_id, function=function,
+                                  on_duration=on_duration, color=color)

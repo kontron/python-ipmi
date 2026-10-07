@@ -92,8 +92,8 @@ class Dcmi(IpmiMixin):
             (bits ``major`` and ``minor``, the DCMI version),
             ``parameter_revision`` and ``parameter_data``.
         """
-        rsp = self.send_message_with_name('GetDcmiCapabilities',
-                                          parameter_selector=selector)
+        rsp = self.send_message_by_name('GetDcmiCapabilities',
+                                        parameter_selector=selector)
         return rsp
 
     def get_power_reading(self, mode: int, attributes: int = 0) -> Message:
@@ -113,8 +113,8 @@ class Dcmi(IpmiMixin):
             ``reading_state`` (bit 6 is set if the power measurement is
             active).
         """
-        rsp = self.send_message_with_name('GetPowerReading',
-                                          mode=mode, attributes=attributes)
+        rsp = self.send_message_by_name('GetPowerReading',
+                                        mode=mode, attributes=attributes)
         return rsp
 
     def _get_all_instances(self, name: str, entity_id: int,
@@ -131,11 +131,11 @@ class Dcmi(IpmiMixin):
         items: list[Any] = []
         start = 0
         while True:
-            rsp = self.send_message_with_name(name,
-                                              sensor_type=1,
-                                              entity_id=entity_id,
-                                              entity_instance=0,
-                                              entity_instance_start=start)
+            rsp = self.send_message_by_name(name,
+                                            sensor_type=1,
+                                            entity_id=entity_id,
+                                            entity_instance=0,
+                                            entity_instance_start=start)
             received = decode(rsp)
             new = [(k, i) for (k, i) in received if k not in keys]
             for (k, i) in new:
@@ -204,7 +204,7 @@ class Dcmi(IpmiMixin):
             CompletionCodeError: The BMC rejected the request, e.g. if no
                 power limit is set (0x80).
         """
-        return self.send_message_with_name('GetPowerLimit')
+        return self.send_message_by_name('GetPowerLimit')
 
     def set_power_limit(self, power_limit: int, correction_time_limit: int,
                         statistics_sampling_period: int,
@@ -223,7 +223,7 @@ class Dcmi(IpmiMixin):
             exception_actions: The action if the limit is exceeded, one of
                 the ``POWER_LIMIT_EXCEPTION_*`` constants.
         """
-        self.send_message_with_name(
+        self.send_message_by_name(
                 'SetPowerLimit',
                 exception_actions=exception_actions,
                 power_limit=power_limit,
@@ -232,13 +232,13 @@ class Dcmi(IpmiMixin):
 
     def activate_power_limit(self) -> None:
         """Activate the power limit."""
-        self.send_message_with_name('ActivateDeactivatePowerLimit',
-                                    activation=1)
+        self.send_message_by_name('ActivateDeactivatePowerLimit',
+                                  activation=1)
 
     def deactivate_power_limit(self) -> None:
         """Deactivate the power limit."""
-        self.send_message_with_name('ActivateDeactivatePowerLimit',
-                                    activation=0)
+        self.send_message_by_name('ActivateDeactivatePowerLimit',
+                                  activation=0)
 
     def get_thermal_limit(self, entity_id: int,
                           entity_instance: int) -> Message:
@@ -254,9 +254,9 @@ class Dcmi(IpmiMixin):
             ``temperature_limit`` in degree Celsius and ``exception_time``
             in seconds.
         """
-        return self.send_message_with_name('GetThermalLimit',
-                                           entity_id=entity_id,
-                                           entity_instance=entity_instance)
+        return self.send_message_by_name('GetThermalLimit',
+                                         entity_id=entity_id,
+                                         entity_instance=entity_instance)
 
     def set_thermal_limit(self, entity_id: int, entity_instance: int,
                           temperature_limit: int, exception_time: int,
@@ -301,9 +301,9 @@ class Dcmi(IpmiMixin):
             (bits ``major`` and ``minor``), ``parameter_revision`` and
             ``parameter_data``.
         """
-        return self.send_message_with_name('GetDcmiConfigurationParameters',
-                                           parameter_selector=selector,
-                                           set_selector=set_selector)
+        return self.send_message_by_name('GetDcmiConfigurationParameters',
+                                         parameter_selector=selector,
+                                         set_selector=set_selector)
 
     def set_dcmi_configuration_parameters(self, selector: int, data: bytes,
                                           set_selector: int = 0) -> None:
@@ -314,21 +314,21 @@ class Dcmi(IpmiMixin):
             data: The parameter data.
             set_selector: The set selector of the parameter.
         """
-        self.send_message_with_name('SetDcmiConfigurationParameters',
-                                    parameter_selector=selector,
-                                    set_selector=set_selector,
-                                    parameter_data=data)
+        self.send_message_by_name('SetDcmiConfigurationParameters',
+                                  parameter_selector=selector,
+                                  set_selector=set_selector,
+                                  parameter_data=data)
 
     def _get_dcmi_string(self, name: str, length_request_size: int) -> bytes:
         # the first request is only used to get the total length
-        rsp = self.send_message_with_name(name, offset=0,
-                                          number_of_bytes=length_request_size)
+        rsp = self.send_message_by_name(name, offset=0,
+                                        number_of_bytes=length_request_size)
         total_length = rsp.total_length
         data = b''
         while len(data) < total_length:
             count = min(MAX_STRING_CHUNK_SIZE, total_length - len(data))
-            rsp = self.send_message_with_name(name, offset=len(data),
-                                              number_of_bytes=count)
+            rsp = self.send_message_by_name(name, offset=len(data),
+                                            number_of_bytes=count)
             chunk = rsp.data.tobytes()
             if not chunk:
                 break
@@ -338,9 +338,9 @@ class Dcmi(IpmiMixin):
     def _set_dcmi_string(self, name: str, data: bytes) -> None:
         for offset in range(0, len(data), MAX_STRING_CHUNK_SIZE):
             chunk = data[offset:offset + MAX_STRING_CHUNK_SIZE]
-            self.send_message_with_name(name, offset=offset,
-                                        number_of_bytes=len(chunk),
-                                        data=chunk)
+            self.send_message_by_name(name, offset=offset,
+                                      number_of_bytes=len(chunk),
+                                      data=chunk)
 
     def get_asset_tag(self) -> str:
         """Return the asset tag of the system.

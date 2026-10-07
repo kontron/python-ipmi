@@ -36,7 +36,7 @@ These commands are primarily to provide standardized chassis status and control 
 .. note::
 
    - O/M - Optional/Mandatory command as stated by the IPMI standard
-   - Support - Supported command by **send_message_with_name** method
+   - Support - Supported command by **send_message_by_name** method
    - API - High level API support implemented in this library
 
 The methods and the returned classes are described in detail in the :doc:`api`.
@@ -46,7 +46,7 @@ Get Chassis Capabilities Command
 
 This command returns information about which main chassis management functions are present on the :abbr:`IPMB (Intelligent Platform Management Bus)` and what addresses are used to access those functions. This command is used to find the devices that provide functions such as :abbr:`SEL (System Event Log)`, :abbr:`SDR (Sensor Data Record)`, and :abbr:`ICMB (Intelligent Chassis Management Bus)` Bridging so that they can be accessed via commands delivered via a physical or logical :abbr:`IPMB (Intelligent Platform Management Bus)`.
 
-There is no high level API for this command, it is sent with the **send_message_with_name** method. The response has the following fields:
+There is no high level API for this command, it is sent with the **send_message_by_name** method. The response has the following fields:
 
   * ``capabilities_flags`` with the bits ``intrusion_sensor``, ``frontpanel_lockout``, ``diagnostic_interrupt`` and ``power_interlock``
   * ``fru_info_device_address``
@@ -59,7 +59,7 @@ For example:
 
 .. code:: python
 
-   rsp = ipmi.send_message_with_name('GetChassisCapabilities')
+   rsp = ipmi.send_message_by_name('GetChassisCapabilities')
    if rsp.capabilities_flags.intrusion_sensor:
        print('chassis intrusion sensor present')
    print('SEL device address: 0x%02x' % rsp.sel_device_address)
@@ -194,13 +194,13 @@ For example:
 Get POH Counter Command
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-This command returns the Power-On Hours (POH) counter. There is no high level API for this command, it is sent with the **send_message_with_name** method. The response contains the ``counter_reading`` and the ``minutes_per_count``.
+This command returns the Power-On Hours (POH) counter. There is no high level API for this command, it is sent with the **send_message_by_name** method. The response contains the ``counter_reading`` and the ``minutes_per_count``.
 
 For example:
 
 .. code:: python
 
-   rsp = ipmi.send_message_with_name('GetPohCounter')
+   rsp = ipmi.send_message_by_name('GetPohCounter')
    hours = rsp.counter_reading * rsp.minutes_per_count / 60
 
 

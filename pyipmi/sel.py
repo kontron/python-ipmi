@@ -57,7 +57,7 @@ class Sel(IpmiMixin):
         Returns:
             The number of entries.
         """
-        info = SelInfo(self.send_message_with_name('GetSelInfo'))
+        info = SelInfo(self.send_message_by_name('GetSelInfo'))
         return info.entries
 
     def get_sel_reservation_id(self) -> int:
@@ -69,13 +69,13 @@ class Sel(IpmiMixin):
         Returns:
             The reservation ID.
         """
-        rsp = self.send_message_with_name('ReserveSel')
+        rsp = self.send_message_by_name('ReserveSel')
         return rsp.reservation_id
 
     def _clear_sel(self, cmd: int, reservation: int) -> int:
-        rsp = self.send_message_with_name('ClearSel',
-                                          reservation_id=reservation,
-                                          cmd=cmd)
+        rsp = self.send_message_by_name('ClearSel',
+                                        reservation_id=reservation,
+                                        cmd=cmd)
         return rsp.status.erase_in_progress
 
     def clear_sel(self, retry: int = 5) -> None:
@@ -102,9 +102,9 @@ class Sel(IpmiMixin):
         Returns:
             The record ID of the deleted entry.
         """
-        rsp = self.send_message_with_name('DeleteSelEntry',
-                                          reservation_id=reservation,
-                                          record_id=record_id)
+        rsp = self.send_message_by_name('DeleteSelEntry',
+                                        reservation_id=reservation,
+                                        record_id=record_id)
         return rsp.record_id
 
     def get_and_clear_sel_entry(self, record_id: int) -> SelEntry:

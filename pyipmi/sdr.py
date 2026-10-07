@@ -102,7 +102,7 @@ class Sdr(IpmiMixin):
             The SDR repository information.
         """
         return SdrRepositoryInfo(
-                self.send_message_with_name('GetSdrRepositoryInfo'))
+                self.send_message_by_name('GetSdrRepositoryInfo'))
 
     def get_sdr_repository_allocation_info(self) -> SdrRepositoryAllocationInfo:
         """Get the allocation information of the SDR repository.
@@ -111,7 +111,7 @@ class Sdr(IpmiMixin):
             The SDR repository allocation information.
         """
         return SdrRepositoryAllocationInfo(
-                self.send_message_with_name('GetSdrRepositoryAllocationInfo'))
+                self.send_message_by_name('GetSdrRepositoryAllocationInfo'))
 
     def reserve_sdr_repository(self) -> int:
         """Reserve the SDR repository.
@@ -122,7 +122,7 @@ class Sdr(IpmiMixin):
         Returns:
             The reservation ID.
         """
-        rsp = self.send_message_with_name('ReserveSdrRepository')
+        rsp = self.send_message_by_name('ReserveSdrRepository')
         return rsp.reservation_id
 
     def _get_sdr_chunk(self, reservation_id: int, record_id: int, offset: int,
@@ -228,15 +228,15 @@ class Sdr(IpmiMixin):
             The record ID of the deleted record.
         """
         reservation_id = self.reserve_sdr_repository()
-        rsp = self.send_message_with_name('DeleteSdr',
-                                          reservation_id=reservation_id,
-                                          record_id=record_id)
+        rsp = self.send_message_by_name('DeleteSdr',
+                                        reservation_id=reservation_id,
+                                        record_id=record_id)
         return rsp.record_id
 
     def _clear_sdr_repository(self, cmd: int, reservation_id: int) -> int:
-        rsp = self.send_message_with_name('ClearSdrRepository',
-                                          reservation_id=reservation_id,
-                                          cmd=cmd)
+        rsp = self.send_message_by_name('ClearSdrRepository',
+                                        reservation_id=reservation_id,
+                                        cmd=cmd)
         return rsp.status.erase_in_progress
 
     def clear_sdr_repository(self, retry: int = 5) -> None:
@@ -254,7 +254,7 @@ class Sdr(IpmiMixin):
                                 self._clear_sdr_repository, retry)
 
     def _run_initialization_agent(self, cmd: int) -> int:
-        rsp = self.send_message_with_name('RunInitializationAgent', cmd=cmd)
+        rsp = self.send_message_by_name('RunInitializationAgent', cmd=cmd)
         return rsp.status.initialization_completed
 
     def start_initialization_agent(self) -> None:

@@ -16,7 +16,7 @@ The :abbr:`BMC (Board Management Controller)` implements a standardized **'Watch
 .. note::
 
    - O/M - Optional/Mandatory command as stated by the IPMI standard
-   - Support - Supported command by **send_message_with_name** method
+   - Support - Supported command by **send_message_by_name** method
    - API - High level API support implemented in this library
 
 The methods and the returned classes are described in detail in the :doc:`api`.

@@ -199,7 +199,7 @@ def test_ipmi_send_message_completion_code_error():
     assert mock.call_count == 1
 
 
-def test_ipmi_send_message_with_name():
+def test_ipmi_send_message_by_name():
 
     rsp = GetDeviceIdRsp()
     rsp.completion_code = 0
@@ -211,13 +211,13 @@ def test_ipmi_send_message_with_name():
     ipmi = create_connection(interface)
     ipmi.send_message = mock_send_message
 
-    ipmi.send_message_with_name('GetDeviceId')
+    ipmi.send_message_by_name('GetDeviceId')
     args, kwargs = mock_send_message.call_args
     req = args[0]
     assert isinstance(req, GetDeviceIdReq)
 
 
-def test_ipmi_send_message_with_name_and_kwargs():
+def test_ipmi_send_message_by_name_and_kwargs():
 
     rsp = GetSensorReadingRsp()
     rsp.completion_code = 0
@@ -229,9 +229,24 @@ def test_ipmi_send_message_with_name_and_kwargs():
     ipmi = create_connection(interface)
     ipmi.send_message = mock_send_message
 
-    ipmi.send_message_with_name('GetSensorReading', sensor_number=5, lun=2)
+    ipmi.send_message_by_name('GetSensorReading', sensor_number=5, lun=2)
     args, kwargs = mock_send_message.call_args
     req = args[0]
     assert isinstance(req, GetSensorReadingReq)
     assert req.sensor_number == 5
     assert req.lun == 2
+
+
+def test_ipmi_send_message_with_name_deprecated():
+    rsp = GetSensorReadingRsp()
+    rsp.completion_code = 0
+
+    ipmi = create_connection(interfaces.create_interface('mock'))
+    ipmi.send_message = MagicMock(return_value=rsp)
+
+    with pytest.warns(DeprecationWarning, match='send_message_by_name'):
+        assert ipmi.send_message_with_name(
+            'GetSensorReading', sensor_number=5) is rsp
+    req = ipmi.send_message.call_args.args[0]
+    assert isinstance(req, GetSensorReadingReq)
+    assert req.sensor_number == 5
