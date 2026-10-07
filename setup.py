@@ -18,7 +18,16 @@ def pep440_version(describe):
     """Convert the output of 'git describe' to a PEP 440 version.
 
     0.5.8-77-g7c853b0.dirty -> 0.5.8.dev77+g7c853b0.dirty
+
+    Without tags, e.g. in a shallow clone, 'git describe --always' prints
+    only the abbreviated commit:
+
+    7c853b0.dirty -> 0+g7c853b0.dirty
     """
+    m = re.match(r'^([0-9a-f]{7,40})(\.dirty)?$', describe)
+    if m:
+        commit, dirty = m.groups()
+        return '0+g' + commit + (dirty or '')
     m = re.match(r'^(.+?)(?:-(\d+)-(g[0-9a-f]+))?(\.dirty)?$', describe)
     tag, distance, commit, dirty = m.groups()
     version = tag

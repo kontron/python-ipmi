@@ -8,6 +8,11 @@ build:
   apt_packages:
     # for the graphviz diagrams
     - graphviz
+  jobs:
+    # Read the Docs clones without tags, fetch them for the version that
+    # setup.py gets from 'git describe'
+    post_checkout:
+      - git fetch --unshallow --tags || true
 
 sphinx:
   configuration: docs/source/conf.py
