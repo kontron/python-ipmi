@@ -516,3 +516,59 @@ def test_get_fru_internal_use_area_last_area():
     assert area.internal_use_data == bytes(range(1, 24))
     # read up to the end of the FRU data
     assert fru.requests == [(0, 8), (8, 24)]
+
+
+def _fru_image(multirecords, after=b''):
+    """Return FRU data with a multirecord area at offset 8.
+
+    `after` is an area that follows the multirecord area, e.g. a board info
+    area, the header points to it if it is given.
+    """
+    multirecord_area = b''.join(multirecords)
+    following = 8 + len(multirecord_area)
+    board_offset = following // 8 if after else 0
+    header = [1, 0, 0, board_offset, 0, 1, 0]
+    header.append(-sum(header) & 0xff)
+    return bytes(header) + multirecord_area + after
+
+
+def _record(data, end_of_list=False):
+    """Return a DC output multirecord with valid checksums."""
+    header = [0x01, 0x82 if end_of_list else 0x02, len(data), -sum(data) & 0xff]
+    return bytes(header + [-sum(header) & 0xff]) + bytes(data)
+
+
+# a board info area of 16 bytes: format 1, length 2, language, date, five
+# empty fields (0xc0), the end marker 0xc1, padding and the checksum
+_BOARD = [1, 2, 0, 0, 0, 0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc0, 0xc1, 0, 0, 0]
+BOARD_AREA = bytes(_BOARD + [-sum(_BOARD) & 0xff])
+
+
+def test_multirecord_area_without_end_of_list():
+    # two records without the end of list flag, followed by the board area
+    data = _fru_image([_record([1, 2, 3]), _record([4, 5, 6])], BOARD_AREA)
+    inventory = FruInventory(data)
+    assert [bytes(r.raw) for r in inventory.multirecord_area.records] \
+        == [b'\x01\x02\x03', b'\x04\x05\x06']
+    assert inventory.board_info_area is not None
+
+
+def test_get_fru_multirecord_area_without_end_of_list():
+    data = _fru_image([_record([1, 2, 3]), _record([4, 5, 6])], BOARD_AREA)
+    fru = FakeFruDevice(data)
+    area = fru.get_fru_multirecord_area()
+    assert len(area.records) == 2
+    # nothing is read beyond the multirecord area at 8 - 24
+    assert all(o + c <= 24 for o, c in fru.requests[1:])
+
+
+def test_multirecord_area_record_exceeds_data():
+    # the last record declares 8 bytes, but only 3 follow
+    record = _record([1, 2, 3], end_of_list=True)
+    record = record[:2] + b'\x08' + record[3:4] \
+        + bytes([-(sum(record[:2]) + 8 + record[3]) & 0xff]) + record[5:]
+    data = _fru_image([record])
+    with pytest.raises(DecodingError):
+        FruInventory(data)
+    with pytest.raises(DecodingError):
+        FruInventory(data, ignore_checksum=True)

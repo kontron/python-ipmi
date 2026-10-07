@@ -383,6 +383,10 @@ class Fru(IpmiMixin):
                                  ) -> InventoryMultiRecordArea:
         """Read and decode the multirecord area.
 
+        The records are read up to the record with the end of list flag, or
+        up to the next area or the end of the FRU data if the flag is
+        missing.
+
         Args:
             fru_id: The FRU device ID.
             ignore_checksum: Don't raise a DecodingError on a wrong
@@ -406,8 +410,13 @@ class Fru(IpmiMixin):
             raise DataNotFound('FRU has no multirecord area')
         offset = header.multirecord_area_offset
         count = 0
+        # the area ends at the next area or at the end of the FRU data, if
+        # the end of list flag is missing
+        end = header.next_area_offset(offset)
+        if end is None:
+            end = header.fru_size
 
-        while True:
+        while end is None or offset < end:
             # read the header
             self._check_fru_size(header, 'multirecord area', offset, 5)
             data = self.read_fru_data(offset=offset, count=5, fru_id=fru_id)
@@ -420,6 +429,10 @@ class Fru(IpmiMixin):
 
         # now read the full area
         offset = header.multirecord_area_offset
+        if end is not None and offset + count > end:
+            raise DecodingError(f'multirecord area at offset 0x{offset:x} '
+                                f'with {count} bytes exceeds the next area '
+                                f'or the FRU data at 0x{end:x}')
         self._check_fru_size(header, 'multirecord area', offset, count)
         data = self.read_fru_data(offset=offset, count=count, fru_id=fru_id)
         return InventoryMultiRecordArea(data, ignore_checksum=ignore_checksum)
@@ -808,6 +821,9 @@ class FruDataMultiRecord(FruData):
         if sum(data[:5]) % 256 != 0 and ignore_checksum is False:
             raise DecodingError('FruDataMultiRecord header checksum failed')
         self.raw = data[5:5+self.length]
+        if len(self.raw) < self.length:
+            raise DecodingError('FruDataMultiRecord record data exceeds the '
+                                'multirecord area')
         if (sum(self.raw) + data[3]) % 256 != 0 and ignore_checksum is False:
             raise DecodingError('FruDataMultiRecord record checksum failed')
         # an OEM record starts with the manufacturer ID, LS byte first
@@ -957,6 +973,10 @@ class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
 class InventoryMultiRecordArea:
     """The multirecord area.
 
+    The list of records ends with the record with the end of list flag. If
+    the flag is missing, it ends at the end of the area: at the next area
+    or at the end of the FRU data.
+
     Attributes:
         records (list[FruDataMultiRecord]): The records of the area,
             decoded by :meth:`FruDataMultiRecord.create_from_record_id`.
@@ -979,7 +999,9 @@ class InventoryMultiRecordArea:
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         self.records = list()
         offset = 0
-        while True:
+        # the list ends with the end of list flag, or at the end of the area
+        # if the flag is missing
+        while offset < len(data):
             record = FruDataMultiRecord.create_from_record_id(
                 data[offset:], ignore_checksum=ignore_checksum)
             self.records.append(record)
@@ -1052,7 +1074,8 @@ class FruInventory:
                 data[self.common_header.product_info_area_offset:],
                 ignore_checksum=ignore_checksum)
 
-        if self.common_header.multirecord_area_offset:
+        offset = self.common_header.multirecord_area_offset
+        if offset:
+            end = self.common_header.next_area_offset(offset)
             self.multirecord_area = InventoryMultiRecordArea(
-                data[self.common_header.multirecord_area_offset:],
-                ignore_checksum=ignore_checksum)
+                data[offset:end], ignore_checksum=ignore_checksum)
