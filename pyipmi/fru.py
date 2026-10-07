@@ -700,6 +700,9 @@ class FruDataMultiRecord(FruData):
         end_of_list (bool): True for the last record of the area.
         length (int): The length of the record data in bytes.
         raw (Sequence[int]): The record data, without the record header.
+        manufacturer_id (int | None): The IANA manufacturer ID of an OEM
+            record (``TYPE_OEM``), from the first three bytes of the
+            record data. None for other records.
     """
 
     TYPE_POWER_SUPPLY_INFORMATION = 0
@@ -708,13 +711,19 @@ class FruDataMultiRecord(FruData):
     TYPE_MANAGEMENT_ACCESS_RECORD = 3
     TYPE_BASE_COMPATIBILITY_RECORD = 4
     TYPE_EXTENDED_COMPATIBILITY_RECORD = 5
-    TYPE_OEM = list(range(0x0c, 0x100))
+    TYPE_OEM = list(range(0xc0, 0x100))
     TYPE_OEM_PICMG = 0xc0
 
     def __str__(self) -> str:
-        """Return the record type ID and the record data as hex string."""
-        return '%02x: %s' % (self.record_type_id,
-                             ' '.join('%02x' % b for b in self.raw))
+        """Return the record type ID and the record data as hex string.
+
+        The manufacturer ID of an OEM record is added to the record type.
+        """
+        record_type = '%02x' % self.record_type_id
+        if self.manufacturer_id is not None:
+            record_type += ' (OEM, manufacturer ID %d)' % self.manufacturer_id
+        return '%s: %s' % (record_type,
+                           ' '.join('%02x' % b for b in self.raw))
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         if len(data) < 5:
@@ -728,6 +737,11 @@ class FruDataMultiRecord(FruData):
         self.raw = data[5:5+self.length]
         if (sum(self.raw) + data[3]) % 256 != 0 and ignore_checksum is False:
             raise DecodingError('FruDataMultiRecord record checksum failed')
+        # an OEM record starts with the manufacturer ID, LS byte first
+        self.manufacturer_id: int | None = None
+        if self.record_type_id in self.TYPE_OEM and len(self.raw) >= 3:
+            self.manufacturer_id = \
+                self.raw[0] | self.raw[1] << 8 | self.raw[2] << 16
 
     @staticmethod
     def create_from_record_id(data: Sequence[int],

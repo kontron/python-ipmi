@@ -8,8 +8,8 @@ import pytest
 from pyipmi.errors import CompletionCodeError, DataNotFound, DecodingError
 from pyipmi.msgs import constants
 
-from pyipmi.fru import (Fru, FruData, FruInventory,
-                        FruPicmgPowerModuleCapabilityRecord,
+from pyipmi.fru import (Fru, FruData, FruDataMultiRecord, FruInventory,
+                        FruPicmgPowerModuleCapabilityRecord, FruPicmgRecord,
                         InventoryCommonHeader, InventoryBoardInfoArea,
                         get_fru_inventory_from_file)
 
@@ -123,6 +123,9 @@ def test_fru_inventory_from_file_4():
     assert [r.record_type_id for r in records] == [0xd0, 0xd0, 0xd0]
     assert [r.length for r in records] == [47, 8, 7]
     assert [r.end_of_list for r in records] == [False, False, True]
+    # the manufacturer ID of the OEM records is 11, Hewlett-Packard
+    assert [r.manufacturer_id for r in records] == [11, 11, 11]
+    assert str(records[2]) == 'd0 (OEM, manufacturer ID 11): 0b 00 00 02 0b 00 00'
 
 
 def test_board_area():
@@ -410,3 +413,36 @@ def test_get_fru_area_not_present(method):
     with pytest.raises(DataNotFound):
         getattr(fru, method)()
     assert fru.requests == [(0, 8)]
+
+
+def test_multirecord_picmg_manufacturer_id():
+    fru_file = os.path.join(this_file_path, 'fru_bin/kontron_am4010.bin')
+    record = get_fru_inventory_from_file(fru_file).multirecord_area.records[0]
+    assert isinstance(record, FruPicmgRecord)
+    assert record.manufacturer_id == 0x315a
+    assert str(record).startswith('c0 (OEM, manufacturer ID 12634): 5a 31 00')
+
+
+def _multirecord(record_type, data):
+    """Return a multirecord, the last one of the area, with checksums."""
+    header = [record_type, 0x82, len(data), -sum(data) & 0xff]
+    return bytes(header + [-sum(header) & 0xff] + list(data))
+
+
+def test_multirecord_not_oem():
+    # a DC output record (type 0x01) is no OEM record
+    record = FruDataMultiRecord.create_from_record_id(
+        _multirecord(0x01, b'\x01\x02\x03'))
+    assert record.manufacturer_id is None
+    assert str(record) == '01: 01 02 03'
+
+
+def test_multirecord_oem_too_short():
+    record = FruDataMultiRecord.create_from_record_id(
+        _multirecord(0xd0, b'\x0b\x00'))
+    assert record.manufacturer_id is None
+    assert str(record) == 'd0: 0b 00'
+
+
+def test_multirecord_type_oem():
+    assert FruDataMultiRecord.TYPE_OEM == list(range(0xc0, 0x100))
