@@ -1327,6 +1327,11 @@ def main(argv: list[str] | None = None) -> None:
         if args.verbose:
             traceback.print_exc()
         sys.exit(1)
+    except pyipmi.errors.IpmiConnectionError as e:
+        print('Connection error: %s' % e)
+        if args.verbose:
+            traceback.print_exc()
+        sys.exit(1)
     except pyipmi.errors.HpmError as e:
         print('HPM error: %s' % e)
         if args.verbose:

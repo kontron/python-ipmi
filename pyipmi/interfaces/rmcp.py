@@ -31,7 +31,8 @@ from .. import Target
 from ..session import Session
 from ..msgs import create_request_by_name, constants, Message
 from ..messaging import ChannelAuthenticationCapabilities
-from ..errors import DecodingError, NotSupportedError, RetryError
+from ..errors import (DecodingError, IpmiConnectionError, NotSupportedError,
+                      RetryError)
 from .base import Interface
 from ..interfaces.ipmb import (IpmbHeaderReq, encode_ipmb_msg,
                                encode_bridged_message, decode_bridged_message,
@@ -480,8 +481,17 @@ class Rmcp(Interface):
 
     def ping(self) -> None:
         ping = AsfPing()
-        self._send_asf_msg(ping)
-        self._receive_asf_msg(AsfPong)
+        try:
+            self._send_asf_msg(ping)
+            self._receive_asf_msg(AsfPong)
+        except TimeoutError:
+            raise IpmiConnectionError(
+                f'no response to RMCP ping from {self.host}:{self.port}, '
+                'check host, port and network connectivity') from None
+        except ConnectionRefusedError:
+            raise IpmiConnectionError(
+                f'connection to {self.host}:{self.port} refused, '
+                'is the BMC listening on this port?') from None
 
     def _get_channel_auth_cap(
             self, session: Session) -> ChannelAuthenticationCapabilities:

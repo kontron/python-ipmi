@@ -8,7 +8,7 @@ import pytest
 from pyipmi.session import Session
 from pyipmi.interfaces.rmcp import (AsfMsg, AsfPing, AsfPong, IpmiMsg, RmcpMsg, Rmcp)
 from pyipmi.utils import py3_array_tobytes
-from pyipmi.errors import DecodingError, RetryError
+from pyipmi.errors import DecodingError, IpmiConnectionError, RetryError
 from pyipmi.interfaces.ipmb import IpmbHeaderReq, encode_ipmb_msg
 
 
@@ -244,6 +244,19 @@ class TestRmcp:
         before = time.monotonic()
         rmcp.send_and_receive_raw(rmcp.host_target, 0, 6, b'\x00')
         assert rmcp._last_request_time >= before
+
+    @pytest.mark.parametrize('exc, msg', [
+        (TimeoutError, 'no response to RMCP ping from 10.0.0.1:623'),
+        (ConnectionRefusedError, 'connection to 10.0.0.1:623 refused'),
+    ])
+    def test_ping_error(self, exc, msg):
+        rmcp = Rmcp()
+        rmcp.host = '10.0.0.1'
+        rmcp.port = 623
+        rmcp._sock = MagicMock(spec=socket.socket)
+        rmcp._sock.recv.side_effect = exc
+        with pytest.raises(IpmiConnectionError, match=msg):
+            rmcp.ping()
 
 
 def _rmcp_rsp(seq, data=b'\x00\xaa'):
