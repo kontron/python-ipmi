@@ -51,6 +51,7 @@ from .utils import check_completion_code, bcd_search
 from .utils import py3dec_unic_bytes_fix, py3_array_tobytes
 from .state import State
 from .fields import VersionField
+from .constants import manufacturer_name
 from .mixin import IpmiMixin
 
 
@@ -1099,6 +1100,9 @@ class UpgradeImageHeaderRecord:
     Attributes:
         signature (bytes): The signature ``PICMGFWU``.
         manufacturer_id (int): The manufacturer ID.
+        manufacturer_name (str | None): The name of a well known
+            manufacturer, see :func:`pyipmi.constants.manufacturer_name`.
+            None for other manufacturers.
         components (list[int]): The numbers of the components in the image.
         earliest_compatible_revision (VersionField): The earliest firmware
             revision the image is compatible with.
@@ -1173,6 +1177,7 @@ class UpgradeImageHeaderRecord:
             data = [ord(c) for c in data]
 
         self.manufacturer_id = data[10] | data[11] << 8 | data[12] << 16
+        self.manufacturer_name = manufacturer_name(self.manufacturer_id)
         self.components: list[int] = []
         for i in range(8):
             if data[20] & (1 << i):
@@ -1195,7 +1200,10 @@ class UpgradeImageHeaderRecord:
         string.append(" Signature:        %s" % self.signature.decode())
         string.append(" Format Version:   %s" % self.format_version)
         string.append(" Device ID:        %s" % self.device_id)
-        string.append(" Manufacturer:     %s" % self.manufacturer_id)
+        manufacturer = '%d' % self.manufacturer_id
+        if self.manufacturer_name is not None:
+            manufacturer += ' = %s' % self.manufacturer_name
+        string.append(" Manufacturer:     %s" % manufacturer)
         string.append(" Product ID:       %s" % self.product_id)
         string.append(" Time:             %s" % self.time)
         string.append(" Image Cap:        0x%02x" % self.capabilities)

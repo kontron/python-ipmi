@@ -614,9 +614,20 @@ def test_upgrade_image_header_str():
     image = UpgradeImage(HPM_FILE)
     s = str(image.header)
     assert 'Device ID:        4' in s
-    assert 'Manufacturer:     15000' in s
+    assert 'Manufacturer:     15000 = Kontron\n' in s
+    assert image.header.manufacturer_name == 'Kontron'
     assert str(image.actions[1]).startswith(
         'Action Record Type: 0x2 (Upload Firmware Image)')
+
+
+def test_upgrade_image_header_unknown_manufacturer():
+    with open(HPM_FILE, 'rb') as f:
+        data = bytearray(f.read())
+    # manufacturer ID 12345, which is not well known
+    data[10:13] = b'\x39\x30\x00'
+    header = UpgradeImageHeaderRecord(bytes(data))
+    assert header.manufacturer_name is None
+    assert 'Manufacturer:     12345\n' in str(header)
 
 
 def test_upgrade_action_record_invalid():

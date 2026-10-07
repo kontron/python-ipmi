@@ -303,6 +303,7 @@ class TestParser:
         out = capsys.readouterr().out
         assert 'HPM Upgrade Image header' in out
         assert 'Upload Firmware Image' in out
+        assert 'Manufacturer:     15000 = Kontron' in out
 
     def test_invalid_choice(self, capsys):
         with pytest.raises(SystemExit):
