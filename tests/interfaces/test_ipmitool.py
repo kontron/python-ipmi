@@ -238,6 +238,11 @@ class TestIpmitool:
                                      '-D /dev/tty2:115200 -t 0x20 -l 0 '
                                      'raw 0x06 0x01')
 
+    def test_rmcp_ping_serial_terminal(self):
+        interface = Ipmitool(interface_type='serial-terminal')
+        with pytest.raises(RuntimeError, match='^rmcp_ping not supported'):
+            interface.rmcp_ping()
+
     @pytest.mark.parametrize('cipher', ['-1', '256', '666'])
     def test_ipmitool_cipher_out_of_range(self, cipher):
         with pytest.raises(RuntimeError):

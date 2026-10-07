@@ -160,9 +160,9 @@ class Ipmitool(Interface):
         """
         if self._interface_type == 'serial-terminal':
             raise RuntimeError(
-                'rcmp_ping not supported on "serial-terminal" interface')
+                'rmcp_ping not supported on "serial-terminal" interface')
 
-        # for now this uses impitool..
+        # for now this uses ipmitool..
         session = self._get_session()
         cmd = self.IPMITOOL_PATH
         cmd += (' -I %s' % self._interface_type)
