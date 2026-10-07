@@ -222,9 +222,14 @@ class TestIpmitool:
                                      '-D /dev/tty2:115200 -t 0x20 -l 0 '
                                      'raw 0x06 0x01')
 
-    def test_ipmitool_cipher_out_of_range(self):
+    @pytest.mark.parametrize('cipher', ['-1', '256', '666'])
+    def test_ipmitool_cipher_out_of_range(self, cipher):
         with pytest.raises(RuntimeError):
-            Ipmitool(cipher='666')
+            Ipmitool(cipher=cipher)
+
+    @pytest.mark.parametrize('cipher', ['0', '17', '255'])
+    def test_ipmitool_cipher_in_range(self, cipher):
+        Ipmitool(cipher=cipher)
 
     def test_send_and_receive_raw_retries_timeout(self):
         interface = Ipmitool(interface_type='lanplus', cipher='3',
