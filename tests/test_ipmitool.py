@@ -228,6 +228,19 @@ class TestParser:
         assert expected in out
         assert not_expected not in out
 
+    @pytest.mark.parametrize('extra, data_printed', [(['all'], True),
+                                                     ([], False)])
+    def test_fru_print_file_internal_use_area(self, capsys, extra,
+                                              data_printed):
+        path = os.path.join(os.path.dirname(__file__), 'fru_bin',
+                            'HP_ProLiant_BL460c_Gen8.bin')
+        ipmitool.main(['fru', 'print-file', path] + extra)
+        out = capsys.readouterr().out
+        assert ('Internal Use Area:\n'
+                '  Format Version:     1\n'
+                '  Data Length:        15\n') in out
+        assert ('  Data:               02 01 00 85' in out) == data_printed
+
     @pytest.mark.parametrize('content, error', [
         (None, 'No such file'),
         (b'\x01\x00\x00\x00\x00\x00\x00\x00', 'checksum'),

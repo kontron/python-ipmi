@@ -318,6 +318,11 @@ def test_get_fru_inventory(filename):
     else:
         assert ([bytes(r.raw) for r in inventory.multirecord_area.records]
                 == [bytes(r.raw) for r in expected.multirecord_area.records])
+    if expected.internal_use_area is None:
+        assert inventory.internal_use_area is None
+    else:
+        assert (inventory.internal_use_area.internal_use_data
+                == expected.internal_use_area.internal_use_data)
     for area in ('chassis_info_area', 'board_info_area', 'product_info_area'):
         if getattr(expected, area) is None:
             assert getattr(inventory, area) is None
@@ -404,8 +409,8 @@ def test_get_fru_inventory_without_area_info():
 
 
 @pytest.mark.parametrize('method', [
-    'get_fru_chassis_area', 'get_fru_board_area', 'get_fru_product_area',
-    'get_fru_multirecord_area',
+    'get_fru_internal_use_area', 'get_fru_chassis_area', 'get_fru_board_area',
+    'get_fru_product_area', 'get_fru_multirecord_area',
 ])
 def test_get_fru_area_not_present(method):
     # common header without any area
@@ -463,3 +468,51 @@ def test_fru_inventory_from_unreadable_file(tmp_path):
     fru_file.chmod(0)
     with pytest.raises(PermissionError):
         get_fru_inventory_from_file(str(fru_file))
+
+
+def test_internal_use_area_from_file():
+    path = os.path.join(FRU_BIN_DIR, 'HP_ProLiant_BL460c_Gen8.bin')
+    with open(path, 'rb') as f:
+        raw = f.read()
+    area = get_fru_inventory_from_file(path).internal_use_area
+    assert area.format_version == 1
+    # the area ends at the chassis info area at offset 24
+    assert area.internal_use_data == raw[9:24]
+
+
+def test_internal_use_area_erased():
+    # the internal use area of this FRU is erased (0xff), it is decoded
+    path = os.path.join(FRU_BIN_DIR, 'kontron_am4904.bin')
+    area = get_fru_inventory_from_file(path).internal_use_area
+    assert area.format_version == 0x0f
+    assert area.internal_use_data == b'\xff' * 255
+
+
+# common header with only an internal use area at offset 8 and its data up
+# to the end of the FRU data
+INTERNAL_USE_ONLY = (b'\x01\x01\x00\x00\x00\x00\x00\xfe' + b'\x01'
+                     + bytes(range(1, 24)))
+
+
+def test_internal_use_area_last_area_from_file():
+    inventory = FruInventory(INTERNAL_USE_ONLY)
+    assert inventory.internal_use_area.internal_use_data == bytes(range(1, 24))
+
+
+def test_get_fru_internal_use_area():
+    path = os.path.join(FRU_BIN_DIR, 'HP_ProLiant_BL460c_Gen8.bin')
+    with open(path, 'rb') as f:
+        raw = f.read()
+    fru = FakeFruDevice(raw)
+    area = fru.get_fru_internal_use_area()
+    assert area.internal_use_data == raw[9:24]
+    # read up to the next area
+    assert fru.requests == [(0, 8), (8, 16)]
+
+
+def test_get_fru_internal_use_area_last_area():
+    fru = FakeFruDevice(INTERNAL_USE_ONLY)
+    area = fru.get_fru_internal_use_area()
+    assert area.internal_use_data == bytes(range(1, 24))
+    # read up to the end of the FRU data
+    assert fru.requests == [(0, 8), (8, 24)]

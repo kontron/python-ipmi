@@ -265,7 +265,24 @@ def cmd_fru_read(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
 
 def print_fru_inventory(inv: pyipmi.fru.FruInventory, print_all: bool,
                         all_hint: str) -> None:
-    """Print a FRU inventory, the multirecord area only with `print_all`."""
+    """Print a FRU inventory.
+
+    The data of the internal use area and the multirecord area are only
+    printed with `print_all`.
+    """
+    # Internal Use Area
+    internal_use_area = inv.internal_use_area
+    if internal_use_area:
+        data = internal_use_area.internal_use_data
+        print('Internal Use Area:')
+        print('  Format Version:     %d' % internal_use_area.format_version)
+        print('  Data Length:        %d' % len(data))
+        if print_all:
+            # 16 bytes per line
+            lines = [data[i:i + 16].hex(' ') for i in range(0, len(data), 16)]
+            for i, line in enumerate(lines):
+                print('  %-20s%s' % ('Data:' if i == 0 else '', line))
+
     # Chassis Info Area
     chassis_area = inv.chassis_info_area
     if chassis_area:

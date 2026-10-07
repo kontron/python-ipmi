@@ -18,8 +18,8 @@
 
 The FRU (Field Replaceable Unit) inventory data is specified by the IPMI
 Platform Management FRU Information Storage Definition v1.0. It consists
-of a common header and the optional chassis info, board info, product info
-and multirecord areas.
+of a common header and the optional internal use, chassis info, board info,
+product info and multirecord areas.
 
 The FRU inventory of a device is read with the methods of :class:`Fru`,
 which are available on :class:`pyipmi.Ipmi`. A FRU file is decoded with
@@ -251,6 +251,48 @@ class Fru(IpmiMixin):
                 fru_id=fru_id, ignore_checksum=ignore_checksum)
         return header
 
+    def get_fru_internal_use_area(self, fru_id: int = 0,
+                                  ignore_checksum: bool = False,
+                                  header: InventoryCommonHeader | None = None
+                                  ) -> InventoryInternalUseArea:
+        """Read and decode the internal use area.
+
+        The area is read up to the next area, or up to the end of the FRU
+        data if it is the last area.
+
+        Args:
+            fru_id: The FRU device ID.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum of the common header, the area has no checksum.
+            header: The common header of the FRU inventory, it is read from
+                the device if None. Pass the header to read several areas
+                without reading it again.
+
+        Returns:
+            The decoded internal use area.
+
+        Raises:
+            DataNotFound: The FRU inventory has no internal use area.
+            DecodingError: The area exceeds the size of the FRU inventory
+                area.
+        """
+        header = self._get_header(fru_id, ignore_checksum, header)
+        offset = header.internal_use_area_offset
+        if offset is None:
+            raise DataNotFound('FRU has no internal use area')
+        end = header.next_area_offset(offset)
+        if end is None:
+            end = header.fru_size
+        if end is None:
+            # the last area and the FRU size is unknown: read to the end
+            data = self.read_fru_data(offset=offset, fru_id=fru_id)
+        else:
+            self._check_fru_size(header, 'internal use area', offset,
+                                 end - offset)
+            data = self.read_fru_data(offset=offset, count=end - offset,
+                                      fru_id=fru_id)
+        return InventoryInternalUseArea(data)
+
     def get_fru_chassis_area(self, fru_id: int = 0,
                              ignore_checksum: bool = False,
                              header: InventoryCommonHeader | None = None
@@ -405,6 +447,13 @@ class Fru(IpmiMixin):
             ignore_checksum=ignore_checksum
         )
 
+        if header.internal_use_area_offset:
+            fru.internal_use_area = self.get_fru_internal_use_area(
+                fru_id=fru_id,
+                ignore_checksum=ignore_checksum,
+                header=header
+            )
+
         if header.chassis_info_area_offset:
             fru.chassis_info_area = self.get_fru_chassis_area(
                 fru_id=fru_id,
@@ -536,6 +585,39 @@ class InventoryCommonHeader(FruData):
                    self.product_info_area_offset,
                    self.multirecord_area_offset)
         return [o for o in offsets if o is not None]
+
+    def next_area_offset(self, offset: int) -> int | None:
+        """Return the offset of the area that follows an offset.
+
+        Args:
+            offset: The offset in the FRU inventory data.
+
+        Returns:
+            The lowest area offset greater than ``offset``, None if no area
+            follows.
+        """
+        return min((o for o in self.area_offsets() if o > offset),
+                   default=None)
+
+
+class InventoryInternalUseArea(FruData):
+    """The internal use area.
+
+    The area has a format version and data defined by the manufacturer.
+    It has neither a length nor a checksum, it ends at the next area or at
+    the end of the FRU data. The format version is not checked, e.g. an
+    erased area has the format version 0x0f.
+
+    Attributes:
+        format_version (int): The format version of the area, 1 for the
+            IPMI FRU specification.
+        internal_use_data (bytes): The data of the area after the format
+            version.
+    """
+
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
+        self.format_version = data[0] & 0x0f
+        self.internal_use_data = bytes(data[1:])
 
 
 class CommonInfoArea(FruData):
@@ -930,6 +1012,8 @@ class FruInventory:
         Raises:
             DecodingError: An area is invalid or its checksum is wrong.
         """
+        #: The internal use area.
+        self.internal_use_area: InventoryInternalUseArea | None = None
         #: The chassis info area.
         self.chassis_info_area: InventoryChassisInfoArea | None = None
         #: The board info area.
@@ -946,6 +1030,12 @@ class FruInventory:
         self.raw = data
         self.common_header = InventoryCommonHeader(
             data[:8], ignore_checksum=ignore_checksum)
+
+        offset = self.common_header.internal_use_area_offset
+        if offset:
+            end = self.common_header.next_area_offset(offset)
+            self.internal_use_area = InventoryInternalUseArea(
+                data[offset:end])
 
         if self.common_header.chassis_info_area_offset:
             self.chassis_info_area = InventoryChassisInfoArea(
