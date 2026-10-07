@@ -136,6 +136,9 @@ Print FRU inventory
 .TP
 \fBipmitool.py fru\fR \fI\,read\/\fR
 Read the FRU data and write it to a file
+.TP
+\fBipmitool.py fru\fR \fI\,print\-file\/\fR
+Print the FRU inventory of a file
 
 .SH COMMAND \fI\,'ipmitool.py fru print'\/\fR
 usage: ipmitool.py fru print [\-h] [fru_id] [{all}]
@@ -160,6 +163,19 @@ Read the FRU data and write it to a file
 .TP
 \fBfilename\fR
 file to write the FRU data to
+
+.SH COMMAND \fI\,'ipmitool.py fru print\-file'\/\fR
+usage: ipmitool.py fru print\-file [\-h] filename [{all}]
+
+Print the FRU inventory of a file
+
+.TP
+\fBfilename\fR
+file with the FRU data, e.g. written by "fru read"
+
+.TP
+\fB{all}\fR
+also print the multirecord area
 
 .SH COMMAND \fI\,'ipmitool.py sdr'\/\fR
 usage: ipmitool.py sdr [\-h] <command> ...

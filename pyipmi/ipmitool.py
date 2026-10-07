@@ -263,9 +263,9 @@ def cmd_fru_read(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
           % (len(data), args.fru_id, args.filename))
 
 
-def cmd_fru_print(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
-    inv = ipmi.get_fru_inventory(args.fru_id)
-
+def print_fru_inventory(inv: pyipmi.fru.FruInventory, print_all: bool,
+                        all_hint: str) -> None:
+    """Print a FRU inventory, the multirecord area only with `print_all`."""
     # Chassis Info Area
     chassis_area = inv.chassis_info_area
     if chassis_area:
@@ -322,11 +322,26 @@ Product Info Area:
     multirecord_area = inv.multirecord_area
     if multirecord_area:
         print('Multirecord Area:')
-        if args.all == 'all':
+        if print_all:
             for record in multirecord_area.records:
                 print('  %s' % record)
         else:
-            print('  Skipped. Use "print <fruid> all"')
+            print('  Skipped. Use "%s"' % all_hint)
+
+
+def cmd_fru_print(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    inv = ipmi.get_fru_inventory(args.fru_id)
+    print_fru_inventory(inv, args.all == 'all', 'print <fruid> all')
+
+
+def cmd_fru_print_file(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    try:
+        inv = pyipmi.fru.get_fru_inventory_from_file(args.filename)
+    except (OSError, pyipmi.errors.DecodingError) as e:
+        print('Cannot read the FRU data of %s: %s' % (args.filename, e),
+              file=sys.stderr)
+        sys.exit(1)
+    print_fru_inventory(inv, args.all == 'all', 'print-file <filename> all')
 
 
 def cmd_raw(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -1051,6 +1066,13 @@ def build_parser() -> argparse.ArgumentParser:
                       'Read the FRU data and write it to a file')
     p.add_argument('fru_id', type=auto_int)
     p.add_argument('filename', help='file to write the FRU data to')
+    p = group.command('print-file', cmd_fru_print_file,
+                      'Print the FRU inventory of a file',
+                      needs_connection=False)
+    p.add_argument('filename', help='file with the FRU data, e.g. written '
+                                    'by "fru read"')
+    p.add_argument('all', nargs='?', choices=('all',),
+                   help='also print the multirecord area')
 
     group = commands.group('sdr', 'Print Sensor Data Repository entries '
                            'and readings')

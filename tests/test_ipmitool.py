@@ -153,6 +153,7 @@ class TestParser:
         ('chassis power cycle', 'cmd_chassis_power'),
         ('fru print', 'cmd_fru_print'),
         ('fru read 0 fru.bin', 'cmd_fru_read'),
+        ('fru print-file fru.bin', 'cmd_fru_print_file'),
         ('sdr list', 'cmd_sdr_list'),
         ('sdr raw 1', 'cmd_sdr_show_raw'),
         ('sdr show 1', 'cmd_sdr_show'),
@@ -203,6 +204,42 @@ class TestParser:
         assert (args.fru_id, args.all) == (0, None)
         args = self.parse('fru print 2 all')
         assert (args.fru_id, args.all) == (2, 'all')
+
+    def test_fru_print_file(self):
+        args = self.parse('fru print-file fru.bin')
+        assert (args.filename, args.all) == ('fru.bin', None)
+        assert not args.needs_connection
+        args = self.parse('fru print-file fru.bin all')
+        assert args.all == 'all'
+        with pytest.raises(SystemExit):
+            self.parse('fru print-file')
+
+    @pytest.mark.parametrize('extra, expected, not_expected', [
+        (['all'], 'd0 (OEM, manufacturer ID 11)', 'Skipped'),
+        ([], 'Skipped. Use "print-file <filename> all"', 'OEM'),
+    ])
+    def test_fru_print_file_runs_without_connection(self, capsys, extra,
+                                                    expected, not_expected):
+        path = os.path.join(os.path.dirname(__file__), 'fru_bin',
+                            'HP_ProLiant_BL460c_Gen8.bin')
+        ipmitool.main(['fru', 'print-file', path] + extra)
+        out = capsys.readouterr().out
+        assert 'Product Name:       HP ProLiant BL460c Gen8' in out
+        assert expected in out
+        assert not_expected not in out
+
+    @pytest.mark.parametrize('content, error', [
+        (None, 'No such file'),
+        (b'\x01\x00\x00\x00\x00\x00\x00\x00', 'checksum'),
+    ])
+    def test_fru_print_file_error(self, tmp_path, capsys, content, error):
+        path = tmp_path / 'fru.bin'
+        if content is not None:
+            path.write_bytes(content)
+        with pytest.raises(SystemExit) as e:
+            ipmitool.main(['fru', 'print-file', str(path)])
+        assert e.value.code == 1
+        assert error in capsys.readouterr().err
 
     def test_fru_read(self):
         args = self.parse('fru read 0x02 fru.bin')
