@@ -390,7 +390,7 @@ def cmd_fru_print_file(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
 
 def cmd_raw(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     raw_bytes = array('B', args.data)
-    rsp = ipmi.raw_command(args.lun, args.netfn, py3_array_tobytes(raw_bytes))
+    rsp = ipmi.send_raw(args.lun, args.netfn, py3_array_tobytes(raw_bytes))
     print(' '.join('%02x' % d for d in array('B', rsp)))
 
 

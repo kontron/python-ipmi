@@ -267,3 +267,21 @@ def test_ipmi_wait_until_ipmb_is_accessible_deprecated():
                       match='wait_until_target_is_accessible'):
         ipmi.wait_until_ipmb_is_accessible(timeout=10, interval=0)
     ipmi.interface.is_target_accessible.assert_called_once()
+
+
+def test_ipmi_send_raw():
+    ipmi = create_connection(interfaces.create_interface('mock'))
+    ipmi.target = Target(0x20)
+    ipmi.interface.send_and_receive_raw = MagicMock(return_value=b'\x00\x01')
+    assert ipmi.send_raw(0, 6, b'\x01') == b'\x00\x01'
+    ipmi.interface.send_and_receive_raw.assert_called_once_with(
+        ipmi.target, 0, 6, b'\x01')
+
+
+def test_ipmi_raw_command_deprecated():
+    ipmi = create_connection(interfaces.create_interface('mock'))
+    ipmi.interface.send_and_receive_raw = MagicMock(return_value=b'\x00')
+    with pytest.warns(DeprecationWarning, match='send_raw'):
+        assert ipmi.raw_command(0, 6, b'\x01') == b'\x00'
+    ipmi.interface.send_and_receive_raw.assert_called_once_with(
+        ipmi.target, 0, 6, b'\x01')

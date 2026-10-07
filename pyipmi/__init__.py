@@ -406,7 +406,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
                       stacklevel=2)
         return self.send_message_by_name(name, *args, **kwargs)
 
-    def raw_command(self, lun: int, netfn: int, raw_bytes: bytes) -> bytes:
+    def send_raw(self, lun: int, netfn: int, raw_bytes: bytes) -> bytes:
         """Send a raw request to the target and return the raw response.
 
         Args:
@@ -419,6 +419,12 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         """
         return self.interface.send_and_receive_raw(self.target, lun, netfn,
                                                    raw_bytes)
+
+    def raw_command(self, lun: int, netfn: int, raw_bytes: bytes) -> bytes:
+        """Deprecated, the old name of :meth:`send_raw`."""
+        warnings.warn('raw_command is deprecated, use send_raw',
+                      DeprecationWarning, stacklevel=2)
+        return self.send_raw(lun, netfn, raw_bytes)
 
     @property
     def interface(self) -> Any:
