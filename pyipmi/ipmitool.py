@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import logging
 import pprint
@@ -38,6 +39,29 @@ from pyipmi.utils import py3_array_tobytes
 def auto_int(value: str) -> int:
     """Argument type for numbers, decimal or with 0x prefix."""
     return int(value, 0)
+
+
+def ipv4_address(value: str) -> str:
+    """Argument type for IPv4 addresses, xxx.xxx.xxx.xxx."""
+    try:
+        ipaddress.IPv4Address(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError('invalid IPv4 address: %s'
+                                         % value) from None
+    return value
+
+
+def vlan_id(value: str) -> int:
+    """Argument type for 802.1q VLAN IDs, 1 - 4095 or 'off' for 0."""
+    if value == 'off':
+        return 0
+    try:
+        vlan = int(value, 0)
+    except ValueError:
+        vlan = None
+    if vlan is None or not 1 <= vlan <= 4095:
+        raise argparse.ArgumentTypeError('invalid VLAN ID: %s' % value)
+    return vlan
 
 
 def log_level(value: str) -> tuple[str, int]:
@@ -429,6 +453,53 @@ CHASSIS_POWER_CONTROLS = {
     'diag': 'chassis_control_power_diagnostic_interrupt',
     'soft': 'chassis_control_power_soft_shutdown',
 }
+
+
+def cmd_lan_print(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    lan = pyipmi.lan
+    channel = args.lan_channel
+    if channel is None:
+        channel = ipmi.get_lan_channel()
+
+    def parameter(selector: int, convert: Callable) -> object:
+        try:
+            return convert(ipmi.get_lan_config_param(channel, selector))
+        except pyipmi.errors.CompletionCodeError:
+            return 'not supported'
+
+    lines: list[tuple[str, object]] = [('Channel', channel)]
+    lines.append(('IP Address Source',
+                  parameter(lan.LAN_PARAMETER_IP_ADDRESS_SOURCE,
+                            lan.data_to_ip_source)))
+    lines.append(('IP Address', parameter(lan.LAN_PARAMETER_IP_ADDRESS,
+                                          lan.data_to_ip_address)))
+    lines.append(('Subnet Mask', parameter(lan.LAN_PARAMETER_SUBNET_MASK,
+                                           lan.data_to_ip_address)))
+    lines.append(('MAC Address', parameter(lan.LAN_PARAMETER_MAC_ADDRESS,
+                                           lan.data_to_mac_address)))
+    lines.append(('Default Gateway IP',
+                  parameter(lan.LAN_PARAMETER_DEFAULT_GATEWAY_ADDRESS,
+                            lan.data_to_ip_address)))
+    lines.append(('Default Gateway MAC',
+                  parameter(lan.LAN_PARAMETER_DEFAULT_GATEWAY_MAC_ADDRESS,
+                            lan.data_to_mac_address)))
+    vlan = parameter(lan.LAN_PARAMETER_802_1Q_VLAN_ID, lan.data_to_vlan)
+    lines.append(('802.1q VLAN ID', 'disabled' if vlan == 0 else vlan))
+
+    for (name, value) in lines:
+        print('%-21s%s' % (name + ':', value))
+
+
+def cmd_lan_set_ipaddr(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.set_ip_address(args.address, args.lan_channel)
+
+
+def cmd_lan_set_ipsrc(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.set_ip_source(args.source, args.lan_channel)
+
+
+def cmd_lan_set_vlan(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.set_vlan_id(args.vlan, args.lan_channel)
 
 
 def cmd_chassis_power(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -1093,6 +1164,27 @@ def build_parser() -> argparse.ArgumentParser:
                                     'by "fru read"')
     p.add_argument('all', nargs='?', choices=('all',),
                    help='also print the multirecord area')
+
+    group = commands.group('lan', 'Print and set the LAN configuration')
+    lan_channel_help = 'the LAN channel, the first LAN channel if not given'
+    p = group.command('print', cmd_lan_print, 'Print the LAN configuration')
+    p.add_argument('lan_channel', metavar='channel', type=auto_int, nargs='?',
+                   help=lan_channel_help)
+    sub = group.group('set', 'Set the LAN configuration')
+    p = sub.command('ipaddr', cmd_lan_set_ipaddr, 'Set the IP address')
+    p.add_argument('address', type=ipv4_address,
+                   help='the IP address, xxx.xxx.xxx.xxx')
+    p.add_argument('lan_channel', metavar='channel', type=auto_int, nargs='?',
+                   help=lan_channel_help)
+    p = sub.command('ipsrc', cmd_lan_set_ipsrc, 'Set the IP address source')
+    p.add_argument('source', choices=('static', 'dhcp'))
+    p.add_argument('lan_channel', metavar='channel', type=auto_int, nargs='?',
+                   help=lan_channel_help)
+    p = sub.command('vlan', cmd_lan_set_vlan, 'Set the 802.1q VLAN ID')
+    p.add_argument('vlan', type=vlan_id, metavar='{<id>,off}',
+                   help='the VLAN ID 1 - 4095, off to disable the VLAN')
+    p.add_argument('lan_channel', metavar='channel', type=auto_int, nargs='?',
+                   help=lan_channel_help)
 
     group = commands.group('sdr', 'Print Sensor Data Repository entries '
                            'and readings')

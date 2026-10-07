@@ -156,6 +156,10 @@ class TestParser:
         ('fru print', 'cmd_fru_print'),
         ('fru read 0 fru.bin', 'cmd_fru_read'),
         ('fru print-file fru.bin', 'cmd_fru_print_file'),
+        ('lan print', 'cmd_lan_print'),
+        ('lan set ipaddr 10.0.1.224', 'cmd_lan_set_ipaddr'),
+        ('lan set ipsrc dhcp', 'cmd_lan_set_ipsrc'),
+        ('lan set vlan off', 'cmd_lan_set_vlan'),
         ('sdr list', 'cmd_sdr_list'),
         ('sdr raw 1', 'cmd_sdr_show_raw'),
         ('sdr show 1', 'cmd_sdr_show'),
@@ -255,6 +259,29 @@ class TestParser:
             ipmitool.main(['fru', 'print-file', str(path)])
         assert e.value.code == 1
         assert error in capsys.readouterr().err
+
+    def test_lan(self):
+        args = self.parse('lan print')
+        assert args.lan_channel is None
+        # the bridge channel option -b is not the LAN channel
+        args = self.parse('-b 7 lan print 2')
+        assert (args.channel, args.lan_channel) == (7, 2)
+        args = self.parse('lan set ipaddr 10.0.1.224 3')
+        assert (args.address, args.lan_channel) == ('10.0.1.224', 3)
+        assert self.parse('lan set ipsrc static').source == 'static'
+        assert self.parse('lan set vlan off').vlan == 0
+        assert self.parse('lan set vlan 394').vlan == 394
+
+    @pytest.mark.parametrize('command', [
+        'lan set ipaddr 10.0.1',
+        'lan set ipaddr 10.0.1.256',
+        'lan set ipsrc bios',
+        'lan set vlan 4096',
+        'lan set vlan on',
+    ])
+    def test_lan_invalid(self, command):
+        with pytest.raises(SystemExit):
+            self.parse(command)
 
     def test_fru_read(self):
         args = self.parse('fru read 0x02 fru.bin')
@@ -584,3 +611,91 @@ def test_bmc_info_manufacturer_name(capsys, manufacturer, name):
     # the IDs are shown in decimal and hex
     assert 'Device ID:          4 (0x04)\n' in out
     assert 'Product ID:         1701 (0x06a5)\n' in out
+
+
+def lan_rsp(data):
+    """Return a Get LAN Configuration Parameters response."""
+    # completion code, parameter revision, data
+    return b'\x00\x11' + bytes(data)
+
+
+# Get Channel Info response: channel 1 is an 802.3 LAN channel
+LAN_CHANNEL_INFO_RSP = b'\x00\x01\x04\x01\x80\xf2\x1b\x00\x00\x00'
+
+
+def run_command(ipmi, command):
+    args = build_parser().parse_args(command.split())
+    args.func(ipmi, args)
+
+
+def test_lan_print(capsys):
+    ipmi = create_ipmi({
+        'GetChannelInfo': LAN_CHANNEL_INFO_RSP,
+        'GetLanConfigurationParameters': [
+            lan_rsp([2]),                       # IP address source
+            lan_rsp([10, 0, 1, 224]),           # IP address
+            lan_rsp([255, 255, 255, 0]),        # subnet mask
+            lan_rsp([0, 0x11, 0x22, 0x33, 0x44, 0x55]),   # MAC address
+            lan_rsp([10, 0, 1, 1]),             # default gateway
+            lan_rsp([0, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e]),   # gateway MAC
+            lan_rsp([0x8a, 0x81]),              # VLAN 394
+        ],
+    })
+    run_command(ipmi, 'lan print')
+    assert capsys.readouterr().out == (
+        'Channel:             1\n'
+        'IP Address Source:   dhcp\n'
+        'IP Address:          10.0.1.224\n'
+        'Subnet Mask:         255.255.255.0\n'
+        'MAC Address:         00:11:22:33:44:55\n'
+        'Default Gateway IP:  10.0.1.1\n'
+        'Default Gateway MAC: 00:0a:0b:0c:0d:0e\n'
+        '802.1q VLAN ID:      394\n')
+    # all parameters are read from the LAN channel 1
+    assert all(data[0] == 1 for (name, data) in ipmi.requests
+               if name == 'GetLanConfigurationParametersReq')
+
+
+def test_lan_print_not_supported(capsys):
+    ipmi = create_ipmi({
+        'GetLanConfigurationParameters': [
+            lan_rsp([1]),
+            lan_rsp([10, 0, 1, 224]),
+            lan_rsp([255, 255, 255, 0]),
+            lan_rsp([0, 0x11, 0x22, 0x33, 0x44, 0x55]),
+            # the gateway parameters are not supported
+            b'\x80',
+            b'\x80',
+            lan_rsp([0, 0]),                    # VLAN disabled
+        ],
+    })
+    run_command(ipmi, 'lan print 2')
+    out = capsys.readouterr().out
+    assert 'Channel:             2\n' in out
+    assert 'IP Address Source:   static\n' in out
+    assert 'Default Gateway IP:  not supported\n' in out
+    assert 'Default Gateway MAC: not supported\n' in out
+    assert '802.1q VLAN ID:      disabled\n' in out
+
+
+@pytest.mark.parametrize('command, data', [
+    ('lan set ipaddr 10.0.1.224 1', b'\x01\x03\x0a\x00\x01\xe0'),
+    ('lan set ipsrc dhcp 1', b'\x01\x04\x02'),
+    ('lan set ipsrc static 1', b'\x01\x04\x01'),
+    ('lan set vlan 394 1', b'\x01\x14\x8a\x81'),
+    ('lan set vlan off 1', b'\x01\x14\x00\x00'),
+])
+def test_lan_set(command, data):
+    ipmi = create_ipmi(b'\x00')
+    run_command(ipmi, command)
+    assert ipmi.requests == [('SetLanConfigurationParametersReq', data)]
+
+
+def test_lan_set_lan_channel(capsys):
+    # without a channel the LAN channel is looked up
+    ipmi = create_ipmi({'GetChannelInfo': LAN_CHANNEL_INFO_RSP,
+                        'SetLanConfigurationParameters': b'\x00'})
+    run_command(ipmi, 'lan set ipsrc dhcp')
+    assert ipmi.requests == [
+        ('GetChannelInfoReq', b'\x01'),
+        ('SetLanConfigurationParametersReq', b'\x01\x04\x02')]

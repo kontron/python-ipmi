@@ -31,6 +31,9 @@ Get chassis status and set power state
 \fBipmitool.py\fR \fI\,fru\/\fR
 Print and read built\-in FRU
 .TP
+\fBipmitool.py\fR \fI\,lan\/\fR
+Print and set the LAN configuration
+.TP
 \fBipmitool.py\fR \fI\,sdr\/\fR
 Print Sensor Data Repository entries and readings
 .TP
@@ -176,6 +179,84 @@ file with the FRU data, e.g. written by "fru read"
 .TP
 \fB{all}\fR
 also print the multirecord area
+
+.SH COMMAND \fI\,'ipmitool.py lan'\/\fR
+usage: ipmitool.py lan [\-h] <command> ...
+
+Print and set the LAN configuration
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'ipmitool.py lan'\/\fR
+.TP
+\fBipmitool.py lan\fR \fI\,print\/\fR
+Print the LAN configuration
+.TP
+\fBipmitool.py lan\fR \fI\,set\/\fR
+Set the LAN configuration
+
+.SH COMMAND \fI\,'ipmitool.py lan print'\/\fR
+usage: ipmitool.py lan print [\-h] [channel]
+
+Print the LAN configuration
+
+.TP
+\fBchannel\fR
+the LAN channel, the first LAN channel if not given
+
+.SH COMMAND \fI\,'ipmitool.py lan set'\/\fR
+usage: ipmitool.py lan set [\-h] <command> ...
+
+Set the LAN configuration
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'ipmitool.py lan set'\/\fR
+.TP
+\fBipmitool.py lan set\fR \fI\,ipaddr\/\fR
+Set the IP address
+.TP
+\fBipmitool.py lan set\fR \fI\,ipsrc\/\fR
+Set the IP address source
+.TP
+\fBipmitool.py lan set\fR \fI\,vlan\/\fR
+Set the 802.1q VLAN ID
+
+.SH COMMAND \fI\,'ipmitool.py lan set ipaddr'\/\fR
+usage: ipmitool.py lan set ipaddr [\-h] address [channel]
+
+Set the IP address
+
+.TP
+\fBaddress\fR
+the IP address, xxx.xxx.xxx.xxx
+
+.TP
+\fBchannel\fR
+the LAN channel, the first LAN channel if not given
+
+.SH COMMAND \fI\,'ipmitool.py lan set ipsrc'\/\fR
+usage: ipmitool.py lan set ipsrc [\-h] {static,dhcp} [channel]
+
+Set the IP address source
+
+.TP
+\fB{static,dhcp}\fR
+
+.TP
+\fBchannel\fR
+the LAN channel, the first LAN channel if not given
+
+.SH COMMAND \fI\,'ipmitool.py lan set vlan'\/\fR
+usage: ipmitool.py lan set vlan [\-h] {<id>,off} [channel]
+
+Set the 802.1q VLAN ID
+
+.TP
+\fB{<id>,off}\fR
+the VLAN ID 1 \- 4095, off to disable the VLAN
+
+.TP
+\fBchannel\fR
+the LAN channel, the first LAN channel if not given
 
 .SH COMMAND \fI\,'ipmitool.py sdr'\/\fR
 usage: ipmitool.py sdr [\-h] <command> ...
