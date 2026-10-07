@@ -44,7 +44,7 @@ from .errors import DecodingError, CompletionCodeError, RetryError, DataNotFound
 from .helper import ReadLength
 from .msgs import constants
 from .utils import bcd_search, chunks, py3_array_tobytes
-from .fields import FruTypeLengthString
+from .fields import FruTypeLengthString, _unpack6bitascii
 from .mixin import IpmiMixin
 
 codecs.register(bcd_search)
@@ -799,17 +799,22 @@ class FruDataMultiRecord(FruData):
     TYPE_EXTENDED_COMPATIBILITY_RECORD = 5
     TYPE_OEM = list(range(0xc0, 0x100))
     TYPE_OEM_PICMG = 0xc0
+    TYPE_OEM_FMC = 0xfa
 
     def __str__(self) -> str:
         """Return the record type ID and the record data as hex string.
 
         The manufacturer ID of an OEM record is added to the record type.
         """
+        return '%s: %s' % (self._type_string(),
+                           ' '.join('%02x' % b for b in self.raw))
+
+    def _type_string(self) -> str:
+        """Return the record type ID and the manufacturer of an OEM record."""
         record_type = '%02x' % self.record_type_id
         if self.manufacturer_id is not None:
             record_type += ' (OEM, manufacturer ID %d)' % self.manufacturer_id
-        return '%s: %s' % (record_type,
-                           ' '.join('%02x' % b for b in self.raw))
+        return record_type
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         if len(data) < 5:
@@ -838,8 +843,11 @@ class FruDataMultiRecord(FruData):
                               ) -> FruDataMultiRecord:
         """Decode a record with the class for its record type.
 
-        PICMG records are decoded by :class:`FruPicmgRecord`, the other
-        records by :class:`FruDataUnknown`.
+        DC Output and DC Load records are decoded by
+        :class:`FruDcOutputRecord` and :class:`FruDcLoadRecord`, PICMG
+        records by :class:`FruPicmgRecord`, the FMC records of VITA by
+        :class:`FruFmcRecord` and the other records by
+        :class:`FruDataUnknown`.
 
         Args:
             data: The data of the multirecord area, starting with the
@@ -850,11 +858,22 @@ class FruDataMultiRecord(FruData):
         Returns:
             The decoded record.
         """
-        if data[0] == FruDataMultiRecord.TYPE_OEM_PICMG:
+        record_type = data[0]
+        if record_type == FruDataMultiRecord.TYPE_OEM_PICMG:
             return FruPicmgRecord.create_from_record_id(
                 data, ignore_checksum=ignore_checksum)
-        else:
-            return FruDataUnknown(data, ignore_checksum=ignore_checksum)
+        if record_type == FruDataMultiRecord.TYPE_DC_OUTPUT:
+            return FruDcOutputRecord(data, ignore_checksum=ignore_checksum)
+        if record_type == FruDataMultiRecord.TYPE_DC_LOAD:
+            return FruDcLoadRecord(data, ignore_checksum=ignore_checksum)
+        # an FMC record starts with the manufacturer ID of VITA
+        if (record_type == FruDataMultiRecord.TYPE_OEM_FMC
+                and len(data) >= 8 and data[2] >= 3
+                and data[5] | data[6] << 8 | data[7] << 16
+                == VITA_MANUFACTURER_ID):
+            return FruFmcRecord.create_from_record_id(
+                data, ignore_checksum=ignore_checksum)
+        return FruDataUnknown(data, ignore_checksum=ignore_checksum)
 
 
 class FruDataUnknown(FruDataMultiRecord):
@@ -968,6 +987,358 @@ class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
         FruPicmgRecord._from_data(self, data, ignore_checksum=ignore_checksum)
         maximum_current_output = data[10] | data[11] << 8
         self.maximum_current_output = float(maximum_current_output/10)
+
+
+def _int16(data: bytes, offset: int, signed: bool = False) -> int:
+    """Return the 16 bit value at offset, LS byte first."""
+    return int.from_bytes(data[offset:offset + 2], 'little', signed=signed)
+
+
+class FruDcOutputRecord(FruDataMultiRecord):
+    """A DC Output record (type 0x01).
+
+    The record describes a DC output of the FRU, e.g. a voltage an FMC module
+    supplies to its carrier. The voltages are in mV, the currents in mA.
+
+    Attributes:
+        standby_enable (bool): The output is also on in standby.
+        output_number (int): The output number. ANSI/VITA 57.1 assigns the
+            numbers of an FMC module: 0 VADJ, 1 3P3V, 2 12P0V, 3 VIO_B_M2C,
+            4 VREF_A_M2C, 5 VREF_B_M2C of P1, 6 - 11 the same for P2.
+        nominal_voltage (int): The nominal voltage.
+        max_negative_voltage (int): The maximum negative voltage deviation.
+            The FRU data of FMC modules store the lower voltage limit.
+        max_positive_voltage (int): The maximum positive voltage deviation.
+            The FRU data of FMC modules store the upper voltage limit.
+        ripple_and_noise (int): The ripple and noise peak to peak.
+        min_current_draw (int): The minimum current draw.
+        max_current_draw (int): The maximum current draw.
+    """
+
+    def __str__(self) -> str:
+        """Return the record type and the decoded values."""
+        return ('%s DC Output %d: %d mV (%d - %d mV), ripple and noise %d mV, '
+                '%d - %d mA%s'
+                % (self._type_string(), self.output_number,
+                   self.nominal_voltage, self.max_negative_voltage,
+                   self.max_positive_voltage, self.ripple_and_noise,
+                   self.min_current_draw, self.max_current_draw,
+                   ', standby' if self.standby_enable else ''))
+
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
+        FruDataMultiRecord._from_data(self, data,
+                                      ignore_checksum=ignore_checksum)
+        raw = bytes(self.raw)
+        if len(raw) < 13:
+            raise DecodingError('DC output record too short (%d bytes)'
+                                % len(raw))
+        self.standby_enable = bool(raw[0] & 0x80)
+        self.output_number = raw[0] & 0x0f
+        # the voltages are signed and in 10 mV units
+        self.nominal_voltage = _int16(raw, 1, signed=True) * 10
+        self.max_negative_voltage = _int16(raw, 3, signed=True) * 10
+        self.max_positive_voltage = _int16(raw, 5, signed=True) * 10
+        self.ripple_and_noise = _int16(raw, 7)
+        self.min_current_draw = _int16(raw, 9)
+        self.max_current_draw = _int16(raw, 11)
+
+
+class FruDcLoadRecord(FruDataMultiRecord):
+    """A DC Load record (type 0x02).
+
+    The record describes a DC load of the FRU, e.g. a voltage an FMC module
+    needs from its carrier. The voltages are in mV, the currents in mA.
+
+    Attributes:
+        output_number (int): The number of the output that supplies the
+            load, see :class:`FruDcOutputRecord`.
+        nominal_voltage (int): The nominal voltage.
+        min_voltage (int): The minimum voltage.
+        max_voltage (int): The maximum voltage.
+        ripple_and_noise (int): The ripple and noise peak to peak.
+        min_current_load (int): The minimum current load.
+        max_current_load (int): The maximum current load.
+    """
+
+    def __str__(self) -> str:
+        """Return the record type and the decoded values."""
+        return ('%s DC Load %d: %d mV (%d - %d mV), ripple and noise %d mV, '
+                '%d - %d mA'
+                % (self._type_string(), self.output_number,
+                   self.nominal_voltage, self.min_voltage, self.max_voltage,
+                   self.ripple_and_noise, self.min_current_load,
+                   self.max_current_load))
+
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
+        FruDataMultiRecord._from_data(self, data,
+                                      ignore_checksum=ignore_checksum)
+        raw = bytes(self.raw)
+        if len(raw) < 13:
+            raise DecodingError('DC load record too short (%d bytes)'
+                                % len(raw))
+        self.output_number = raw[0] & 0x0f
+        # the voltages are signed and in 10 mV units
+        self.nominal_voltage = _int16(raw, 1, signed=True) * 10
+        self.min_voltage = _int16(raw, 3, signed=True) * 10
+        self.max_voltage = _int16(raw, 5, signed=True) * 10
+        self.ripple_and_noise = _int16(raw, 7)
+        self.min_current_load = _int16(raw, 9)
+        self.max_current_load = _int16(raw, 11)
+
+
+# the manufacturer ID of the FMC records of ANSI/VITA 57
+VITA_MANUFACTURER_ID = 0x0012a2
+
+
+class FruFmcRecord(FruDataMultiRecord):
+    """An FMC record of ANSI/VITA 57, an OEM record of VITA (type 0xFA).
+
+    The records are decoded by :meth:`create_from_record_id` with the class
+    for their subtype, a record of an unknown subtype by this class. The
+    ``SUBTYPE_*`` constants are the subtypes, the ``MODULE_SIZE_*``,
+    ``CONNECTOR_*`` and ``CLOCK_DIRECTION_*`` constants the values of the
+    main definitions.
+
+    Attributes:
+        subtype (int): The subtype of the FMC record.
+    """
+
+    SUBTYPE_MAIN_DEFINITION = 0x00
+    SUBTYPE_PLUS_MAIN_DEFINITION = 0x01
+    SUBTYPE_I2C_DEVICE_DEFINITION = 0x10
+
+    MODULE_SIZE_SINGLE_WIDTH = 0
+    MODULE_SIZE_DOUBLE_WIDTH = 1
+
+    CONNECTOR_LPC = 0
+    CONNECTOR_HPC = 1
+    CONNECTOR_HSPC = 2
+
+    CLOCK_DIRECTION_M2C = 0
+    CLOCK_DIRECTION_C2M = 1
+
+    _MODULE_SIZES = {0: 'single width', 1: 'double width'}
+    _CLOCK_DIRECTIONS = {0: 'M2C', 1: 'C2M'}
+
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
+        FruDataMultiRecord._from_data(self, data,
+                                      ignore_checksum=ignore_checksum)
+        if len(self.raw) < 4:
+            raise DecodingError('FMC record too short (%d bytes)'
+                                % len(self.raw))
+        self.subtype = self.raw[3]
+
+    @staticmethod
+    def create_from_record_id(data: Sequence[int],
+                              ignore_checksum: bool = False) -> FruFmcRecord:
+        """Decode an FMC record with the class for its subtype.
+
+        Args:
+            data: The data of the multirecord area, starting with the
+                record.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum.
+
+        Returns:
+            The decoded record.
+
+        Raises:
+            DecodingError: The record is too short or a checksum is wrong.
+        """
+        record = FruFmcRecord(data, ignore_checksum=ignore_checksum)
+        cls = {
+            FruFmcRecord.SUBTYPE_MAIN_DEFINITION: FruFmcMainDefinition,
+            FruFmcRecord.SUBTYPE_PLUS_MAIN_DEFINITION:
+                FruFmcPlusMainDefinition,
+            FruFmcRecord.SUBTYPE_I2C_DEVICE_DEFINITION:
+                FruFmcI2cDeviceDefinition,
+        }.get(record.subtype)
+        if cls is None:
+            return record
+        return cls(data, ignore_checksum=ignore_checksum)
+
+    def _check_length(self, length: int) -> bytes:
+        """Return the data after the subtype, raise if it is too short."""
+        payload = bytes(self.raw[4:])
+        if len(payload) < length:
+            raise DecodingError('FMC record subtype %d too short (%d bytes)'
+                                % (self.subtype, len(payload)))
+        return payload
+
+    @staticmethod
+    def _name(names: dict[int, str], value: int) -> str:
+        return names.get(value, 'reserved (%d)' % value)
+
+
+class FruFmcMainDefinition(FruFmcRecord):
+    """The FMC main definition record of ANSI/VITA 57.1.
+
+    Attributes:
+        module_size (int): One of the ``MODULE_SIZE_*`` constants.
+        p1_connector_size (int): ``CONNECTOR_LPC``, ``CONNECTOR_HPC`` or
+            ``CONNECTOR_NOT_FITTED``.
+        p2_connector_size (int): ``CONNECTOR_LPC``, ``CONNECTOR_HPC`` or
+            ``CONNECTOR_NOT_FITTED``.
+        clock_direction (int): One of the ``CLOCK_DIRECTION_*`` constants.
+        p1_a_num_signals (int): The number of signals of P1 bank A.
+        p1_b_num_signals (int): The number of signals of P1 bank B.
+        p2_a_num_signals (int): The number of signals of P2 bank A.
+        p2_b_num_signals (int): The number of signals of P2 bank B.
+        p1_gbt_num_trcv (int): The number of GBT transceivers of P1.
+        p2_gbt_num_trcv (int): The number of GBT transceivers of P2.
+        tck_max_clock (int): The maximum TCK clock in MHz.
+    """
+
+    CONNECTOR_NOT_FITTED = 3
+
+    _CONNECTORS = {0: 'LPC', 1: 'HPC', 3: 'not fitted'}
+
+    def __str__(self) -> str:
+        """Return the record type and the decoded values."""
+        return ('%s FMC Main Definition: %s, P1 %s, P2 %s, clock %s, '
+                'P1 %d/%d signals, P2 %d/%d signals, P1 %d GBT, P2 %d GBT, '
+                'TCK %d MHz'
+                % (self._type_string(),
+                   self._name(self._MODULE_SIZES, self.module_size),
+                   self._name(self._CONNECTORS, self.p1_connector_size),
+                   self._name(self._CONNECTORS, self.p2_connector_size),
+                   self._name(self._CLOCK_DIRECTIONS, self.clock_direction),
+                   self.p1_a_num_signals, self.p1_b_num_signals,
+                   self.p2_a_num_signals, self.p2_b_num_signals,
+                   self.p1_gbt_num_trcv, self.p2_gbt_num_trcv,
+                   self.tck_max_clock))
+
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
+        FruFmcRecord._from_data(self, data, ignore_checksum=ignore_checksum)
+        payload = self._check_length(7)
+        self.module_size = payload[0] >> 6 & 0x3
+        self.p1_connector_size = payload[0] >> 4 & 0x3
+        self.p2_connector_size = payload[0] >> 2 & 0x3
+        self.clock_direction = payload[0] >> 1 & 0x1
+        self.p1_a_num_signals = payload[1]
+        self.p1_b_num_signals = payload[2]
+        self.p2_a_num_signals = payload[3]
+        self.p2_b_num_signals = payload[4]
+        self.p1_gbt_num_trcv = payload[5] >> 4
+        self.p2_gbt_num_trcv = payload[5] & 0xf
+        self.tck_max_clock = payload[6]
+
+
+class FruFmcPlusMainDefinition(FruFmcRecord):
+    """The FMC+ main definition record of ANSI/VITA 57.4.
+
+    Attributes:
+        module_size (int): One of the ``MODULE_SIZE_*`` constants.
+        p1_p3_connector_size (int): ``CONNECTOR_LPC``, ``CONNECTOR_HPC``,
+            ``CONNECTOR_HSPC`` or ``CONNECTOR_HSPC_HSPCE``.
+        p2_p4_connector_size (int): ``CONNECTOR_LPC``, ``CONNECTOR_HPC``,
+            ``CONNECTOR_HSPC``, ``CONNECTOR_HSPC_HSPCE`` or
+            ``CONNECTOR_NOT_FITTED``.
+        clock_direction (int): One of the ``CLOCK_DIRECTION_*`` constants.
+        p1_a_num_signals (int): The number of signals of P1 bank A.
+        p1_b_num_signals (int): The number of signals of P1 bank B.
+        p2_a_num_signals (int): The number of signals of P2 bank A.
+        p2_b_num_signals (int): The number of signals of P2 bank B.
+        p1_gbt_num_trcv (int): The number of GBT transceivers of P1.
+        p2_gbt_num_trcv (int): The number of GBT transceivers of P2.
+        tck_max_clock (int): The maximum TCK clock in MHz.
+    """
+
+    # HSPC connector with an HSPCe extension connector (P3 or P4)
+    CONNECTOR_HSPC_HSPCE = 3
+    CONNECTOR_NOT_FITTED = 7
+
+    _CONNECTORS = {0: 'LPC', 1: 'HPC', 2: 'HSPC', 3: 'HSPC/HSPCe',
+                   7: 'not fitted'}
+
+    def __str__(self) -> str:
+        """Return the record type and the decoded values."""
+        return ('%s FMC+ Main Definition: %s, P1/P3 %s, P2/P4 %s, clock %s, '
+                'P1 %d/%d signals, P2 %d/%d signals, P1 %d GBT, P2 %d GBT, '
+                'TCK %d MHz'
+                % (self._type_string(),
+                   self._name(self._MODULE_SIZES, self.module_size),
+                   self._name(self._CONNECTORS, self.p1_p3_connector_size),
+                   self._name(self._CONNECTORS, self.p2_p4_connector_size),
+                   self._name(self._CLOCK_DIRECTIONS, self.clock_direction),
+                   self.p1_a_num_signals, self.p1_b_num_signals,
+                   self.p2_a_num_signals, self.p2_b_num_signals,
+                   self.p1_gbt_num_trcv, self.p2_gbt_num_trcv,
+                   self.tck_max_clock))
+
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
+        FruFmcRecord._from_data(self, data, ignore_checksum=ignore_checksum)
+        payload = self._check_length(7)
+        self.module_size = payload[0] >> 6 & 0x3
+        self.p1_p3_connector_size = payload[0] >> 4 & 0x3
+        self.p2_p4_connector_size = payload[0] >> 1 & 0x7
+        self.clock_direction = payload[0] & 0x1
+        self.p1_a_num_signals = payload[1]
+        self.p2_a_num_signals = payload[2]
+        # the 6 bit numbers of P2 bank B signals and P1 transceivers are
+        # split over two bytes
+        self.p1_b_num_signals = payload[3] & 0x3f
+        self.p2_b_num_signals = (payload[4] & 0x0f) << 2 | payload[3] >> 6
+        self.p1_gbt_num_trcv = (payload[5] & 0x03) << 4 | payload[4] >> 4
+        self.p2_gbt_num_trcv = payload[5] >> 2
+        self.tck_max_clock = payload[6]
+
+
+class FruFmcI2cDeviceDefinition(FruFmcRecord):
+    """The FMC I2C device definition record of ANSI/VITA 57.1.
+
+    The record lists the I2C devices of an FMC module. It is a string in
+    6-bit ASCII of the device addresses, each encoded as one character,
+    followed by the device name.
+
+    Attributes:
+        devices (list[tuple[str, list[int]]]): The I2C devices as tuples of
+            the device name and the device addresses.
+    """
+
+    def __str__(self) -> str:
+        """Return the record type and the I2C devices."""
+        devices = ', '.join('%s (%s)' % (name, ', '.join(map(str, addresses)))
+                            for name, addresses in self.devices)
+        return '%s FMC I2C Devices: %s' % (self._type_string(), devices)
+
+    @staticmethod
+    def _address(character: str) -> int | None:
+        """Return the address of an address character, None for others.
+
+        The characters '!' to '*' are the addresses 0 to 9, '+' to '/' the
+        addresses 11 to 15, address 10 is not used.
+        """
+        code = ord(character) - ord('!')
+        if 0 <= code < 10:
+            return code
+        if 10 <= code < 15:
+            return code + 1
+        return None
+
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
+        FruFmcRecord._from_data(self, data, ignore_checksum=ignore_checksum)
+        payload = bytes(self.raw[4:])
+        # the 6-bit ASCII is packed in groups of 3 bytes
+        payload += bytes(-len(payload) % 3)
+        text = _unpack6bitascii(payload)
+        self.devices: list[tuple[str, list[int]]] = []
+        position = 0
+        while position < len(text):
+            addresses = []
+            while position < len(text):
+                address = self._address(text[position])
+                if address is None:
+                    break
+                addresses.append(address)
+                position += 1
+            start = position
+            while position < len(text) and \
+                    self._address(text[position]) is None:
+                position += 1
+            name = text[start:position].strip()
+            if name or addresses:
+                self.devices.append((name, addresses))
 
 
 class InventoryMultiRecordArea:

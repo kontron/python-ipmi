@@ -8,7 +8,10 @@ import pytest
 from pyipmi.errors import CompletionCodeError, DataNotFound, DecodingError
 from pyipmi.msgs import constants
 
-from pyipmi.fru import (Fru, FruData, FruDataMultiRecord, FruInventory,
+from pyipmi.fru import (Fru, FruData, FruDataMultiRecord, FruDataUnknown,
+                        FruDcLoadRecord, FruDcOutputRecord,
+                        FruFmcI2cDeviceDefinition, FruFmcMainDefinition,
+                        FruFmcPlusMainDefinition, FruFmcRecord, FruInventory,
                         FruPicmgPowerModuleCapabilityRecord, FruPicmgRecord,
                         InventoryCommonHeader, InventoryBoardInfoArea,
                         get_fru_inventory_from_file)
@@ -452,11 +455,11 @@ def _multirecord(record_type, data):
 
 
 def test_multirecord_not_oem():
-    # a DC output record (type 0x01) is no OEM record
+    # an extended compatibility record (type 0x05) is no OEM record
     record = FruDataMultiRecord.create_from_record_id(
-        _multirecord(0x01, b'\x01\x02\x03'))
+        _multirecord(0x05, b'\x01\x02\x03'))
     assert record.manufacturer_id is None
-    assert str(record) == '01: 01 02 03'
+    assert str(record) == '05: 01 02 03'
 
 
 def test_multirecord_oem_too_short():
@@ -550,8 +553,8 @@ def _fru_image(multirecords, after=b''):
 
 
 def _record(data, end_of_list=False):
-    """Return a DC output multirecord with valid checksums."""
-    header = [0x01, 0x82 if end_of_list else 0x02, len(data), -sum(data) & 0xff]
+    """Return an extended compatibility multirecord with valid checksums."""
+    header = [0x05, 0x82 if end_of_list else 0x02, len(data), -sum(data) & 0xff]
     return bytes(header + [-sum(header) & 0xff]) + bytes(data)
 
 
@@ -667,3 +670,121 @@ def test_opalkelly_multirecords_end_at_next_area():
         ignore_checksum=True)
     records = inventory.multirecord_area.records
     assert sum(r.length + 5 for r in records) == 144 - 8
+
+
+def _frugy_records(filename):
+    path = os.path.join(FRUGY_DIR, filename)
+    return get_fru_inventory_from_file(path).multirecord_area.records
+
+
+def test_dc_output_records():
+    records = [r for r in _frugy_records('ADRV9375-N.bin')
+               if isinstance(r, FruDcOutputRecord)]
+    # P1_VIO_B_M2C, P1_VREF_A_M2C and P1_VREF_B_M2C
+    assert [r.output_number for r in records] == [3, 4, 5]
+    record = records[0]
+    assert record.standby_enable is False
+    assert record.nominal_voltage == 2500
+    assert (record.max_negative_voltage, record.max_positive_voltage) == (0, 0)
+    assert record.ripple_and_noise == 50
+    assert (record.min_current_draw, record.max_current_draw) == (0, 0)
+    assert str(record) == ('01 DC Output 3: 2500 mV (0 - 0 mV), ripple and '
+                           'noise 50 mV, 0 - 0 mA')
+
+
+def test_dc_load_records():
+    records = [r for r in _frugy_records('ADRV9375-N.bin')
+               if isinstance(r, FruDcLoadRecord)]
+    # P1_VADJ, P1_3P3V and P1_12P0V
+    assert [(r.output_number, r.nominal_voltage, r.min_voltage, r.max_voltage,
+             r.ripple_and_noise, r.min_current_load, r.max_current_load)
+            for r in records] == [
+        (0, 2500, 1800, 2500, 50, 0, 1000),
+        (1, 3300, 2970, 3630, 0, 0, 500),
+        (2, 12000, 10800, 13200, 6, 500, 1000),
+    ]
+    assert str(records[2]) == ('02 DC Load 2: 12000 mV (10800 - 13200 mV), '
+                               'ripple and noise 6 mV, 500 - 1000 mA')
+
+
+def test_fmc_main_definition():
+    records = _frugy_records('ADRV9375-N.bin')
+    record = records[6]
+    assert isinstance(record, FruFmcMainDefinition)
+    assert (record.manufacturer_id, record.subtype) == (0x0012a2, 0)
+    assert record.module_size == FruFmcRecord.MODULE_SIZE_SINGLE_WIDTH
+    assert record.p1_connector_size == FruFmcRecord.CONNECTOR_HPC
+    assert record.p2_connector_size == FruFmcMainDefinition.CONNECTOR_NOT_FITTED
+    assert record.clock_direction == FruFmcRecord.CLOCK_DIRECTION_M2C
+    assert (record.p1_a_num_signals, record.p1_b_num_signals,
+            record.p2_a_num_signals, record.p2_b_num_signals) == (26, 0, 0, 0)
+    assert (record.p1_gbt_num_trcv, record.p2_gbt_num_trcv) == (4, 0)
+    assert record.tck_max_clock == 0
+    assert str(record) == ('fa (OEM, manufacturer ID 4770) FMC Main '
+                           'Definition: single width, P1 HPC, P2 not fitted, '
+                           'clock M2C, P1 26/0 signals, P2 0/0 signals, '
+                           'P1 4 GBT, P2 0 GBT, TCK 0 MHz')
+
+
+def test_fmc_i2c_device_definition():
+    record = _frugy_records('ADRV9375-N.bin')[7]
+    assert isinstance(record, FruFmcI2cDeviceDefinition)
+    assert record.subtype == 0x10
+    assert record.devices == [('AD7291', [1])]
+    assert str(record) == ('fa (OEM, manufacturer ID 4770) FMC I2C '
+                           'Devices: AD7291 (1)')
+
+
+def test_fmc_plus_main_definition():
+    record = _frugy_records('fmc+_loopback.bin')[-1]
+    assert isinstance(record, FruFmcPlusMainDefinition)
+    assert record.subtype == 1
+    assert record.module_size == FruFmcRecord.MODULE_SIZE_SINGLE_WIDTH
+    assert record.p1_p3_connector_size == FruFmcRecord.CONNECTOR_HSPC
+    assert record.p2_p4_connector_size == \
+        FruFmcPlusMainDefinition.CONNECTOR_NOT_FITTED
+    assert record.clock_direction == FruFmcRecord.CLOCK_DIRECTION_M2C
+    assert (record.p1_a_num_signals, record.p1_b_num_signals,
+            record.p2_a_num_signals, record.p2_b_num_signals) == (112, 48, 0, 0)
+    assert (record.p1_gbt_num_trcv, record.p2_gbt_num_trcv) == (24, 0)
+    assert record.tck_max_clock == 128
+
+
+def _oem_record(record_type, data):
+    """Return a multirecord, the last one of the area, with checksums."""
+    header = [record_type, 0x82, len(data), -sum(data) & 0xff]
+    return bytes(header + [-sum(header) & 0xff] + list(data))
+
+
+def test_dc_output_negative_voltage():
+    # -12 V (0xfb50 in 10 mV units), -10.8 V (0xfbc8) and -13.2 V (0xfad8)
+    # on output 1, standby enabled
+    data = [0x81, 0x50, 0xfb, 0xc8, 0xfb, 0xd8, 0xfa, 0x64, 0x00,
+            0x00, 0x00, 0xe8, 0x03]
+    record = FruDataMultiRecord.create_from_record_id(_oem_record(0x01, data))
+    assert record.standby_enable is True
+    assert record.output_number == 1
+    assert record.nominal_voltage == -12000
+    assert (record.max_negative_voltage, record.max_positive_voltage) \
+        == (-10800, -13200)
+
+
+@pytest.mark.parametrize('record_type', [0x01, 0x02])
+def test_dc_record_too_short(record_type):
+    with pytest.raises(DecodingError, match='too short'):
+        FruDataMultiRecord.create_from_record_id(
+            _oem_record(record_type, bytes(12)))
+
+
+def test_fmc_unknown_subtype():
+    record = FruDataMultiRecord.create_from_record_id(
+        _oem_record(0xfa, b'\xa2\x12\x00\x20\x01\x02'))
+    assert type(record) is FruFmcRecord
+    assert record.subtype == 0x20
+
+
+def test_fmc_record_without_vita_id():
+    # an Opal Kelly FMC record has no manufacturer ID, it is not decoded
+    record = FruDataMultiRecord.create_from_record_id(
+        _oem_record(0xfa, b'\x0c\x15\x00\x00\x00\x00\x0a\x00'))
+    assert type(record) is FruDataUnknown
