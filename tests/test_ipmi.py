@@ -6,7 +6,7 @@ import pytest
 
 from pyipmi import (Ipmi, interfaces, create_connection, NullRequester, Routing,
                     Session, Target)
-from pyipmi.errors import CompletionCodeError, RetryError
+from pyipmi.errors import CompletionCodeError, IpmiTimeoutError, RetryError
 from pyipmi.msgs.bmc import GetDeviceIdReq, GetDeviceIdRsp
 from pyipmi.msgs.sensor import GetSensorReadingReq, GetSensorReadingRsp
 from pyipmi.msgs.constants import CC_NODE_BUSY
@@ -136,6 +136,23 @@ def test_ipmi_with_statemetn():
         assert ipmi.interface is not None
         assert isinstance(ipmi.session, Session)
         assert isinstance(ipmi.requester, NullRequester)
+
+
+def test_wait_until_ipmb_is_accessible():
+    ipmi = create_connection(interfaces.create_interface('mock'))
+    ipmi.interface.is_ipmc_accessible = MagicMock(
+        side_effect=(IpmiTimeoutError(), False, True))
+    ipmi.wait_until_ipmb_is_accessible(timeout=10, interval=0)
+    # returns as soon as the target is accessible
+    assert ipmi.interface.is_ipmc_accessible.call_count == 3
+
+
+def test_wait_until_ipmb_is_accessible_timeout():
+    ipmi = create_connection(interfaces.create_interface('mock'))
+    ipmi.interface.is_ipmc_accessible = MagicMock(
+        side_effect=IpmiTimeoutError())
+    with pytest.raises(IpmiTimeoutError):
+        ipmi.wait_until_ipmb_is_accessible(timeout=0.05, interval=0.01)
 
 
 def test_ipmi_send_message_retry():

@@ -313,9 +313,11 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         start_time = time.time()
         while time.time() < start_time + (timeout):
             try:
-                self.is_ipmc_accessible()
+                if self.is_ipmc_accessible():
+                    return
             except IpmiTimeoutError:
-                time.sleep(interval)
+                pass
+            time.sleep(interval)
 
         self.is_ipmc_accessible()
 
