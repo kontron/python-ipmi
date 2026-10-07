@@ -335,7 +335,9 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
             The response message.
 
         Raises:
-            RetryError: No response after ``retry`` tries.
+            RetryError: The target is still busy after ``retry`` tries.
+            CompletionCodeError: The interface failed with another
+                completion code, e.g. of a bridged Send Message request.
         """
         req.target = self.target
         req.requester = self.requester
@@ -349,6 +351,7 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
             except CompletionCodeError as e:
                 if e.cc == msgs.constants.CC_NODE_BUSY:
                     continue
+                raise
         else:
             raise RetryError()
 

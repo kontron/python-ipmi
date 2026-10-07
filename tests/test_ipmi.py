@@ -185,6 +185,20 @@ def test_ipmi_send_message_retry_error():
         ipmi.send_message(req)
 
 
+def test_ipmi_send_message_completion_code_error():
+    interface = interfaces.create_interface('mock')
+    cc = CompletionCodeError(0xc1)
+    mock = MagicMock(side_effect=(cc, GetDeviceIdRsp()))
+    interface.send_and_receive = mock
+    ipmi = create_connection(interface)
+    ipmi.target = None
+    # only a busy target is retried
+    with pytest.raises(CompletionCodeError) as e:
+        ipmi.send_message(GetDeviceIdReq())
+    assert e.value.cc == 0xc1
+    assert mock.call_count == 1
+
+
 def test_ipmi_send_message_with_name():
 
     rsp = GetDeviceIdRsp()
