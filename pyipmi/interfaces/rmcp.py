@@ -306,7 +306,7 @@ class AsfPing(AsfMsg):
 
     def __str__(self) -> str:
         """Return the message as string."""
-        return 'ping: ' + super(AsfMsg, self).__str__()
+        return 'ping: ' + super().__str__()
 
 
 class AsfPong(AsfMsg):

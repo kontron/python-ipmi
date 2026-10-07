@@ -55,6 +55,11 @@ class TestAsfPing:
         pdu = m.pack()
         assert pdu == b'\x00\x00\x11\xbe\x80\x00\x00\x00'
 
+    def test_str(self):
+        m = AsfPing()
+        m.unpack(b'\x00\x00\x11\xbe\x80\x00\x00\x00')
+        assert str(m) == 'ping: 00 00 11 be 80 00 00 00'
+
 
 class TestAsfPong:
     def test_unpack(self):
