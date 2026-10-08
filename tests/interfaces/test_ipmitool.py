@@ -284,7 +284,23 @@ class TestIpmitool:
 
         mock.assert_called_once_with('ipmitool -I serial-terminal '
                                      '-D /dev/tty2:115200 -t 0x20 -l 0 '
-                                     'raw 0x06 0x01')
+                                     'raw 0x06 0x01 2>&1')
+
+    @pytest.mark.parametrize('interface_type', ['lan', 'serial-terminal'])
+    def test_send_and_receive_raw_completion_code_on_stderr(self,
+                                                            interface_type):
+        # ipmitool prints the completion code to stderr and exits with 1
+        interface = Ipmitool(interface_type=interface_type)
+        if interface_type == 'serial-terminal':
+            self.session.set_session_type_serial('/dev/tty2', 115200)
+        interface.establish_session(self.session)
+        interface.IPMITOOL_PATH = (
+            "sh -c 'echo \"Unable to send RAW command (channel=0x0 "
+            "netfn=0x6 lun=0x0 cmd=0x1 rsp=0xc1): Invalid command\" >&2; "
+            "exit 1' ipmitool")
+
+        data = interface.send_and_receive_raw(Target(0x20), 0, 0x6, b'\x01')
+        assert data == b'\xc1'
 
     @pytest.mark.parametrize('interface_type, target, system_interface', [
         ('open', Target(), True),

@@ -463,6 +463,8 @@ class Ipmitool(Interface):
 
         cmd += self._build_ipmitool_target(target)
         cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)
+        # ipmitool prints the errors, e.g. the completion code, to stderr
+        cmd += (' 2>&1')
 
         return cmd
 
