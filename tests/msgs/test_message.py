@@ -5,6 +5,8 @@ from array import array
 import pytest
 
 from pyipmi.errors import DecodingError, EncodingError
+from pyipmi.msgs import (create_request_by_name, create_response_by_name,
+                         decode_message, encode_message)
 from pyipmi.utils import ByteBuffer
 from pyipmi.msgs.message import (Bitfield, Message, UnsignedInt,
                                  RemainingBytes, String)
@@ -105,8 +107,6 @@ def test_string_decode_too_short():
 
 def test_session_challenge_truncated():
     # a truncated challenge string must not be used for the session
-    from pyipmi.msgs import create_response_by_name, decode_message
-
     rsp = create_response_by_name('GetSessionChallenge')
     with pytest.raises(DecodingError):
         decode_message(rsp, b'\x00\x01\x02\x03\x04abc')
@@ -131,8 +131,6 @@ def test_message():
 
 def test_message_encode_out_of_range():
     # channel 16 was sent as channel 0, a power limit of 70000 W as 4464 W
-    from pyipmi.msgs import create_request_by_name, encode_message
-
     req = create_request_by_name('GetChannelInfo')
     req.channel.number = 16
     with pytest.raises(EncodingError):
@@ -142,3 +140,31 @@ def test_message_encode_out_of_range():
     req.power_limit = 70000
     with pytest.raises(EncodingError):
         encode_message(req)
+
+
+def test_message_kwargs():
+    req = create_request_by_name('GetSdr', reservation_id=0x1234,
+                                 record_id=1, offset=5, bytes_to_read=16)
+    assert encode_message(req) == b'\x34\x12\x01\x00\x05\x10'
+
+    # a bitfield from its value as integer
+    req = create_request_by_name('GetChannelInfo', channel=7)
+    assert req.channel.number == 7
+    assert encode_message(req) == b'\x07'
+
+    # a field named 'data'
+    req = create_request_by_name('WriteFruData', fru_id=1, offset=2,
+                                 data=array('B', b'\xaa'))
+    assert encode_message(req) == b'\x01\x02\x00\xaa'
+
+
+def test_message_kwargs_unknown_field():
+    with pytest.raises(TypeError, match='no field'):
+        create_request_by_name('GetSdr', recordid=1)
+
+
+def test_message_data_field_not_replaced():
+    # the field 'data' keeps its default value, it is not replaced by ''
+    req = create_request_by_name('ManufacturingTestOn')
+    assert not isinstance(req.data, str)
+    req.data.extend(b'\x01')

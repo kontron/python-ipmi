@@ -400,7 +400,9 @@ class Message:
         # set default lun
         self.lun = self.__default_lun__
 
-        self.data: Any = ''
+        # a message without a field 'data', the field must not be replaced
+        if not hasattr(self, 'data'):
+            self.data: Any = ''
         if args:
             self._decode(args[0])
         else:
@@ -408,8 +410,19 @@ class Message:
                 self._set_field(name, value)
 
     def _set_field(self, name: str, value: Any) -> None:
-        raise NotImplementedError()
-        # TODO walk along the properties..
+        """Set a field, a bitfield also from its value as integer.
+
+        Raises:
+            TypeError: The message has no field with this name.
+        """
+        names = [field.name for field in getattr(self, '__fields__', ())]
+        if name not in names + ['data']:
+            raise TypeError(f'{type(self).__name__} has no field {name!r}')
+        current = getattr(self, name, None)
+        if isinstance(current, Bitfield.BitWrapper) and isinstance(value, int):
+            current._value = value
+        else:
+            setattr(self, name, value)
 
     def __str__(self) -> str:
         return f'{type(self).__name__} [netfn={self.netfn}, cmd={self.cmdid}, grp={self.group_extension}]'
@@ -420,8 +433,7 @@ class Message:
                 raise DescriptionError(f'Field name "{field.name}" is '
                                        'reserved')
             if hasattr(self, field.name):
-                raise DescriptionError('Field "%s" already added',
-                                       field.name)
+                raise DescriptionError(f'Field "{field.name}" already added')
             setattr(self, field.name, field.create())
 
     def _pack(self) -> array:
