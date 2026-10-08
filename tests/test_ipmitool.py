@@ -12,7 +12,7 @@ from pyipmi import ipmitool
 from pyipmi.errors import CompletionCodeError
 from pyipmi.msgs import create_response_by_name, decode_message
 from pyipmi.ipmitool import build_parser, log_level, parse_interface_options
-from pyipmi.sdr import SdrCommon
+from pyipmi.sdr import SdrCommon, SdrCompactSensorRecord, SdrFullSensorRecord
 
 from .ipmi_helper import create_ipmi
 
@@ -755,3 +755,55 @@ def test_lan_set_lan_channel(capsys):
     assert ipmi.requests == [
         ('GetChannelInfoReq', b'\x01'),
         ('SetLanConfigurationParametersReq', b'\x01\x04\x02')]
+
+
+class TestSdrList:
+    @staticmethod
+    def full_record():
+        record = SdrFullSensorRecord()
+        record.id = 1
+        record.type = 0x01
+        record.number = 0
+        record.owner_lun = 1
+        record.device_id_string = 'Temp'
+        record.analog_data_format = record.DATA_FMT_UNSIGNED
+        record.m = 1
+        record.b = 0
+        record.k1 = 0
+        record.k2 = 0
+        record.linearization = 0
+        return record
+
+    @staticmethod
+    def compact_record():
+        record = SdrCompactSensorRecord()
+        record.id = 2
+        record.type = 0x02
+        record.number = 0
+        record.owner_lun = 1
+        record.device_id_string = 'State'
+        return record
+
+    def test_sdr_list(self, capsys):
+        ipmi = MagicMock()
+        ipmi.get_device_id.return_value.supports_function.return_value = True
+        ipmi.sdr_repository_entries.return_value = [self.full_record(),
+                                                    self.compact_record()]
+        # the states 0 are valid, as the sensor number 0
+        ipmi.get_sensor_reading.return_value = (25, 0)
+
+        ipmitool.cmd_sdr_list(ipmi, None)
+
+        # the sensors are read with the LUN of their owner
+        assert ipmi.get_sensor_reading.call_args_list == [
+            ((0, 1),), ((0, 1),)]
+        lines = capsys.readouterr().out.splitlines()
+        assert lines[2] == ('0x0001 |   0 | Temp               |    25.000 '
+                            '| 0x0')
+        assert lines[3] == ('0x0002 |   0 | State              |        25 '
+                            '| 0x0')
+
+    def test_print_sdr_list_entry_not_available(self, capsys):
+        ipmitool.print_sdr_list_entry(3, None, 'Other', None, None)
+        assert capsys.readouterr().out == (
+            '0x0003 |  na | Other              |      None | na\n')

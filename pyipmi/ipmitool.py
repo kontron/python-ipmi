@@ -186,7 +186,7 @@ def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
         print(f"LCR:              {t_lcr}")
         print(f"LNR:              {t_lnr}")
     elif isinstance(s, pyipmi.sdr.SdrCompactSensorRecord):
-        (raw, states) = ipmi.get_sensor_reading(s.number)
+        (raw, states) = ipmi.get_sensor_reading(s.number, s.owner_lun)
         print(f"Reading:          {raw}")
         print(f"Reading state:    {format_states(states)}")
     elif isinstance(s,
@@ -232,8 +232,9 @@ def cmd_sdr_show_all(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
 def print_sdr_list_entry(record_id: int, number: int | str | None,
                          id_string: str | None, value: object,
                          states: int | None) -> None:
-    number_str = str(number) if number else 'na'
-    states_str = hex(states) if states else 'na'
+    # sensor number 0 and the states 0 are valid
+    number_str = 'na' if number is None else str(number)
+    states_str = 'na' if states is None else hex(states)
 
     print(f"0x{record_id:04x} | {number_str!s:>3} | {id_string!s:<18} | "
           f"{value!s:>9} | {states_str}")
@@ -262,14 +263,15 @@ def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
             states = None
 
             if isinstance(s, pyipmi.sdr.SdrFullSensorRecord):
-                (raw, states) = ipmi.get_sensor_reading(s.number)
+                (raw, states) = ipmi.get_sensor_reading(s.number, s.owner_lun)
                 number = s.number
                 if raw is not None:
                     value = format_analog_value(
                         s.convert_sensor_raw_to_value(raw))
 
             elif isinstance(s, pyipmi.sdr.SdrCompactSensorRecord):
-                (value, states) = ipmi.get_sensor_reading(s.number)
+                (value, states) = ipmi.get_sensor_reading(s.number,
+                                                          s.owner_lun)
                 number = s.number
 
             id_string = getattr(s, 'device_id_string', None)
