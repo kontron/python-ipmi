@@ -43,10 +43,11 @@ class VersionField:
 
         if data[1] == 0xff:
             self.minor = data[1]
-        elif data[1] <= 0x99:
+        elif data[1] >> 4 <= 9 and data[1] & 0xf <= 9:
+            # two BCD digits, 0xa - 0xf are no digits
             self.minor = int(py3_array_tobytes(data[1:2]).decode('bcd+'))
         else:
-            raise DecodingError()
+            raise DecodingError(f'invalid BCD minor version 0x{data[1]:02x}')
 
     def version_to_string(self) -> str:
         return ''.join(f"{self.major}.{self.minor}")

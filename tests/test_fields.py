@@ -30,6 +30,13 @@ def test_versionfield_decoding_error():
         version = VersionField('\x00\x9a')  # noqa:F841
 
 
+@pytest.mark.parametrize('minor', [0x1a, 0x0f, 0x5c, 0xa0, 0x9a])
+def test_versionfield_invalid_bcd(minor):
+    # 0xa - 0xf are no BCD digits, e.g. 0x1a must not be decoded as 1
+    with pytest.raises(DecodingError):
+        VersionField(bytes([1, minor]))
+
+
 def test_FruTypeLengthString_6bitascii():
     f = FruTypeLengthString(b'\x83d\xc9\xb2\xde', 0)
     assert f.string == 'DELL'
