@@ -206,6 +206,50 @@ class TestSdrFullSensorRecord:
         assert sdr.convert_sensor_value_to_raw(-1) == 255
         assert sdr.convert_sensor_value_to_raw(-127) == 129
 
+    @pytest.mark.parametrize('fmt, lowest, highest', [
+        (SdrFullSensorRecord.DATA_FMT_UNSIGNED, (0, 0x00), (255, 0xff)),
+        (SdrFullSensorRecord.DATA_FMT_1S_COMPLEMENT, (-127, 0x80), (127, 0x7f)),
+        (SdrFullSensorRecord.DATA_FMT_2S_COMPLEMENT, (-128, 0x80), (127, 0x7f)),
+    ])
+    def test_convert_sensor_value_to_raw_out_of_range(self, fmt, lowest,
+                                                      highest):
+        sdr = SdrFullSensorRecord()
+        sdr.analog_data_format = fmt
+        sdr.m = 1
+        sdr.b = 0
+        sdr.k1 = 0
+        sdr.k2 = 0
+        sdr.linearization = 0
+
+        # the limits are still converted
+        for (value, raw) in (lowest, highest):
+            assert sdr.convert_sensor_value_to_raw(value) == raw
+            assert sdr.convert_sensor_raw_to_value(raw) == value
+
+        # one beyond the limits must not wrap around to another raw value
+        with pytest.raises(ValueError):
+            sdr.convert_sensor_value_to_raw(lowest[0] - 1)
+        with pytest.raises(ValueError):
+            sdr.convert_sensor_value_to_raw(highest[0] + 1)
+
+    @pytest.mark.parametrize('fmt', [
+        SdrFullSensorRecord.DATA_FMT_1S_COMPLEMENT,
+        SdrFullSensorRecord.DATA_FMT_2S_COMPLEMENT,
+    ])
+    def test_convert_sensor_value_to_raw_signed_out_of_range(self, fmt):
+        sdr = SdrFullSensorRecord()
+        sdr.analog_data_format = fmt
+        sdr.m = 1
+        sdr.b = 0
+        sdr.k1 = 0
+        sdr.k2 = 0
+        sdr.linearization = 0
+
+        # these were encoded as negative raw values before
+        for value in (128, 200, 255, -129, -200, -255):
+            with pytest.raises(ValueError):
+                sdr.convert_sensor_value_to_raw(value)
+
     def test_convert_sensor_value_to_raw_with_offset(self):
         # 3.3VSB voltage sensor (see issue #124)
         sdr = SdrFullSensorRecord()

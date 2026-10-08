@@ -606,16 +606,20 @@ class SdrFullSensorRecord(SdrCommon):
         raw = int(round(raw))
 
         # the sign of the raw value depends on the offset B and not only on
-        # the sign of the given value
+        # the sign of the given value. Check the range before the conversion,
+        # it maps any negative value into 0x80..0xff.
         fmt = self.analog_data_format
         if (fmt == self.DATA_FMT_1S_COMPLEMENT):
+            if raw < -127 or raw > 127:
+                raise ValueError()
             if raw < 0:
                 raw = (-raw ^ 0x7f) | 0x80
         elif (fmt == self.DATA_FMT_2S_COMPLEMENT):
+            if raw < -128 or raw > 127:
+                raise ValueError()
             if raw < 0:
                 raw = (-(raw + 1) ^ 0x7f) | 0x80
-
-        if raw < 0 or raw > 0xff:
+        elif raw < 0 or raw > 0xff:
             raise ValueError()
 
         return raw
