@@ -4,7 +4,7 @@ from array import array
 
 import pytest
 
-from pyipmi.errors import EncodingError
+from pyipmi.errors import DecodingError, EncodingError
 from pyipmi.utils import ByteBuffer
 from pyipmi.msgs.message import (Bitfield, Message, UnsignedInt,
                                  RemainingBytes, String)
@@ -74,16 +74,42 @@ def test_unsignedint_decode():
 
 
 def test_string_encode():
+    # padded with NUL bytes to the length of the field
     t = TMessage(String('test', 10))
     t.test = '1234'
     byte_buffer = t.encode()
-    assert byte_buffer.array == array('B', [0x31, 0x32, 0x33, 0x34])
+    assert byte_buffer.array == array('B', b'1234' + b'\x00' * 6)
+
+    t.test = b'0123456789'
+    assert t.encode().array == array('B', b'0123456789')
+
+
+def test_string_encode_too_long():
+    t = TMessage(String('test', 10))
+    t.test = '01234567890'
+    with pytest.raises(EncodingError):
+        t.encode()
 
 
 def test_string_decode():
     t = TMessage(String('test', 10))
-    t.decode(b'abcdef')
-    assert t.test == b'abcdef'
+    t.decode(b'abcdefghij')
+    assert t.test == b'abcdefghij'
+
+
+def test_string_decode_too_short():
+    t = TMessage(String('test', 10))
+    with pytest.raises(DecodingError):
+        t.decode(b'abcdef')
+
+
+def test_session_challenge_truncated():
+    # a truncated challenge string must not be used for the session
+    from pyipmi.msgs import create_response_by_name, decode_message
+
+    rsp = create_response_by_name('GetSessionChallenge')
+    with pytest.raises(DecodingError):
+        decode_message(rsp, b'\x00\x01\x02\x03\x04abc')
 
 
 def test_remainingbytes_encode():

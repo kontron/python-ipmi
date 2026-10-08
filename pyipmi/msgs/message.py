@@ -117,13 +117,26 @@ class UnsignedInt(BaseField):
 
 
 class String(BaseField):
+    """A string of a fixed length.
+
+    A shorter string is padded with NUL bytes on encoding.
+    """
+
     length: int
 
     def encode(self, obj: Message, data: ByteBuffer) -> None:
         value = getattr(obj, self.name)
-        data.push_string(value)
+        if isinstance(value, str):
+            value = value.encode()
+        if len(value) > self.length:
+            raise EncodingError('String "%s" is longer than %d bytes'
+                                % (self.name, self.length))
+        data.push_string(value.ljust(self.length, b'\x00'))
 
     def decode(self, obj: Message, data: ByteBuffer) -> None:
+        if len(data) < self.length:
+            raise DecodingError('String "%s" is shorter than %d bytes'
+                                % (self.name, self.length))
         value = data.pop_string(self.length)
         setattr(obj, self.name, value)
 
