@@ -166,8 +166,7 @@ class Ipmitool(Interface):
         session = self._get_session()
         cmd = self.IPMITOOL_PATH
         cmd += (' -I %s' % self._interface_type)
-        cmd += (' -H %s' % session.rmcp_host)
-        cmd += (' -p %s' % session.rmcp_port)
+        cmd += self._build_ipmitool_host(session)
         cmd += (' -v')
         cmd += self._build_ipmitool_retries()
         if session.auth_type == Session.AUTH_TYPE_NONE:
@@ -384,6 +383,14 @@ class Ipmitool(Interface):
             cmd += ' -N %d' % self._timeout
         return cmd
 
+    @staticmethod
+    def _build_ipmitool_host(session: Session) -> str:
+        # The command is executed by a shell, so the host and port are quoted
+        # like the credentials, e.g. a host '10.0.0.1; reboot' must not run a
+        # second command.
+        return (f' -H {shlex.quote(str(session.rmcp_host))}'
+                f' -p {shlex.quote(str(session.rmcp_port))}')
+
     def _build_ipmitool_credentials(self) -> str:
         # The command is executed by a shell, so the credentials have to be
         # quoted to prevent the shell from interpreting characters like
@@ -409,8 +416,7 @@ class Ipmitool(Interface):
 
         cmd = self.IPMITOOL_PATH
         cmd += (' -I %s' % self._interface_type)
-        cmd += (' -H %s' % session.rmcp_host)
-        cmd += (' -p %s' % session.rmcp_port)
+        cmd += self._build_ipmitool_host(session)
         cmd += (' -v')
 
         cmd += self._build_ipmitool_priv_level(session.priv_level)
@@ -436,8 +442,10 @@ class Ipmitool(Interface):
                                    raw_bytes: bytes) -> str:
         session = self._get_session()
 
+        # quoted like the host, the command is executed by a shell
+        device = f'{session.serial_port}:{session.serial_baudrate}'
         cmd = (f'{self.IPMITOOL_PATH} -I {self._interface_type} '
-               f'-D {session.serial_port}:{session.serial_baudrate}')
+               f'-D {shlex.quote(device)}')
 
         cmd += self._build_ipmitool_target(target)
         cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)

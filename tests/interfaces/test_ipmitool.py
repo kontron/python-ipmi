@@ -176,6 +176,54 @@ class TestIpmitool:
         assert args[args.index('-U') + 1] == username
         assert args[args.index('-P') + 1] == password
 
+    @pytest.mark.parametrize('host', [
+        '10.0.1.1; echo injected',
+        '10.0.1.1 && echo injected',
+        '$(echo injected)',
+        '`echo injected`',
+        'host name',
+    ])
+    def test_host_with_shell_special_chars(self, host):
+        self.session.set_session_type_rmcp(host)
+        # replace ipmitool with printf to get every argument on its own line
+        # after the command line was processed by the shell
+        self._interface.IPMITOOL_PATH = 'printf "%s\\n"'
+
+        cmd = self._interface._build_ipmitool_cmd(Target(0x20), 0, 0x6,
+                                                  b'\x01')
+        output, _ = self._interface._run_ipmitool(cmd)
+        args = output.decode().splitlines()
+
+        assert 'injected' not in args
+        assert args[args.index('-H') + 1] == host
+        assert args[args.index('-p') + 1] == '623'
+
+    def test_rmcp_ping_host_with_shell_special_chars(self):
+        self.session.set_session_type_rmcp('10.0.1.1; echo injected')
+        mock = MagicMock()
+        mock.return_value = (b'', 0)
+        self._interface._run_ipmitool = mock
+
+        self._interface.rmcp_ping()
+
+        cmd = mock.call_args[0][0]
+        assert " -H '10.0.1.1; echo injected' -p 623 " in cmd
+
+    def test_serial_port_with_shell_special_chars(self):
+        interface = Ipmitool(interface_type='serial-terminal')
+        self.session.set_session_type_serial('/dev/tty2; echo injected',
+                                             115200)
+        interface.establish_session(self.session)
+        interface.IPMITOOL_PATH = 'printf "%s\\n"'
+
+        cmd = interface._build_serial_ipmitool_cmd(Target(0x20), 0, 0x6,
+                                                   b'\x01')
+        output, _ = interface._run_ipmitool(cmd)
+        args = output.decode().splitlines()
+
+        assert 'injected' not in args
+        assert args[args.index('-D') + 1] == '/dev/tty2; echo injected:115200'
+
     def test_send_and_receive_raw_return_value(self):
         mock = MagicMock()
         mock.return_value = (b' 10 80 01 02 51 bd 98 3a 00 a8 '
