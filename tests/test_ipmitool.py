@@ -372,9 +372,48 @@ class TestParser:
                        '-t', '0x72', '-b', '7', 'sel', 'clear'])
 
         assert calls == [
-            ('connect', 'ipmbdev', 'port=/dev/ipmb-1', 0x72, [(0x20, 7, 0)],
-             None, 623, '', '', None),
+            ('connect', 'ipmbdev', 'port=/dev/ipmb-1', 0x72, None,
+             None, 623, '', '', None, 7),
             'open', 'sel clear', 'close']
+
+
+class TestCreateIpmiConnection:
+    @staticmethod
+    def routing(ipmi):
+        return [(r.rq_sa, r.rs_sa, r.channel) for r in ipmi.target.routing]
+
+    def test_channel_rmcp(self):
+        # like ipmitool -t 0x82 -b 0: bridged by the BMC on channel 0
+        ipmi = ipmitool.create_ipmi_connection('rmcp', None, 0x82, None,
+                                               '10.0.0.1', 623, 'admin',
+                                               'admin', None, 0)
+        assert ipmi.target.ipmb_address == 0x82
+        assert self.routing(ipmi) == [(0x81, 0x20, 0), (0x20, 0x82, None)]
+
+    def test_channel_ipmitool(self):
+        ipmi = ipmitool.create_ipmi_connection('ipmitool', None, 0x72, None,
+                                               '10.0.0.1', 623, 'admin',
+                                               'admin', None, 7)
+        ipmi.interface.establish_session(ipmi.session)
+        assert ipmi.interface._build_ipmitool_target(ipmi.target) \
+            == ' -t 0x72 -b 7'
+
+    def test_channel_uses_own_address(self, monkeypatch):
+        # the requester of the first hop is the own address of the interface
+        interface = MagicMock(slave_address=0x24)
+        monkeypatch.setattr(ipmitool.pyipmi.interfaces, 'create_interface',
+                            lambda name, **kwargs: interface)
+        ipmi = ipmitool.create_ipmi_connection('openipmblink', None, 0x72,
+                                               None, None, 623, '', '', None,
+                                               7)
+        assert self.routing(ipmi) == [(0x24, 0x20, 7), (0x20, 0x72, None)]
+
+    def test_routing(self):
+        ipmi = ipmitool.create_ipmi_connection('rmcp', None, 0x72,
+                                               '[(0x81,0x20,0),(0x20,0x72,None)]',
+                                               '10.0.0.1', 623, 'admin',
+                                               'admin', None)
+        assert self.routing(ipmi) == [(0x81, 0x20, 0), (0x20, 0x72, None)]
 
 
 class TestSdrShow:

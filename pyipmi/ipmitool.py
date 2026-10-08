@@ -783,7 +783,9 @@ def create_ipmi_connection(interface_name: str, options: str | None,
                            target_routing: str | list | None,
                            rmcp_host: str | None, rmcp_port: int,
                            rmcp_user: str, rmcp_password: str,
-                           rmcp_priv_level: str | None) -> pyipmi.Ipmi | None:
+                           rmcp_priv_level: str | None,
+                           target_channel: int | None = None
+                           ) -> pyipmi.Ipmi | None:
     interface_options = parse_interface_options(interface_name, options)
 
     try:
@@ -796,7 +798,14 @@ def create_ipmi_connection(interface_name: str, options: str | None,
     ipmi = pyipmi.create_connection(interface)
     ipmi.target = pyipmi.Target(target_address)
 
-    if target_routing is not None:
+    if target_channel is not None:
+        # like ipmitool -t <addr> -b <channel>: the BMC bridges the request
+        # to the target on the channel. The requester address of the first
+        # hop is the own address of the interface, e.g. 0x81 for RMCP.
+        rq_sa = getattr(interface, 'slave_address', 0x81)
+        ipmi.target.set_routing([(rq_sa, 0x20, target_channel),
+                                 (0x20, target_address, None)])
+    elif target_routing is not None:
         ipmi.target.set_routing(target_routing)
 
     if rmcp_host is not None:
@@ -1392,16 +1401,13 @@ def main(argv: list[str] | None = None) -> None:
 
     setup_logging(args.verbose, args.log_levels)
 
-    routing = args.routing
-    if args.channel is not None:
-        routing = [(0x20, args.channel, 0)]
-
     ipmi = None
     if args.needs_connection:
         ipmi = create_ipmi_connection(args.interface, args.options,
-                                      args.target, routing,
+                                      args.target, args.routing,
                                       args.host, args.port, args.user,
-                                      args.password, args.priv_level)
+                                      args.password, args.priv_level,
+                                      args.channel)
         if ipmi is None:
             sys.exit(1)  # interface could not be created, error is printed
 
