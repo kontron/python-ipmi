@@ -21,7 +21,7 @@ from array import array
 from typing import Any, TYPE_CHECKING, TypeGuard, overload
 from collections.abc import Generator, Iterator, Sequence
 from .msgs import constants
-from .errors import DecodingError, CompletionCodeError
+from .errors import DecodingError, EncodingError, CompletionCodeError
 
 if TYPE_CHECKING:
     # `pyipmi.msgs.message` imports `ByteBuffer` from this module, so the
@@ -86,6 +86,9 @@ class ByteBuffer:
             self.array = array('B')
 
     def push_unsigned_int(self, value: int, length: int) -> None:
+        if value < 0 or value >= 1 << (8 * length):
+            raise EncodingError('value %d does not fit in %d byte(s)'
+                                % (value, length))
         for i in range(length):
             self.array.append(value >> (8*i) & 0xff)
 

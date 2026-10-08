@@ -7,7 +7,7 @@ from array import array
 import pyipmi.msgs.device_messaging
 from pyipmi.utils import (ByteBuffer, chunks, check_completion_code,
                           check_rsp_completion_code)
-from pyipmi.errors import DecodingError, CompletionCodeError
+from pyipmi.errors import DecodingError, EncodingError, CompletionCodeError
 from pyipmi.msgs import decode_message
 
 
@@ -38,6 +38,20 @@ def test_bytebuffer_push_unsigned_int():
     buf.push_unsigned_int(256, 2)
     assert buf[5] == 0
     assert buf[6] == 1
+
+
+@pytest.mark.parametrize('value, length', [
+    (256, 1),
+    (0x10000, 2),
+    (0x1000000, 3),
+    (-1, 1),
+])
+def test_bytebuffer_push_unsigned_int_out_of_range(value, length):
+    # the value must not be truncated silently
+    buf = ByteBuffer()
+    with pytest.raises(EncodingError):
+        buf.push_unsigned_int(value, length)
+    assert len(buf) == 0
 
 
 def test_bytebuffer_pop_unsigned_int():

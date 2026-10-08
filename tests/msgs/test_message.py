@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
 from array import array
+
+import pytest
+
+from pyipmi.errors import EncodingError
 from pyipmi.utils import ByteBuffer
 from pyipmi.msgs.message import (Bitfield, Message, UnsignedInt,
                                  RemainingBytes, String)
@@ -28,6 +32,24 @@ def test_bitfield_encode():
     t.status.erase_in_progress = 1
     byte_buffer = t.encode()
     assert byte_buffer.array == array('B', [0x1])
+
+
+@pytest.mark.parametrize('value', [16, 0xff, -1])
+def test_bitfield_encode_out_of_range(value):
+    # the value must not be truncated silently
+    t = TMessage(Bitfield('status', 1,
+                          Bitfield.Bit('erase_in_progress', 4),
+                          Bitfield.ReservedBit(4, 0),))
+    t.status.erase_in_progress = value
+    with pytest.raises(EncodingError):
+        t.encode()
+
+
+def test_unsignedint_encode_out_of_range():
+    t = TMessage(UnsignedInt('test', 2))
+    t.test = 70000
+    with pytest.raises(EncodingError):
+        t.encode()
 
 
 def test_unsignedint_encode():
@@ -79,3 +101,18 @@ def test_message():
     assert msg.lun == 0
     assert msg.netfn == 1
     assert msg.cmdid == 2
+
+
+def test_message_encode_out_of_range():
+    # channel 16 was sent as channel 0, a power limit of 70000 W as 4464 W
+    from pyipmi.msgs import create_request_by_name, encode_message
+
+    req = create_request_by_name('GetChannelInfo')
+    req.channel.number = 16
+    with pytest.raises(EncodingError):
+        encode_message(req)
+
+    req = create_request_by_name('SetPowerLimit')
+    req.power_limit = 70000
+    with pytest.raises(EncodingError):
+        encode_message(req)

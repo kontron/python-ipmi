@@ -268,7 +268,11 @@ class Bitfield(BaseField):
                 if bit_value is None:
                     raise EncodingError('Bitfield "%s" not set.' % bit.name)
 
-                value |= (bit_value & (2**bit._width - 1)) << bit.offset
+                if bit_value < 0 or bit_value >= 1 << bit._width:
+                    raise EncodingError('Bitfield "%s": value %d does not '
+                                        'fit in %d bit(s)'
+                                        % (bit.name, bit_value, bit._width))
+                value |= bit_value << bit.offset
             return value
 
         def _set_value(self, value: int) -> None:

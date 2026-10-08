@@ -98,10 +98,10 @@ def test_partialaddsdr_encode_req():
     m.reservation_id = 0x2211
     m.record_id = 0x4433
     m.offset = 0xaa
-    m.status.in_progress = 0xaa
+    m.status.in_progress = 0x1
     m.record_data = array('B', [0x55, 0x44])
     data = encode_message(m)
-    assert data == b'\x11\x22\x33\x44\xaa\x0a\x55\x44'
+    assert data == b'\x11\x22\x33\x44\xaa\x01\x55\x44'
 
 
 def test_partialaddsdr_decode_rsp():
