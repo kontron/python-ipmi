@@ -875,7 +875,12 @@ class FruDataMultiRecord(FruData):
             The decoded record.
         """
         record_type = data[0]
-        if record_type == FruDataMultiRecord.TYPE_OEM_PICMG:
+        # a PICMG record is an OEM record with the manufacturer ID of PICMG,
+        # the record type ID and the format version
+        if (record_type == FruDataMultiRecord.TYPE_OEM_PICMG
+                and len(data) >= 10 and data[2] >= 5
+                and data[5] | data[6] << 8 | data[7] << 16
+                == PICMG_MANUFACTURER_ID):
             return FruPicmgRecord.create_from_record_id(
                 data, ignore_checksum=ignore_checksum)
         if record_type == FruDataMultiRecord.TYPE_DC_OUTPUT:
@@ -890,6 +895,10 @@ class FruDataMultiRecord(FruData):
             return FruFmcRecord.create_from_record_id(
                 data, ignore_checksum=ignore_checksum)
         return FruDataUnknown(data, ignore_checksum=ignore_checksum)
+
+
+# the manufacturer ID of PICMG, the first bytes of a PICMG record
+PICMG_MANUFACTURER_ID = 0x00315a
 
 
 class FruDataUnknown(FruDataMultiRecord):
@@ -979,10 +988,11 @@ class FruPicmgRecord(FruDataMultiRecord):
         return picmg_record
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
-        if len(data) < 10:
-            raise DecodingError('data too short')
         data = array.array('B', data)
         FruDataMultiRecord._from_data(self, data, ignore_checksum=ignore_checksum)
+        # the length of the record, the data can contain further records
+        if self.length < 5:
+            raise DecodingError('data too short')
         self.manufacturer_id = \
             data[5] | data[6] << 8 | data[7] << 16
         self.picmg_record_type_id = data[8]
@@ -998,9 +1008,10 @@ class FruPicmgPowerModuleCapabilityRecord(FruPicmgRecord):
     """
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
-        if len(data) < 12:
-            raise DecodingError('data too short')
         FruPicmgRecord._from_data(self, data, ignore_checksum=ignore_checksum)
+        # the length of the record, the data can contain further records
+        if self.length < 7:
+            raise DecodingError('data too short')
         maximum_current_output = data[10] | data[11] << 8
         self.maximum_current_output = float(maximum_current_output/10)
 

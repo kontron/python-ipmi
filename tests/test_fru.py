@@ -833,3 +833,48 @@ def test_board_area_custom_fields():
                                      0xc1])
     fields = InventoryBoardInfoArea(area).custom_mfg_info
     assert [f.string for f in fields] == ['AB', 'CD']
+
+
+def test_multirecord_oem_c0_not_picmg():
+    # an OEM record of type 0xc0 of another manufacturer, only with its
+    # manufacturer ID
+    record = FruDataMultiRecord.create_from_record_id(
+        _multirecord(0xc0, b'\x98\x3a\x00'))
+    assert type(record) is FruDataUnknown
+    assert record.manufacturer_id == 0x3a98
+
+    # longer, with bytes that look like a PICMG record type ID
+    record = FruDataMultiRecord.create_from_record_id(
+        _multirecord(0xc0, b'\x98\x3a\x00\x16\x00\x01\x02'))
+    assert type(record) is FruDataUnknown
+
+
+def test_multirecord_picmg_too_short():
+    # a record with the PICMG manufacturer ID, but without the record type
+    # ID and the format version, is not decoded as PICMG record
+    record = FruDataMultiRecord.create_from_record_id(
+        _multirecord(0xc0, b'\x5a\x31\x00\x27'))
+    assert type(record) is FruDataUnknown
+    assert record.manufacturer_id == 0x315a
+
+
+def test_multirecord_picmg_power_module_followed_by_record():
+    # the power module capability record (0x27) needs the 2 bytes of the
+    # maximum current, they must not be taken from the next record
+    picmg = _multirecord(0xc0, b'\x5a\x31\x00\x27\x00')
+    data = picmg[:1] + b'\x02' + picmg[2:4] \
+        + bytes([-(picmg[0] + 0x02 + picmg[2] + picmg[3]) & 0xff]) \
+        + picmg[5:] + _multirecord(0x05, b'\x01\x02\x03')
+    with pytest.raises(DecodingError):
+        FruDataMultiRecord.create_from_record_id(data)
+
+
+def test_multirecord_area_with_oem_c0_record():
+    # the area is decoded although it has a non PICMG 0xc0 record
+    oem = _record([0x98, 0x3a, 0x00])
+    oem = bytes([0xc0]) + oem[1:4] + bytes([-(0xc0 + sum(oem[1:4])) & 0xff]) \
+        + oem[5:]
+    data = _fru_image([oem, _record([1, 2, 3], end_of_list=True)])
+    records = FruInventory(data).multirecord_area.records
+    assert [type(r) for r in records] == [FruDataUnknown, FruDataUnknown]
+    assert records[0].manufacturer_id == 0x3a98
