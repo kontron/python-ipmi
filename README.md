@@ -1,9 +1,12 @@
 # Pure Python IPMI Library
 
 [![Build Status](https://github.com/kontron/python-ipmi/actions/workflows/test.yml/badge.svg)](https://github.com/kontron/python-ipmi/actions/workflows/test.yml)
+[![Lint](https://github.com/kontron/python-ipmi/actions/workflows/lint.yml/badge.svg)](https://github.com/kontron/python-ipmi/actions/workflows/lint.yml)
 [![PyPI version](https://img.shields.io/pypi/v/python-ipmi.svg)](https://pypi.org/project/python-ipmi/)
 [![Documentation Status](https://readthedocs.org/projects/python-ipmi/badge/?version=latest)](https://python-ipmi.readthedocs.io/en/latest/?badge=latest)
 [![Python versions](https://img.shields.io/pypi/pyversions/python-ipmi.svg)](https://pypi.org/project/python-ipmi/)
+[![License](https://img.shields.io/pypi/l/python-ipmi.svg)](https://github.com/kontron/python-ipmi/blob/master/COPYING)
+[![Downloads](https://img.shields.io/pypi/dm/python-ipmi.svg)](https://pypistats.org/packages/python-ipmi)
 [![Coverage Status](https://coveralls.io/repos/github/kontron/python-ipmi/badge.svg?branch=master)](https://coveralls.io/github/kontron/python-ipmi?branch=master)
 [![Code Climate](https://codeclimate.com/github/kontron/python-ipmi/badges/gpa.svg)](http://codeclimate.com/github/kontron/python-ipmi)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/068eca4b1e784425aa46ae0b06aeaf37)](https://www.codacy.com/gh/kontron/python-ipmi/dashboard?utm_source=github.com&utm_medium=referral&utm_content=kontron/python-ipmi&utm_campaign=Badge_Grade)
