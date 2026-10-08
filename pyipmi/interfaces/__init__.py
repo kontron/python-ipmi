@@ -70,6 +70,28 @@ INTERFACES: list[type[Interface]] = [
 def create_interface(interface: str, *args: Any, **kwargs: Any) -> Any:
     """Create an interface by its name.
 
+    The supported names are:
+
+    * ``'rmcp'`` (:class:`Rmcp`): IPMI v1.5 over LAN (RMCP)
+    * ``'rmcpplus'`` (:class:`RmcpPlus`): IPMI v2.0 over LAN (RMCP+)
+    * ``'ipmitool'`` (:class:`Ipmitool`): the ``raw`` command of ipmitool
+    * ``'ipmidev'`` (:class:`IpmiDev`): the Linux IPMI driver
+      (``/dev/ipmi0``)
+    * ``'ipmbdev'`` (:class:`IpmbDev`): the Linux IPMB device driver
+    * ``'aardvark'`` (:class:`Aardvark`): the Total Phase Aardvark I2C
+      adapter
+    * ``'openipmblink'`` (:class:`OpenIpmbLink`): the openipmblink IPMB
+      bridge
+    * ``'mock'`` (:class:`Mock`): a dummy interface for tests
+
+    The arguments are described at the interface classes.
+
+    Example:
+        Create an interface using ipmitool with ``-I lanplus``::
+
+            interface = create_interface('ipmitool',
+                                         interface_type='lanplus')
+
     Args:
         interface: The name of the interface, the ``NAME`` of its class,
             e.g. ``'rmcpplus'``.
