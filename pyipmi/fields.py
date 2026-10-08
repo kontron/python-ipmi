@@ -53,7 +53,13 @@ class VersionField:
 
 
 def _unpack6bitascii(data: Sequence[int]) -> str:
-    """Unpack the 6bit ascii encoded string."""
+    """Unpack the 6bit ascii encoded string.
+
+    The characters are packed in groups of 3 bytes, the last group can be
+    shorter, e.g. 5 characters take 4 bytes.
+    """
+    count = len(data) * 8 // 6
+    data = list(data) + [0] * (-len(data) % 3)
     string = ''
     for i in range(0, len(data), 3):
         d = data[i:i+3]
@@ -61,7 +67,7 @@ def _unpack6bitascii(data: Sequence[int]) -> str:
         string += chr(0x20 + (((d[0] & 0xc0) >> 6) | ((d[1] & 0xf) << 2)))
         string += chr(0x20 + (((d[1] & 0xf0) >> 4) | ((d[2] & 0x3) << 4)))
         string += chr(0x20 + ((d[2] & 0xfc) >> 2))
-    return string
+    return string[:count]
 
 
 class TypeLengthString:
