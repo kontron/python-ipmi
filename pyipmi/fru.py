@@ -652,8 +652,8 @@ class CommonInfoArea(FruData):
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         self.format_version = data[0] & 0x0f
         if self.format_version != 1:
-            raise DecodingError('unsupported format version (%d)' %
-                                self.format_version)
+            raise DecodingError('unsupported format version '
+                                f'({self.format_version:d})')
         self.length = data[1] * 8
         if sum(data[:self.length]) % 256 != 0 and ignore_checksum is False:
             raise DecodingError('checksum failed')
@@ -817,17 +817,17 @@ class FruDataMultiRecord(FruData):
 
         The manufacturer ID of an OEM record is added to the record type.
         """
-        return '%s: %s' % (self._type_string(),
-                           ' '.join('%02x' % b for b in self.raw))
+        return (f"{self._type_string()}: "
+                f"{' '.join(f'{b:02x}' for b in self.raw)}")
 
     def _type_string(self) -> str:
         """Return the record type ID and the manufacturer of an OEM record."""
-        record_type = '%02x' % self.record_type_id
+        record_type = f'{self.record_type_id:02x}'
         if self.manufacturer_id is not None:
-            manufacturer = '%d' % self.manufacturer_id
+            manufacturer = f'{self.manufacturer_id:d}'
             if self.manufacturer_name is not None:
-                manufacturer += ' = %s' % self.manufacturer_name
-            record_type += ' (OEM, manufacturer ID %s)' % manufacturer
+                manufacturer += f' = {self.manufacturer_name}'
+            record_type += f' (OEM, manufacturer ID {manufacturer})'
         return record_type
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
@@ -1044,21 +1044,22 @@ class FruDcOutputRecord(FruDataMultiRecord):
 
     def __str__(self) -> str:
         """Return the record type and the decoded values."""
-        return ('%s DC Output %d: %d mV (%d - %d mV), ripple and noise %d mV, '
-                '%d - %d mA%s'
-                % (self._type_string(), self.output_number,
-                   self.nominal_voltage, self.max_negative_voltage,
-                   self.max_positive_voltage, self.ripple_and_noise,
-                   self.min_current_draw, self.max_current_draw,
-                   ', standby' if self.standby_enable else ''))
+        standby = ', standby' if self.standby_enable else ''
+        return (f'{self._type_string()} DC Output {self.output_number:d}: '
+                f'{self.nominal_voltage:d} mV '
+                f'({self.max_negative_voltage:d} - '
+                f'{self.max_positive_voltage:d} mV), ripple and noise '
+                f'{self.ripple_and_noise:d} mV, '
+                f'{self.min_current_draw:d} - {self.max_current_draw:d} mA'
+                f'{standby}')
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         FruDataMultiRecord._from_data(self, data,
                                       ignore_checksum=ignore_checksum)
         raw = bytes(self.raw)
         if len(raw) < 13:
-            raise DecodingError('DC output record too short (%d bytes)'
-                                % len(raw))
+            raise DecodingError(f'DC output record too short ({len(raw):d} '
+                                'bytes)')
         self.standby_enable = bool(raw[0] & 0x80)
         self.output_number = raw[0] & 0x0f
         # the voltages are signed and in 10 mV units
@@ -1089,20 +1090,19 @@ class FruDcLoadRecord(FruDataMultiRecord):
 
     def __str__(self) -> str:
         """Return the record type and the decoded values."""
-        return ('%s DC Load %d: %d mV (%d - %d mV), ripple and noise %d mV, '
-                '%d - %d mA'
-                % (self._type_string(), self.output_number,
-                   self.nominal_voltage, self.min_voltage, self.max_voltage,
-                   self.ripple_and_noise, self.min_current_load,
-                   self.max_current_load))
+        return (f'{self._type_string()} DC Load {self.output_number:d}: '
+                f'{self.nominal_voltage:d} mV ({self.min_voltage:d} - '
+                f'{self.max_voltage:d} mV), ripple and noise '
+                f'{self.ripple_and_noise:d} mV, '
+                f'{self.min_current_load:d} - {self.max_current_load:d} mA')
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         FruDataMultiRecord._from_data(self, data,
                                       ignore_checksum=ignore_checksum)
         raw = bytes(self.raw)
         if len(raw) < 13:
-            raise DecodingError('DC load record too short (%d bytes)'
-                                % len(raw))
+            raise DecodingError(f'DC load record too short ({len(raw):d} '
+                                'bytes)')
         self.output_number = raw[0] & 0x0f
         # the voltages are signed and in 10 mV units
         self.nominal_voltage = _int16(raw, 1, signed=True) * 10
@@ -1151,8 +1151,8 @@ class FruFmcRecord(FruDataMultiRecord):
         FruDataMultiRecord._from_data(self, data,
                                       ignore_checksum=ignore_checksum)
         if len(self.raw) < 4:
-            raise DecodingError('FMC record too short (%d bytes)'
-                                % len(self.raw))
+            raise DecodingError(f'FMC record too short ({len(self.raw):d} '
+                                'bytes)')
         self.subtype = self.raw[3]
 
     @staticmethod
@@ -1188,13 +1188,13 @@ class FruFmcRecord(FruDataMultiRecord):
         """Return the data after the subtype, raise if it is too short."""
         payload = bytes(self.raw[4:])
         if len(payload) < length:
-            raise DecodingError('FMC record subtype %d too short (%d bytes)'
-                                % (self.subtype, len(payload)))
+            raise DecodingError(f'FMC record subtype {self.subtype:d} too '
+                                f'short ({len(payload):d} bytes)')
         return payload
 
     @staticmethod
     def _name(names: dict[int, str], value: int) -> str:
-        return names.get(value, 'reserved (%d)' % value)
+        return names.get(value, f'reserved ({value:d})')
 
 
 class FruFmcMainDefinition(FruFmcRecord):
@@ -1222,18 +1222,18 @@ class FruFmcMainDefinition(FruFmcRecord):
 
     def __str__(self) -> str:
         """Return the record type and the decoded values."""
-        return ('%s FMC Main Definition: %s, P1 %s, P2 %s, clock %s, '
-                'P1 %d/%d signals, P2 %d/%d signals, P1 %d GBT, P2 %d GBT, '
-                'TCK %d MHz'
-                % (self._type_string(),
-                   self._name(self._MODULE_SIZES, self.module_size),
-                   self._name(self._CONNECTORS, self.p1_connector_size),
-                   self._name(self._CONNECTORS, self.p2_connector_size),
-                   self._name(self._CLOCK_DIRECTIONS, self.clock_direction),
-                   self.p1_a_num_signals, self.p1_b_num_signals,
-                   self.p2_a_num_signals, self.p2_b_num_signals,
-                   self.p1_gbt_num_trcv, self.p2_gbt_num_trcv,
-                   self.tck_max_clock))
+        return (f'{self._type_string()} FMC Main Definition: '
+                f'{self._name(self._MODULE_SIZES, self.module_size)}, P1 '
+                f'{self._name(self._CONNECTORS, self.p1_connector_size)}, P2 '
+                f'{self._name(self._CONNECTORS, self.p2_connector_size)}, '
+                'clock '
+                f'{self._name(self._CLOCK_DIRECTIONS, self.clock_direction)}, '
+                f'P1 {self.p1_a_num_signals:d}/{self.p1_b_num_signals:d} '
+                'signals, P2 '
+                f'{self.p2_a_num_signals:d}/{self.p2_b_num_signals:d} '
+                f'signals, P1 {self.p1_gbt_num_trcv:d} GBT, P2 '
+                f'{self.p2_gbt_num_trcv:d} GBT, '
+                f'TCK {self.tck_max_clock:d} MHz')
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         FruFmcRecord._from_data(self, data, ignore_checksum=ignore_checksum)
@@ -1280,18 +1280,19 @@ class FruFmcPlusMainDefinition(FruFmcRecord):
 
     def __str__(self) -> str:
         """Return the record type and the decoded values."""
-        return ('%s FMC+ Main Definition: %s, P1/P3 %s, P2/P4 %s, clock %s, '
-                'P1 %d/%d signals, P2 %d/%d signals, P1 %d GBT, P2 %d GBT, '
-                'TCK %d MHz'
-                % (self._type_string(),
-                   self._name(self._MODULE_SIZES, self.module_size),
-                   self._name(self._CONNECTORS, self.p1_p3_connector_size),
-                   self._name(self._CONNECTORS, self.p2_p4_connector_size),
-                   self._name(self._CLOCK_DIRECTIONS, self.clock_direction),
-                   self.p1_a_num_signals, self.p1_b_num_signals,
-                   self.p2_a_num_signals, self.p2_b_num_signals,
-                   self.p1_gbt_num_trcv, self.p2_gbt_num_trcv,
-                   self.tck_max_clock))
+        return (f'{self._type_string()} FMC+ Main Definition: '
+                f'{self._name(self._MODULE_SIZES, self.module_size)}, P1/P3 '
+                f'{self._name(self._CONNECTORS, self.p1_p3_connector_size)}, '
+                'P2/P4 '
+                f'{self._name(self._CONNECTORS, self.p2_p4_connector_size)}, '
+                'clock '
+                f'{self._name(self._CLOCK_DIRECTIONS, self.clock_direction)}, '
+                f'P1 {self.p1_a_num_signals:d}/{self.p1_b_num_signals:d} '
+                'signals, P2 '
+                f'{self.p2_a_num_signals:d}/{self.p2_b_num_signals:d} '
+                f'signals, P1 {self.p1_gbt_num_trcv:d} GBT, P2 '
+                f'{self.p2_gbt_num_trcv:d} GBT, '
+                f'TCK {self.tck_max_clock:d} MHz')
 
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         FruFmcRecord._from_data(self, data, ignore_checksum=ignore_checksum)
@@ -1325,9 +1326,9 @@ class FruFmcI2cDeviceDefinition(FruFmcRecord):
 
     def __str__(self) -> str:
         """Return the record type and the I2C devices."""
-        devices = ', '.join('%s (%s)' % (name, ', '.join(map(str, addresses)))
+        devices = ', '.join(f"{name} ({', '.join(map(str, addresses))})"
                             for name, addresses in self.devices)
-        return '%s FMC I2C Devices: %s' % (self._type_string(), devices)
+        return f'{self._type_string()} FMC I2C Devices: {devices}'
 
     @staticmethod
     def _address(character: str) -> int | None:

@@ -180,7 +180,7 @@ class IpmiDev(Interface):
 
     def _get_dev(self) -> int:
         if self._dev is None:
-            raise RuntimeError('Device %s is not open' % self.port)
+            raise RuntimeError(f'Device {self.port} is not open')
         return self._dev
 
     def is_target_accessible(self, target: Target) -> bool:
@@ -215,8 +215,8 @@ class IpmiDev(Interface):
     def _encode_address(self, target: Target, lun: int) -> ctypes.Structure:
         routing = target.routing or []
         if len(routing) > 2:
-            raise RuntimeError('ipmidev supports only one bridge, routing: %s'
-                               % ', '.join(str(r) for r in routing))
+            raise RuntimeError("ipmidev supports only one bridge, routing: "
+                               f"{', '.join(str(r) for r in routing)}")
 
         address: int | None
         if len(routing) == 2:

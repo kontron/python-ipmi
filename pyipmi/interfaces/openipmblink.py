@@ -158,8 +158,8 @@ class OpenIpmbLinkDevice:
                 info = self.command('ping')
             if info.get('version') != self.PROTOCOL_VERSION:
                 raise OpenIpmbLinkError(
-                    'bridge protocol version %s, interface needs %d'
-                    % (info.get('version'), self.PROTOCOL_VERSION))
+                    f"bridge protocol version {info.get('version')}, "
+                    f"interface needs {self.PROTOCOL_VERSION:d}")
         except Exception:
             self.close()
             raise
@@ -208,7 +208,7 @@ class OpenIpmbLinkDevice:
         """
         with self._listeners_lock:
             if bus in self._listeners:
-                raise OpenIpmbLinkError('bus %d is already in use' % bus)
+                raise OpenIpmbLinkError(f'bus {bus:d} is already in use')
             self._listeners[bus] = listener
 
     def remove_listener(self, bus: int) -> None:
@@ -263,8 +263,8 @@ class OpenIpmbLinkDevice:
                 except queue.Empty:
                     raise OpenIpmbLinkError('no reply from bridge') from None
                 if packet.get('evt') == 'error':
-                    raise OpenIpmbLinkError('bridge reported error: %s'
-                                            % packet.get('status'))
+                    raise OpenIpmbLinkError("bridge reported error: "
+                                            f"{packet.get('status')}")
                 if packet.get('rsp') == cmd:
                     return packet
 
@@ -400,7 +400,7 @@ class OpenIpmbLink(IpmbInterface):
     def _check_status(reply: dict) -> None:
         status = reply.get('status')
         if status != 'ok':
-            raise OpenIpmbLinkError('bridge status: %s' % status)
+            raise OpenIpmbLinkError(f'bridge status: {status}')
 
     def send_frame(self, frame: bytes) -> None:
         """Send a complete IPMB message, starting with rsSA.

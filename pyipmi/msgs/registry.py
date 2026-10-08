@@ -37,8 +37,7 @@ class MessageRegistry:
         for attr in ('__netfn__', '__cmdid__', '__default_lun__',
                      '__group_extension__'):
             if not hasattr(cls, attr):
-                raise DescriptionError('Class has to have attribute "%s"' %
-                                       attr)
+                raise DescriptionError(f'Class has to have attribute "{attr}"')
         # (3) netfn lsb has to be 0 for Req and 1 for Rsp
         if cls.__name__.endswith('Req') and cls.__netfn__ & 1 != 0:
             raise DescriptionError('LSB of NetFN of a Request must be 0')
@@ -48,13 +47,14 @@ class MessageRegistry:
 
         # (4) must not be registered before
         if cls.__name__ in self.registry:
-            raise DescriptionError('Message %s already registered' %
-                                   cls.__name__)
+            raise DescriptionError(f'Message {cls.__name__} already '
+                                   'registered')
         msg_id = (cls.__netfn__, cls.__cmdid__, cls.__group_extension__)
         if msg_id in self.registry:
-            raise DescriptionError('Message (%d,%d,%s) already registered (%s)'
-                                   % (msg_id[0], msg_id[1], msg_id[2],
-                                      self.registry[msg_id]))
+            (netfn, cmdid, group_extension) = msg_id
+            raise DescriptionError(f'Message ({netfn:d},{cmdid:d},'
+                                   f'{group_extension}) already registered '
+                                   f'({self.registry[msg_id]})')
 
         # register name
         self.registry[cls.__name__] = cls

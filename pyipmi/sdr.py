@@ -399,13 +399,11 @@ class SdrCommon:
 
     def __str__(self) -> str:
         """Return the device ID string, if any, and the record data."""
+        data = ' '.join(f'{b:02x}' for b in self.data)
         if hasattr(self, 'device_id_string'):
-            s = '["%s"] [%s]' % \
-                 (self.device_id_string,
-                  ' '.join(['%02x' % b for b in self.data]))
+            s = f'["{self.device_id_string}"] [{data}]'
         else:
-            s = '[%s]' % \
-                 (' '.join(['%02x' % b for b in self.data]))
+            s = f'[{data}]'
         return s
 
     def _common_header(self, data: ByteSequence) -> None:
@@ -416,7 +414,8 @@ class SdrCommon:
             self.type = buffer.pop_unsigned_int(1)
             self.length = buffer.pop_unsigned_int(1)
         except IndexError:
-            raise DecodingError('Invalid SDR length (%d)' % len(data)) from None
+            raise DecodingError('Invalid SDR length '
+                                f'({len(data):d})') from None
 
     def _common_record_key(self, buffer: ByteBuffer) -> None:
         self.owner_id = buffer.pop_unsigned_int(1)
@@ -553,11 +552,9 @@ class SdrFullSensorRecord(SdrCommon):
 
     def __str__(self) -> str:
         """Return the device ID string, the entity and the record data."""
-        s = '["%s"] [%s:%s] [%s]' \
-                % (self.device_id_string,
-                   self.entity_id,
-                   self.entity_instance,
-                   ' '.join(['%02x' % b for b in self.data]))
+        data = ' '.join(f'{b:02x}' for b in self.data)
+        s = (f'["{self.device_id_string}"] '
+             f'[{self.entity_id}:{self.entity_instance}] [{data}]')
         return s
 
     def convert_sensor_raw_to_value(self, raw: int | None) -> float | None:
@@ -654,8 +651,9 @@ class SdrFullSensorRecord(SdrCommon):
                 L_LINEAR: lambda x: x,
             }[self.linearization & 0x7f]
         except KeyError:
-            raise errors.DecodingError('unknown linearization %d' %
-                                       (self.linearization & 0x7f)) from None
+            linearization = self.linearization & 0x7f
+            raise errors.DecodingError('unknown linearization '
+                                       f'{linearization:d}') from None
 
     @staticmethod
     def _convert_complement(value: int, size: int) -> int:
@@ -852,9 +850,8 @@ class SdrCompactSensorRecord(SdrCommon):
 
     def __str__(self) -> str:
         """Return the device ID string and the record data."""
-        s = '["%s"] [%s]' \
-            % (self.device_id_string,
-               ' '.join(['%02x' % b for b in self.data]))
+        data = ' '.join(f'{b:02x}' for b in self.data)
+        s = f'["{self.device_id_string}"] [{data}]'
         return s
 
     def _from_data(self, data: ByteSequence) -> None:
@@ -972,9 +969,8 @@ class SdrFruDeviceLocator(SdrCommon):
 
     def __str__(self) -> str:
         """Return the device ID string and the record data."""
-        s = '["%s"] [%s]' \
-            % (self.device_id_string,
-               ' '.join(['%02x' % b for b in self.data]))
+        data = ' '.join(f'{b:02x}' for b in self.data)
+        s = f'["{self.device_id_string}"] [{data}]'
         return s
 
     def _from_data(self, data: ByteSequence) -> None:
@@ -1027,9 +1023,8 @@ class SdrManagementControllerDeviceLocator(SdrCommon):
 
     def __str__(self) -> str:
         """Return the device ID string and the record data."""
-        s = '["%s"] [%s]' \
-            % (self.device_id_string,
-               ' '.join(['%02x' % b for b in self.data]))
+        data = ' '.join(f'{b:02x}' for b in self.data)
+        s = f'["{self.device_id_string}"] [{data}]'
         return s
 
     def _from_data(self, data: ByteSequence) -> None:

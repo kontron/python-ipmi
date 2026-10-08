@@ -311,19 +311,19 @@ class SelEntry(State):
 
     def __str__(self) -> str:
         """Return the fields of the entry as multi-line string."""
-        raw = '[%s]' % (' '.join(['0x%02x' % b for b in self.data]))
+        raw = f"[{' '.join([f'0x{b:02x}' for b in self.data])}]"
         string = []
-        string.append('SEL Record ID 0x%04x' % self.record_id)
-        string.append('  Raw: %s' % raw)
-        string.append('  Type: %d' % self.type)
-        string.append('  Timestamp: %d' % self.timestamp)
-        string.append('  Generator: %d' % self.generator_id)
-        string.append('  EvM rev: %d' % self.evm_rev)
-        string.append('  Sensor Type: 0x%02x' % self.sensor_type)
-        string.append('  Sensor Number: %d' % self.sensor_number)
-        string.append('  Event Direction: %d' % self.event_direction)
-        string.append('  Event Type: 0x%02x' % self.event_type)
-        string.append('  Event Data: %s' % array('B', self.event_data).tolist())
+        string.append(f'SEL Record ID 0x{self.record_id:04x}')
+        string.append(f'  Raw: {raw}')
+        string.append(f'  Type: {self.type:d}')
+        string.append(f'  Timestamp: {self.timestamp:d}')
+        string.append(f'  Generator: {self.generator_id:d}')
+        string.append(f'  EvM rev: {self.evm_rev:d}')
+        string.append(f'  Sensor Type: 0x{self.sensor_type:02x}')
+        string.append(f'  Sensor Number: {self.sensor_number:d}')
+        string.append(f'  Event Direction: {self.event_direction:d}')
+        string.append(f'  Event Type: 0x{self.event_type:02x}')
+        string.append(f"  Event Data: {array('B', self.event_data).tolist()}")
         return "\n".join(string)
 
     @staticmethod
@@ -340,14 +340,14 @@ class SelEntry(State):
         if entry_type == SelEntry.TYPE_SYSTEM_EVENT:
             string = 'System Event'
         elif entry_type in SelEntry.TYPE_OEM_TIMESTAMPED_RANGE:
-            string = 'OEM timestamped (0x%02x)' % entry_type
+            string = f'OEM timestamped (0x{entry_type:02x})'
         elif entry_type in SelEntry.TYPE_OEM_NON_TIMESTAMPED_RANGE:
-            string = 'OEM non-timestamped (0x%02x)' % entry_type
+            string = f'OEM non-timestamped (0x{entry_type:02x})'
         return string
 
     def _from_data(self, data: ByteSequence) -> None:
         if len(data) != 16:
-            raise DecodingError('Invalid SEL record length (%d)' % len(data))
+            raise DecodingError(f'Invalid SEL record length ({len(data):d})')
 
         self.data = data
 
@@ -359,7 +359,7 @@ class SelEntry(State):
         if (self.type != self.TYPE_SYSTEM_EVENT
                 and self.type not in self.TYPE_OEM_TIMESTAMPED_RANGE
                 and self.type not in self.TYPE_OEM_NON_TIMESTAMPED_RANGE):
-            raise DecodingError('Unknown SEL type (0x%02x)' % self.type)
+            raise DecodingError(f'Unknown SEL type (0x{self.type:02x})')
         self.timestamp = buffer.pop_unsigned_int(4)
         self.generator_id = buffer.pop_unsigned_int(2)
         self.evm_rev = buffer.pop_unsigned_int(1)

@@ -240,7 +240,8 @@ class Hpm(IpmiMixin):
                         constants.CMDID_HPM_INITIATE_UPGRADE_ACTION,
                         timeout, interval)
             else:
-                raise HpmError('initiate_upgrade_action CC=0x%02x' % e.cc) from e
+                raise HpmError('initiate_upgrade_action '
+                               f'CC=0x{e.cc:02x}') from e
 
     def upload_firmware_block(self, block_number: int, data: bytes) -> None:
         """Upload a block of a firmware image.
@@ -321,8 +322,8 @@ class Hpm(IpmiMixin):
                         block_size -= 1
                         block_size_reduced = True
                     else:
-                        raise HpmError('upload_firmware_block CC=0x%02x'
-                                       % e.cc) from e
+                        raise HpmError('upload_firmware_block '
+                                       f'CC=0x{e.cc:02x}') from e
                 except IpmiTimeoutError:
                     if attempt == retry - 1:
                         raise IpmiTimeoutError() from None
@@ -379,7 +380,8 @@ class Hpm(IpmiMixin):
                             constants.CMDID_HPM_FINISH_FIRMWARE_UPLOAD,
                             timeout, interval)
             else:
-                raise HpmError('finish_firmware_upload CC=0x%02x' % e.cc) from e
+                raise HpmError('finish_firmware_upload '
+                               f'CC=0x{e.cc:02x}') from e
 
     def get_upgrade_status(self) -> UpgradeStatus:
         """Get the status of the last long duration command.
@@ -417,9 +419,10 @@ class Hpm(IpmiMixin):
                         == CC_LONG_DURATION_CMD_IN_PROGRESS:
                     time.sleep(interval)
                 elif status.last_completion_code != constants.CC_OK:
-                    raise HpmError('command 0x%02x completed with CC=0x%02x'
-                                   % (status.command_in_progress,
-                                      status.last_completion_code))
+                    raise HpmError('command '
+                                   f'0x{status.command_in_progress:02x} '
+                                   'completed with '
+                                   f'CC=0x{status.last_completion_code:02x}')
                 else:
                     return
             except IpmiTimeoutError:
@@ -469,7 +472,7 @@ class Hpm(IpmiMixin):
                             constants.CMDID_HPM_ACTIVATE_FIRMWARE,
                             timeout, interval)
             else:
-                raise HpmError('activate_firmware CC=0x%02x' % e.cc) from e
+                raise HpmError(f'activate_firmware CC=0x{e.cc:02x}') from e
         except IpmiTimeoutError:
             # controller is in reset and flashed new firmware
             pass
@@ -527,7 +530,8 @@ class Hpm(IpmiMixin):
                             constants.CMDID_HPM_INITIATE_MANUAL_ROLLBACK,
                             timeout, interval)
             else:
-                raise HpmError('initiate_manual_rollback CC=0x%02x' % e.cc) from e
+                raise HpmError('initiate_manual_rollback '
+                               f'CC=0x{e.cc:02x}') from e
         except IpmiTimeoutError:
             # controller is in reset and flashed new firmware
             pass
@@ -605,15 +609,15 @@ class Hpm(IpmiMixin):
         header = image.header
 
         if header.device_id != device_id.device_id:
-            raise HpmError('Device ID: image=0x%x device=0x%x'
-                           % (header.device_id, device_id.device_id))
+            raise HpmError(f'Device ID: image=0x{header.device_id:x} '
+                           f'device=0x{device_id.device_id:x}')
         if header.manufacturer_id != device_id.manufacturer_id:
-            raise HpmError('Manufacturer ID: image=0x%x device=0x%x'
-                           % (header.manufacturer_id,
-                              device_id.manufacturer_id))
+            raise HpmError('Manufacturer ID: '
+                           f'image=0x{header.manufacturer_id:x} '
+                           f'device=0x{device_id.manufacturer_id:x}')
         if header.product_id != device_id.product_id:
-            raise HpmError('Product ID: image=0x%x device=0x%x'
-                           % (header.product_id, device_id.product_id))
+            raise HpmError(f'Product ID: image=0x{header.product_id:x} '
+                           f'device=0x{device_id.product_id:x}')
 
         # tbd check version
 
@@ -722,8 +726,8 @@ class Hpm(IpmiMixin):
     def _check_component_in_image(image: UpgradeImage,
                                   component: int) -> None:
         if component not in image.header.components:
-            raise HpmError('component=%d not in image (image components: %s)'
-                           % (component, image.header.components))
+            raise HpmError(f'component={component:d} not in image (image '
+                           f'components: {image.header.components})')
 
     def install_component_from_image(self, image: UpgradeImage,
                                      component: int) -> None:
@@ -820,8 +824,8 @@ class UpgradeStatus(State):
     def __str__(self) -> str:
         """Return the command ID and the completion code."""
         string = []
-        string.append("cmd=0x%02x cc=0x%02x" %
-                      (self.command_in_progress, self.last_completion_code))
+        string.append(f"cmd=0x{self.command_in_progress:02x} "
+                      f"cc=0x{self.last_completion_code:02x}")
         return "\n".join(string)
 
 
@@ -845,8 +849,8 @@ class TargetUpgradeCapabilities(State):
         """Return the capabilities as multi-line string."""
         string = []
         string.append("Target Upgrade Capabilities")
-        string.append(" HPM.1 version: %s" % self.version)
-        string.append(" Components: %s" % self.components)
+        string.append(f" HPM.1 version: {self.version}")
+        string.append(f" Components: {self.components}")
         return "\n".join(string)
 
 
@@ -951,7 +955,7 @@ class ComponentPropertyGeneral(ComponentProperty):
 
     def __str__(self) -> str:
         """Return the name and the value of the property."""
-        return 'General: %s' % ', '.join(self.general)
+        return f"General: {', '.join(self.general)}"
 
 
 class ComponentPropertyCurrentVersion(ComponentProperty):
@@ -966,7 +970,7 @@ class ComponentPropertyCurrentVersion(ComponentProperty):
 
     def __str__(self) -> str:
         """Return the name and the value of the property."""
-        return 'Current version: %s' % self.version
+        return f'Current version: {self.version}'
 
 
 class ComponentPropertyDescriptionString(ComponentProperty):
@@ -984,7 +988,7 @@ class ComponentPropertyDescriptionString(ComponentProperty):
 
     def __str__(self) -> str:
         """Return the name and the value of the property."""
-        return 'Description: %s' % self.description
+        return f'Description: {self.description}'
 
 
 class ComponentPropertyRollbackVersion(ComponentProperty):
@@ -1001,7 +1005,7 @@ class ComponentPropertyRollbackVersion(ComponentProperty):
 
     def __str__(self) -> str:
         """Return the name and the value of the property."""
-        return 'Rollback version: %s' % self.version
+        return f'Rollback version: {self.version}'
 
 
 class ComponentPropertyDeferredVersion(ComponentProperty):
@@ -1016,7 +1020,7 @@ class ComponentPropertyDeferredVersion(ComponentProperty):
 
     def __str__(self) -> str:
         """Return the name and the value of the property."""
-        return 'Deferred version: %s' % self.version
+        return f'Deferred version: {self.version}'
 
 
 class ComponentPropertyOem(ComponentProperty):
@@ -1031,7 +1035,7 @@ class ComponentPropertyOem(ComponentProperty):
 
     def __str__(self) -> str:
         """Return the name and the value of the property."""
-        return 'OEM data: %s' % bytes(self.oem_data).hex(' ')
+        return f"OEM data: {bytes(self.oem_data).hex(' ')}"
 
 
 class SelfTestResult(State):
@@ -1174,8 +1178,8 @@ class UpgradeImageHeaderRecord:
     def _from_data(self, data: bytes) -> None:
         self.signature = data[0:8]
         if self.signature != self.SIGNATURE:
-            raise HpmError('no HPM.1 upgrade image (invalid signature %s)'
-                           % bytes(self.signature).hex(' '))
+            raise HpmError("no HPM.1 upgrade image (invalid signature "
+                           f"{bytes(self.signature).hex(' ')})")
 
         for a in self.FORMAT:
             setattr(self, a.field_name, struct.unpack(
@@ -1205,23 +1209,24 @@ class UpgradeImageHeaderRecord:
         """Return the header fields as multi-line string."""
         string = []
         string.append("HPM Upgrade Image header")
-        string.append(" Signature:        %s" % self.signature.decode())
-        string.append(" Format Version:   %s" % self.format_version)
-        string.append(" Device ID:        %s" % self.device_id)
-        manufacturer = '%d' % self.manufacturer_id
+        string.append(f" Signature:        {self.signature.decode()}")
+        string.append(f" Format Version:   {self.format_version}")
+        string.append(f" Device ID:        {self.device_id}")
+        manufacturer = f'{self.manufacturer_id:d}'
         if self.manufacturer_name is not None:
-            manufacturer += ' = %s' % self.manufacturer_name
-        string.append(" Manufacturer:     %s" % manufacturer)
-        string.append(" Product ID:       %s" % self.product_id)
-        string.append(" Time:             %s" % self.time)
-        string.append(" Image Cap:        0x%02x" % self.capabilities)
-        string.append(" Components:       %s" % self.components)
-        string.append(" Selftest Timeout: %s" % self.selftest_timeout)
-        string.append(" Rollback Timeout: %s" % self.rollback_timeout)
-        string.append(" Inacc. Timeout:   %s" % self.inaccessibility_timeout)
-        string.append(" Earliest comp.:   %s" % self.earliest_compatible_revision)
-        string.append(" firmware Revision:%s" % self.firmware_revision)
-        string.append(" OEM data len:     %s" % self.oem_data_length)
+            manufacturer += f' = {self.manufacturer_name}'
+        string.append(f" Manufacturer:     {manufacturer}")
+        string.append(f" Product ID:       {self.product_id}")
+        string.append(f" Time:             {self.time}")
+        string.append(f" Image Cap:        0x{self.capabilities:02x}")
+        string.append(f" Components:       {self.components}")
+        string.append(f" Selftest Timeout: {self.selftest_timeout}")
+        string.append(f" Rollback Timeout: {self.rollback_timeout}")
+        string.append(f" Inacc. Timeout:   {self.inaccessibility_timeout}")
+        string.append(" Earliest comp.:   "
+                      f"{self.earliest_compatible_revision}")
+        string.append(f" firmware Revision:{self.firmware_revision}")
+        string.append(f" OEM data len:     {self.oem_data_length}")
         return "\n".join(string)
 
 
@@ -1290,16 +1295,16 @@ class UpgradeActionRecord:
         elif action_type == IMAGE_ACTION_UPLOAD_FIRMWARE_IMAGE:
             return UpgradeActionRecordUploadForUpgrade(data)
         else:
-            raise HpmError('unsupported ActionRecord type 0x%02x'
-                           % action_type)
+            raise HpmError('unsupported ActionRecord type '
+                           f'0x{action_type:02x}')
 
     def __str__(self) -> str:
         """Return the action type and the components."""
         assert self.action is not None and self.components is not None
         string = []
-        string.append("Action Record Type: 0x%x (%s) " %
-                   (self.action, self.ACTIONS[self.action]))
-        string.append(" Components: 0x%02x" % self.components)
+        string.append(f"Action Record Type: 0x{self.action:x} "
+                      f"({self.ACTIONS[self.action]}) ")
+        string.append(f" Components: 0x{self.components:02x}")
         return "\n".join(string)
 
 
@@ -1353,18 +1358,16 @@ class UpgradeActionRecordUploadForUpgrade(UpgradeActionRecord):
             self.firmware_image_data = data[34:(34 + self.firmware_length)]
             if len(self.firmware_image_data) != self.firmware_length:
                 raise HpmError('upload action record: firmware image '
-                               'truncated (%d of %d bytes)'
-                               % (len(self.firmware_image_data),
-                                  self.firmware_length))
+                               f'truncated ({len(self.firmware_image_data):d} '
+                               f'of {self.firmware_length:d} bytes)')
             self.length += 31 + self.firmware_length
 
     def __str__(self) -> str:
         """Return the action record fields as multi-line string."""
         string = [UpgradeActionRecord.__str__(self)]
-        string.append(" Firmware Version: %s" % self.firmware_version)
-        string.append(" Description:      %s"
-                   % self.firmware_description_string)
-        string.append(" Firmware Length:  %s" % self.firmware_length)
+        string.append(f" Firmware Version: {self.firmware_version}")
+        string.append(f" Description:      {self.firmware_description_string}")
+        string.append(f" Firmware Length:  {self.firmware_length}")
         return "\n".join(string)
 
 

@@ -99,23 +99,21 @@ class Ipmitool(Interface):
         if interface_type in self.supported_interfaces:
             self._interface_type = interface_type
         else:
-            raise RuntimeError('interface type %s not supported' %
-                               interface_type)
+            raise RuntimeError(f'interface type {interface_type} not '
+                               'supported')
         if cipher is not None and int(cipher) not in range(256):
-            raise RuntimeError('cipher %s not in allowed range [0-255]' %
-                               cipher)
+            raise RuntimeError(f'cipher {cipher} not in allowed range [0-255]')
         else:
             self._cipher = cipher
 
         if (retries is not None or timeout is not None) and \
                 interface_type not in ('lan', 'lanplus'):
             raise RuntimeError('retries and timeout are not supported by '
-                               'interface type %s' % interface_type)
+                               f'interface type {interface_type}')
         if retries is not None and int(retries) < 0:
-            raise RuntimeError('retries %s must not be negative' % retries)
+            raise RuntimeError(f'retries {retries} must not be negative')
         if timeout is not None and int(timeout) < 1:
-            raise RuntimeError('timeout %s must be at least 1 second' %
-                               timeout)
+            raise RuntimeError(f'timeout {timeout} must be at least 1 second')
         self._retries = None if retries is None else int(retries)
         self._timeout = None if timeout is None else int(timeout)
 
@@ -165,7 +163,7 @@ class Ipmitool(Interface):
         # for now this uses ipmitool..
         session = self._get_session()
         cmd = self.IPMITOOL_PATH
-        cmd += (' -I %s' % self._interface_type)
+        cmd += (f' -I {self._interface_type}')
         cmd += self._build_ipmitool_host(session)
         cmd += (' -v')
         cmd += self._build_ipmitool_retries()
@@ -323,8 +321,8 @@ class Ipmitool(Interface):
             cmd = self._build_serial_ipmitool_cmd(target, lun, netfn,
                                                   raw_bytes)
         else:
-            raise RuntimeError('interface type %s not supported' %
-                               self._interface_type)
+            raise RuntimeError(f'interface type {self._interface_type} not '
+                               'supported')
 
         output, rc = self._run_ipmitool(cmd)
         cc, rsp = self._parse_output(output)
@@ -335,21 +333,21 @@ class Ipmitool(Interface):
             data.append(cc)
         else:
             if rc != 0:
-                raise RuntimeError('ipmitool failed with rc=%d' % rc)
+                raise RuntimeError(f'ipmitool failed with rc={rc:d}')
             # completion code
             data.append(CC_OK)
             if rsp:
                 data.extend(rsp)
 
-        logger.debug('IPMI RX: {:s}'.format(
-            ''.join('%02x ' % b for b in array('B', data))))
+        logger.debug("IPMI RX: "
+                     f"{''.join(f'{b:02x} ' for b in array('B', data)):s}")
 
         return py3_array_tobytes(data)
 
     @staticmethod
     def _build_ipmitool_raw_data(lun: int, netfn: int, raw: bytes) -> str:
         cmd = f' -l {lun:d} raw '
-        cmd += ' '.join(['0x%02x' % (d)
+        cmd += ' '.join([f'0x{d:02x}'
                          for d in [netfn] + array('B', raw).tolist()])
         return cmd
 
@@ -360,8 +358,7 @@ class Ipmitool(Interface):
         channel = target.routing[index].channel
         if channel is None:
             raise ValueError('the ipmitool interface needs the bridge channel '
-                             'of routing entry %d, got None: %s'
-                             % (index, target))
+                             f'of routing entry {index:d}, got None: {target}')
         return channel
 
     @staticmethod
@@ -376,28 +373,28 @@ class Ipmitool(Interface):
                 pass
             elif len(target.routing) == 2:
                 # ipmitool/shelfmanager does implicit bridging
-                cmd += (' -t 0x%02x' % target.routing[1].rs_sa)
-                cmd += (' -b %d' % Ipmitool._routing_channel(target, 0))
+                cmd += (f' -t 0x{target.routing[1].rs_sa:02x}')
+                cmd += (f' -b {Ipmitool._routing_channel(target, 0):d}')
             elif len(target.routing) == 3:
-                cmd += (' -T 0x%02x' % target.routing[1].rs_sa)
-                cmd += (' -B %d' % Ipmitool._routing_channel(target, 0))
-                cmd += (' -t 0x%02x' % target.routing[2].rs_sa)
-                cmd += (' -b %d' % Ipmitool._routing_channel(target, 1))
+                cmd += (f' -T 0x{target.routing[1].rs_sa:02x}')
+                cmd += (f' -B {Ipmitool._routing_channel(target, 0):d}')
+                cmd += (f' -t 0x{target.routing[2].rs_sa:02x}')
+                cmd += (f' -b {Ipmitool._routing_channel(target, 1):d}')
             else:
                 raise RuntimeError('The ipmitool interface supports at most '
-                                   'double bridging %s' % target)
+                                   f'double bridging {target}')
 
         elif target.ipmb_address:
-            cmd += (' -t 0x%02x' % target.ipmb_address)
+            cmd += (f' -t 0x{target.ipmb_address:02x}')
 
         return cmd
 
     def _build_ipmitool_retries(self) -> str:
         cmd = ''
         if self._retries is not None:
-            cmd += ' -R %d' % self._retries
+            cmd += f' -R {self._retries:d}'
         if self._timeout is not None:
-            cmd += ' -N %d' % self._timeout
+            cmd += f' -N {self._timeout:d}'
         return cmd
 
     @staticmethod
@@ -425,29 +422,29 @@ class Ipmitool(Interface):
                    Session.PRIV_LEVEL_ADMINISTRATOR: 'ADMINISTRATOR'
                  }
 
-        return (' -L %s' % LEVELS[level])
+        return (f' -L {LEVELS[level]}')
 
     def _build_ipmitool_cmd(self, target: Target, lun: int, netfn: int,
                             raw_bytes: bytes) -> str:
         session = self._get_session()
 
         cmd = self.IPMITOOL_PATH
-        cmd += (' -I %s' % self._interface_type)
+        cmd += (f' -I {self._interface_type}')
         cmd += self._build_ipmitool_host(session)
         cmd += (' -v')
 
         cmd += self._build_ipmitool_priv_level(session.priv_level)
 
         if self._cipher is not None:
-            cmd += (' -C %s' % self._cipher)
+            cmd += (f' -C {self._cipher}')
         cmd += self._build_ipmitool_retries()
         if session.auth_type == Session.AUTH_TYPE_NONE:
             cmd += ' -P ""'
         elif session.auth_type == Session.AUTH_TYPE_PASSWORD:
             cmd += self._build_ipmitool_credentials()
         else:
-            raise RuntimeError('Session type %d not supported' %
-                               session.auth_type)
+            raise RuntimeError(f'Session type {session.auth_type:d} not '
+                               'supported')
 
         cmd += self._build_ipmitool_target(target)
         cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)
@@ -475,7 +472,7 @@ class Ipmitool(Interface):
             raise RuntimeError('Session needs to be set')
 
         cmd = self.IPMITOOL_PATH
-        cmd += (' -I %s' % self._interface_type)
+        cmd += (f' -I {self._interface_type}')
 
         cmd += self._build_ipmitool_target(target)
         cmd += self._build_ipmitool_raw_data(lun, netfn, raw_bytes)

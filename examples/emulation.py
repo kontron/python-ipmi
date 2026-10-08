@@ -241,8 +241,8 @@ def handle_rmcp_ipmi_msg(context: ConnectionContext, sdu: bytes) -> bytes:
         group_id = _get_group_id(ipmi_sdu)
 
         logger.warning(f'Cant create message: netfn 0x{req_header.netfn:x} cmd: 0x{req_header.cmdid:x} group: {group_id}')
-        logger.debug('IPMI RX: {:s}'.format(
-            ' '.join('%02x' % b for b in array('B', ipmi_sdu))))
+        logger.debug("IPMI RX: "
+                     f"{' '.join(f'{b:02x}' for b in array('B', ipmi_sdu)):s}")
 
         # bytes are immutable ... so convert to change
         a = bytearray(ipmi_sdu)
@@ -274,8 +274,8 @@ def handle_rmcp_ipmi_msg(context: ConnectionContext, sdu: bytes) -> bytes:
     except KeyError:
         return _create_invalid_response(ipmi_sdu)
 
-    logger.debug('IPMI RX: {}: {:s}'.format(req,
-                 ' '.join('%02x' % b for b in array('B', ipmi_sdu))))
+    logger.debug(f"IPMI RX: {req}: "
+                 f"{' '.join(f'{b:02x}' for b in array('B', ipmi_sdu)):s}")
     decode_message(req, ipmi_sdu[6:-1])
 
     rsp = handle_ipmi_request_msg(context, req)
@@ -285,8 +285,8 @@ def handle_rmcp_ipmi_msg(context: ConnectionContext, sdu: bytes) -> bytes:
     rsp_header.from_req_header(req_header)
 
     tx_data = ipmb.encode_ipmb_msg(rsp_header, data)
-    logger.debug('IPMI TX: {}: {:s}'.format(rsp,
-                 ' '.join('%02x' % b for b in array('B', tx_data))))
+    logger.debug(f"IPMI TX: {rsp}: "
+                 f"{' '.join(f'{b:02x}' for b in array('B', tx_data)):s}")
 
     # rmcp ipmi rsp msg
     ipmi_tx = rmcp.IpmiMsg(context.session)

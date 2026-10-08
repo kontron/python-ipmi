@@ -49,7 +49,7 @@ class VersionField:
             raise DecodingError()
 
     def version_to_string(self) -> str:
-        return ''.join("%s.%s" % (self.major, self.minor))
+        return ''.join(f"{self.major}.{self.minor}")
 
 
 def _unpack6bitascii(data: Sequence[int]) -> str:
@@ -93,7 +93,7 @@ class TypeLengthString:
 
     def __str__(self) -> str:
         if self.field_type is self.TYPE_FRU_BINARY:
-            return ' '.join('%02x' % b for b in self.raw)
+            return ' '.join(f'{b:02x}' for b in self.raw)
         else:
             return self.string.replace('\x00', '')
 

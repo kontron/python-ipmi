@@ -311,10 +311,10 @@ class ChannelAuthenticationCapabilities(State):
     def __str__(self) -> str:
         """Return the capabilities as multi-line string."""
         s = 'Authentication Capabilities:\n'
-        s += '  IPMI v1.5: %s\n' % self.ipmi_1_5
-        s += '  IPMI v2.0: %s\n' % self.ipmi_2_0
-        s += '  Auth. types: %s\n' % ' '.join(self.auth_types)
-        s += '  Max Auth. type: %s\n' % self.get_max_auth_type()
+        s += f'  IPMI v1.5: {self.ipmi_1_5}\n'
+        s += f'  IPMI v2.0: {self.ipmi_2_0}\n'
+        s += f"  Auth. types: {' '.join(self.auth_types)}\n"
+        s += f'  Max Auth. type: {self.get_max_auth_type()}\n'
         return s
 
 
@@ -342,8 +342,8 @@ class ChannelInfo(State):
 
     def __str__(self) -> str:
         """Return the channel number, medium type and protocol type."""
-        return ('Channel %d: medium 0x%02x protocol 0x%02x'
-                % (self.channel, self.medium_type, self.protocol_type))
+        return (f'Channel {self.channel:d}: medium 0x{self.medium_type:02x} '
+                f'protocol 0x{self.protocol_type:02x}')
 
 
 class UserAccess(State):
@@ -377,12 +377,12 @@ class UserAccess(State):
     def __str__(self) -> str:
         """Return the user access as multi-line string."""
         s = 'User Access:\n'
-        s += '  Max user number: %i\n' % self.user_count
-        s += '  Enabled user: %i\n' % self.enabled_user_count
-        s += '  Enabled status: %i\n' % self.enabled_status
-        s += '  Fixed name user: %i\n' % self.fixed_name_user_count
-        s += '  Privilege level: %s\n' % self.privilege_level
-        s += '  IPMI messaging: %s\n' % self.ipmi_messaging
-        s += '  Link Auth.: %s\n' % self.link_auth
-        s += '  Callback only: %s' % self.callback_only
+        s += f'  Max user number: {self.user_count:d}\n'
+        s += f'  Enabled user: {self.enabled_user_count:d}\n'
+        s += f'  Enabled status: {self.enabled_status:d}\n'
+        s += f'  Fixed name user: {self.fixed_name_user_count:d}\n'
+        s += f'  Privilege level: {self.privilege_level}\n'
+        s += f'  IPMI messaging: {self.ipmi_messaging}\n'
+        s += f'  Link Auth.: {self.link_auth}\n'
+        s += f'  Callback only: {self.callback_only}'
         return s

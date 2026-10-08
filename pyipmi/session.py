@@ -151,12 +151,12 @@ class Session:
 
     def __str__(self) -> str:
         string = 'Session:\n'
-        string += '  ID: 0x%08x\n' % self.sid
-        string += '  Seq: 0x%08x\n' % self.sequence_number
-        string += '  Host: %s:%s\n' % (self._rmcp_host, self._rmcp_port)
-        string += '  Auth.: %s\n' % self.auth_type
-        string += '  User: %s\n' % str(self._auth_username)
-        string += '  Password: %s\n' % str(self._auth_password)
+        string += f'  ID: 0x{self.sid:08x}\n'
+        string += f'  Seq: 0x{self.sequence_number:08x}\n'
+        string += f'  Host: {self._rmcp_host}:{self._rmcp_port}\n'
+        string += f'  Auth.: {self.auth_type}\n'
+        string += f'  User: {str(self._auth_username)}\n'
+        string += f'  Password: {str(self._auth_password)}\n'
         string += '\n'
         return string
 

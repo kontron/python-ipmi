@@ -26,17 +26,17 @@ ipmi.close()
 with pyipmi.Ipmi(interface=intf, session=sess, target=target) as ipmi:
     device_id = ipmi.get_device_id()
 
-print('''
-Device ID:          %(device_id)s
-Device Revision:    %(revision)s
-Firmware Revision:  %(fw_revision)s
-IPMI Version:       %(ipmi_version)s
-Manufacturer ID:    %(manufacturer_id)d (0x%(manufacturer_id)04x)
-Product ID:         %(product_id)d (0x%(product_id)04x)
-Device Available:   %(available)d
-Provides SDRs:      %(provides_sdrs)d
+print(f'''
+Device ID:          {device_id.device_id}
+Device Revision:    {device_id.revision}
+Firmware Revision:  {device_id.fw_revision}
+IPMI Version:       {device_id.ipmi_version}
+Manufacturer ID:    {device_id.manufacturer_id:d} (0x{device_id.manufacturer_id:04x})
+Product ID:         {device_id.product_id:d} (0x{device_id.product_id:04x})
+Device Available:   {device_id.available:d}
+Provides SDRs:      {device_id.provides_sdrs:d}
 Additional Device Support:
-'''[1:-1] % device_id.__dict__)
+'''[1:-1])
 
 functions = (
         ('SENSOR', 'Sensor Device'),
@@ -50,8 +50,8 @@ functions = (
 )
 for n, s in functions:
     if device_id.supports_function(n):
-        print('  %s' % s)
+        print(f'  {s}')
 
 if device_id.aux is not None:
-    print('Aux Firmware Rev Info:  [%s]' % (
-            ' '.join('0x%02x' % d for d in device_id.aux)))
+    print("Aux Firmware Rev Info:  "
+          f"[{' '.join(f'0x{d:02x}' for d in device_id.aux)}]")

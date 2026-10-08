@@ -36,11 +36,11 @@ with pyipmi.Ipmi(interface=intf, session=sess, target=target) as ipmi:
             (raw, states) = ipmi.get_sensor_reading(sdr.number,
                                                     sdr.owner_lun)
             value = sdr.convert_sensor_raw_to_value(raw)
-            print('%-18s | %10s' % (sdr.device_id_string, value))
+            print(f'{sdr.device_id_string!s:<18} | {value!s:>10}')
         elif sdr.type == pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
             # compact records describe discrete sensors, there is no
             # conversion to a physical value
             (raw, states) = ipmi.get_sensor_reading(sdr.number,
                                                     sdr.owner_lun)
-            print('%-18s | %10s | states=0x%04x'
-                  % (sdr.device_id_string, raw, states or 0))
+            print(f'{sdr.device_id_string!s:<18} | {raw!s:>10} | '
+                  f'states=0x{states or 0:04x}')

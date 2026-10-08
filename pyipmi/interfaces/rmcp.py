@@ -251,9 +251,9 @@ class AsfMsg:
     def __str__(self) -> str:
         """Return the data, or the whole message, as hex bytes."""
         if self.data:
-            return ' '.join('%02x' % b for b in array('B', self.data))
+            return ' '.join(f'{b:02x}' for b in array('B', self.data))
         if self.sdu:
-            return ' '.join('%02x' % b for b in array('B', self.sdu))
+            return ' '.join(f'{b:02x}' for b in array('B', self.sdu))
         return ''
 
     @staticmethod
@@ -279,7 +279,8 @@ class AsfMsg:
                 AsfMsg().ASF_TYPE_PRESENCE_PONG: AsfPong,
             }[asf.asf_type]
         except KeyError:
-            raise DecodingError('Unsupported ASF type(0x%02x)' % asf.asf_type) from None
+            raise DecodingError('Unsupported ASF '
+                                f'type(0x{asf.asf_type:02x})') from None
 
         instance = cls()
         instance.unpack(sdu)
@@ -445,7 +446,7 @@ class IpmiMsg:
         return self._padd_password()
 
     def _pack_auth_code_md5(self, sdu: bytes) -> bytes:
-        auth_code = struct.pack('>16s I %ds I 16s' % len(sdu),
+        auth_code = struct.pack(f'>16s I {len(sdu):d}s I 16s',
                                 self._pack_auth_code_straight(),
                                 self._pack_session_id(),
                                 sdu,
@@ -492,7 +493,7 @@ class IpmiMsg:
         elif auth_type == Session.AUTH_TYPE_MD5:
             pdu += self._pack_auth_code_md5(sdu or b'')
         else:
-            raise NotSupportedError('authentication type %s' % auth_type)
+            raise NotSupportedError(f'authentication type {auth_type}')
 
         pdu += py3_array_tobytes(array('B', [data_len]))
 
@@ -666,8 +667,8 @@ class Rmcp(Interface):
         self._sock.settimeout(timeout)
 
     def _send_ipmi_msg(self, data: bytes) -> None:
-        logger.debug('IPMI TX: {:s}'.format(
-            ' '.join('%02x' % b for b in array('B', data))))
+        logger.debug("IPMI TX: "
+                     f"{' '.join(f'{b:02x}' for b in array('B', data)):s}")
         ipmi = IpmiMsg(self._session)
         tx_data = ipmi.pack(data)
         self._send_rmcp_msg(tx_data, RMCP_CLASS_IPMI)
@@ -678,8 +679,8 @@ class Rmcp(Interface):
             raise DecodingError('invalid class field in IPMI message')
         msg = IpmiMsg(ignore_sdu_length=ignore_sdu_length)
         data = msg.unpack(pdu) or b''
-        logger.debug('IPMI RX: {:s}'.format(
-            ' '.join('%02x' % b for b in array('B', data))))
+        logger.debug("IPMI RX: "
+                     f"{' '.join(f'{b:02x}' for b in array('B', data)):s}")
         return data
 
     def _send_asf_msg(self, msg: AsfMsg) -> None:
@@ -802,7 +803,7 @@ class Rmcp(Interface):
         # 1 - Get Channel Authentication Capabilities
         logger.debug('Get Channel Authentication Capabilities')
         caps = self._get_channel_auth_cap(session)
-        logger.debug('%s' % caps)
+        logger.debug(f'{caps}')
 
         # 2 - Get Session Challenge
         logger.debug('Get Session Challenge')
@@ -847,7 +848,7 @@ class Rmcp(Interface):
             logger.debug('Session already closed')
             return
 
-        logger.debug('Close Session %s' % self._session)
+        logger.debug(f'Close Session {self._session}')
         req = create_request_by_name('CloseSession')
         req.target = self.host_target
         req.session_id = self._session.sid

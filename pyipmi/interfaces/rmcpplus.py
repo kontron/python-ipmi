@@ -288,8 +288,8 @@ class SessionKeys:
                 installed.
         """
         if len(data) < 2 * AES_BLOCK_SIZE or len(data) % AES_BLOCK_SIZE:
-            raise DecodingError('invalid encrypted payload length %d'
-                                % len(data))
+            raise DecodingError('invalid encrypted payload length '
+                                f'{len(data):d}')
         iv = data[:AES_BLOCK_SIZE]
         decryptor = _aes_cipher(self.k2[:AES_BLOCK_SIZE], iv).decryptor()
         data = decryptor.update(data[AES_BLOCK_SIZE:]) + decryptor.finalize()
@@ -374,7 +374,7 @@ def unpack_rmcpplus(pdu: bytes, keys: SessionKeys | None = None
         struct.unpack(RMCPPLUS_HEADER_FORMAT, pdu[:RMCPPLUS_HEADER_LENGTH])
 
     if auth_type != AUTH_TYPE_RMCP_PLUS:
-        raise DecodingError('invalid authentication type 0x%02x' % auth_type)
+        raise DecodingError(f'invalid authentication type 0x{auth_type:02x}')
 
     end = RMCPPLUS_HEADER_LENGTH + length
     if len(pdu) < end:
@@ -458,9 +458,8 @@ class RmcpPlus(Rmcp):
         elif cipher_suite in CIPHER_SUITES:
             self.cipher_suites = (cipher_suite,)
         else:
-            raise NotSupportedError('cipher suite %s (supported: %s)'
-                                    % (cipher_suite,
-                                       ', '.join(map(str, CIPHER_SUITES))))
+            raise NotSupportedError(f"cipher suite {cipher_suite} (supported: "
+                                    f"{', '.join(map(str, CIPHER_SUITES))})")
         self.kg = kg
         self._keys: SessionKeys | None = None
         self._console_session_id = 0
@@ -488,7 +487,7 @@ class RmcpPlus(Rmcp):
         (payload_type, session_id, _, payload) = \
             unpack_rmcpplus(pdu, self._keys)
         if self._keys is not None and session_id != self._console_session_id:
-            raise DecodingError('invalid session ID 0x%08x' % session_id)
+            raise DecodingError(f'invalid session ID 0x{session_id:08x}')
         return (payload_type, payload)
 
     def _send_ipmi_msg(self, data: bytes) -> None:
@@ -578,7 +577,7 @@ class RmcpPlus(Rmcp):
         if algorithms != (suite.authentication, suite.integrity,
                           suite.confidentiality):
             raise DecodingError('Open Session Response: BMC selected other '
-                                'algorithms %s' % (algorithms,))
+                                f'algorithms {algorithms}')
         return managed_session_id
 
     def _rakp(self, session: Session, suite: CipherSuite,
@@ -587,11 +586,11 @@ class RmcpPlus(Rmcp):
         username = session.auth_username_bytes
         password = session.auth_password_bytes
         if len(username) > MAX_USER_NAME_LENGTH:
-            raise AuthenticationError('user name longer than %d bytes'
-                                      % MAX_USER_NAME_LENGTH)
+            raise AuthenticationError('user name longer than '
+                                      f'{MAX_USER_NAME_LENGTH:d} bytes')
         if len(password) > MAX_PASSWORD_LENGTH:
-            raise IpmiLongPasswordError('password longer than %d bytes'
-                                        % MAX_PASSWORD_LENGTH)
+            raise IpmiLongPasswordError('password longer than '
+                                        f'{MAX_PASSWORD_LENGTH:d} bytes')
 
         digest = AUTH_ALGORITHMS[suite.authentication][0]
         icv_length = AUTH_ALGORITHMS[suite.authentication][1]

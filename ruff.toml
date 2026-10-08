@@ -19,7 +19,6 @@ ignore = [
     "E501",   # line too long
     "B903",   # class could be a dataclass or namedtuple
     "C408",   # dict()/list() calls instead of literals
-    "UP031",  # %-style string formatting
 ]
 
 [lint.pydocstyle]

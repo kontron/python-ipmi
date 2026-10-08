@@ -135,8 +135,7 @@ class Routing:
         self.channel = channel
 
     def __str__(self) -> str:
-        s = 'Routing: Rq: %s Rs: %s Ch: %s' \
-                % (self.rq_sa, self.rs_sa, self.channel)
+        s = f'Routing: Rq: {self.rq_sa} Rs: {self.rs_sa} Ch: {self.channel}'
         return s
 
 
@@ -217,10 +216,10 @@ class Target:
         if self.ipmb_address is None:
             string = 'Target: IPMB: none\n'
         else:
-            string = 'Target: IPMB: 0x%02x\n' % self.ipmb_address
+            string = f'Target: IPMB: 0x{self.ipmb_address:02x}\n'
         if self.routing:
             for route in self.routing:
-                string += ' %s\n' % route
+                string += f' {route}\n'
         return string
 
 

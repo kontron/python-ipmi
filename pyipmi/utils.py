@@ -87,8 +87,8 @@ class ByteBuffer:
 
     def push_unsigned_int(self, value: int, length: int) -> None:
         if value < 0 or value >= 1 << (8 * length):
-            raise EncodingError('value %d does not fit in %d byte(s)'
-                                % (value, length))
+            raise EncodingError(f'value {value:d} does not fit in {length:d} '
+                                'byte(s)')
         for i in range(length):
             self.array.append(value >> (8*i) & 0xff)
 

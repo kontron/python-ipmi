@@ -38,7 +38,7 @@ class BaseField:
 
     def encode(self, obj: Message, data: ByteBuffer) -> None:
         if getattr(obj, self.name) is None:
-            raise EncodingError('Field "%s" not set.' % self.name)
+            raise EncodingError(f'Field "{self.name}" not set.')
         raise NotImplementedError()
 
     def create(self) -> Any:
@@ -61,9 +61,9 @@ class ByteArray(BaseField):
     def encode(self, obj: Message, data: ByteBuffer) -> None:
         a = getattr(obj, self.name)
         if len(a) != self._length(obj):
-            raise EncodingError('Array must be exactly %d bytes long '
-                                '(but is %d long)' %
-                                (self._length(obj), len(a)))
+            raise EncodingError(f'Array must be exactly {self._length(obj):d} '
+                                'bytes long '
+                                f'(but is {len(a):d} long)')
         for i in range(self._length(obj)):
             data.push_unsigned_int(a[i], 1)
 
@@ -129,14 +129,14 @@ class String(BaseField):
         if isinstance(value, str):
             value = value.encode()
         if len(value) > self.length:
-            raise EncodingError('String "%s" is longer than %d bytes'
-                                % (self.name, self.length))
+            raise EncodingError(f'String "{self.name}" is longer than '
+                                f'{self.length:d} bytes')
         data.push_string(value.ljust(self.length, b'\x00'))
 
     def decode(self, obj: Message, data: ByteBuffer) -> None:
         if len(data) < self.length:
-            raise DecodingError('String "%s" is shorter than %d bytes'
-                                % (self.name, self.length))
+            raise DecodingError(f'String "{self.name}" is shorter than '
+                                f'{self.length:d} bytes')
         value = data.pop_string(self.length)
         setattr(obj, self.name, value)
 
@@ -241,9 +241,8 @@ class Bitfield(BaseField):
         counter = 0
 
         def __init__(self, width: int, default: int = 0) -> None:
-            Bitfield.Bit.__init__(self, 'reserved_bit_%d' %
-                                  Bitfield.reserved_bit_counter,
-                                  width, default)
+            name = f'reserved_bit_{Bitfield.reserved_bit_counter:d}'
+            Bitfield.Bit.__init__(self, name, width, default)
             Bitfield.reserved_bit_counter += 1
 
     class BitWrapper:
@@ -253,8 +252,8 @@ class Bitfield(BaseField):
             self._length = length
             for bit in bits:
                 if hasattr(self, bit.name):
-                    raise DescriptionError('Bit with name "%s" already added' %
-                                           bit.name)
+                    raise DescriptionError(f'Bit with name "{bit.name}" '
+                                           'already added')
                 if bit.default is not None:
                     setattr(self, bit.name, bit.default)
                 else:
@@ -265,7 +264,7 @@ class Bitfield(BaseField):
             for attr in dir(self):
                 if attr.startswith('_'):
                     continue
-                s += '%s=%s, ' % (attr, getattr(self, attr))
+                s += f'{attr}={getattr(self, attr)}, '
             s += ']'
             return s
 
@@ -279,12 +278,12 @@ class Bitfield(BaseField):
                 if bit_value is None:
                     bit_value = bit.default
                 if bit_value is None:
-                    raise EncodingError('Bitfield "%s" not set.' % bit.name)
+                    raise EncodingError(f'Bitfield "{bit.name}" not set.')
 
                 if bit_value < 0 or bit_value >= 1 << bit._width:
-                    raise EncodingError('Bitfield "%s": value %d does not '
-                                        'fit in %d bit(s)'
-                                        % (bit.name, bit_value, bit._width))
+                    raise EncodingError(f'Bitfield "{bit.name}": value '
+                                        f'{bit_value:d} does not '
+                                        f'fit in {bit._width:d} bit(s)')
                 value |= bit_value << bit.offset
             return value
 
@@ -400,8 +399,8 @@ class Message:
     def _create_fields(self) -> None:
         for field in self.__fields__:
             if field.name in self.RESERVED_FIELD_NAMES:
-                raise DescriptionError('Field name "%s" is reserved' %
-                                       field.name)
+                raise DescriptionError(f'Field name "{field.name}" is '
+                                       'reserved')
             if hasattr(self, field.name):
                 raise DescriptionError('Field "%s" already added',
                                        field.name)

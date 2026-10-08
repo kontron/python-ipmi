@@ -46,8 +46,8 @@ def ipv4_address(value: str) -> str:
     try:
         ipaddress.IPv4Address(value)
     except ValueError:
-        raise argparse.ArgumentTypeError('invalid IPv4 address: %s'
-                                         % value) from None
+        raise argparse.ArgumentTypeError('invalid IPv4 address: '
+                                         f'{value}') from None
     return value
 
 
@@ -60,7 +60,7 @@ def vlan_id(value: str) -> int:
     except ValueError:
         vlan = None
     if vlan is None or not 1 <= vlan <= 4095:
-        raise argparse.ArgumentTypeError('invalid VLAN ID: %s' % value)
+        raise argparse.ArgumentTypeError(f'invalid VLAN ID: {value}')
     return vlan
 
 
@@ -81,25 +81,25 @@ def log_level(value: str) -> tuple[str, int]:
     # getLevelName() maps a known level name to its number
     number = logging.getLevelName(level.upper())
     if not isinstance(number, int):
-        raise argparse.ArgumentTypeError('invalid log level: %s' % level)
+        raise argparse.ArgumentTypeError(f'invalid log level: {level}')
     return (name, number)
 
 
 def cmd_bmc_info(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     device_id = ipmi.get_device_id()
-    print('''
-Device ID:          %(device_id)d (0x%(device_id)02x)
-Device Revision:    %(revision)s
-Firmware Revision:  %(fw_revision)s
-IPMI Version:       %(ipmi_version)s
-Manufacturer ID:    %(manufacturer_id)d (0x%(manufacturer_id)04x)
-Manufacturer Name:  %(manufacturer)s
-Product ID:         %(product_id)d (0x%(product_id)04x)
-Device Available:   %(available)d
-Provides SDRs:      %(provides_sdrs)d
+    manufacturer = device_id.manufacturer_name or 'Unknown'
+    print(f'''
+Device ID:          {device_id.device_id:d} (0x{device_id.device_id:02x})
+Device Revision:    {device_id.revision}
+Firmware Revision:  {device_id.fw_revision}
+IPMI Version:       {device_id.ipmi_version}
+Manufacturer ID:    {device_id.manufacturer_id:d} (0x{device_id.manufacturer_id:04x})
+Manufacturer Name:  {manufacturer}
+Product ID:         {device_id.product_id:d} (0x{device_id.product_id:04x})
+Device Available:   {device_id.available:d}
+Provides SDRs:      {device_id.provides_sdrs:d}
 Additional Device Support:
-'''[1:-1] % dict(device_id.__dict__,
-                 manufacturer=device_id.manufacturer_name or 'Unknown'))
+'''[1:-1])
 
     functions = (
             ('SENSOR', 'Sensor Device'),
@@ -113,11 +113,11 @@ Additional Device Support:
     )
     for n, s in functions:
         if device_id.supports_function(n):
-            print('  %s' % s)
+            print(f'  {s}')
 
     if device_id.aux is not None:
-        print('Aux Firmware Rev Info:  [{:s}]'.format(
-              ' '.join('%02x' % d for d in device_id.aux)))
+        print("Aux Firmware Rev Info:  "
+              f"[{' '.join(f'{d:02x}' for d in device_id.aux):s}]")
 
 
 def cmd_bmc_reset(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -144,24 +144,24 @@ def format_analog_value(value: float | None) -> str:
     """Format a converted analog sensor value with 3 decimal places."""
     if value is None:
         return 'na'
-    return '%.3f' % value
+    return f'{value:.3f}'
 
 
 def format_states(states: int | None) -> str:
     if states is None:
         return 'na'
-    return '0x%x' % states
+    return f'0x{states:x}'
 
 
 def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
 
-    print("SDR record ID:    0x%04x" % s.id)
-    print("SDR type:         0x%02x" % s.type)
+    print(f"SDR record ID:    0x{s.id:04x}")
+    print(f"SDR type:         0x{s.type:02x}")
     # not all record types have an ID string and entity
     if hasattr(s, 'device_id_string'):
-        print("Device Id string: %s" % s.device_id_string)
+        print(f"Device Id string: {s.device_id_string}")
     if hasattr(s, 'entity_id'):
-        print("Entity:           %s.%s" % (s.entity_id, s.entity_instance))
+        print(f"Entity:           {s.entity_id}.{s.entity_instance}")
     if isinstance(s, pyipmi.sdr.SdrFullSensorRecord):
         (raw, states) = ipmi.get_sensor_reading(s.number, s.owner_lun)
         value = format_analog_value(s.convert_sensor_raw_to_value(raw))
@@ -177,37 +177,37 @@ def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
             s.convert_sensor_raw_to_value(s.threshold['lcr']))
         t_lnr = format_analog_value(
             s.convert_sensor_raw_to_value(s.threshold['lnr']))
-        print("Reading value:    %s" % value)
-        print("Reading state:    %s" % format_states(states))
-        print("UNR:              %s" % t_unr)
-        print("UCR:              %s" % t_ucr)
-        print("UNC:              %s" % t_unc)
-        print("LNC:              %s" % t_lnc)
-        print("LCR:              %s" % t_lcr)
-        print("LNR:              %s" % t_lnr)
+        print(f"Reading value:    {value}")
+        print(f"Reading state:    {format_states(states)}")
+        print(f"UNR:              {t_unr}")
+        print(f"UCR:              {t_ucr}")
+        print(f"UNC:              {t_unc}")
+        print(f"LNC:              {t_lnc}")
+        print(f"LCR:              {t_lcr}")
+        print(f"LNR:              {t_lnr}")
     elif isinstance(s, pyipmi.sdr.SdrCompactSensorRecord):
         (raw, states) = ipmi.get_sensor_reading(s.number)
-        print("Reading:          %s" % raw)
-        print("Reading state:    %s" % format_states(states))
+        print(f"Reading:          {raw}")
+        print(f"Reading state:    {format_states(states)}")
     elif isinstance(s,
                     pyipmi.sdr.SdrManagementControllerConfirmationRecord):
-        print("Slave address:    0x%02x" % (s.device_slave_address << 1))
-        print("Device ID:        0x%02x" % s.device_id)
-        print("Device revision:  %d" % s.device_revision)
-        print("Channel:          %d" % s.channel_number)
-        print("Firmware:         %d.%02x" % (s.firmware_revision_1,
-                                             s.firmware_revision_2))
-        print("IPMI version:     %d.%d" % (s.ipmi_version & 0xf,
-                                           s.ipmi_version >> 4))
-        print("Manufacturer ID:  0x%05x" % s.manufacturer_id)
-        print("Manufacturer Name: %s" % (s.manufacturer_name or 'Unknown'))
-        print("Product ID:       0x%04x" % s.product_id)
+        print(f"Slave address:    0x{s.device_slave_address << 1:02x}")
+        print(f"Device ID:        0x{s.device_id:02x}")
+        print(f"Device revision:  {s.device_revision:d}")
+        print(f"Channel:          {s.channel_number:d}")
+        print("Firmware:         "
+              f"{s.firmware_revision_1:d}.{s.firmware_revision_2:02x}")
+        print("IPMI version:     "
+              f"{s.ipmi_version & 0xf:d}.{s.ipmi_version >> 4:d}")
+        print(f"Manufacturer ID:  0x{s.manufacturer_id:05x}")
+        print(f"Manufacturer Name: {s.manufacturer_name or 'Unknown'}")
+        print(f"Product ID:       0x{s.product_id:04x}")
 
 
 def cmd_sdr_show_raw(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     try:
         sdr = ipmi.get_device_sdr(args.sdr_id)
-        print(' '.join(['0x%02x' % b for b in sdr.data]))
+        print(' '.join([f'0x{b:02x}' for b in sdr.data]))
     except ValueError:
         print('')
 
@@ -235,8 +235,8 @@ def print_sdr_list_entry(record_id: int, number: int | str | None,
     number_str = str(number) if number else 'na'
     states_str = hex(states) if states else 'na'
 
-    print("0x%04x | %3s | %-18s | %9s | %s" % (record_id, number_str,
-                                               id_string, value, states_str))
+    print(f"0x{record_id:04x} | {number_str!s:>3} | {id_string!s:<18} | "
+          f"{value!s:>9} | {states_str}")
 
 
 def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -286,8 +286,8 @@ def cmd_fru_read(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     data = ipmi.read_fru_data_full(args.fru_id)
     with open(args.filename, 'wb') as f:
         f.write(data)
-    print('Read %d bytes from FRU %d to %s'
-          % (len(data), args.fru_id, args.filename))
+    print(f'Read {len(data):d} bytes from FRU {args.fru_id:d} to '
+          f'{args.filename}')
 
 
 def print_fru_inventory(inv: pyipmi.fru.FruInventory, print_all: bool,
@@ -302,65 +302,65 @@ def print_fru_inventory(inv: pyipmi.fru.FruInventory, print_all: bool,
     if internal_use_area:
         data = internal_use_area.internal_use_data
         print('Internal Use Area:')
-        print('  Format Version:     %d' % internal_use_area.format_version)
-        print('  Data Length:        %d' % len(data))
+        print(f'  Format Version:     {internal_use_area.format_version:d}')
+        print(f'  Data Length:        {len(data):d}')
         if print_all:
             # 16 bytes per line
             lines = [data[i:i + 16].hex(' ') for i in range(0, len(data), 16)]
             for i, line in enumerate(lines):
-                print('  %-20s%s' % ('Data:' if i == 0 else '', line))
+                print(f"  {'Data:' if i == 0 else '':<20}{line}")
 
     # Chassis Info Area
     chassis_area = inv.chassis_info_area
     if chassis_area:
-        print('''
+        print(f'''
 Chassis Info Area:
-  Type:               %(type)d
-  Part Number:        %(part_number)s
-  Serial Number:      %(serial_number)s
-'''[1:-1] % chassis_area.__dict__)
+  Type:               {chassis_area.type:d}
+  Part Number:        {chassis_area.part_number}
+  Serial Number:      {chassis_area.serial_number}
+'''[1:-1])
 
         if len(chassis_area.custom_chassis_info) != 0:
             print('  Custom Chassis Info Records:')
             for field in chassis_area.custom_chassis_info:
-                print('    %s' % field)
+                print(f'    {field}')
 
     # Board Info Area
     board_area = inv.board_info_area
     if board_area:
-        print('''
+        print(f'''
 Board Info Area:
-  Mfg. Date / Time:   %(mfg_date)s
-  Manufacturer:       %(manufacturer)s
-  Product Name:       %(product_name)s
-  Serial Number:      %(serial_number)s
-  Part Number:        %(part_number)s
-  FRU File ID:        %(fru_file_id)s
-'''[1:-1] % board_area.__dict__)
+  Mfg. Date / Time:   {board_area.mfg_date}
+  Manufacturer:       {board_area.manufacturer}
+  Product Name:       {board_area.product_name}
+  Serial Number:      {board_area.serial_number}
+  Part Number:        {board_area.part_number}
+  FRU File ID:        {board_area.fru_file_id}
+'''[1:-1])
 
         if len(board_area.custom_mfg_info) != 0:
             print('  Custom Board Info Records:')
             for field in board_area.custom_mfg_info:
-                print('    %s' % field)
+                print(f'    {field}')
 
     # Product Info Area
     product_area = inv.product_info_area
     if product_area:
-        print('''
+        print(f'''
 Product Info Area:
-  Manufacturer:       %(manufacturer)s
-  Name:               %(name)s
-  Part/Model Number:  %(part_number)s
-  Version:            %(version)s
-  Serial Number:      %(serial_number)s
-  Asset:              %(asset_tag)s
-  FRU File ID:        %(fru_file_id)s
-'''[1:-1] % product_area.__dict__)
+  Manufacturer:       {product_area.manufacturer}
+  Name:               {product_area.name}
+  Part/Model Number:  {product_area.part_number}
+  Version:            {product_area.version}
+  Serial Number:      {product_area.serial_number}
+  Asset:              {product_area.asset_tag}
+  FRU File ID:        {product_area.fru_file_id}
+'''[1:-1])
 
         if len(product_area.custom_mfg_info) != 0:
             print('  Custom Board Info Records:')
             for field in product_area.custom_mfg_info:
-                print('    %s' % field)
+                print(f'    {field}')
 
     # Multirecords
     multirecord_area = inv.multirecord_area
@@ -368,9 +368,9 @@ Product Info Area:
         print('Multirecord Area:')
         if print_all:
             for record in multirecord_area.records:
-                print('  %s' % record)
+                print(f'  {record}')
         else:
-            print('  Skipped. Use "%s"' % all_hint)
+            print(f'  Skipped. Use "{all_hint}"')
 
 
 def cmd_fru_print(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -382,7 +382,7 @@ def cmd_fru_print_file(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     try:
         inv = pyipmi.fru.get_fru_inventory_from_file(args.filename)
     except (OSError, pyipmi.errors.DecodingError) as e:
-        print('Cannot read the FRU data of %s: %s' % (args.filename, e),
+        print(f'Cannot read the FRU data of {args.filename}: {e}',
               file=sys.stderr)
         sys.exit(1)
     print_fru_inventory(inv, args.all == 'all', 'print-file <filename> all')
@@ -391,7 +391,7 @@ def cmd_fru_print_file(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
 def cmd_raw(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     raw_bytes = array('B', args.data)
     rsp = ipmi.send_raw(args.lun, args.netfn, py3_array_tobytes(raw_bytes))
-    print(' '.join('%02x' % d for d in array('B', rsp)))
+    print(' '.join(f'{d:02x}' for d in array('B', rsp)))
 
 
 def cmd_hpm_capabilities(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -399,9 +399,9 @@ def cmd_hpm_capabilities(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
 
     for c in cap.components:
         properties = ipmi.get_component_properties(c)
-        print("Component ID: %d" % c)
+        print(f"Component ID: {c:d}")
         for prop in properties:
-            print("  %s" % prop)
+            print(f"  {prop}")
 
 
 def cmd_hpm_check_file(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -430,14 +430,14 @@ def cmd_chassis_status(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
                  }))
     else:
 
-        print('''
-Power ON:          %(power_on)s
-Overload:          %(overload)s
-Interlock:         %(interlock)s
-Fault:             %(fault)s
-Ctrl Fault:        %(control_fault)s
-Restore Policy:    %(restore_policy)s
-'''[1:-1] % status.__dict__)
+        print(f'''
+Power ON:          {status.power_on}
+Overload:          {status.overload}
+Interlock:         {status.interlock}
+Fault:             {status.fault}
+Ctrl Fault:        {status.control_fault}
+Restore Policy:    {status.restore_policy}
+'''[1:-1])
 
         for event in status.last_event:
             print(event)
@@ -487,7 +487,7 @@ def cmd_lan_print(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     lines.append(('802.1q VLAN ID', 'disabled' if vlan == 0 else vlan))
 
     for (name, value) in lines:
-        print('%-21s%s' % (name + ':', value))
+        print(f"{name + ':':<21}{value}")
 
 
 def cmd_lan_set_ipaddr(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -519,9 +519,9 @@ def print_link_state(p: pyipmi.picmg.LinkDescriptor | None,
     intf_str = pyipmi.picmg.LinkDescriptor().get_interface_string(p.interface)
     link_str = pyipmi.picmg.LinkDescriptor().get_link_type_string(
             p.type, p.extension, p.sig_class)
-    print('CH=%02d INTF=%d FLAGS=0x%x TYPE=%d SIG=%d EXT=%d STATE=%d (%s/%s)'
-          % (p.channel, p.interface, p.link_flags, p.type, p.sig_class,
-             p.extension, s, intf_str, link_str))
+    print(f'CH={p.channel:02d} INTF={p.interface:d} FLAGS=0x{p.link_flags:x} '
+          f'TYPE={p.type:d} SIG={p.sig_class:d} EXT={p.extension:d} '
+          f'STATE={s:d} ({intf_str}/{link_str})')
 
 
 def cmd_picmg_get_portstate_all(ipmi: pyipmi.Ipmi,
@@ -591,40 +591,40 @@ def cmd_vita_properties(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     ipmc = rsp.ipmc_identifier
     ipmb = rsp.ipmb_capabilities
     rev = rsp.specification_revision
-    print('VSO Identifier    : 0x%02x' % rsp.vita_identifier)
-    print('IPMC Identifier   : 0x%02x' % int(ipmc))
-    print('    Tier  %d' % (ipmc.tier_functionality + 1))
-    print('    Layer %d' % (ipmc.layer_functionality + 1))
-    print('IPMB Capabilities : 0x%02x' % int(ipmb))
+    print(f'VSO Identifier    : 0x{rsp.vita_identifier:02x}')
+    print(f'IPMC Identifier   : 0x{int(ipmc):02x}')
+    print(f'    Tier  {ipmc.tier_functionality + 1:d}')
+    print(f'    Layer {ipmc.layer_functionality + 1:d}')
+    print(f'IPMB Capabilities : 0x{int(ipmb):02x}')
     frequency = {0: '100', 1: '400'}.get(ipmb.max_frequency, 'RESERVED')
-    print('    Frequency  %skHz' % frequency)
-    print('    %d IPMB interface%s supported'
-          % (ipmb.number_ipmbs + 1, 's' if ipmb.number_ipmbs else ''))
-    print('VSO Standard      : %s'
-          % ('VITA 46.11' if rsp.vso_standard.standard == 0 else 'RESERVED'))
-    print('VSO Spec Revision : %d.%d' % (rev & 0xf, rev >> 4))
-    print('Max FRU Device ID : 0x%02x' % rsp.max_fru_id)
-    print('FRU Device ID     : 0x%02x' % rsp.ipmc_fru_device_id)
+    print(f'    Frequency  {frequency}kHz')
+    print(f"    {ipmb.number_ipmbs + 1:d} IPMB interface"
+          f"{'s' if ipmb.number_ipmbs else ''} supported")
+    print(f"VSO Standard      : "
+          f"{'VITA 46.11' if rsp.vso_standard.standard == 0 else 'RESERVED'}")
+    print(f'VSO Spec Revision : {rev & 0xf:d}.{rev >> 4:d}')
+    print(f'Max FRU Device ID : 0x{rsp.max_fru_id:02x}')
+    print(f'FRU Device ID     : 0x{rsp.ipmc_fru_device_id:02x}')
 
 
 def cmd_vita_frucontrol(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     name = (VITA_FRU_CONTROL_OPTIONS[args.option]
             if args.option < len(VITA_FRU_CONTROL_OPTIONS) else 'Unknown')
-    print('FRU Device Id: %d FRU Control Option: %s' % (args.fru_id, name))
+    print(f'FRU Device Id: {args.fru_id:d} FRU Control Option: {name}')
     ipmi.vita_fru_control(args.fru_id, args.option)
     print('FRU Control: ok')
 
 
 def cmd_vita_addrinfo(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     rsp = ipmi.get_vita_fru_address_info(args.fru_id)
-    print('Hardware Address : 0x%02x' % rsp.hardware_address)
-    print('IPMB-0 Address   : 0x%02x' % rsp.ipmb_0_address)
-    print('FRU ID           : 0x%02x' % rsp.fru_id)
-    print('Site ID          : 0x%02x' % rsp.site_id)
-    print('Site Type        : %s'
-          % pyipmi.vita.VITA_SITE_TYPES.get(rsp.site_type, 'Unknown'))
+    print(f'Hardware Address : 0x{rsp.hardware_address:02x}')
+    print(f'IPMB-0 Address   : 0x{rsp.ipmb_0_address:02x}')
+    print(f'FRU ID           : 0x{rsp.fru_id:02x}')
+    print(f'Site ID          : 0x{rsp.site_id:02x}')
+    print("Site Type        : "
+          f"{pyipmi.vita.VITA_SITE_TYPES.get(rsp.site_type, 'Unknown')}")
     if rsp.address_on_channel_7 is not None:
-        print('Channel 7 Address: 0x%02x' % rsp.address_on_channel_7)
+        print(f'Channel 7 Address: 0x{rsp.address_on_channel_7:02x}')
 
 
 def cmd_vita_activate(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -639,14 +639,14 @@ def cmd_vita_deactivate(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
 
 def cmd_vita_policy_get(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     policy = ipmi.get_vita_fru_state_policy(args.fru_id).activation_policies
-    print('FRU State Policy Bits:\t%xh' % int(policy))
-    print('    Default-Activation-Locked Policy Bit is %d'
-          % policy.default_activation_locked)
-    print('    Commanded-Deactivation-Ignored Policy Bit is %d'
-          % policy.commanded_deactivation_ignored)
-    print('    Deactivation-Locked Policy Bit is %d'
-          % policy.deactivation_lock)
-    print('    Activation-Locked Policy Bit is %d' % policy.activation_lock)
+    print(f'FRU State Policy Bits:\t{int(policy):x}h')
+    print('    Default-Activation-Locked Policy Bit is '
+          f'{policy.default_activation_locked:d}')
+    print('    Commanded-Deactivation-Ignored Policy Bit is '
+          f'{policy.commanded_deactivation_ignored:d}')
+    print('    Deactivation-Locked Policy Bit is '
+          f'{policy.deactivation_lock:d}')
+    print(f'    Activation-Locked Policy Bit is {policy.activation_lock:d}')
 
 
 def cmd_vita_policy_set(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -656,19 +656,19 @@ def cmd_vita_policy_set(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
 
 def cmd_vita_led_prop(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     rsp = ipmi.get_vita_led_properties(args.fru_id)
-    print('LED Count:\t   %#x' % rsp.led_count)
+    print(f'LED Count:\t   {rsp.led_count:#x}')
 
 
 def cmd_vita_led_cap(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     rsp = ipmi.get_vita_led_color_capabilities(args.fru_id, args.led_id)
     capabilities = int(rsp.color_capabilities)
     colors = [VITA_LED_COLORS[i] for i in range(8) if capabilities & (1 << i)]
-    print('LED Color Capabilities: %s' % ', '.join(colors))
+    print(f"LED Color Capabilities: {', '.join(colors)}")
     print('Default LED Color in')
-    print('      LOCAL control:  %s'
-          % _vita_led_color(rsp.default_color_local_control.value))
-    print('      OVERRIDE state: %s'
-          % _vita_led_color(rsp.default_color_override_control.value))
+    print('      LOCAL control:  '
+          f'{_vita_led_color(rsp.default_color_local_control.value)}')
+    print('      OVERRIDE state: '
+          f'{_vita_led_color(rsp.default_color_override_control.value)}')
     if rsp.flags is not None:
         print('LED flags:')
         if rsp.flags & 2:
@@ -685,27 +685,29 @@ def cmd_vita_led_get(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
                                       (state.lamp_test, 'LAMPTEST'),
                                       (state.hardware_restrict, 'HW RESTRICT'))
              if bit]
-    print('LED states:                   %x\t%s'
-          % (int(state), ' '.join('[%s]' % flag for flag in flags)))
+    print("LED states:                   "
+          f"{int(state):x}\t{' '.join(f'[{flag}]' for flag in flags)}")
 
     if state.ipmc_control:
-        print('  Local Control function:     %x\t[%s]'
-              % (rsp.local_control_function,
-                 _vita_led_function(rsp.local_control_function)))
-        print('  Local Control On-Duration:  %x'
-              % rsp.local_control_on_duration)
-        print('  Local Control Color:        %x\t[%s]'
-              % (rsp.local_control_color,
-                 _vita_led_color(rsp.local_control_color & 7)))
+        function = _vita_led_function(rsp.local_control_function)
+        color = _vita_led_color(rsp.local_control_color & 7)
+        print('  Local Control function:     '
+              f'{rsp.local_control_function:x}\t[{function}]')
+        print('  Local Control On-Duration:  '
+              f'{rsp.local_control_on_duration:x}')
+        print('  Local Control Color:        '
+              f'{rsp.local_control_color:x}\t[{color}]')
 
     if (state.override or state.lamp_test) and rsp.override_state is not None:
-        print('  Override function:     %x\t[%s]'
-              % (rsp.override_state, _vita_led_function(rsp.override_state)))
-        print('  Override On-Duration:  %x' % rsp.override_on_duration)
-        print('  Override Color:        %x\t[%s]'
-              % (rsp.override_color, _vita_led_color(rsp.override_color & 7)))
+        function = _vita_led_function(rsp.override_state)
+        color = _vita_led_color(rsp.override_color & 7)
+        print('  Override function:     '
+              f'{rsp.override_state:x}\t[{function}]')
+        print(f'  Override On-Duration:  {rsp.override_on_duration:x}')
+        print('  Override Color:        '
+              f'{rsp.override_color:x}\t[{color}]')
         if state.lamp_test and rsp.lamp_test_duration is not None:
-            print('  Lamp test duration:    %x' % rsp.lamp_test_duration)
+            print(f'  Lamp test duration:    {rsp.lamp_test_duration:x}')
 
 
 def cmd_vita_led_set(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -736,7 +738,7 @@ def parse_interface_options(interface_name: str,
             elif (name, value) == ('fastmode', 'off'):
                 interface_options['enable_fastmode'] = False
             else:
-                print('Warning: unknown option %s' % name)
+                print(f'Warning: unknown option {name}')
         elif interface_name == 'ipmitool':
             if name == 'interface_type':
                 interface_options['interface_type'] = value
@@ -747,7 +749,7 @@ def parse_interface_options(interface_name: str,
             elif name == 'timeout':
                 interface_options['timeout'] = int(value)
             else:
-                print('Warning: unknown option %s' % name)
+                print(f'Warning: unknown option {name}')
         elif interface_name == 'ipmbdev':
             if name == 'port':
                 interface_options['port'] = value
@@ -757,7 +759,7 @@ def parse_interface_options(interface_name: str,
             elif name == 'timeout':
                 interface_options['timeout'] = float(value)
             else:
-                print('Warning: unknown option %s' % name)
+                print(f'Warning: unknown option {name}')
         elif interface_name == 'openipmblink':
             if name == 'port':
                 interface_options['port'] = value
@@ -766,14 +768,14 @@ def parse_interface_options(interface_name: str,
             elif name == 'address':
                 interface_options['slave_address'] = int(value, 0)
             else:
-                print('Warning: unknown option %s' % name)
+                print(f'Warning: unknown option {name}')
         elif interface_name == 'rmcpplus':
             if name == 'cipher':
                 interface_options['cipher_suite'] = int(value)
             elif name == 'kg':
                 interface_options['kg'] = bytes.fromhex(value)
             else:
-                print('Warning: unknown option %s' % name)
+                print(f'Warning: unknown option {name}')
 
     return interface_options
 
@@ -890,19 +892,19 @@ def dcmi_entity(value: str) -> int:
         return int(value, 0)
     except ValueError:
         raise argparse.ArgumentTypeError(
-            'invalid entity: %s (use %s or a number)'
-            % (value, ', '.join(DCMI_ENTITY_NAMES))) from None
+            f"invalid entity: {value} (use {', '.join(DCMI_ENTITY_NAMES)} or "
+            "a number)") from None
 
 
 def dcmi_entity_name(entity_id: int) -> str:
     for name, value in DCMI_ENTITY_NAMES.items():
         if value == entity_id:
             return name
-    return '0x%02x' % entity_id
+    return f'0x{entity_id:02x}'
 
 
 def hex_bytes(data: bytes) -> str:
-    return ' '.join('%02x' % b for b in data)
+    return ' '.join(f'{b:02x}' for b in data)
 
 
 def cmd_dcmi_discover(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -910,37 +912,37 @@ def cmd_dcmi_discover(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
         try:
             rsp = ipmi.get_dcmi_capabilities(selector)
         except pyipmi.errors.CompletionCodeError as e:
-            print('%-45s: ERR: CC=0x%02x' % (name, e.cc))
+            print(f'{name!s:<45}: ERR: CC=0x{e.cc:02x}')
             continue
         conformance = rsp.specification_conformance
-        print('%-45s: %s (DCMI %d.%d, revision %d)'
-              % (name, hex_bytes(rsp.parameter_data), conformance.major,
-                 conformance.minor, rsp.parameter_revision))
+        print(f'{name!s:<45}: {hex_bytes(rsp.parameter_data)} (DCMI '
+              f'{conformance.major:d}.{conformance.minor:d}, revision '
+              f'{rsp.parameter_revision:d})')
 
 
 def cmd_dcmi_power_reading(ipmi: pyipmi.Ipmi,
                            args: argparse.Namespace) -> None:
     rsp = ipmi.get_power_reading(1)
-    print('Instantaneous power reading : %5d Watts' % rsp.current_power)
-    print('Minimum power               : %5d Watts' % rsp.minimum_power)
-    print('Maximum power               : %5d Watts' % rsp.maximum_power)
-    print('Average power               : %5d Watts' % rsp.average_power)
-    print('Timestamp                   : %d' % rsp.timestamp)
-    print('Sampling period             : %d ms' % rsp.period)
-    print('Power reading state         : %s'
-          % ('activated' if rsp.reading_state & 0x40 else 'deactivated'))
+    print(f'Instantaneous power reading : {rsp.current_power:5d} Watts')
+    print(f'Minimum power               : {rsp.minimum_power:5d} Watts')
+    print(f'Maximum power               : {rsp.maximum_power:5d} Watts')
+    print(f'Average power               : {rsp.average_power:5d} Watts')
+    print(f'Timestamp                   : {rsp.timestamp:d}')
+    print(f'Sampling period             : {rsp.period:d} ms')
+    state = 'activated' if rsp.reading_state & 0x40 else 'deactivated'
+    print(f'Power reading state         : {state}')
 
 
 def cmd_dcmi_power_get_limit(ipmi: pyipmi.Ipmi,
                              args: argparse.Namespace) -> None:
     rsp = ipmi.get_power_limit()
     actions = {v: k for (k, v) in DCMI_POWER_LIMIT_ACTIONS.items()}
-    print('Exception actions      : %s'
-          % actions.get(rsp.exception_actions,
-                        'OEM 0x%02x' % rsp.exception_actions))
-    print('Power limit            : %d Watts' % rsp.power_limit)
-    print('Correction time        : %d ms' % rsp.correction_time_limit)
-    print('Sampling period        : %d s' % rsp.statistics_sampling_period)
+    action = actions.get(rsp.exception_actions,
+                         f'OEM 0x{rsp.exception_actions:02x}')
+    print(f'Exception actions      : {action}')
+    print(f'Power limit            : {rsp.power_limit:d} Watts')
+    print(f'Correction time        : {rsp.correction_time_limit:d} ms')
+    print(f'Sampling period        : {rsp.statistics_sampling_period:d} s')
 
 
 def cmd_dcmi_power_set_limit(ipmi: pyipmi.Ipmi,
@@ -968,7 +970,7 @@ def cmd_dcmi_sensors(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
         except (pyipmi.errors.CompletionCodeError,
                 pyipmi.errors.DecodingError):
             name = ''
-        print('0x%04x | %s' % (record_id, name))
+        print(f'0x{record_id:04x} | {name}')
 
 
 def cmd_dcmi_get_temp_reading(ipmi: pyipmi.Ipmi,
@@ -979,26 +981,26 @@ def cmd_dcmi_get_temp_reading(ipmi: pyipmi.Ipmi,
         try:
             readings = ipmi.get_temperature_readings(entity_id)
         except pyipmi.errors.CompletionCodeError as e:
-            print('%-10s | ERR: CC=0x%02x' % (dcmi_entity_name(entity_id),
-                                               e.cc))
+            print(f'{dcmi_entity_name(entity_id)!s:<10} | ERR: '
+                  f'CC=0x{e.cc:02x}')
             continue
         for (instance, temperature) in readings:
-            print('%-10s | %3d | %+4d C' % (dcmi_entity_name(entity_id),
-                                            instance, temperature))
+            print(f'{dcmi_entity_name(entity_id)!s:<10} | {instance:3d} | '
+                  f'{temperature:+4d} C')
 
 
 def cmd_dcmi_thermalpolicy_get(ipmi: pyipmi.Ipmi,
                                args: argparse.Namespace) -> None:
     rsp = ipmi.get_thermal_limit(args.entity, args.instance)
     actions = rsp.exception_actions
-    print('Exception actions    : %s'
-          % ('enabled' if actions.enable else 'disabled'))
-    print('  Hard power off     : %s'
-          % ('active' if actions.hard_power_off else 'inactive'))
-    print('  Log event to SEL   : %s'
-          % ('active' if actions.log_event_to_sel else 'inactive'))
-    print('Temperature limit    : %d C' % rsp.temperature_limit)
-    print('Exception time       : %d s' % rsp.exception_time)
+    enabled = 'enabled' if actions.enable else 'disabled'
+    hard_power_off = 'active' if actions.hard_power_off else 'inactive'
+    log_event_to_sel = 'active' if actions.log_event_to_sel else 'inactive'
+    print(f'Exception actions    : {enabled}')
+    print(f'  Hard power off     : {hard_power_off}')
+    print(f'  Log event to SEL   : {log_event_to_sel}')
+    print(f'Temperature limit    : {rsp.temperature_limit:d} C')
+    print(f'Exception time       : {rsp.exception_time:d} s')
 
 
 def cmd_dcmi_thermalpolicy_set(ipmi: pyipmi.Ipmi,
@@ -1011,7 +1013,7 @@ def cmd_dcmi_thermalpolicy_set(ipmi: pyipmi.Ipmi,
 
 
 def cmd_dcmi_asset_tag(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
-    print('Asset tag: %s' % ipmi.get_asset_tag())
+    print(f'Asset tag: {ipmi.get_asset_tag()}')
 
 
 def cmd_dcmi_set_asset_tag(ipmi: pyipmi.Ipmi,
@@ -1021,8 +1023,8 @@ def cmd_dcmi_set_asset_tag(ipmi: pyipmi.Ipmi,
 
 def cmd_dcmi_get_mc_id_string(ipmi: pyipmi.Ipmi,
                               args: argparse.Namespace) -> None:
-    print('Management controller ID string: %s'
-          % ipmi.get_management_controller_id_string())
+    print('Management controller ID string: '
+          f'{ipmi.get_management_controller_id_string()}')
 
 
 def cmd_dcmi_set_mc_id_string(ipmi: pyipmi.Ipmi,
@@ -1036,13 +1038,13 @@ def cmd_dcmi_get_conf_param(ipmi: pyipmi.Ipmi,
                  else DCMI_CONFIGURATION_PARAMETERS)
     for selector in selectors:
         name = DCMI_CONFIGURATION_PARAMETERS.get(selector,
-                                                 'Parameter %d' % selector)
+                                                 f'Parameter {selector:d}')
         try:
             rsp = ipmi.get_dcmi_configuration_parameters(selector)
         except pyipmi.errors.CompletionCodeError as e:
-            print('%-24s: ERR: CC=0x%02x' % (name, e.cc))
+            print(f'{name!s:<24}: ERR: CC=0x{e.cc:02x}')
             continue
-        print('%-24s: %s' % (name, hex_bytes(rsp.parameter_data)))
+        print(f'{name!s:<24}: {hex_bytes(rsp.parameter_data)}')
 
 
 def cmd_dcmi_set_conf_param(ipmi: pyipmi.Ipmi,
@@ -1103,7 +1105,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.set_defaults(func=None, help_parser=parser)
 
     parser.add_argument('-V', '--version', action='version',
-                        version='ipmitool v%s' % pyipmi.__version__)
+                        version=f'ipmitool v{pyipmi.__version__}')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='be verbose')
     parser.add_argument('--log-level', dest='log_levels',
@@ -1353,7 +1355,7 @@ def build_parser() -> argparse.ArgumentParser:
                    '2: commanded deactivation ignored, '
                    '3: default activation locked')
     p.add_argument('mask', type=auto_int,
-                   help='policy bits to change (%s)' % policy_bits)
+                   help=f'policy bits to change ({policy_bits})')
     p.add_argument('value', type=auto_int, help='new policy bits')
 
     sub = group.group('led', 'FRU LED commands')
@@ -1416,7 +1418,7 @@ def main(argv: list[str] | None = None) -> None:
             ipmi.open()  # this will open interface and session
         args.func(ipmi, args)
     except pyipmi.errors.CompletionCodeError as e:
-        print('Command returned with completion code 0x%02x' % e.cc)
+        print(f'Command returned with completion code 0x{e.cc:02x}')
         if args.verbose:
             traceback.print_exc()
         sys.exit(1)
@@ -1426,12 +1428,12 @@ def main(argv: list[str] | None = None) -> None:
             traceback.print_exc()
         sys.exit(1)
     except pyipmi.errors.IpmiConnectionError as e:
-        print('Connection error: %s' % e)
+        print(f'Connection error: {e}')
         if args.verbose:
             traceback.print_exc()
         sys.exit(1)
     except pyipmi.errors.HpmError as e:
-        print('HPM error: %s' % e)
+        print(f'HPM error: {e}')
         if args.verbose:
             traceback.print_exc()
         sys.exit(1)

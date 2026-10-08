@@ -108,4 +108,4 @@ def create_interface(interface: str, *args: Any, **kwargs: Any) -> Any:
         if intf.NAME == interface:
             return intf(*args, **kwargs)
 
-    raise RuntimeError('unknown interface with name %s' % interface)
+    raise RuntimeError(f'unknown interface with name {interface}')

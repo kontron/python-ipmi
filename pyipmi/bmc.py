@@ -272,14 +272,14 @@ class DeviceId(State):
 
     def __str__(self) -> str:
         """Return the device ID fields as one line."""
-        string = 'Device ID: %d' % self.device_id
-        string += ' revision: %d' % self.revision
-        string += ' available: %d' % self.available
-        string += ' fw version: %s' % (self.fw_revision)
-        string += ' ipmi: %s' % self.ipmi_version
-        string += ' manufacturer: %d' % self.manufacturer_id
-        string += ' product: %d' % self.product_id
-        string += ' functions: %s' % ','.join(self.supported_functions)
+        string = f'Device ID: {self.device_id:d}'
+        string += f' revision: {self.revision:d}'
+        string += f' available: {self.available:d}'
+        string += f' fw version: {self.fw_revision}'
+        string += f' ipmi: {self.ipmi_version}'
+        string += f' manufacturer: {self.manufacturer_id:d}'
+        string += f' product: {self.product_id:d}'
+        string += f" functions: {','.join(self.supported_functions)}"
         return string
 
     def supports_function(self, name: str) -> bool:
@@ -341,10 +341,11 @@ class DeviceGuid(State):
 
     def __str__(self) -> str:
         """Return the GUID string."""
-        return 'Device GUID: %s' % self.device_guid_string
+        return f'Device GUID: {self.device_guid_string}'
 
     def _from_response(self, rsp: Message) -> None:
         self.device_guid = rsp.device_guid
+        # the GUID is sent LS byte first
+        h = bytes(reversed(self.device_guid)).hex()
         self.device_guid_string = \
-            '%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-' \
-            '%02x%02x%02x%02x%02x%02x' % tuple(reversed(self.device_guid))
+            f'{h[0:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:32]}'

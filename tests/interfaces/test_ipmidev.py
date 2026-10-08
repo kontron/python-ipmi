@@ -63,7 +63,7 @@ class FakeDriver:
             ctypes.memmove(arg.msg.data, rsp, len(rsp))
             arg.msg.data_len = len(rsp)
         else:
-            raise AssertionError('unexpected ioctl %x' % request)
+            raise AssertionError(f'unexpected ioctl {request:x}')
         return 0
 
     def select(self, rlist, wlist, xlist, timeout):

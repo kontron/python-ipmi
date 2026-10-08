@@ -296,8 +296,8 @@ def encode_bridged_message(routing: list[Routing], header: IpmbHeaderReq,
 
     for bridge in reversed(routing[:-1]):
         if bridge.channel is None:
-            raise ValueError('bridge channel of routing entry missing: %s'
-                             % bridge)
+            raise ValueError('bridge channel of routing entry missing: '
+                             f'{bridge}')
         tx_data = encode_send_message(tx_data,
                                       rq_sa=bridge.rq_sa,
                                       rs_sa=bridge.rs_sa,
@@ -347,7 +347,7 @@ def target_ipmb_address(target: Target) -> int:
         ValueError: The target has no IPMB address.
     """
     if target.ipmb_address is None:
-        raise ValueError('IPMB address of the target missing: %s' % target)
+        raise ValueError(f'IPMB address of the target missing: {target}')
     return target.ipmb_address
 
 
@@ -495,7 +495,7 @@ class IpmbInterface(Interface):
         """Start the thread that reads messages with `_read_frame()`."""
         self._stop_receiver_event.clear()
         self._receiver = threading.Thread(target=self._receive_loop,
-                                          name='%s-rx' % self.NAME,
+                                          name=f'{self.NAME}-rx',
                                           daemon=True)
         self._receiver.start()
 

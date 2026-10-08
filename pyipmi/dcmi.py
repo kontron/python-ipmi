@@ -362,8 +362,8 @@ class Dcmi(IpmiMixin):
         """
         data = asset_tag.encode('utf-8')
         if len(data) > MAX_ASSET_TAG_LENGTH:
-            raise ValueError('asset tag is longer than %d bytes'
-                             % MAX_ASSET_TAG_LENGTH)
+            raise ValueError('asset tag is longer than '
+                             f'{MAX_ASSET_TAG_LENGTH:d} bytes')
         self._set_dcmi_string('SetAssetTag', data)
 
     def get_management_controller_id_string(self) -> str:
@@ -389,6 +389,6 @@ class Dcmi(IpmiMixin):
         # the string has to be null terminated
         data = id_string.encode('ascii') + b'\x00'
         if len(data) > MAX_MC_ID_STRING_LENGTH:
-            raise ValueError('identifier string is longer than %d bytes'
-                             % (MAX_MC_ID_STRING_LENGTH - 1))
+            raise ValueError('identifier string is longer than '
+                             f'{MAX_MC_ID_STRING_LENGTH - 1:d} bytes')
         self._set_dcmi_string('SetManagementControllerIdString', data)

@@ -56,10 +56,11 @@ class Event(IpmiMixin):
             CompletionCodeError: The target rejected the request.
         """
         if not 0 <= ipmb_address <= 0x7f:
-            raise ValueError('event receiver address 0x%x is not a 7-bit '
-                             'IPMB address' % ipmb_address)
+            raise ValueError(f'event receiver address 0x{ipmb_address:x} is '
+                             'not a 7-bit '
+                             'IPMB address')
         if not 0 <= lun <= 3:
-            raise ValueError('event receiver LUN %d is out of range' % lun)
+            raise ValueError(f'event receiver LUN {lun:d} is out of range')
         req = create_request_by_name('SetEventReceiver')
         req.event_receiver.ipmb_i2c_slave_address = ipmb_address
         req.event_receiver.lun = lun

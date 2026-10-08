@@ -479,7 +479,7 @@ class TestSdrShow:
         ipmitool.sdr_show(None, SdrCommon.from_data(data))
 
         out = capsys.readouterr().out
-        assert 'SDR type:         0x%02x' % data[3] in out
+        assert f'SDR type:         0x{data[3]:02x}' in out
         assert 'Device Id string' not in out
 
     def test_fru_device_locator_record(self, capsys):
@@ -651,7 +651,7 @@ def test_cmd_fru_read(tmp_path, capsys):
     ipmi.read_fru_data_full.assert_called_once_with(1)
     assert filename.read_bytes() == bytes(range(256))
     assert capsys.readouterr().out == (
-        'Read 256 bytes from FRU 1 to %s\n' % filename)
+        f'Read 256 bytes from FRU 1 to {filename}\n')
 
 
 @pytest.mark.parametrize('manufacturer, name', [
@@ -663,7 +663,7 @@ def test_bmc_info_manufacturer_name(capsys, manufacturer, name):
                        + b'\xa5\x06')
     ipmitool.cmd_bmc_info(ipmi, None)
     out = capsys.readouterr().out
-    assert 'Manufacturer Name:  %s\n' % name in out
+    assert f'Manufacturer Name:  {name}\n' in out
     # the IDs are shown in decimal and hex
     assert 'Device ID:          4 (0x04)\n' in out
     assert 'Product ID:         1701 (0x06a5)\n' in out

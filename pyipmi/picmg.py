@@ -785,11 +785,11 @@ class LedState(State):
                 and not self.lamp_test_enabled:
             string += ' NONE'
         if self.local_state_available:
-            string += ' local_function %s local_color %s' % (
-                self.local_function, self.local_color)
+            string += (f' local_function {self.local_function} local_color '
+                       f'{self.local_color}')
         if self.override_enabled:
-            string += ' override_function %s override_color %s' % (
-                self.override_function, self.override_color)
+            string += (f' override_function {self.override_function} '
+                       f'override_color {self.override_color}')
         string += ']'
         return string
 

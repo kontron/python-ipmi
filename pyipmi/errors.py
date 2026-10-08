@@ -42,8 +42,8 @@ class CompletionCodeError(Exception):
         self.cc_desc = self.find_cc_desc(cc, cmdid, netfn, group_extension)
 
     def __str__(self) -> str:
-        return "%s cc=0x%02x desc=%s" \
-            % (self.__class__.__name__, self.cc, self.cc_desc)
+        return (f"{self.__class__.__name__} cc=0x{self.cc:02x} "
+                f"desc={self.cc_desc}")
 
     @staticmethod
     def find_cc_desc(error_cc: int, cmdid: int | None = None,
@@ -71,8 +71,8 @@ class MessageStatusCodeError(Exception):
             msc, "Unknown error description")
 
     def __str__(self) -> str:
-        return "%s msc=0x%02x desc=%s" \
-            % (self.__class__.__name__, self.msc, self.msc_desc)
+        return (f"{self.__class__.__name__} msc=0x{self.msc:02x} "
+                f"desc={self.msc_desc}")
 
 
 class NotSupportedError(Exception):
