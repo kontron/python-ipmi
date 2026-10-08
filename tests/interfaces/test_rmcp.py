@@ -4,6 +4,7 @@ import array
 import socket
 import threading
 import time
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 import pytest
 from pyipmi.session import Session
@@ -11,7 +12,7 @@ from pyipmi.interfaces.rmcp import (AsfMsg, AsfPing, AsfPong, IpmiMsg, RmcpMsg, 
                                     call_repeatedly)
 from pyipmi.utils import py3_array_tobytes
 from pyipmi.errors import (CompletionCodeError, DecodingError, IpmiConnectionError,
-                           RetryError)
+                           NotSupportedError, RetryError)
 from pyipmi.interfaces.ipmb import IpmbHeaderReq, encode_ipmb_msg
 
 
@@ -267,6 +268,22 @@ class TestRmcp:
             assert done.wait(5)
         finally:
             stop()
+
+    @pytest.mark.parametrize('auth_types, auth_type', [
+        (['none', 'md2', 'md5', 'straight'], Session.AUTH_TYPE_MD5),
+        # MD2 and OEM are not implemented, straight password is used
+        (['none', 'md2', 'straight'], Session.AUTH_TYPE_PASSWORD),
+        (['md2', 'oem_proprietary', 'straight'], Session.AUTH_TYPE_PASSWORD),
+        (['none', 'md2'], Session.AUTH_TYPE_NONE),
+    ])
+    def test_select_auth_type(self, auth_types, auth_type):
+        caps = SimpleNamespace(auth_types=auth_types)
+        assert Rmcp()._select_auth_type(caps) == auth_type
+
+    def test_select_auth_type_not_supported(self):
+        caps = SimpleNamespace(auth_types=['md2', 'oem_proprietary'])
+        with pytest.raises(NotSupportedError, match='md2 oem_proprietary'):
+            Rmcp()._select_auth_type(caps)
 
     def test_send_and_receive_updates_last_request_time(self):
         rmcp = Rmcp()

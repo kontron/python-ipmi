@@ -775,6 +775,28 @@ class Rmcp(Interface):
         if idle >= self.keep_alive_interval:
             self._get_device_id()
 
+    # the authentication types the interface implements, the strongest
+    # first. MD2 and OEM are not implemented.
+    SUPPORTED_AUTH_TYPES = (
+        ('md5', Session.AUTH_TYPE_MD5),
+        ('straight', Session.AUTH_TYPE_PASSWORD),
+        ('none', Session.AUTH_TYPE_NONE),
+    )
+
+    def _select_auth_type(self,
+                          caps: ChannelAuthenticationCapabilities) -> int:
+        """Return the strongest authentication type of the BMC to use.
+
+        Raises:
+            NotSupportedError: The BMC supports no authentication type the
+                interface implements.
+        """
+        for (name, auth_type) in self.SUPPORTED_AUTH_TYPES:
+            if name in caps.auth_types:
+                return auth_type
+        raise NotSupportedError('no supported authentication type, the BMC '
+                                f"supports: {' '.join(caps.auth_types)}")
+
     def establish_session(self, session: Session) -> None:
         """Establish an IPMI v1.5 session with the BMC.
 
@@ -807,7 +829,7 @@ class Rmcp(Interface):
 
         # 2 - Get Session Challenge
         logger.debug('Get Session Challenge')
-        session.auth_type = caps.get_max_auth_type()
+        session.auth_type = self._select_auth_type(caps)
         rsp = self._get_session_challenge(session)
         session_challenge = rsp.challenge_string
         session.sid = rsp.temporary_session_id
