@@ -99,13 +99,27 @@ class Session:
     def priv_level(self) -> int:
         return self._priv_level
 
+    PRIV_LEVELS = {
+        'user': PRIV_LEVEL_USER,
+        'operator': PRIV_LEVEL_OPERATOR,
+        'administrator': PRIV_LEVEL_ADMINISTRATOR,
+    }
+
     def set_priv_level(self, level: str) -> None:
-        LEVELS = {
-                   'user': self.PRIV_LEVEL_USER,
-                   'operator': self.PRIV_LEVEL_OPERATOR,
-                   'administrator': self.PRIV_LEVEL_ADMINISTRATOR,
-                 }
-        self._priv_level = LEVELS[level.lower()]
+        """Set the privilege level of the session.
+
+        Args:
+            level: ``'user'``, ``'operator'`` or ``'administrator'``, the case
+                does not matter.
+
+        Raises:
+            ValueError: The level is unknown.
+        """
+        try:
+            self._priv_level = self.PRIV_LEVELS[level.lower()]
+        except KeyError:
+            raise ValueError(f'unknown privilege level {level!r}, use one of '
+                             f"{', '.join(self.PRIV_LEVELS)}") from None
 
     def _set_auth_type(self, auth_type: int) -> None:
         self._auth_type = auth_type

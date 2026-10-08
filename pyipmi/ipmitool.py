@@ -1138,7 +1138,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('-P', dest='password', metavar='<password>',
                         default='', help='RMCP password')
     parser.add_argument('-L', dest='priv_level', metavar='<level>',
-                        help='RMCP privilege level')
+                        type=str.lower,
+                        choices=list(pyipmi.session.Session.PRIV_LEVELS),
+                        help='RMCP privilege level (user, operator, '
+                             'administrator)')
 
     commands = _CommandGroups(parser.add_subparsers(metavar='<command>'))
 

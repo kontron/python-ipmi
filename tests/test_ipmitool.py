@@ -119,7 +119,7 @@ class TestParser:
 
     def test_global_options(self):
         args = self.parse('-I openipmblink -o port=/dev/x,bus=1 -t 0x82 '
-                          '-b 7 -H host -p 0x26f -U user -P pass -L ADMIN '
+                          '-b 7 -H host -p 0x26f -U user -P pass -L ADMINISTRATOR '
                           '-v -J bmc info')
         assert args.interface == 'openipmblink'
         assert args.options == 'port=/dev/x,bus=1'
@@ -129,7 +129,7 @@ class TestParser:
         assert args.port == 623
         assert args.user == 'user'
         assert args.password == 'pass'
-        assert args.priv_level == 'ADMIN'
+        assert args.priv_level == 'administrator'
         assert args.verbose
         assert args.json
 
@@ -755,6 +755,21 @@ def test_lan_set_lan_channel(capsys):
     assert ipmi.requests == [
         ('GetChannelInfoReq', b'\x01'),
         ('SetLanConfigurationParametersReq', b'\x01\x04\x02')]
+
+
+class TestPrivLevel:
+    @pytest.mark.parametrize('level', ['user', 'OPERATOR', 'Administrator'])
+    def test_priv_level(self, level):
+        args = build_parser().parse_args(['-L', level, 'bmc', 'info'])
+        assert args.priv_level == level.lower()
+
+    @pytest.mark.parametrize('level', ['oem', 'admin', 'callback'])
+    def test_priv_level_invalid(self, capsys, level):
+        # a usage error instead of a traceback
+        with pytest.raises(SystemExit) as e:
+            build_parser().parse_args(['-L', level, 'bmc', 'info'])
+        assert e.value.code == 2
+        assert 'invalid choice' in capsys.readouterr().err
 
 
 class TestSdrList:

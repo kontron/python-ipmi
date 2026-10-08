@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import pytest
+
 from pyipmi.session import Session
 
 
@@ -53,3 +55,17 @@ def test_set_priv_level():
 def test_string():
     session = Session()
     str(session)
+
+
+def test_set_priv_level_ignores_case():
+    session = Session()
+    session.set_priv_level('USER')
+    assert session.priv_level == session.PRIV_LEVEL_USER
+
+
+@pytest.mark.parametrize('level', ['oem', 'admin', ''])
+def test_set_priv_level_invalid(level):
+    session = Session()
+    with pytest.raises(ValueError, match='unknown privilege level'):
+        session.set_priv_level(level)
+    assert session.priv_level == session.PRIV_LEVEL_ADMINISTRATOR
