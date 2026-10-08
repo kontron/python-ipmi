@@ -170,8 +170,7 @@ class Sensor(IpmiMixin):
         req.offset = offset
         req.bytes_to_read = length
 
-        rsp = get_sdr_chunk_helper(self.send_message, req,
-                                   self.reserve_device_sdr_repository)
+        rsp = get_sdr_chunk_helper(self.send_message, req)
 
         return (rsp.next_record_id, rsp.record_data)
 
@@ -191,19 +190,25 @@ class Sensor(IpmiMixin):
         Raises:
             DecodingError: The record data is invalid.
         """
-        (next_id, record_data) = \
+        return self._get_device_sdr(record_id, reservation_id)[0]
+
+    def _get_device_sdr(self, record_id: int, reservation_id: int | None
+                        ) -> tuple[sdr.SdrCommon, int]:
+        # returns the reservation ID too, a new one if it was canceled
+        (next_id, record_data, reservation_id) = \
             get_sdr_data_helper(self.reserve_device_sdr_repository,
                                 self._get_device_sdr_chunk,
                                 record_id, reservation_id,
                                 self._device_sdr_read_length)
 
-        return sdr.SdrCommon.from_data(record_data, next_id)
+        return (sdr.SdrCommon.from_data(record_data, next_id), reservation_id)
 
     def device_sdr_entries(self) -> Generator[sdr.SdrCommon, None, None]:
         """Return a generator of all records of the device SDR repository.
 
-        The repository is reserved once. The records are read starting with
-        record ID 0 until the next record ID is 0xffff.
+        The repository is reserved once, and again if the reservation is
+        canceled. The records are read starting with record ID 0 until the
+        next record ID is 0xffff.
 
         Yields:
             The decoded records.
@@ -212,7 +217,8 @@ class Sensor(IpmiMixin):
         record_id = 0
 
         while True:
-            record = self.get_device_sdr(record_id, reservation_id)
+            (record, reservation_id) = self._get_device_sdr(record_id,
+                                                            reservation_id)
             yield record
             if record.next_id == 0xffff:
                 break

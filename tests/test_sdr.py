@@ -477,6 +477,8 @@ def test_get_repository_sdr_canceled_reservation(monkeypatch):
             b'\x00\xff\xff' + header,
             # the reservation is canceled, e.g. by an added record
             b'\xc5',
+            # the record is read again from the start
+            b'\x00\xff\xff' + header,
             b'\x00\xff\xff' + b'\x20\x00\x07',
         ],
     })
@@ -485,4 +487,38 @@ def test_get_repository_sdr_canceled_reservation(monkeypatch):
     assert sdr.number == 7
     names = [name for (name, _) in ipmi.requests]
     assert names == ['ReserveSdrRepositoryReq', 'GetSdrReq', 'GetSdrReq',
-                     'ReserveSdrRepositoryReq', 'GetSdrReq']
+                     'ReserveSdrRepositoryReq', 'GetSdrReq', 'GetSdrReq']
+    # the new reservation ID 2 is used for the reads after the cancel
+    reservations = [data[:2] for (name, data) in ipmi.requests
+                    if name == 'GetSdrReq']
+    assert reservations == [b'\x01\x00', b'\x01\x00', b'\x02\x00',
+                            b'\x02\x00']
+
+
+def test_sdr_repository_entries_canceled_reservation(monkeypatch):
+    monkeypatch.setattr('pyipmi.helper.time',
+                        SimpleNamespace(sleep=lambda s: None))
+    # two OEM records with 3 bytes record key
+    record_1 = b'\x01\x00\x51\xc0\x03' + b'\x20\x00\x07'
+    record_2 = b'\x02\x00\x51\xc0\x03' + b'\x20\x00\x08'
+    ipmi = create_ipmi({
+        'ReserveSdrRepository': [b'\x00\x01\x00', b'\x00\x02\x00'],
+        'GetSdr': [
+            b'\x00\x02\x00' + record_1[:5],
+            # the reservation is canceled, e.g. by an added record
+            b'\xc5',
+            b'\x00\x02\x00' + record_1[:5],
+            b'\x00\x02\x00' + record_1[5:],
+            b'\x00\xff\xff' + record_2[:5],
+            b'\x00\xff\xff' + record_2[5:],
+        ],
+    })
+    records = list(ipmi.sdr_repository_entries())
+    assert [r.number for r in records] == [7, 8]
+    # the next record is read with the new reservation right away, the
+    # repository is reserved only once again
+    names = [name for (name, _) in ipmi.requests]
+    assert names.count('ReserveSdrRepositoryReq') == 2
+    reservations = [data[:2] for (name, data) in ipmi.requests
+                    if name == 'GetSdrReq']
+    assert reservations[2:] == [b'\x02\x00'] * 4

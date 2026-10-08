@@ -133,8 +133,7 @@ class Sdr(IpmiMixin):
         req.offset = offset
         req.bytes_to_read = length
 
-        rsp = get_sdr_chunk_helper(self.send_message, req,
-                                   self.reserve_sdr_repository)
+        rsp = get_sdr_chunk_helper(self.send_message, req)
 
         return (rsp.next_record_id, rsp.record_data)
 
@@ -154,16 +153,23 @@ class Sdr(IpmiMixin):
         Raises:
             DecodingError: The record data is invalid.
         """
-        (next_id, record_data) = get_sdr_data_helper(
+        return self._get_repository_sdr(record_id, reservation_id)[0]
+
+    def _get_repository_sdr(self, record_id: int,
+                            reservation_id: int | None
+                            ) -> tuple[SdrCommon, int]:
+        # returns the reservation ID too, a new one if it was canceled
+        (next_id, record_data, reservation_id) = get_sdr_data_helper(
                 self.reserve_sdr_repository, self._get_sdr_chunk,
                 record_id, reservation_id, self._sdr_read_length)
-        return SdrCommon.from_data(record_data, next_id)
+        return (SdrCommon.from_data(record_data, next_id), reservation_id)
 
     def sdr_repository_entries(self) -> Generator[SdrCommon, None, None]:
         """Return a generator of all records of the SDR repository.
 
-        The repository is reserved once. The records are read starting with
-        record ID 0 until the next record ID is 0xffff.
+        The repository is reserved once, and again if the reservation is
+        canceled. The records are read starting with record ID 0 until the
+        next record ID is 0xffff.
 
         Yields:
             The decoded records.
@@ -172,7 +178,8 @@ class Sdr(IpmiMixin):
         record_id = 0
 
         while True:
-            s = self.get_repository_sdr(record_id, reservation_id)
+            (s, reservation_id) = self._get_repository_sdr(record_id,
+                                                           reservation_id)
             yield s
             if s.next_id == 0xffff:
                 break

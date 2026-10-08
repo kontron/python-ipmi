@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import time
+from array import array
 from collections.abc import Callable
 
 from .errors import CompletionCodeError, RetryError
@@ -29,9 +30,18 @@ DEFAULT_READ_LENGTH = 32
 
 
 def get_sdr_chunk_helper(send_fn: Callable[[Message], Message], req: Message,
-                         reserve_fn: Callable[[], int],
                          retry: int = 5) -> Message:
+    """Send a request for a chunk of a record and return the response.
 
+    The request is sent again if the device is busy.
+
+    Raises:
+        CompletionCodeError: The request failed, e.g. with
+            ``CC_RES_CANCELED`` if the reservation was canceled. The record
+            has to be read again from the start then, see
+            :func:`get_sdr_data_helper`.
+        RetryError: The device is still busy after `retry` tries.
+    """
     while True:
         retry -= 1
         if retry == 0:
@@ -39,10 +49,6 @@ def get_sdr_chunk_helper(send_fn: Callable[[Message], Message], req: Message,
         rsp = send_fn(req)
         if rsp.completion_code == constants.CC_OK:
             break
-        elif rsp.completion_code == constants.CC_RES_CANCELED:
-            time.sleep(1)
-            req.reservation_id = reserve_fn()
-            continue
         elif rsp.completion_code == constants.CC_TIMEOUT:
             time.sleep(0.1)
             continue
@@ -76,23 +82,56 @@ class ReadLength:
             raise RetryError()
 
 
-def get_sdr_data_helper(reserve_fn: Callable[[], int], get_fn: Callable,
+def get_sdr_data_helper(reserve_fn: Callable[[], int],
+                        get_fn: Callable[[int, int, int, int],
+                                         tuple[int, array]],
                         record_id: int,
                         reservation_id: int | None = None,
-                        read_length: ReadLength | None = None
-                        ) -> tuple[int, ByteBuffer]:
+                        read_length: ReadLength | None = None,
+                        retry: int = 5) -> tuple[int, ByteBuffer, int]:
     """Helper function to retrieve the sdr data.
 
     A specified helper function is used to retrieve the chunks.
 
     This can be used for SDRs from the Sensor Device or form the SDR
     repository.
+
+    If the reservation is canceled, e.g. because the repository changed, the
+    repository is reserved again and the record is read again from the
+    start, so the record data is never mixed from before and after a change.
+
+    Returns:
+        The next record ID, the record data and the reservation ID, which is
+        a new one if the reservation was canceled. Use it for the next
+        records.
+
+    Raises:
+        RetryError: The reservation was canceled `retry` times.
     """
     if reservation_id is None:
         reservation_id = reserve_fn()
     if read_length is None:
         read_length = ReadLength()
 
+    while True:
+        try:
+            (next_id, record_data) = _get_sdr_data(get_fn, record_id,
+                                                   reservation_id,
+                                                   read_length)
+            return (next_id, record_data, reservation_id)
+        except CompletionCodeError as e:
+            if e.cc != constants.CC_RES_CANCELED:
+                raise
+            retry -= 1
+            if retry <= 0:
+                raise RetryError() from e
+            time.sleep(1)
+            reservation_id = reserve_fn()
+
+
+def _get_sdr_data(get_fn: Callable[[int, int, int, int], tuple[int, array]],
+                  record_id: int, reservation_id: int,
+                  read_length: ReadLength) -> tuple[int, ByteBuffer]:
     (next_id, data) = get_fn(reservation_id, record_id, 0, 5)
 
     header = ByteBuffer(data)
@@ -118,7 +157,7 @@ def get_sdr_data_helper(reserve_fn: Callable[[], int], get_fn: Callable,
             (next_id, data) = get_fn(reservation_id, record_id, offset, length)
         except CompletionCodeError as e:
             if e.cc != constants.CC_CANT_RET_NUM_REQ_BYTES:
-                raise CompletionCodeError(e.cc) from e
+                raise
             # reduce the length and retry this chunk
             read_length.reduce(length, 4)
             continue
