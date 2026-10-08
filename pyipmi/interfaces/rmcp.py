@@ -81,8 +81,9 @@ def call_repeatedly(interval: float, func: Callable[..., Any],
                     *args: Any) -> Callable[[], None]:
     """Call a function repeatedly in a background thread.
 
-    The first call is after ``interval`` seconds. A TimeoutError raised by
-    the function is ignored.
+    The first call is after ``interval`` seconds. An exception raised by the
+    function is logged and does not stop the calls, e.g. a keep-alive request
+    whose response got lost.
 
     Args:
         interval: The time between the calls in seconds.
@@ -99,8 +100,9 @@ def call_repeatedly(interval: float, func: Callable[..., Any],
         while not stopped.wait(interval):
             try:
                 func(*args)
-            except TimeoutError:
-                pass
+            except Exception as e:
+                logger.warning('%s failed: %s', getattr(func, '__name__', func),
+                               repr(e))
 
     t = threading.Thread(target=loop)
     t.daemon = True

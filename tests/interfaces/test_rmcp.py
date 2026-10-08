@@ -2,13 +2,16 @@
 
 import array
 import socket
+import threading
 import time
 from unittest.mock import MagicMock
 import pytest
 from pyipmi.session import Session
-from pyipmi.interfaces.rmcp import (AsfMsg, AsfPing, AsfPong, IpmiMsg, RmcpMsg, Rmcp)
+from pyipmi.interfaces.rmcp import (AsfMsg, AsfPing, AsfPong, IpmiMsg, RmcpMsg, Rmcp,
+                                    call_repeatedly)
 from pyipmi.utils import py3_array_tobytes
-from pyipmi.errors import DecodingError, IpmiConnectionError, RetryError
+from pyipmi.errors import (CompletionCodeError, DecodingError, IpmiConnectionError,
+                           RetryError)
 from pyipmi.interfaces.ipmb import IpmbHeaderReq, encode_ipmb_msg
 
 
@@ -239,6 +242,31 @@ class TestRmcp:
         rmcp._last_request_time = time.monotonic() - 1.0
         rmcp._keep_alive()
         rmcp._get_device_id.assert_called_once()
+
+    @pytest.mark.parametrize('error', [
+        TimeoutError(),
+        RetryError(),
+        CompletionCodeError(0xc3),
+        DecodingError(),
+        OSError(),
+    ])
+    def test_keep_alive_continues_after_error(self, error):
+        # e.g. a lost response of a keep-alive request raises RetryError, the
+        # following keep-alive requests have to be sent anyway
+        calls = []
+        done = threading.Event()
+
+        def keep_alive():
+            calls.append(1)
+            if len(calls) == 3:
+                done.set()
+            raise error
+
+        stop = call_repeatedly(0.01, keep_alive)
+        try:
+            assert done.wait(5)
+        finally:
+            stop()
 
     def test_send_and_receive_updates_last_request_time(self):
         rmcp = Rmcp()
