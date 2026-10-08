@@ -377,6 +377,23 @@ class TestParser:
             'open', 'sel clear', 'close']
 
 
+class TestChassisPower:
+    # the control values of the Chassis Control command
+    @pytest.mark.parametrize('action, control', [
+        ('off', 0),
+        ('on', 1),
+        ('cycle', 2),
+        ('reset', 3),
+        ('diag', 4),
+        ('soft', 5),
+    ])
+    def test_chassis_power(self, action, control):
+        ipmi = create_ipmi(b'\x00')
+        args = build_parser().parse_args(['chassis', 'power', action])
+        ipmitool.cmd_chassis_power(ipmi, args)
+        assert ipmi.requests == [('ChassisControlReq', bytes([control]))]
+
+
 class TestCreateIpmiConnection:
     @staticmethod
     def routing(ipmi):

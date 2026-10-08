@@ -450,8 +450,8 @@ CHASSIS_POWER_CONTROLS = {
     'on': 'chassis_control_power_up',
     'cycle': 'chassis_control_power_cycle',
     'reset': 'chassis_control_hard_reset',
-    'diag': 'chassis_control_power_diagnostic_interrupt',
-    'soft': 'chassis_control_power_soft_shutdown',
+    'diag': 'chassis_control_diagnostic_interrupt',
+    'soft': 'chassis_control_soft_shutdown',
 }
 
 
