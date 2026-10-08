@@ -433,6 +433,31 @@ def test_wait_for_long_duration_command_timeout(fake_time):
     assert fake_time.sleeps == [0.25] * 4
 
 
+def test_wait_for_long_duration_command_error(fake_time):
+    # still in progress, then completed with an error
+    ipmi = create_ipmi({'GetUpgradeStatus': [b'\x00\x00\x34\x80',
+                                             b'\x00\x00\x34\x81']})
+    with pytest.raises(HpmError, match='CC=0x81'):
+        ipmi.wait_for_long_duration_command(0x34, timeout=1, interval=0.25)
+    assert fake_time.sleeps == [0.25]
+
+
+@pytest.mark.parametrize('method, args, command', [
+    ('initiate_upgrade_action_and_wait', (0x02, ACTION_PREPARE_COMPONENT),
+     'InitiateUpgradeAction'),
+    ('finish_upload_and_wait', (1, 100), 'FinishFirmwareUpload'),
+    ('activate_firmware_and_wait', (), 'ActivateFirmware'),
+    ('initiate_manual_rollback_and_wait', (), 'InitiateManualRollback'),
+])
+def test_and_wait_long_duration_error(fake_time, method, args, command):
+    # the command fails after it was accepted as long duration command,
+    # e.g. a compare of a component that does not match
+    ipmi = create_ipmi({command: b'\x80',
+                        'GetUpgradeStatus': b'\x00\x00\x34\x81'})
+    with pytest.raises(HpmError):
+        getattr(ipmi, method)(*args)
+
+
 @pytest.mark.parametrize('error', [IpmiTimeoutError(), OSError()])
 def test_wait_for_long_duration_command_not_reachable(fake_time, error):
     ipmi = create_ipmi(b'\x00\x00\x31\x00')

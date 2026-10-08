@@ -401,6 +401,10 @@ class Hpm(IpmiMixin):
             expected_cmd: The ID of the command that is waited for.
             timeout: The maximum time in seconds to wait.
             interval: The interval in seconds of the status polls.
+
+        Raises:
+            HpmError: The command completed with an error, e.g. a compare
+                of a component that does not match.
         """
         start_time = time.time()
         while time.time() < start_time + timeout:
@@ -412,6 +416,10 @@ class Hpm(IpmiMixin):
                 if status.last_completion_code \
                         == CC_LONG_DURATION_CMD_IN_PROGRESS:
                     time.sleep(interval)
+                elif status.last_completion_code != constants.CC_OK:
+                    raise HpmError('command 0x%02x completed with CC=0x%02x'
+                                   % (status.command_in_progress,
+                                      status.last_completion_code))
                 else:
                     return
             except IpmiTimeoutError:
