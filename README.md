@@ -19,7 +19,7 @@
 * RMCP+ interface
   * native
   * legacy using [ipmitool] as backend
-* system interface (using ipmitool as backend)
+* system interface
   * native (KCS, SMIC, BT, SSIF) using the IPMI driver on Linux
   * legacy using [ipmitool] as backend
 * IPMB interface
