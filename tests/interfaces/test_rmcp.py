@@ -295,6 +295,88 @@ class TestRmcp:
         rmcp.send_and_receive_raw(rmcp.host_target, 0, 6, b'\x00')
         assert rmcp._last_request_time >= before
 
+    def test_send_and_receive_uses_own_sequence_number(self):
+        # another request, e.g. of the keep-alive thread, increments the
+        # sequence number before this request is sent
+        rmcp = Rmcp(max_retries=0)
+        rmcp._sock = MagicMock(spec=socket.socket)
+        # the response with the sequence number 1, once, then a timeout
+        rmcp._sock.recv.side_effect = [
+            b'\x06\x00\xff\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08'
+            b'\x81\x1c\x63\x20\x04\x00\xc1\x1b',
+            TimeoutError()]
+        inc = rmcp._inc_sequence_number
+
+        def inc_and_other_request():
+            seq = inc()
+            inc()
+            return seq
+
+        rmcp._inc_sequence_number = inc_and_other_request
+        # the response matches the request, its completion code is 0xc1
+        rsp = rmcp.send_and_receive_raw(rmcp.host_target, 0, 6, b'\x00')
+        assert rsp == b'\xc1'
+
+    @staticmethod
+    def _establish(rmcp, session, initial_inbound):
+        rmcp._sock = MagicMock(spec=socket.socket)
+        rmcp.ping = MagicMock()
+        rmcp._get_channel_auth_cap = MagicMock(
+            return_value=SimpleNamespace(auth_types=['none']))
+        seen = {}
+
+        def challenge(session):
+            # the session setup is sent with sequence number 0
+            seen['seq'] = session.sequence_number
+            seen['activated'] = session.activated
+            return SimpleNamespace(challenge_string=bytes(16),
+                                   temporary_session_id=0x11223344)
+
+        rmcp._get_session_challenge = challenge
+        rmcp._activate_session = MagicMock(return_value=SimpleNamespace(
+            session_id=0x55667788,
+            initial_inbound_sequence_number=initial_inbound))
+        rmcp._set_session_privilege_level = MagicMock()
+        rmcp.establish_session(session)
+        return seen
+
+    @staticmethod
+    def _packed_sequence_number(session):
+        pdu = IpmiMsg(session).pack(b'')
+        return int.from_bytes(pdu[1:5], 'little')
+
+    @pytest.mark.parametrize('initial_inbound, first', [
+        (0x1000, 0x1000),
+        (1, 1),
+        # 0 is not used
+        (0, 1),
+    ])
+    def test_establish_session_initial_inbound_sequence_number(
+            self, initial_inbound, first):
+        rmcp = Rmcp(keep_alive_interval=0)
+        session = Session()
+        session.set_session_type_rmcp('10.0.0.1')
+        self._establish(rmcp, session, initial_inbound)
+
+        # the first request of the session uses the initial inbound
+        # sequence number of the Activate Session response
+        assert self._packed_sequence_number(session) == first
+        assert self._packed_sequence_number(session) == first + 1
+
+    def test_establish_session_again(self):
+        rmcp = Rmcp(keep_alive_interval=0)
+        session = Session()
+        session.set_session_type_rmcp('10.0.0.1')
+        self._establish(rmcp, session, 0x1000)
+        for _ in range(5):
+            self._packed_sequence_number(session)
+        session.activated = False
+
+        # the second session starts with sequence number 0 again
+        seen = self._establish(rmcp, session, 0x2000)
+        assert seen == {'seq': 0, 'activated': False}
+        assert self._packed_sequence_number(session) == 0x2000
+
     def test_receive_ipmi_msg_invalid_class(self):
         rmcp = Rmcp()
         rmcp._sock = MagicMock(spec=socket.socket)

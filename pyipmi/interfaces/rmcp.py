@@ -623,6 +623,7 @@ class Rmcp(Interface):
         self._last_request_time = 0.0
         self._timeout: float | None = None
         self.transaction_lock = threading.Lock()
+        self._sequence_lock = threading.Lock()
         if quirks_cfg is None:
             quirks_cfg = {}
         self.quirks_cfg = quirks_cfg
@@ -815,6 +816,10 @@ class Rmcp(Interface):
             CompletionCodeError: A request of the session setup failed.
         """
         self._session = None
+        # the session can be established again after it was closed, the
+        # requests before the activation are sent with sequence number 0
+        session.sequence_number = 0
+        session.activated = False
         self.host = session.rmcp_host
         self.port = session.rmcp_port
         self._sock.connect((self.host, self.port))
@@ -840,7 +845,11 @@ class Rmcp(Interface):
         logger.debug('Activate Session')
         rsp = self._activate_session(session, session_challenge)
         session.sid = rsp.session_id
-        session.sequence_number = rsp.initial_inbound_sequence_number
+        # the next request is sent with the initial inbound sequence number
+        # (0 is not used), the sequence number is incremented before each
+        # request of the activated session
+        session.sequence_number = \
+            max(rsp.initial_inbound_sequence_number, 1) - 1
         session.activated = True
 
         logger.debug('Set Session Privilege Level')
@@ -878,8 +887,15 @@ class Rmcp(Interface):
         check_completion_code(rsp.completion_code)
         self._session.activated = False
 
-    def _inc_sequence_number(self) -> None:
-        self.next_sequence_number = (self.next_sequence_number + 1) % 64
+    def _inc_sequence_number(self) -> int:
+        """Increment the IPMB sequence number and return it.
+
+        The keep-alive thread sends requests too, so the sequence number is
+        incremented and read under a lock.
+        """
+        with self._sequence_lock:
+            self.next_sequence_number = (self.next_sequence_number + 1) % 64
+            return self.next_sequence_number
 
     def _receive_response(self, header: IpmbHeaderReq) -> bytes:
         """Receive the response that matches the request `header`.
@@ -933,13 +949,13 @@ class Rmcp(Interface):
         Raises:
             RetryError: No response after ``max_retries`` retries.
         """
-        self._inc_sequence_number()
+        seq = self._inc_sequence_number()
 
         header = IpmbHeaderReq()
         header.netfn = netfn
         header.rs_lun = lun
         header.rs_sa = target_ipmb_address(target)
-        header.rq_seq = self.next_sequence_number
+        header.rq_seq = seq
         header.rq_lun = 0
         header.rq_sa = self.slave_address
         header.cmdid = cmdid
@@ -947,7 +963,7 @@ class Rmcp(Interface):
         # Bridge message
         if target.routing:
             tx_data = encode_bridged_message(target.routing, header, payload,
-                                             self.next_sequence_number)
+                                             seq)
         else:
             tx_data = encode_ipmb_msg(header, payload)
 
