@@ -273,6 +273,29 @@ def test_platform_event_encode_req():
     assert data == b'\x04\xf2\xab\x6f\x01\xff\xff'
 
 
+def test_platform_event_encode_req_generator_id():
+    # over the system interface the request starts with the Generator ID
+    m = pyipmi.msgs.sensor.PlatformEventReq()
+    assert m.generator_id is None
+    m.generator_id = 0x41
+    m.sensor_type = 0xf2
+    m.sensor_number = 0xab
+    m.event_type.type = 0x6f
+    m.event_data = [0x1, 0xff, 0xff]
+    data = encode_message(m)
+    assert data == b'\x41\x04\xf2\xab\x6f\x01\xff\xff'
+
+
+def test_platform_event_decode_req():
+    m = pyipmi.msgs.sensor.PlatformEventReq()
+    decode_message(m, b'\x04\xf2\xab\x6f\x01\xff\xff')
+    assert m.generator_id is None
+    assert m.event_message_rev == 4
+    assert m.sensor_type == 0xf2
+    assert m.sensor_number == 0xab
+    assert m.event_data == array('B', [0x1, 0xff, 0xff])
+
+
 def test_platform_event_decode_rsp():
     m = pyipmi.msgs.sensor.PlatformEventRsp()
     decode_message(m, b'\x00')

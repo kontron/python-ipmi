@@ -227,3 +227,39 @@ def test_get_device_id(driver_factory):
         intf.close()
 
     assert device_id.device_id == 0x0c
+
+
+def platform_event_responder(addr, netfn, cmd, data):
+    return [(ipmidev.IPMI_RESPONSE_RECV_TYPE, 0, netfn + 1, cmd, b'\x00')]
+
+
+@pytest.mark.parametrize('target, system_interface', [
+    (pyipmi.Target(), True),
+    (pyipmi.Target(0x20), True),
+    (pyipmi.Target(0x72), False),
+    (pyipmi.Target(0x72, routing=[(0x20, 0x20, 7), (0x20, 0x72, None)]),
+     False),
+])
+def test_is_system_interface(target, system_interface):
+    assert IpmiDev().is_system_interface(target) is system_interface
+
+
+@pytest.mark.parametrize('target, data', [
+    # the system interface needs the Generator ID 0x41
+    (pyipmi.Target(0x20), b'\x41\x04\xf2\x01\x6f\x00'),
+    # bridged to IPMB, the Generator ID is the requester address
+    (pyipmi.Target(0x72), b'\x04\xf2\x01\x6f\x00'),
+])
+def test_send_platform_event(driver_factory, target, data):
+    driver = driver_factory(platform_event_responder)
+    ipmi = pyipmi.create_connection(IpmiDev())
+    ipmi.target = target
+    ipmi.interface.open()
+    try:
+        ipmi.send_platform_event(0xf2, 1, 0x6f)
+    finally:
+        ipmi.interface.close()
+
+    _, netfn, cmd, req_data = driver.requests[0]
+    assert (netfn, cmd) == (0x04, 0x02)
+    assert req_data == data

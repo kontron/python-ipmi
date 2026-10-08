@@ -110,6 +110,22 @@ class Interface:
             return self.is_ipmc_accessible(target)
         raise NotImplementedError()
 
+    def is_system_interface(self, target: Target) -> bool:
+        """Check if requests to the target are sent over the system interface.
+
+        Some requests differ on the system interface, e.g. a Platform Event
+        request has to contain the Generator ID there, which is taken from
+        the requester address otherwise. False by default.
+
+        Args:
+            target: The target.
+
+        Returns:
+            True if requests to the target are sent directly to the BMC over
+            the system interface (KCS, SMIC, BT or SSIF), not bridged.
+        """
+        return False
+
     def is_ipmc_accessible(self, target: Target) -> bool:
         """Deprecated, the old name of :meth:`is_target_accessible`."""
         warnings.warn('is_ipmc_accessible is deprecated, use '

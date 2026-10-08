@@ -51,6 +51,10 @@ from . import sdr
 from .mixin import IpmiMixin
 
 
+# Generator ID of system management software (software ID 0x20), sent in a
+# Platform Event request over the system interface
+GENERATOR_ID_SMS = 0x41
+
 # THRESHOLD BASED STATES
 EVENT_READING_TYPE_CODE_THRESHOLD = 0x01
 # DMI-based "Usage States" STATES
@@ -333,8 +337,13 @@ class Sensor(IpmiMixin):
 
     def send_platform_event(self, sensor_type: int, sensor_number: int,
                             event_type: int, asserted: bool = True,
-                            event_data: list[int] | None = None) -> None:
+                            event_data: list[int] | None = None,
+                            generator_id: int = GENERATOR_ID_SMS) -> None:
         """Send a platform event message to the event receiver.
+
+        The Generator ID is only sent over the system interface, where the
+        request has to contain it. Otherwise the event receiver takes it from
+        the requester address.
 
         Args:
             sensor_type: The sensor type, one of the ``SENSOR_TYPE_*``
@@ -346,11 +355,15 @@ class Sensor(IpmiMixin):
             asserted: True for an assertion event, False for a deassertion
                 event.
             event_data: The event data bytes 1 - 3, ``[0]`` if None.
+            generator_id: The Generator ID sent over the system interface,
+                by default ``GENERATOR_ID_SMS`` (0x41) like ipmitool.
 
         Raises:
             CompletionCodeError: The device rejected the event.
         """
         req = create_request_by_name('PlatformEvent')
+        if self.interface.is_system_interface(self.target):
+            req.generator_id = generator_id
         req.sensor_type = sensor_type
         req.sensor_number = sensor_number
         req.event_type.type = event_type

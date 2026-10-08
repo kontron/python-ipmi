@@ -286,6 +286,21 @@ class TestIpmitool:
                                      '-D /dev/tty2:115200 -t 0x20 -l 0 '
                                      'raw 0x06 0x01')
 
+    @pytest.mark.parametrize('interface_type, target, system_interface', [
+        ('open', Target(), True),
+        ('open', Target(0x20), True),
+        ('open', Target(0x72), False),
+        ('open', Target(0x72, routing=[(0x20, 0x72, 0)]), True),
+        ('open', Target(0x72, routing=[(0x20, 0x20, 7), (0x20, 0x72, None)]),
+         False),
+        ('lan', Target(0x20), False),
+        ('lanplus', Target(0x20), False),
+    ])
+    def test_is_system_interface(self, interface_type, target,
+                                 system_interface):
+        interface = Ipmitool(interface_type=interface_type)
+        assert interface.is_system_interface(target) is system_interface
+
     def test_rmcp_ping_serial_terminal(self):
         interface = Ipmitool(interface_type='serial-terminal')
         with pytest.raises(RuntimeError, match='^rmcp_ping not supported'):

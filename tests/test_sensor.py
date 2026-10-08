@@ -2,10 +2,12 @@
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from pyipmi import interfaces, create_connection
 from pyipmi.msgs.sensor import (SetSensorThresholdsRsp, GetSensorThresholdsRsp,
                                 GetSensorReadingRsp, PlatformEventRsp)
-from pyipmi.sensor import (EVENT_READING_TYPE_SENSOR_SPECIFIC,
+from pyipmi.sensor import (EVENT_READING_TYPE_SENSOR_SPECIFIC, GENERATOR_ID_SMS,
                            SENSOR_TYPE_MODULE_HOT_SWAP)
 
 
@@ -82,6 +84,28 @@ class TestSensor:
         assert req.event_type.type == 0x6f
         assert req.event_type.dir == 0
         assert req.event_data == [0, 0xff, 0xff]
+
+    def test_send_platform_event_without_generator_id(self):
+        # the Generator ID is taken from the requester address
+        self.mock_send_recv.return_value = PlatformEventRsp()
+        self.ipmi.send_platform_event(SENSOR_TYPE_MODULE_HOT_SWAP, 1,
+                                      EVENT_READING_TYPE_SENSOR_SPECIFIC)
+        req = self.mock_send_recv.call_args[0][0]
+        assert req.generator_id is None
+
+    @pytest.mark.parametrize('kwargs, generator_id', [
+        ({}, GENERATOR_ID_SMS),
+        ({'generator_id': 0x21}, 0x21),
+    ])
+    def test_send_platform_event_system_interface(self, kwargs,
+                                                  generator_id):
+        self.ipmi.interface.is_system_interface = lambda target: True
+        self.mock_send_recv.return_value = PlatformEventRsp()
+        self.ipmi.send_platform_event(SENSOR_TYPE_MODULE_HOT_SWAP, 1,
+                                      EVENT_READING_TYPE_SENSOR_SPECIFIC,
+                                      **kwargs)
+        req = self.mock_send_recv.call_args[0][0]
+        assert req.generator_id == generator_id
 
     def test_get_sensor_thresholds(self):
 

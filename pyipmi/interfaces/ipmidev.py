@@ -199,6 +199,19 @@ class IpmiDev(Interface):
             return False
         return True
 
+    def is_system_interface(self, target: Target) -> bool:
+        """Check if requests to the target are sent to the system interface.
+
+        Args:
+            target: The target.
+
+        Returns:
+            True for the BMC itself, False for a target the BMC bridges the
+            requests to.
+        """
+        return isinstance(self._encode_address(target, 0),
+                          IpmiSystemInterfaceAddr)
+
     def _encode_address(self, target: Target, lun: int) -> ctypes.Structure:
         routing = target.routing or []
         if len(routing) > 2:

@@ -22,6 +22,7 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import Optional
+from . import Conditional
 from . import RemainingBytes
 from . import EventMessageRevision
 
@@ -301,11 +302,29 @@ class GetSensorReadingRsp(Message):
     )
 
 
+class _GeneratorId(Conditional):
+    """The Generator ID of a Platform Event request.
+
+    It is only part of the request if it is set (not None). The request
+    contains it when it is sent over the system interface, otherwise the
+    Generator ID is taken from the requester address. It can not be detected
+    when a request is decoded, so it is never decoded.
+    """
+
+    def __init__(self) -> None:
+        Conditional.__init__(self, lambda obj: obj.generator_id is not None,
+                             UnsignedInt('generator_id', 1))
+
+    def create(self) -> None:
+        return None
+
+
 @register_message_class
 class PlatformEventReq(Message):
     __cmdid__ = constants.CMDID_PLATFORM_EVENT
     __netfn__ = constants.NETFN_SENSOR_EVENT
     __fields__ = (
+        _GeneratorId(),
         EventMessageRevision(4),
         UnsignedInt('sensor_type', 1),
         UnsignedInt('sensor_number', 1),

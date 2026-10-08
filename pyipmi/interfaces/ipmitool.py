@@ -196,6 +196,23 @@ class Ipmitool(Interface):
 
         return accessible
 
+    def is_system_interface(self, target: Target) -> bool:
+        """Check if requests to the target are sent to the system interface.
+
+        Args:
+            target: The target.
+
+        Returns:
+            True for the BMC itself with the ``'open'`` interface type
+            (ipmitool ``-I open``), False otherwise.
+        """
+        if self._interface_type != 'open' or target is None:
+            return False
+        if target.routing is not None:
+            # with a routing of one hop the request goes to the BMC itself
+            return len(target.routing) == 1
+        return target.ipmb_address in (None, 0x20)
+
     def _parse_output(self, output: bytes) -> tuple[int | None, array | None]:
         cc, rsp = None, None
         values = []
