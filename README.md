@@ -50,7 +50,8 @@ For the native system interface the Linux IPMI driver is needed
 https://www.kernel.org/doc/html/latest/driver-api/ipmi.html
 
 For legacy RMCP, RMCP+ and system interface (KCS) using ipmitool as backend
-the installation of ipmitool is required.
+the installation of ipmitool is required. Any ipmitool 1.8.x works; the
+serial interface (`serial-terminal`) needs at least version 1.8.13.
 
 The native RMCP+ interface needs the [cryptography] package for
 encrypted sessions (AES-CBC-128, cipher suites 3 and 17):
