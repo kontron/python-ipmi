@@ -1106,7 +1106,18 @@ class SdrManagementControllerConfirmationRecord(SdrCommon):
 # SDR type 0xC0
 ##################################################
 class SdrOEMSensorRecord(SdrCommon):
-    """An OEM Record (type 0xC0), only its header is decoded."""
+    """An OEM Record (type 0xC0).
+
+    The record has no record key, its data starts with the manufacturer ID,
+    followed by the OEM data.
+
+    Attributes:
+        manufacturer_id (int | None): The manufacturer ID, None if the
+            record is too short for it.
+        manufacturer_name (str | None): The name of a well known
+            manufacturer, see :func:`pyipmi.constants.manufacturer_name`.
+        oem_data (bytes): The OEM data after the manufacturer ID.
+    """
 
     def __init__(self, data: ByteSequence | None = None,
                  next_id: int | None = None) -> None:
@@ -1129,8 +1140,13 @@ class SdrOEMSensorRecord(SdrCommon):
     def _from_data(self, data: ByteSequence) -> None:
         buffer = ByteBuffer(data[5:])
 
-        # record key bytes
-        self._common_record_key(buffer.pop_slice(3))
+        # no record key, the manufacturer ID, LS byte first
+        self.manufacturer_id: int | None = None
+        self.manufacturer_name: str | None = None
+        if len(buffer) >= 3:
+            self.manufacturer_id = buffer.pop_unsigned_int(3)
+            self.manufacturer_name = manufacturer_name(self.manufacturer_id)
+        self.oem_data = buffer.tobytes()
 
 
 # Any SDR type not known or not implemented

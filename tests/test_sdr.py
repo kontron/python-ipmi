@@ -9,7 +9,7 @@ from pyipmi.sdr import (SdrCommon, SdrFullSensorRecord, SdrCompactSensorRecord,
                         SdrEventOnlySensorRecord, SdrFruDeviceLocator,
                         SdrManagementControllerDeviceLocator,
                         SdrManagementControllerConfirmationRecord,
-                        SdrUnknownSensorRecord)
+                        SdrOEMSensorRecord, SdrUnknownSensorRecord)
 
 from .ipmi_helper import create_ipmi
 
@@ -469,7 +469,7 @@ def test_delete_sdr_reserves_the_sdr_repository():
 
 def test_get_repository_sdr_canceled_reservation(monkeypatch):
     monkeypatch.setattr('pyipmi.helper.time', SimpleNamespace(sleep=lambda s: None))
-    # OEM record 0x0001 with 3 bytes record key, the last record
+    # OEM record 0x0001 with the manufacturer ID 0x070020, the last record
     header = b'\x01\x00\x51\xc0\x03'
     ipmi = create_ipmi({
         'ReserveSdrRepository': [b'\x00\x01\x00', b'\x00\x02\x00'],
@@ -484,7 +484,7 @@ def test_get_repository_sdr_canceled_reservation(monkeypatch):
     })
     sdr = ipmi.get_repository_sdr(1)
     assert sdr.id == 1
-    assert sdr.number == 7
+    assert sdr.manufacturer_id == 0x070020
     names = [name for (name, _) in ipmi.requests]
     assert names == ['ReserveSdrRepositoryReq', 'GetSdrReq', 'GetSdrReq',
                      'ReserveSdrRepositoryReq', 'GetSdrReq', 'GetSdrReq']
@@ -498,7 +498,7 @@ def test_get_repository_sdr_canceled_reservation(monkeypatch):
 def test_sdr_repository_entries_canceled_reservation(monkeypatch):
     monkeypatch.setattr('pyipmi.helper.time',
                         SimpleNamespace(sleep=lambda s: None))
-    # two OEM records with 3 bytes record key
+    # two OEM records with only the manufacturer ID
     record_1 = b'\x01\x00\x51\xc0\x03' + b'\x20\x00\x07'
     record_2 = b'\x02\x00\x51\xc0\x03' + b'\x20\x00\x08'
     ipmi = create_ipmi({
@@ -514,7 +514,7 @@ def test_sdr_repository_entries_canceled_reservation(monkeypatch):
         ],
     })
     records = list(ipmi.sdr_repository_entries())
-    assert [r.number for r in records] == [7, 8]
+    assert [r.manufacturer_id for r in records] == [0x070020, 0x080020]
     # the next record is read with the new reservation right away, the
     # repository is reserved only once again
     names = [name for (name, _) in ipmi.requests]
@@ -522,3 +522,24 @@ def test_sdr_repository_entries_canceled_reservation(monkeypatch):
     reservations = [data[:2] for (name, data) in ipmi.requests
                     if name == 'GetSdrReq']
     assert reservations[2:] == [b'\x02\x00'] * 4
+
+
+def test_oem_record():
+    # IPMI 2.0 section 43.12: no record key, the manufacturer ID (here PICMG
+    # 0x00315a) is followed by the OEM data
+    data = [0x05, 0x00, 0x51, 0xc0, 0x06, 0x5a, 0x31, 0x00, 0x01, 0x02, 0x03]
+    record = SdrCommon.from_data(data)
+    assert isinstance(record, SdrOEMSensorRecord)
+    assert record.id == 5
+    assert record.manufacturer_id == 0x315a
+    assert record.manufacturer_name == 'PICMG'
+    assert record.oem_data == b'\x01\x02\x03'
+    assert not hasattr(record, 'number')
+
+
+def test_oem_record_too_short():
+    # a record without the complete manufacturer ID is still decoded
+    record = SdrCommon.from_data([0x05, 0x00, 0x51, 0xc0, 0x02, 0x5a, 0x31])
+    assert isinstance(record, SdrOEMSensorRecord)
+    assert record.manufacturer_id is None
+    assert record.oem_data == b'\x5a\x31'
