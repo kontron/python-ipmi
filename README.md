@@ -79,6 +79,61 @@ a temporary location and install:
 python setup.py install
 ```
 
+### Running from the source tree
+
+To work on the library or to use it directly from a git checkout, create a
+virtual environment and install the checkout in editable mode. Changes to the
+source are then active without reinstalling:
+
+```shell
+git clone https://github.com/kontron/python-ipmi.git
+cd python-ipmi
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -e '.[rmcpplus]'
+```
+
+This also installs the `ipmitool.py` command line tool and generates
+`pyipmi/version.py` with the version from `git describe`. Install the
+optional packages for the interfaces you need: `pyserial` for the
+openipmblink interface and `pyaardvark` for the Aardvark IPMB interface.
+
+To run the tests:
+
+```shell
+pip install pytest
+pytest
+```
+
+The CI also runs the linter [ruff], the type checker mypy and the spell
+checker codespell. They are configured in `ruff.toml` and `setup.cfg`, so
+they run without arguments. Use the versions pinned in
+`.github/workflows/lint.yml` to get the same results as the CI:
+
+```shell
+pip install ruff==0.16.10 mypy==2.4.0 codespell
+ruff check .
+mypy
+codespell
+```
+
+`ruff check --fix .` fixes many of the reported issues automatically.
+
+Alternatively, the checkout can be used without installing by adding its top
+directory to `PYTHONPATH`. Then `pyipmi` can be imported from any directory,
+e.g. by your own scripts or the ones in `examples/`, and the tool is started
+with `python3 -m pyipmi.ipmitool`:
+
+```shell
+export PYTHONPATH=/path/to/python-ipmi
+python3 -m pyipmi.ipmitool -V
+```
+
+The optional packages have to be installed separately then, e.g.
+`pip install cryptography` for encrypted RMCP+ sessions. The version is shown
+as `dev` as long as `pyipmi/version.py` has not been generated, e.g. by
+`python3 setup.py --version`.
+
 ### Package version
 
 The version of the package is taken from, in this order:
@@ -272,3 +327,4 @@ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 [Total Phase]: http://www.totalphase.com
 [ipmitool]: https://codeberg.org/IPMITool/ipmitool
 [cryptography]: https://pypi.org/project/cryptography/
+[ruff]: https://docs.astral.sh/ruff/
