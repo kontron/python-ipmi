@@ -561,3 +561,24 @@ def test_VitaSetPayloadModeRsp_encode():
     m.oem_response_3 = 1
     data = encode_message(m)
     assert data == b'\x00\x03\x01'
+
+
+def test_decode_rsp_vita_get_chassis_identifier():
+    # VSO identifier 0x03, then the identifier: 8-bit ASCII 'ABC'
+    m = pyipmi.msgs.vita.VitaGetChassisIdentifierRsp()
+    decode_message(m, b'\x00\x03\xc3ABC')
+    assert m.completion_code == 0x00
+    assert bytes(m.chassis_identifier) == b'\xc3ABC'
+
+
+def test_encode_req_vita_set_chassis_identifier():
+    m = pyipmi.msgs.vita.VitaSetChassisIdentifierReq()
+    m.chassis_identifier = b'\xc3ABC'
+    assert encode_message(m) == b'\x03\xc3ABC'
+
+
+def test_decode_rsp_vita_get_chassis_address_table_info():
+    m = pyipmi.msgs.vita.VitaGetChassisAddressTableInfoRsp()
+    decode_message(m, b'\x00\x03\x01\x02\x03')
+    assert m.completion_code == 0x00
+    assert bytes(m.data) == b'\x01\x02\x03'

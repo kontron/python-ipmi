@@ -21,6 +21,7 @@ from . import UnsignedInt
 from . import Bitfield
 from . import CompletionCode
 from . import Optional
+from . import RemainingBytes
 from . import GroupExtensionIdentifier
 
 
@@ -88,6 +89,8 @@ class VitaGetChassisAddressTableInfoRsp(VitaMessage):
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        # the address table info, not decoded
+        RemainingBytes('data'),
     )
 
 
@@ -139,6 +142,8 @@ class VitaGetChassisIdentifierRsp(VitaMessage):
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        # the type/length byte and the data of the chassis identifier
+        RemainingBytes('chassis_identifier'),
     )
 
 
@@ -148,6 +153,8 @@ class VitaSetChassisIdentifierReq(VitaMessage):
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        # the type/length byte and the data of the chassis identifier
+        RemainingBytes('chassis_identifier'),
     )
 
 
