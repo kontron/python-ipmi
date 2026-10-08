@@ -878,3 +878,37 @@ def test_multirecord_area_with_oem_c0_record():
     records = FruInventory(data).multirecord_area.records
     assert [type(r) for r in records] == [FruDataUnknown, FruDataUnknown]
     assert records[0].manufacturer_id == 0x3a98
+
+
+def _board_area_language(language_code, fields):
+    data = [1, 0, language_code, 0, 0, 0] + list(fields)
+    data += [0] * (-(len(data) + 1) % 8)
+    data[1] = (len(data) + 1) // 8
+    return bytes(data + [-sum(data) & 0xff])
+
+
+# manufacturer 'AB' in UTF-16, product name empty, serial number '12' in
+# 8-bit ASCII, part number, FRU file ID, a custom field 'C' in UTF-16
+_BOARD_UTF16_FIELDS = ([0xc4] + list('AB'.encode('utf-16-le')) + [0xc0]
+                       + [0xc2] + list(b'12') + [0xc0, 0xc0]
+                       + [0xc2] + list('C'.encode('utf-16-le')) + [0xc1])
+
+
+def test_board_area_utf16():
+    # FRU specification section 13: type 11b is 2-byte Unicode, LS byte
+    # first, if the language is not English
+    area = InventoryBoardInfoArea(_board_area_language(7,
+                                                       _BOARD_UTF16_FIELDS))
+    assert area.language_code == 7
+    assert area.manufacturer.string == 'AB'
+    # the serial number is always English
+    assert area.serial_number.string == '12'
+    assert [f.string for f in area.custom_mfg_info] == ['C']
+
+
+@pytest.mark.parametrize('language_code', [0, 25])
+def test_board_area_english(language_code):
+    # 8-bit ASCII + Latin 1 for English
+    fields = [0xc3] + list('AÄB'.encode('latin-1')) + [0xc0] * 4 + [0xc1]
+    area = InventoryBoardInfoArea(_board_area_language(language_code, fields))
+    assert area.manufacturer.string == 'AÄB'

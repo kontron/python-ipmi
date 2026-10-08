@@ -87,8 +87,14 @@ class TypeLengthString:
     TYPE_6BIT_ASCII = 2
     TYPE_ASCII_OR_UTF16 = 3
 
+    # the language codes of English, the other languages use UTF-16
+    LANGUAGE_CODES_ENGLISH = (0, 25)
+
     def __init__(self, data: Sequence[int] | None = None, offset: int = 0,
-                 force_lang_eng: bool = False, sdr: bool = False) -> None:
+                 force_lang_eng: bool = False, sdr: bool = False,
+                 language_code: int = 0) -> None:
+        self._sdr = sdr
+        self._language_code = language_code
         if data:
             self._from_data(data, offset, force_lang_eng)
 
@@ -110,16 +116,29 @@ class TypeLengthString:
             self.string = bytes(self.raw).decode('bcd+')
         elif self.field_type == self.TYPE_6BIT_ASCII:
             self.string = _unpack6bitascii(self.raw)
+        elif (self.field_type == self.TYPE_ASCII_OR_UTF16 and not self._sdr
+              and not force_lang_eng
+              and self._language_code not in self.LANGUAGE_CODES_ENGLISH):
+            # 2-byte Unicode, LS byte first, if the language is not English
+            self.string = bytes(self.raw).decode('utf-16-le', 'replace')
         else:
             chr_data = ''.join([chr(c) for c in self.raw])
             self.string = chr_data
 
 
 class FruTypeLengthString(TypeLengthString):
+    """A field of the FRU data in the TYPE/LENGTH BYTE FORMAT.
+
+    A field of type 11b is 8-bit ASCII + Latin 1 if the language code of
+    its area is English or `force_lang_eng` is set, e.g. for a serial
+    number, and 2-byte Unicode otherwise.
+    """
 
     def __init__(self, data: Sequence[int] | None = None, offset: int = 0,
-                 force_lang_eng: bool = False) -> None:
-        super().__init__(data, offset, force_lang_eng, sdr=False)
+                 force_lang_eng: bool = False,
+                 language_code: int = 0) -> None:
+        super().__init__(data, offset, force_lang_eng, sdr=False,
+                         language_code=language_code)
 
 
 class SdrTypeLengthString(TypeLengthString):

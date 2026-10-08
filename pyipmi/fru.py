@@ -38,6 +38,7 @@ from __future__ import annotations
 import array
 import codecs
 import datetime
+from functools import partial
 from collections.abc import Sequence
 
 from .errors import DecodingError, CompletionCodeError, RetryError, DataNotFound
@@ -522,7 +523,8 @@ def get_fru_inventory_from_file(filename: str,
 CUSTOM_FIELD_END = 0xc1
 
 
-def _decode_custom_fields(data: Sequence[int]) -> list[FruTypeLengthString]:
+def _decode_custom_fields(data: Sequence[int],
+                          language_code: int = 0) -> list[FruTypeLengthString]:
     offset = 0
     fields = []
     while True:
@@ -530,7 +532,8 @@ def _decode_custom_fields(data: Sequence[int]) -> list[FruTypeLengthString]:
             raise DecodingError('end of fields marker 0xc1 missing')
         if data[offset] == CUSTOM_FIELD_END:
             break
-        field = FruTypeLengthString(data, offset)
+        field = FruTypeLengthString(data, offset,
+                                    language_code=language_code)
         if offset + 1 + field.length > len(data):
             raise DecodingError('custom field exceeds the area')
         fields.append(field)
@@ -726,21 +729,25 @@ class InventoryBoardInfoArea(CommonInfoArea):
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         CommonInfoArea._from_data(self, data, ignore_checksum=ignore_checksum)
         self.language_code = data[2]
+        # the strings of type 11b depend on the language
+        field = partial(FruTypeLengthString, data,
+                        language_code=self.language_code)
         minutes = data[5] << 16 | data[4] << 8 | data[3]
         self.mfg_date = (datetime.datetime(1996, 1, 1)
                          + datetime.timedelta(minutes=minutes))
         offset = 6
-        self.manufacturer = FruTypeLengthString(data, offset)
+        self.manufacturer = field(offset)
         offset += self.manufacturer.length + 1
-        self.product_name = FruTypeLengthString(data, offset)
+        self.product_name = field(offset)
         offset += self.product_name.length + 1
-        self.serial_number = FruTypeLengthString(data, offset, True)
+        self.serial_number = field(offset, True)
         offset += self.serial_number.length + 1
-        self.part_number = FruTypeLengthString(data, offset)
+        self.part_number = field(offset)
         offset += self.part_number.length + 1
-        self.fru_file_id = FruTypeLengthString(data, offset, True)
+        self.fru_file_id = field(offset, True)
         offset += self.fru_file_id.length + 1
-        self.custom_mfg_info = _decode_custom_fields(data[offset:])
+        self.custom_mfg_info = _decode_custom_fields(data[offset:],
+                                                     self.language_code)
 
 
 class InventoryProductInfoArea(CommonInfoArea):
@@ -763,23 +770,27 @@ class InventoryProductInfoArea(CommonInfoArea):
     def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
         CommonInfoArea._from_data(self, data, ignore_checksum=ignore_checksum)
         self.language_code = data[2]
+        # the strings of type 11b depend on the language
+        field = partial(FruTypeLengthString, data,
+                        language_code=self.language_code)
         offset = 3
-        self.manufacturer = FruTypeLengthString(data, offset)
+        self.manufacturer = field(offset)
         offset += self.manufacturer.length + 1
-        self.name = FruTypeLengthString(data, offset)
+        self.name = field(offset)
         offset += self.name.length + 1
-        self.part_number = FruTypeLengthString(data, offset)
+        self.part_number = field(offset)
         offset += self.part_number.length + 1
-        self.version = FruTypeLengthString(data, offset)
+        self.version = field(offset)
         offset += self.version.length + 1
-        self.serial_number = FruTypeLengthString(data, offset, True)
+        self.serial_number = field(offset, True)
         offset += self.serial_number.length + 1
-        self.asset_tag = FruTypeLengthString(data, offset)
+        self.asset_tag = field(offset)
         offset += self.asset_tag.length + 1
-        self.fru_file_id = FruTypeLengthString(data, offset, True)
+        self.fru_file_id = field(offset, True)
         offset += self.fru_file_id.length + 1
         self.custom_mfg_info = list()
-        self.custom_mfg_info = _decode_custom_fields(data[offset:])
+        self.custom_mfg_info = _decode_custom_fields(data[offset:],
+                                                     self.language_code)
 
 
 class FruDataMultiRecord(FruData):
