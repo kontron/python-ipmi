@@ -1200,7 +1200,7 @@ class UpgradeImageHeaderRecord:
             VersionField(data[26:26 + VersionField.VERSION_WITH_AUX_FIELD_LEN])
 
         if self.oem_data_length:
-            self.oem_data = data[34:-1]
+            self.oem_data = data[34:34 + self.oem_data_length]
         # XXX checksum check
         self.checksum = data[34 + self.oem_data_length]
         self.length = 34 + self.oem_data_length+1

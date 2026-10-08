@@ -655,6 +655,19 @@ def test_upgrade_image_header_unknown_manufacturer():
     assert 'Manufacturer:     12345\n' in str(header)
 
 
+def test_upgrade_image_header_oem_data():
+    # a header with 2 bytes of OEM data, followed by the rest of the image
+    header = (b'PICMGFWU\x00\x04\x98\x3a\x00\xa5\x06' + bytes(5)
+              + b'\x02' + bytes(11) + b'\x02\x00' + b'\xaa\xbb')
+    header += bytes(((-sum(header)) & 0xff,))
+    data = header + b'\x01\x02\xfd' + bytes(16)
+    record = UpgradeImageHeaderRecord(data)
+    assert record.oem_data_length == 2
+    assert bytes(record.oem_data) == b'\xaa\xbb'
+    assert record.length == 37
+    assert 'OEM data len:     2' in str(record)
+
+
 def test_upgrade_action_record_invalid():
     with pytest.raises(HpmError):
         UpgradeActionRecord.create_from_data(b'\x04\x00\x00')
