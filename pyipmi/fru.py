@@ -525,8 +525,14 @@ CUSTOM_FIELD_END = 0xc1
 def _decode_custom_fields(data: Sequence[int]) -> list[FruTypeLengthString]:
     offset = 0
     fields = []
-    while data[offset] != CUSTOM_FIELD_END:
+    while True:
+        if offset >= len(data):
+            raise DecodingError('end of fields marker 0xc1 missing')
+        if data[offset] == CUSTOM_FIELD_END:
+            break
         field = FruTypeLengthString(data, offset)
+        if offset + 1 + field.length > len(data):
+            raise DecodingError('custom field exceeds the area')
         fields.append(field)
         offset += field.length + 1
     return fields

@@ -802,3 +802,34 @@ def test_multirecord_unknown_manufacturer():
     assert record.manufacturer_id == 12345
     assert record.manufacturer_name is None
     assert str(record) == 'd0 (OEM, manufacturer ID 12345): 39 30 00 01'
+
+
+def _board_area(fields):
+    """Return a board info area with the given fields after the date."""
+    data = [1, 0, 0, 0, 0, 0] + list(fields)
+    data += [0] * (-(len(data) + 1) % 8)
+    data[1] = (len(data) + 1) // 8
+    return bytes(data + [-sum(data) & 0xff])
+
+
+def test_board_area_without_end_marker():
+    # five empty fields and a custom field, but no end marker 0xc1
+    area = _board_area([0xc0] * 5 + [0xc2, 0x41, 0x42])
+    with pytest.raises(DecodingError):
+        InventoryBoardInfoArea(area)
+    with pytest.raises(DecodingError):
+        InventoryBoardInfoArea(area, ignore_checksum=True)
+
+
+def test_board_area_custom_field_exceeds_area():
+    # the custom field declares 20 bytes, more than the area has
+    area = _board_area([0xc0] * 5 + [0xd4, 0x41, 0x42])
+    with pytest.raises(DecodingError):
+        InventoryBoardInfoArea(area)
+
+
+def test_board_area_custom_fields():
+    area = _board_area([0xc0] * 5 + [0xc2, 0x41, 0x42, 0xc2, 0x43, 0x44,
+                                     0xc1])
+    fields = InventoryBoardInfoArea(area).custom_mfg_info
+    assert [f.string for f in fields] == ['AB', 'CD']
