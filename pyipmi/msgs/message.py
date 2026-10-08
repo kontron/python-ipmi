@@ -159,9 +159,27 @@ class CompletionCode(UnsignedInt):
 
 
 class UnsignedIntMask(UnsignedInt):
+    """An unsigned integer of the bits of a mask, the other bits are reserved.
+
+    The reserved bits are ignored on decoding and must not be set on
+    encoding.
+    """
+
     def __init__(self, name: str, length: int, mask: int,
                  default: int | None = None) -> None:
         UnsignedInt.__init__(self, name, length, default)
+        self.mask = mask
+
+    def encode(self, obj: Message, data: ByteBuffer) -> None:
+        value = getattr(obj, self.name)
+        if value & ~self.mask:
+            raise EncodingError(f'Field "{self.name}": value 0x{value:x} '
+                                f'has bits outside of 0x{self.mask:x}')
+        UnsignedInt.encode(self, obj, data)
+
+    def decode(self, obj: Message, data: ByteBuffer) -> None:
+        UnsignedInt.decode(self, obj, data)
+        setattr(obj, self.name, getattr(obj, self.name) & self.mask)
 
 
 class Timestamp(UnsignedInt):

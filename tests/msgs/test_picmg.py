@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
+import pytest
+
 import pyipmi.msgs.bmc
 
 from pyipmi.msgs import constants, decode_message, encode_message
 from pyipmi.msgs.picmg import PICMG_IDENTIFIER
+from pyipmi.errors import EncodingError
 
 
 def test_get_picmg_properties_req():
@@ -122,6 +125,27 @@ def test_decode_rsp_local_control_state():
     assert m.local_function == 0xff
     assert m.local_on_duration == 0
     assert m.local_color == 2
+
+
+def test_decode_rsp_local_color_reserved_bits():
+    # the reserved bits 7:4 of the color are ignored
+    m = pyipmi.msgs.picmg.GetFruLedStateRsp()
+    decode_message(m, b'\x00\x00\x01\xff\x00\xf2')
+    assert m.local_color == 2
+
+
+def test_encode_req_set_fru_led_state_color():
+    m = pyipmi.msgs.picmg.SetFruLedStateReq()
+    m.fru_id = 1
+    m.led_id = 2
+    m.led_function = 0xff
+    m.color = 0x02
+    assert encode_message(m) == b'\x00\x01\x02\xff\x00\x02'
+
+    # the color has 4 bits, the others are reserved
+    m.color = 0x12
+    with pytest.raises(EncodingError):
+        encode_message(m)
 
 
 def test_decode_rsp_override_mode():
