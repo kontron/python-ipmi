@@ -335,14 +335,20 @@ def format_sdr_value(record: pyipmi.sdr.SdrFullSensorRecord, raw: int | None,
     return f'[0x{raw:02x}] {value}'
 
 
-def sdr_sensor_type(record: pyipmi.sdr.SdrCommon) -> int:
+# The records of a sensor
+SdrSensorRecord = (pyipmi.sdr.SdrFullSensorRecord
+                   | pyipmi.sdr.SdrCompactSensorRecord
+                   | pyipmi.sdr.SdrEventOnlySensorRecord)
+
+
+def sdr_sensor_type(record: SdrSensorRecord) -> int:
     # the event-only record has another attribute name for the sensor type
-    if hasattr(record, 'sensor_type_code'):
-        return record.sensor_type_code
-    return record.sensor_type
+    if isinstance(record, pyipmi.sdr.SdrEventOnlySensorRecord):
+        return record.sensor_type
+    return record.sensor_type_code
 
 
-def sdr_event_strings(record: pyipmi.sdr.SdrCommon, mask: int) -> list[str]:
+def sdr_event_strings(record: SdrSensorRecord, mask: int) -> list[str]:
     """Return the descriptions of the event offsets or states of a mask."""
     strings = []
     for offset in range(15):
@@ -354,14 +360,14 @@ def sdr_event_strings(record: pyipmi.sdr.SdrCommon, mask: int) -> list[str]:
     return strings
 
 
-def sdr_show_sensor(s: pyipmi.sdr.SdrCommon) -> None:
+def sdr_show_sensor(s: SdrSensorRecord) -> None:
     """Print the fields of a full, compact or event-only sensor record."""
     sensor_type = sdr_sensor_type(s)
     event_type = s.event_reading_type_code
     threshold_based = (event_type
                        == pyipmi.sensor.EVENT_READING_TYPE_CODE_THRESHOLD)
     unit = ''
-    if hasattr(s, 'units_1'):
+    if not isinstance(s, pyipmi.sdr.SdrEventOnlySensorRecord):
         unit = pyipmi.sdr.units_to_string(s.units_1, s.units_2, s.units_3)
 
     print_sdr_field('Sensor Owner',
@@ -373,7 +379,7 @@ def sdr_show_sensor(s: pyipmi.sdr.SdrCommon) -> None:
     type_name = pyipmi.sensor.event_reading_type_to_string(event_type)
     print_sdr_field('Event/Reading Type', f'[0x{event_type:02x}] {type_name}')
     # the values of a full sensor record are printed with the unit
-    if unit and not isinstance(s, pyipmi.sdr.SdrFullSensorRecord):
+    if unit and isinstance(s, pyipmi.sdr.SdrCompactSensorRecord):
         print_sdr_field('Unit', f'[0x{s.units_1:02x} 0x{s.units_2:02x} '
                                 f'0x{s.units_3:02x}] {unit}')
 
