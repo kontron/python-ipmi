@@ -258,3 +258,89 @@ def test_clear_sel(monkeypatch):
         ('ClearSelReq', b'\x34\x12CLR\xaa'),
         ('ClearSelReq', b'\x34\x12CLR\x00'),
         ('ClearSelReq', b'\x34\x12CLR\x00')]
+
+
+def sel_entry(record_type=0x02, timestamp=0x12345678, generator_id=0x0020,
+              sensor_type=0x01, sensor_number=4, event_desc=0x01,
+              event_data=(0x52, 0x00, 0x00)):
+    data = (b'\x01\x00' + bytes([record_type])
+            + timestamp.to_bytes(4, 'little')
+            + generator_id.to_bytes(2, 'little')
+            + bytes([0x04, sensor_type, sensor_number, event_desc])
+            + bytes(event_data))
+    return SelEntry(ByteBuffer(data))
+
+
+@pytest.mark.parametrize('sensor_type, string', [
+    (0x01, 'Temperature'),
+    (0x2c, 'FRU State'),
+    (0xf0, 'FRU Hot Swap'),
+    (0xc5, 'OEM (0xc5)'),
+    (0x00, 'Unknown (0x00)'),
+])
+def test_sel_entry_sensor_type_to_string(sensor_type, string):
+    assert SelEntry.sensor_type_to_string(sensor_type) == string
+
+
+@pytest.mark.parametrize('record_type, timestamp, string', [
+    (0x02, 0x68201000, '2025-05-11 02:48:32'),
+    (0x02, 0x10, 'Pre-Init 16s'),
+    (0x02, 0x20000000, 'Pre-Init 536870912s'),
+    (0x02, 0xffffffff, 'Unspecified'),
+    (0xc0, 0x68201000, '2025-05-11 02:48:32'),
+    (0xe0, 0x68201000, 'Unspecified'),
+])
+def test_sel_entry_timestamp_to_string(record_type, timestamp, string):
+    entry = sel_entry(record_type=record_type, timestamp=timestamp)
+    assert entry.timestamp_to_string() == string
+
+
+@pytest.mark.parametrize('generator_id, string', [
+    (0x0020, 'IPMB 0x20 LUN 0'),
+    (0x0282, 'IPMB 0x82 LUN 2'),
+    (0x0041, 'Software 0x20'),
+    (0x7020, 'IPMB 0x20 LUN 0 channel 7'),
+])
+def test_sel_entry_generator_to_string(generator_id, string):
+    entry = sel_entry(generator_id=generator_id)
+    assert entry.generator_to_string() == string
+
+
+@pytest.mark.parametrize('sensor_type, event_desc, event_data, string', [
+    # generic threshold event
+    (0x01, 0x01, (0x59, 0, 0), 'Upper Critical going high'),
+    # generic discrete event
+    (0x25, 0x08, (0x01, 0, 0), 'Device Present'),
+    # sensor-specific events
+    (0x08, 0x6f, (0x01, 0, 0), 'Power Supply Failure Detected'),
+    (0xf0, 0x6f, (0x04, 0, 0), 'M4 - FRU Active'),
+    # the direction is not part of the event type
+    (0x2c, 0xef, (0x04, 0, 0), 'FRU Active'),
+    # unknown offsets and types
+    (0x01, 0x01, (0x0c, 0, 0), 'Event Type 0x01 Offset 0x0c'),
+    (0x23, 0x6f, (0x04, 0, 0), 'Event Type 0x6f Offset 0x04'),
+    (0xc0, 0x6f, (0x01, 0, 0), 'Event Type 0x6f Offset 0x01'),
+    (0xc0, 0x70, (0x01, 0, 0), 'OEM Event Type 0x70 Offset 0x01'),
+])
+def test_sel_entry_event_to_string(sensor_type, event_desc, event_data,
+                                   string):
+    entry = sel_entry(sensor_type=sensor_type, event_desc=event_desc,
+                      event_data=event_data)
+    assert entry.event_to_string() == string
+
+
+def test_sel_entry_direction_to_string():
+    assert sel_entry(event_desc=0x01).direction_to_string() == 'Asserted'
+    assert sel_entry(event_desc=0x81).direction_to_string() == 'Deasserted'
+
+
+@pytest.mark.parametrize('event_desc, event_data, values', [
+    (0x01, (0x59, 0x55, 0x50), (0x55, 0x50)),
+    (0x01, (0x49, 0x55, 0x50), (0x55, None)),
+    (0x01, (0x19, 0x55, 0x50), (None, 0x50)),
+    (0x01, (0x09, 0x55, 0x50), (None, None)),
+    (0x6f, (0x59, 0x55, 0x50), (None, None)),
+])
+def test_sel_entry_threshold_event_values(event_desc, event_data, values):
+    entry = sel_entry(event_desc=event_desc, event_data=event_data)
+    assert entry.threshold_event_values() == values
