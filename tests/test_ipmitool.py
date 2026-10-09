@@ -13,6 +13,7 @@ from pyipmi.errors import CompletionCodeError
 from pyipmi.msgs import create_response_by_name, decode_message
 from pyipmi.ipmitool import build_parser, log_level, parse_interface_options
 from pyipmi.sdr import SdrCommon, SdrCompactSensorRecord, SdrFullSensorRecord
+from pyipmi.sel import SelEntry
 
 from .ipmi_helper import create_ipmi
 
@@ -822,3 +823,97 @@ class TestSdrList:
         ipmitool.print_sdr_list_entry(3, None, 'Other', None, None)
         assert capsys.readouterr().out == (
             '0x0003 |  na | Other              |      None | na\n')
+
+
+class TestSelList:
+
+    ENTRIES = [
+        # threshold event of the temperature sensor 4 of the BMC
+        bytes([0x01, 0x00, 0x02, 0x00, 0x10, 0x20, 0x68, 0x20, 0x00,
+               0x04, 0x01, 0x04, 0x01, 0x59, 0x55, 0x50]),
+        # sensor-specific deassertion of the FRU hot swap sensor 0
+        bytes([0x02, 0x00, 0x02, 0x10, 0x00, 0x00, 0x00, 0x82, 0x00,
+               0x04, 0xf0, 0x00, 0xef, 0x02, 0x01, 0xff]),
+        # OEM non-timestamped record
+        bytes([0x03, 0x00, 0xe0] + list(range(1, 14))),
+    ]
+
+    def ipmi(self):
+        ipmi = MagicMock()
+        ipmi.sel_entries.return_value = [SelEntry(e) for e in self.ENTRIES]
+        ipmi.get_device_id.return_value.supports_function.return_value = True
+        record = SdrFullSensorRecord()
+        record.id = 1
+        record.owner_id = 0x20
+        record.owner_lun = 0
+        record.number = 4
+        record.device_id_string = 'CPU Temp'
+        record.analog_data_format = 0
+        record.m = 1
+        record.b = 0
+        record.k1 = 0
+        record.k2 = 0
+        record.linearization = 0
+        ipmi.sdr_repository_entries.return_value = [record]
+        return ipmi
+
+    def test_options(self):
+        parser = build_parser()
+        args = parser.parse_args(['sel', 'list'])
+        assert not args.details and not args.sdr
+        args = parser.parse_args(['sel', 'list', '-d', '--sdr'])
+        assert args.details and args.sdr
+        # the global option for the log level is independent
+        assert not args.verbose
+        args = parser.parse_args(['-v', 'sel', 'list'])
+        assert args.verbose and not args.details
+
+    def test_list(self, capsys):
+        ipmi = self.ipmi()
+        ipmitool.cmd_sel_list(ipmi, argparse.Namespace(details=False,
+                                                       sdr=False))
+        ipmi.sdr_repository_entries.assert_not_called()
+        assert capsys.readouterr().out.splitlines() == [
+            '0x0001 | 2025-05-11 02:48:32 | Temperature #0x04 '
+            '| Upper Critical going high | Asserted '
+            '| Reading 0x55, Threshold 0x50',
+            '0x0002 | Pre-Init 16s        | FRU Hot Swap #0x00 '
+            '| M2 - FRU Activation Request | Deasserted',
+            '0x0003 | Unspecified         | OEM non-timestamped (0xe0) '
+            '| 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d',
+        ]
+
+    def test_list_sdr(self, capsys):
+        ipmitool.cmd_sel_list(self.ipmi(), argparse.Namespace(details=False,
+                                                              sdr=True))
+        lines = capsys.readouterr().out.splitlines()
+        assert lines[0] == ('0x0001 | 2025-05-11 02:48:32 '
+                            '| Temperature CPU Temp '
+                            '| Upper Critical going high | Asserted '
+                            '| Reading 85.000, Threshold 80.000')
+        # the sensor of another owner has no record
+        assert 'FRU Hot Swap #0x00' in lines[1]
+
+    def test_list_details(self, capsys):
+        ipmitool.cmd_sel_list(self.ipmi(), argparse.Namespace(details=True,
+                                                              sdr=True))
+        out = capsys.readouterr().out
+        assert ('SEL Record ID:   0x0001\n'
+                'Record Type:     System Event\n'
+                'Timestamp:       2025-05-11 02:48:32\n'
+                'Generator ID:    0x0020 (IPMB 0x20 LUN 0)\n'
+                'EvM Revision:    0x04\n'
+                'Sensor Type:     0x01 (Temperature)\n'
+                'Sensor Number:   0x04\n'
+                'Sensor Name:     CPU Temp\n'
+                'Event Type:      0x01\n'
+                'Event Direction: Asserted\n'
+                'Event Data:      59 55 50\n'
+                'Description:     Upper Critical going high\n'
+                'Values:          Reading 85.000, Threshold 80.000\n'
+                'Raw Data:        01 00 02 00 10 20 68 20 00 04 01 04 01 59 '
+                '55 50\n') in out
+        assert ('SEL Record ID:   0x0003\n'
+                'Record Type:     OEM non-timestamped (0xe0)\n'
+                'Timestamp:       Unspecified\n'
+                'Raw Data:        03 00 e0 01 02') in out

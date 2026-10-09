@@ -127,9 +127,120 @@ def cmd_bmc_reset(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
         ipmi.warm_reset()
 
 
+def sel_sensor_records(ipmi: pyipmi.Ipmi) -> dict[tuple[int, int, int],
+                                                  pyipmi.sdr.SdrCommon]:
+    """Return the sensor records by owner ID, owner LUN and sensor number.
+
+    The records are read from the SDR repository, or from the device SDR
+    repository of a device without SDR repository.
+    """
+    device_id = ipmi.get_device_id()
+    if device_id.supports_function('sdr_repository'):
+        records = ipmi.sdr_repository_entries()
+    elif device_id.supports_function('sensor'):
+        records = ipmi.device_sdr_entries()
+    else:
+        return {}
+    return {(s.owner_id, s.owner_lun, s.number): s for s in records
+            if hasattr(s, 'number') and hasattr(s, 'owner_id')}
+
+
+def sel_entry_sensor(entry: pyipmi.sel.SelEntry,
+                     records: dict[tuple[int, int, int],
+                                   pyipmi.sdr.SdrCommon]
+                     ) -> pyipmi.sdr.SdrCommon | None:
+    """Return the sensor record of the sensor that generated an event."""
+    owner_id = entry.generator_id & 0xff
+    owner_lun = (entry.generator_id >> 8) & 0x3
+    return records.get((owner_id, owner_lun, entry.sensor_number))
+
+
+def sel_entry_values(entry: pyipmi.sel.SelEntry,
+                     record: pyipmi.sdr.SdrCommon | None) -> str | None:
+    """Return the trigger reading and threshold of a threshold event.
+
+    The raw values are converted with the full sensor record, if given.
+    """
+    (reading, threshold) = entry.threshold_event_values()
+    if reading is None and threshold is None:
+        return None
+
+    def convert(raw: int) -> str:
+        if isinstance(record, pyipmi.sdr.SdrFullSensorRecord):
+            return format_analog_value(record.convert_sensor_raw_to_value(raw))
+        return f'0x{raw:02x}'
+
+    values = []
+    if reading is not None:
+        values.append(f'Reading {convert(reading)}')
+    if threshold is not None:
+        values.append(f'Threshold {convert(threshold)}')
+    return ', '.join(values)
+
+
+def sel_entry_sensor_name(entry: pyipmi.sel.SelEntry,
+                          record: pyipmi.sdr.SdrCommon | None) -> str:
+    sensor_type = entry.sensor_type_to_string(entry.sensor_type)
+    name = getattr(record, 'device_id_string', None)
+    if name:
+        return f'{sensor_type} {name}'
+    return f'{sensor_type} #0x{entry.sensor_number:02x}'
+
+
+def print_sel_entry(entry: pyipmi.sel.SelEntry,
+                    record: pyipmi.sdr.SdrCommon | None) -> None:
+    columns = [f'0x{entry.record_id:04x}', f'{entry.timestamp_to_string():<19}']
+    if entry.type == pyipmi.sel.SelEntry.TYPE_SYSTEM_EVENT:
+        columns.append(sel_entry_sensor_name(entry, record))
+        columns.append(entry.event_to_string())
+        columns.append(entry.direction_to_string())
+        values = sel_entry_values(entry, record)
+        if values is not None:
+            columns.append(values)
+    else:
+        # the bytes after the timestamp (or the record type) are OEM data
+        start = 7 if entry.is_timestamped() else 3
+        columns.append(pyipmi.sel.SelEntry.type_to_string(entry.type) or '')
+        columns.append(' '.join(f'{b:02x}' for b in entry.data[start:]))
+    print(' | '.join(columns))
+
+
+def print_sel_entry_details(entry: pyipmi.sel.SelEntry,
+                            record: pyipmi.sdr.SdrCommon | None) -> None:
+    raw = ' '.join(f'{b:02x}' for b in entry.data)
+    print(f'SEL Record ID:   0x{entry.record_id:04x}')
+    print(f'Record Type:     {pyipmi.sel.SelEntry.type_to_string(entry.type)}')
+    print(f'Timestamp:       {entry.timestamp_to_string()}')
+    if entry.type == pyipmi.sel.SelEntry.TYPE_SYSTEM_EVENT:
+        print(f'Generator ID:    0x{entry.generator_id:04x} '
+              f'({entry.generator_to_string()})')
+        print(f'EvM Revision:    0x{entry.evm_rev:02x}')
+        print(f'Sensor Type:     0x{entry.sensor_type:02x} '
+              f'({entry.sensor_type_to_string(entry.sensor_type)})')
+        print(f'Sensor Number:   0x{entry.sensor_number:02x}')
+        name = getattr(record, 'device_id_string', None)
+        if name:
+            print(f'Sensor Name:     {name}')
+        print(f'Event Type:      0x{entry.event_type:02x}')
+        print(f'Event Direction: {entry.direction_to_string()}')
+        print(f'Event Data:      '
+              f"{' '.join(f'{b:02x}' for b in entry.event_data)}")
+        print(f'Description:     {entry.event_to_string()}')
+        values = sel_entry_values(entry, record)
+        if values is not None:
+            print(f'Values:          {values}')
+    print(f'Raw Data:        {raw}')
+    print()
+
+
 def cmd_sel_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    records = sel_sensor_records(ipmi) if args.sdr else {}
+    print_entry = print_sel_entry_details if args.details else print_sel_entry
     for entry in ipmi.sel_entries():
-        print(entry)
+        record = None
+        if entry.type == pyipmi.sel.SelEntry.TYPE_SYSTEM_EVENT:
+            record = sel_entry_sensor(entry, records)
+        print_entry(entry, record)
 
 
 def cmd_sel_clear(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -1212,7 +1323,12 @@ def build_parser() -> argparse.ArgumentParser:
     group.command('showall', cmd_sdr_show_all, 'Show detail for all SDRs')
 
     group = commands.group('sel', 'Print System Event Log (SEL)')
-    group.command('list', cmd_sel_list, 'List all SEL entries')
+    p = group.command('list', cmd_sel_list, 'List all SEL entries')
+    p.add_argument('-d', '--details', action='store_true',
+                   help='print all fields of the entries')
+    p.add_argument('-s', '--sdr', action='store_true',
+                   help='read the SDRs to print the sensor names and the '
+                        'converted values of threshold events')
     group.command('clear', cmd_sel_clear, 'Clear SEL')
 
     group = commands.group('sensor', 'Sensor commands')
