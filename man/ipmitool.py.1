@@ -1,4 +1,4 @@
-.TH IPMITOOL.PY "1" "2026\-10\-08" "python\-ipmi" "python\-ipmi manual"
+.TH IPMITOOL.PY "1" "2026\-10\-09" "python\-ipmi" "python\-ipmi manual"
 .SH NAME
 ipmitool.py \- pure python IPMI tool
 .SH SYNOPSIS
@@ -319,9 +319,18 @@ List all SEL entries
 Clear SEL
 
 .SH COMMAND \fI\,'ipmitool.py sel list'\/\fR
-usage: ipmitool.py sel list [\-h]
+usage: ipmitool.py sel list [\-h] [\-d] [\-s]
 
 List all SEL entries
+
+.SH OPTIONS \fI\,'ipmitool.py sel list'\/\fR
+.TP
+\fB\-d\fR, \fB\-\-details\fR
+print all fields of the entries
+
+.TP
+\fB\-s\fR, \fB\-\-sdr\fR
+read the SDRs to print the sensor names and the converted values of threshold events
 
 .SH COMMAND \fI\,'ipmitool.py sel clear'\/\fR
 usage: ipmitool.py sel clear [\-h]
