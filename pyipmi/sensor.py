@@ -143,7 +143,7 @@ SENSOR_TYPE_VITA_PAYLOAD_TEST_STATUS = 0xf5
 SENSOR_TYPE_VITA_PAYLOAD_MODE = 0xf7
 SENSOR_TYPE_VITA_IPMC_RESET_TYPE = 0xf8
 
-# Names of the sensor types (IPMI v2.0 table 42-3, PICMG 3.0 table 3-3)
+# Names of the sensor types (IPMI v2.0 table 42-3)
 SENSOR_TYPE_NAMES = {
     0x01: 'Temperature',
     0x02: 'Voltage',
@@ -189,11 +189,27 @@ SENSOR_TYPE_NAMES = {
     0x2a: 'Session Audit',
     0x2b: 'Version Change',
     0x2c: 'FRU State',
+}
+
+# Names of the OEM sensor types defined by PICMG 3.0 (table 3-3) and by
+# VITA 46.11. Both use the same values with different meanings.
+PICMG_SENSOR_TYPE_NAMES = {
     0xf0: 'FRU Hot Swap',
     0xf1: 'IPMB Physical Link',
     0xf2: 'Module Hot Swap',
     0xf3: 'Power Channel Notification',
     0xf4: 'Telco Alarm Input',
+}
+
+VITA_SENSOR_TYPE_NAMES = {
+    0xf0: 'FRU State',
+    0xf1: 'IPMB Link',
+    0xf2: 'FRU Health',
+    0xf3: 'FRU Temperature',
+    0xf4: 'Payload Test Results',
+    0xf5: 'Payload Test Status',
+    0xf7: 'Payload Mode',
+    0xf8: 'IPMC Reset',
 }
 
 # The event offsets of the generic event/reading types (IPMI v2.0 table
@@ -498,15 +514,23 @@ def sensor_type_to_string(sensor_type: int) -> str:
         sensor_type: The sensor type.
 
     Returns:
-        The name of the sensor type, the type as hex number for an unknown
-        or OEM type.
+        The name of the sensor type. An OEM type defined by PICMG or VITA
+        gets the names of both specifications, e.g. 'PICMG FRU Hot Swap /
+        VITA FRU State'. Any other unknown or OEM type is returned as hex
+        number.
     """
     name = SENSOR_TYPE_NAMES.get(sensor_type)
-    if name is None:
-        if sensor_type >= 0xc0:
-            return f'OEM (0x{sensor_type:02x})'
-        return f'Unknown (0x{sensor_type:02x})'
-    return name
+    if name is not None:
+        return name
+    names = [f'{spec} {table[sensor_type]}' for (spec, table) in
+             (('PICMG', PICMG_SENSOR_TYPE_NAMES),
+              ('VITA', VITA_SENSOR_TYPE_NAMES))
+             if sensor_type in table]
+    if names:
+        return ' / '.join(names)
+    if sensor_type >= 0xc0:
+        return f'OEM (0x{sensor_type:02x})'
+    return f'Unknown (0x{sensor_type:02x})'
 
 
 def event_reading_type_to_string(event_reading_type: int) -> str:

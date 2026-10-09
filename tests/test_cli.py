@@ -718,7 +718,7 @@ class TestSdrShow:
             'Record Type:            [0x02] Compact Sensor Record\n'
             'Name:                   A4:Pres SFP-1\n'
             'Entity:                 [0xc1 0x64] PICMG AdvancedMC '
-            'Module\n'
+            'Module / VITA XMC Mezzanine Card\n'
             'Sensor Owner:           [0x82 0x00] IPMB 0x82 LUN 0\n'
             'Sensor Number:          0xd3\n'
             'Sensor Type:            [0x21] Slot / Connector\n'
@@ -1164,7 +1164,8 @@ class TestSelList:
             '0x0001 | 2025-05-11 02:48:32 | Temperature #0x04 '
             '| Upper Critical going high | Asserted '
             '| Reading 0x55, Threshold 0x50',
-            '0x0002 | Pre-Init 16s        | FRU Hot Swap #0x00 '
+            '0x0002 | Pre-Init 16s        '
+            '| PICMG FRU Hot Swap / VITA FRU State #0x00 '
             '| M2 - FRU Activation Request | Deasserted',
             '0x0003 | Unspecified         | OEM non-timestamped (0xe0) '
             '| 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d',
@@ -1180,7 +1181,7 @@ class TestSelList:
                             '| Reading [0x55] 85.000, '
                             'Threshold [0x50] 80.000')
         # the sensor of another owner has no record
-        assert 'FRU Hot Swap #0x00' in lines[1]
+        assert 'VITA FRU State #0x00' in lines[1]
 
     def test_list_details(self, capsys):
         cli.cmd_sel_list(self.ipmi(), argparse.Namespace(details=True,

@@ -275,7 +275,8 @@ def sel_entry(record_type=0x02, timestamp=0x12345678, generator_id=0x0020,
 @pytest.mark.parametrize('sensor_type, string', [
     (0x01, 'Temperature'),
     (0x2c, 'FRU State'),
-    (0xf0, 'FRU Hot Swap'),
+    (0xf0, 'PICMG FRU Hot Swap / VITA FRU State'),
+    (0xf5, 'VITA Payload Test Status'),
     (0xc5, 'OEM (0xc5)'),
     (0x00, 'Unknown (0x00)'),
 ])

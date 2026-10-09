@@ -559,7 +559,8 @@ def test_sdr_type_to_string(sdr_type, string):
 @pytest.mark.parametrize('entity_id, string', [
     (0x03, 'Processor'),
     (0x07, 'System Board'),
-    (0xa0, 'PICMG Front Board'),
+    (0xa0, 'PICMG Front Board / VITA Front Loading VPX Plug-In Module'),
+    (0xc2, 'PICMG MicroTCA Carrier Hub'),
     (0x90, 'Chassis-specific'),
     (0xb0, 'Board-set specific'),
     (0xd0, 'OEM'),

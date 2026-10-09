@@ -179,7 +179,8 @@ class TestSensor:
 
 @pytest.mark.parametrize('sensor_type, string', [
     (0x01, 'Temperature'),
-    (0xf0, 'FRU Hot Swap'),
+    (0xf0, 'PICMG FRU Hot Swap / VITA FRU State'),
+    (0xf5, 'VITA Payload Test Status'),
     (0xc5, 'OEM (0xc5)'),
     (0x00, 'Unknown (0x00)'),
 ])

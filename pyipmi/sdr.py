@@ -103,7 +103,7 @@ SDR_TYPE_NAMES = {
     SDR_TYPE_OEM_SENSOR_RECORD: 'OEM Record',
 }
 
-# Names of the entity IDs (IPMI v2.0 table 43-13, PICMG 3.0 table 3-5)
+# Names of the entity IDs (IPMI v2.0 table 43-13)
 ENTITY_ID_NAMES = {
     0x00: 'Unspecified',
     0x01: 'Other',
@@ -163,14 +163,30 @@ ENTITY_ID_NAMES = {
     0x40: 'Air Inlet',
     0x41: 'Processor / CPU',
     0x42: 'Baseboard',
-    0xa0: 'PICMG Front Board',
-    0xc0: 'PICMG Rear Transition Module',
-    0xc1: 'PICMG AdvancedMC Module',
-    0xc2: 'PICMG MicroTCA Carrier Hub',
-    0xf0: 'PICMG Shelf Management Controller',
-    0xf1: 'PICMG Filtration Unit',
-    0xf2: 'PICMG Shelf FRU Information',
-    0xf3: 'PICMG Alarm Panel',
+}
+
+# Names of the chassis-specific, board-set specific and OEM entity IDs
+# defined by PICMG 3.0 (table 3-5) and by VITA 46.11. Both use the same
+# values for similar entities.
+PICMG_ENTITY_ID_NAMES = {
+    0xa0: 'Front Board',
+    0xc0: 'Rear Transition Module',
+    0xc1: 'AdvancedMC Module',
+    0xc2: 'MicroTCA Carrier Hub',
+    0xf0: 'Shelf Management Controller',
+    0xf1: 'Filtration Unit',
+    0xf2: 'Shelf FRU Information',
+    0xf3: 'Alarm Panel',
+}
+
+VITA_ENTITY_ID_NAMES = {
+    0xa0: 'Front Loading VPX Plug-In Module',
+    0xc0: 'Rear Transition Module',
+    0xc1: 'XMC Mezzanine Card',
+    0xf0: 'Chassis Management Controller',
+    0xf1: 'Filtration Unit',
+    0xf2: 'Chassis FRU Information',
+    0xf3: 'Alarm Panel',
 }
 
 # Names of the sensor unit type codes (IPMI v2.0 table 43-15)
@@ -216,12 +232,20 @@ def entity_id_to_string(entity_id: int) -> str:
         entity_id: The entity ID.
 
     Returns:
-        The name of the entity, the kind of the range for an ID that is
-        chassis-specific, board-set specific or OEM.
+        The name of the entity. An ID defined by PICMG or VITA gets the
+        names of both specifications, e.g. 'PICMG Front Board / VITA Front
+        Loading VPX Plug-In Module'. Any other chassis-specific, board-set
+        specific or OEM ID is returned as the kind of its range.
     """
     name = ENTITY_ID_NAMES.get(entity_id)
     if name is not None:
         return name
+    names = [f'{spec} {table[entity_id]}' for (spec, table) in
+             (('PICMG', PICMG_ENTITY_ID_NAMES),
+              ('VITA', VITA_ENTITY_ID_NAMES))
+             if entity_id in table]
+    if names:
+        return ' / '.join(names)
     if 0x90 <= entity_id <= 0xaf:
         return 'Chassis-specific'
     if 0xb0 <= entity_id <= 0xcf:
