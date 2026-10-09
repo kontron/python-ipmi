@@ -440,21 +440,21 @@ class TestSdrShow:
                 0x02, 0x01, 0x51, 0x4a, 0xc1, 0x62, 0x06, 0x80,
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
-        ipmitool.sdr_show(None, SdrCommon.from_data(data))
+        ipmitool.sdr_show(SdrCommon.from_data(data))
 
         out = capsys.readouterr().out
-        assert 'SDR record ID:    0x0045' in out
-        assert 'SDR type:         0x13' in out
-        assert 'Device Id string' not in out
-        assert 'Entity' not in out
-        assert 'Slave address:    0x20' in out
-        assert 'Device revision:  1' in out
-        assert 'Channel:          0' in out
-        assert 'Firmware:         2.01' in out
-        assert 'IPMI version:     1.5' in out
-        assert 'Manufacturer ID:  0x2c14a' in out
-        assert 'Manufacturer Name: Unknown' in out
-        assert 'Product ID:       0x8006' in out
+        assert out == (
+            'Record ID:              0x0045\n'
+            'Record Type:            [0x13] Management Controller '
+            'Confirmation Record\n'
+            'Slave Address:          0x20\n'
+            'Device ID:              0x00\n'
+            'Device Revision:        [0x01] 1\n'
+            'Channel:                [0x00] 0\n'
+            'Firmware Revision:      [0x02 0x01] 2.01\n'
+            'IPMI Version:           [0x51] 1.5\n'
+            'Manufacturer:           [0x2c14a] Unknown\n'
+            'Product ID:             0x8006\n')
 
     def test_mc_confirmation_record_manufacturer_name(self, capsys):
         # manufacturer ID 15000
@@ -464,34 +464,136 @@ class TestSdrShow:
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         record = SdrCommon.from_data(data)
         assert record.manufacturer_name == 'Kontron'
-        ipmitool.sdr_show(None, record)
+        ipmitool.sdr_show(record)
 
         out = capsys.readouterr().out
-        assert 'Manufacturer ID:  0x03a98' in out
-        assert 'Manufacturer Name: Kontron' in out
+        assert 'Manufacturer:           [0x03a98] Kontron' in out
 
-    @pytest.mark.parametrize('data', [
+    @pytest.mark.parametrize('data, lines', [
         # OEM record
-        [0x05, 0x00, 0x51, 0xc0, 0x05, 0x57, 0x01, 0x00, 0xaa, 0xbb],
+        ([0x05, 0x00, 0x51, 0xc0, 0x05, 0x57, 0x01, 0x00, 0xaa, 0xbb],
+         ['Record Type:            [0xc0] OEM Record',
+          'Manufacturer:           [0x00157] Intel',
+          'OEM Data:               aa bb']),
         # unknown record type
-        [0x01, 0x00, 0x51, 0x0a, 0x00],
+        ([0x01, 0x00, 0x51, 0x0a, 0x00],
+         ['Record Type:            [0x0a] Unknown Record',
+          'Raw Data:               01 00 51 0a 00']),
     ])
-    def test_record_without_id_string(self, capsys, data):
-        ipmitool.sdr_show(None, SdrCommon.from_data(data))
+    def test_record_without_id_string(self, capsys, data, lines):
+        ipmitool.sdr_show(SdrCommon.from_data(data))
 
         out = capsys.readouterr().out
-        assert f'SDR type:         0x{data[3]:02x}' in out
-        assert 'Device Id string' not in out
+        for line in lines:
+            assert line in out
+        assert 'Name:' not in out
 
     def test_fru_device_locator_record(self, capsys):
         data = [0x02, 0x00, 0x51, 0x11, 0x10, 0x20, 0x00, 0x00,
                 0x00, 0x00, 0x10, 0x00, 0x0a, 0x01, 0x00, 0xc4,
                 0x46, 0x52, 0x55, 0x31]
-        ipmitool.sdr_show(None, SdrCommon.from_data(data))
+        ipmitool.sdr_show(SdrCommon.from_data(data))
 
         out = capsys.readouterr().out
-        assert 'Device Id string: FRU1' in out
-        assert 'Entity:           10.1' in out
+        assert out == (
+            'Record ID:              0x0002\n'
+            'Record Type:            [0x11] FRU Device Locator Record\n'
+            'Name:                   FRU1\n'
+            'Entity:                 [0x0a 0x01] Power Supply\n'
+            'Device Access Address:  0x20\n'
+            'FRU Device Address:     0x00\n'
+            'Private Bus:            [0x00] 0\n'
+            'Access LUN:             [0x00] 0\n'
+            'Channel:                [0x00] 0\n'
+            'Device Type:            0x10 modifier 0x00\n')
+
+    # temperature sensor 4 of the BMC with the readable upper thresholds
+    FULL_RECORD = bytes([
+        0x01, 0x00, 0x51, 0x01, 0x00, 0x20, 0x00, 0x04, 0x03, 0x01,
+        0x7f, 0x68, 0x01, 0x01, 0x80, 0x0a, 0x80, 0x7a, 0x38, 0x38,
+        0x00, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x01, 40, 80, 10, 127, 0, 100, 90, 80, 0, 0, 0, 2, 2, 0, 0, 0,
+        0xc8]) + b'CPU Temp'
+
+    # sensor-specific slot/connector sensor of the controller 0x82
+    COMPACT_RECORD = bytes([
+        0xd3, 0x00, 0x51, 0x02, 0x28, 0x82, 0x00, 0xd3, 0xc1, 0x64,
+        0x03, 0x40, 0x21, 0x6f, 0x05, 0x00, 0x01, 0x00, 0x03, 0x00,
+        0xc0, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0xcd]) + b'A4:Pres SFP-1'
+
+    def test_full_sensor_record(self, capsys):
+        ipmitool.sdr_show(SdrCommon.from_data(self.FULL_RECORD))
+
+        # the bits 14:12 of the deassertion mask are no events
+        assert capsys.readouterr().out == (
+            'Record ID:              0x0001\n'
+            'Record Type:            [0x01] Full Sensor Record\n'
+            'Name:                   CPU Temp\n'
+            'Entity:                 [0x03 0x01] Processor\n'
+            'Sensor Owner:           [0x20 0x00] IPMB 0x20 LUN 0\n'
+            'Sensor Number:          0x04\n'
+            'Sensor Type:            [0x01] Temperature\n'
+            'Event/Reading Type:     [0x01] Threshold\n'
+            'Upper Non-recoverable:  [0x64] 100.000 degrees C\n'
+            'Upper Critical:         [0x5a] 90.000 degrees C\n'
+            'Upper Non-critical:     [0x50] 80.000 degrees C\n'
+            'Nominal Reading:        [0x28] 40.000 degrees C\n'
+            'Sensor Minimum:         [0x00] 0.000 degrees C\n'
+            'Sensor Maximum:         [0x7f] 127.000 degrees C\n'
+            'Assertion Events:       [0x0a80]\n'
+            '                        Upper Non-critical going high\n'
+            '                        Upper Critical going high\n'
+            '                        Upper Non-recoverable going high\n'
+            'Deassertion Events:     [0x7a80]\n'
+            '                        Upper Non-critical going high\n'
+            '                        Upper Critical going high\n'
+            '                        Upper Non-recoverable going high\n')
+
+    def test_compact_sensor_record(self, capsys):
+        ipmitool.sdr_show(SdrCommon.from_data(self.COMPACT_RECORD))
+
+        assert capsys.readouterr().out == (
+            'Record ID:              0x00d3\n'
+            'Record Type:            [0x02] Compact Sensor Record\n'
+            'Name:                   A4:Pres SFP-1\n'
+            'Entity:                 [0xc1 0x64] PICMG AdvancedMC '
+            'Module\n'
+            'Sensor Owner:           [0x82 0x00] IPMB 0x82 LUN 0\n'
+            'Sensor Number:          0xd3\n'
+            'Sensor Type:            [0x21] Slot / Connector\n'
+            'Event/Reading Type:     [0x6f] Sensor-specific\n'
+            'Assertion Events:       [0x0005]\n'
+            '                        Fault Status Asserted\n'
+            '                        Slot / Connector Device '
+            'Installed/Attached\n'
+            'Deassertion Events:     [0x0001]\n'
+            '                        Fault Status Asserted\n')
+
+    def test_compact_threshold_sensor_record(self, capsys):
+        # a compact record has no conversion, only the unit is printed
+        data = bytearray(self.COMPACT_RECORD)
+        data[13] = 0x01
+        data[21] = 0x04
+        ipmitool.sdr_show(SdrCommon.from_data(bytes(data)))
+
+        out = capsys.readouterr().out
+        assert ('Event/Reading Type:     [0x01] Threshold\n'
+                'Unit:                   [0xc0 0x04 0x00] Volts\n') in out
+
+    def test_mc_device_locator_record(self, capsys):
+        data = [0x00, 0x01, 0x51, 0x12, 0x0f, 0x20, 0x00, 0x00,
+                0x29, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0xc4,
+                0x42, 0x4d, 0x43, 0x30]
+        ipmitool.sdr_show(SdrCommon.from_data(data))
+
+        assert capsys.readouterr().out.endswith(
+            'Slave Address:          0x20\n'
+            'Channel:                [0x00] 0\n'
+            'Device Capabilities:    [0x29]\n'
+            '                        Sensor Device\n'
+            '                        FRU Inventory Device\n'
+            '                        IPMB Event Generator\n')
 
 
 class TestDcmiCommands:
@@ -808,7 +910,7 @@ class TestSdrList:
         # the states 0 are valid, as the sensor number 0
         ipmi.get_sensor_reading.return_value = (25, 0)
 
-        ipmitool.cmd_sdr_list(ipmi, None)
+        ipmitool.cmd_sdr_list(ipmi, argparse.Namespace(details=False))
 
         # the sensors are read with the LUN of their owner
         assert ipmi.get_sensor_reading.call_args_list == [
@@ -818,6 +920,31 @@ class TestSdrList:
                             '| 0x0')
         assert lines[3] == ('0x0002 |   0 | State              |        25 '
                             '| 0x0')
+
+    def test_sdr_list_details(self, capsys):
+        ipmi = MagicMock()
+        ipmi.get_device_id.return_value.supports_function.return_value = True
+        ipmi.sdr_repository_entries.return_value = [
+            SdrCommon.from_data(TestSdrShow.FULL_RECORD),
+            SdrCommon.from_data(TestSdrShow.COMPACT_RECORD)]
+        ipmitool.cmd_sdr_list(ipmi, argparse.Namespace(details=True))
+
+        # only the values of the records are printed
+        ipmi.get_sensor_reading.assert_not_called()
+        out = capsys.readouterr().out
+        assert 'SDR-ID' not in out
+        assert ('Record ID:              0x0001\n'
+                'Record Type:            [0x01] Full Sensor Record\n'
+                'Name:                   CPU Temp\n') in out
+        assert ('\n\nRecord ID:              0x00d3\n'
+                'Record Type:            [0x02] Compact Sensor Record\n'
+                'Name:                   A4:Pres SFP-1\n') in out
+
+    def test_sdr_list_options(self):
+        parser = build_parser()
+        assert not parser.parse_args(['sdr', 'list']).details
+        assert parser.parse_args(['sdr', 'list', '-d']).details
+        assert parser.parse_args(['sdr', 'list', '--details']).details
 
     def test_print_sdr_list_entry_not_available(self, capsys):
         ipmitool.print_sdr_list_entry(3, None, 'Other', None, None)
@@ -890,7 +1017,8 @@ class TestSelList:
         assert lines[0] == ('0x0001 | 2025-05-11 02:48:32 '
                             '| Temperature CPU Temp '
                             '| Upper Critical going high | Asserted '
-                            '| Reading 85.000, Threshold 80.000')
+                            '| Reading [0x55] 85.000, '
+                            'Threshold [0x50] 80.000')
         # the sensor of another owner has no record
         assert 'FRU Hot Swap #0x00' in lines[1]
 
@@ -899,21 +1027,22 @@ class TestSelList:
                                                               sdr=True))
         out = capsys.readouterr().out
         assert ('SEL Record ID:   0x0001\n'
-                'Record Type:     System Event\n'
-                'Timestamp:       2025-05-11 02:48:32\n'
-                'Generator ID:    0x0020 (IPMB 0x20 LUN 0)\n'
+                'Record Type:     [0x02] System Event\n'
+                'Timestamp:       [0x68201000] 2025-05-11 02:48:32\n'
+                'Generator ID:    [0x0020] IPMB 0x20 LUN 0\n'
                 'EvM Revision:    0x04\n'
-                'Sensor Type:     0x01 (Temperature)\n'
+                'Sensor Type:     [0x01] Temperature\n'
                 'Sensor Number:   0x04\n'
                 'Sensor Name:     CPU Temp\n'
-                'Event Type:      0x01\n'
-                'Event Direction: Asserted\n'
+                'Event Type:      [0x01] Threshold\n'
+                'Event Direction: [0x0] Asserted\n'
                 'Event Data:      59 55 50\n'
-                'Description:     Upper Critical going high\n'
-                'Values:          Reading 85.000, Threshold 80.000\n'
+                'Description:     [0x09] Upper Critical going high\n'
+                'Values:          Reading [0x55] 85.000, '
+                'Threshold [0x50] 80.000\n'
                 'Raw Data:        01 00 02 00 10 20 68 20 00 04 01 04 01 59 '
                 '55 50\n') in out
         assert ('SEL Record ID:   0x0003\n'
-                'Record Type:     OEM non-timestamped (0xe0)\n'
+                'Record Type:     [0xe0] OEM non-timestamped\n'
                 'Timestamp:       Unspecified\n'
                 'Raw Data:        03 00 e0 01 02') in out

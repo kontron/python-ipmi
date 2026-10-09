@@ -27,7 +27,7 @@ import sys
 import textwrap
 import traceback
 from array import array
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 
 import pyipmi
@@ -134,12 +134,8 @@ def sel_sensor_records(ipmi: pyipmi.Ipmi) -> dict[tuple[int, int, int],
     The records are read from the SDR repository, or from the device SDR
     repository of a device without SDR repository.
     """
-    device_id = ipmi.get_device_id()
-    if device_id.supports_function('sdr_repository'):
-        records = ipmi.sdr_repository_entries()
-    elif device_id.supports_function('sensor'):
-        records = ipmi.device_sdr_entries()
-    else:
+    records = sdr_entries(ipmi)
+    if records is None:
         return {}
     return {(s.owner_id, s.owner_lun, s.number): s for s in records
             if hasattr(s, 'number') and hasattr(s, 'owner_id')}
@@ -167,7 +163,9 @@ def sel_entry_values(entry: pyipmi.sel.SelEntry,
 
     def convert(raw: int) -> str:
         if isinstance(record, pyipmi.sdr.SdrFullSensorRecord):
-            return format_analog_value(record.convert_sensor_raw_to_value(raw))
+            value = format_analog_value(
+                record.convert_sensor_raw_to_value(raw))
+            return f'[0x{raw:02x}] {value}'
         return f'0x{raw:02x}'
 
     values = []
@@ -209,23 +207,36 @@ def print_sel_entry_details(entry: pyipmi.sel.SelEntry,
                             record: pyipmi.sdr.SdrCommon | None) -> None:
     raw = ' '.join(f'{b:02x}' for b in entry.data)
     print(f'SEL Record ID:   0x{entry.record_id:04x}')
-    print(f'Record Type:     {pyipmi.sel.SelEntry.type_to_string(entry.type)}')
-    print(f'Timestamp:       {entry.timestamp_to_string()}')
     if entry.type == pyipmi.sel.SelEntry.TYPE_SYSTEM_EVENT:
-        print(f'Generator ID:    0x{entry.generator_id:04x} '
-              f'({entry.generator_to_string()})')
+        type_name = 'System Event'
+    elif entry.is_timestamped():
+        type_name = 'OEM timestamped'
+    else:
+        type_name = 'OEM non-timestamped'
+    print(f'Record Type:     [0x{entry.type:02x}] {type_name}')
+    timestamp = entry.timestamp_to_string()
+    if entry.is_timestamped():
+        timestamp = f'[0x{entry.timestamp:08x}] {timestamp}'
+    print(f'Timestamp:       {timestamp}')
+    if entry.type == pyipmi.sel.SelEntry.TYPE_SYSTEM_EVENT:
+        print(f'Generator ID:    [0x{entry.generator_id:04x}] '
+              f'{entry.generator_to_string()}')
         print(f'EvM Revision:    0x{entry.evm_rev:02x}')
-        print(f'Sensor Type:     0x{entry.sensor_type:02x} '
-              f'({entry.sensor_type_to_string(entry.sensor_type)})')
+        print(f'Sensor Type:     [0x{entry.sensor_type:02x}] '
+              f'{entry.sensor_type_to_string(entry.sensor_type)}')
         print(f'Sensor Number:   0x{entry.sensor_number:02x}')
         name = getattr(record, 'device_id_string', None)
         if name:
             print(f'Sensor Name:     {name}')
-        print(f'Event Type:      0x{entry.event_type:02x}')
-        print(f'Event Direction: {entry.direction_to_string()}')
+        type_name = pyipmi.sensor.event_reading_type_to_string(
+            entry.event_type)
+        print(f'Event Type:      [0x{entry.event_type:02x}] {type_name}')
+        print(f'Event Direction: [0x{entry.event_direction:x}] '
+              f'{entry.direction_to_string()}')
         print(f'Event Data:      '
               f"{' '.join(f'{b:02x}' for b in entry.event_data)}")
-        print(f'Description:     {entry.event_to_string()}')
+        print(f'Description:     [0x{entry.event_offset:02x}] '
+              f'{entry.event_to_string()}')
         values = sel_entry_values(entry, record)
         if values is not None:
             print(f'Values:          {values}')
@@ -258,61 +269,217 @@ def format_analog_value(value: float | None) -> str:
     return f'{value:.3f}'
 
 
-def format_states(states: int | None) -> str:
-    if states is None:
+def sdr_entries(ipmi: pyipmi.Ipmi) -> Iterator[pyipmi.sdr.SdrCommon] | None:
+    """Return the records of the SDR repository.
+
+    The records are read from the device SDR repository of a device without
+    SDR repository, None if the device has neither.
+    """
+    device_id = ipmi.get_device_id()
+    if device_id.supports_function('sdr_repository'):
+        return ipmi.sdr_repository_entries()
+    if device_id.supports_function('sensor'):
+        return ipmi.device_sdr_entries()
+    return None
+
+
+# The thresholds of a full sensor record: the key, the name and the bit of
+# the threshold in the readable threshold mask
+SDR_THRESHOLDS = (
+    ('unr', 'Upper Non-recoverable', 5),
+    ('ucr', 'Upper Critical', 4),
+    ('unc', 'Upper Non-critical', 3),
+    ('lnc', 'Lower Non-critical', 0),
+    ('lcr', 'Lower Critical', 1),
+    ('lnr', 'Lower Non-recoverable', 2),
+)
+
+# The device capabilities of a management controller device locator
+MC_DEVICE_CAPABILITIES = ('Sensor Device', 'SDR Repository Device',
+                          'SEL Device', 'FRU Inventory Device',
+                          'IPMB Event Receiver', 'IPMB Event Generator',
+                          'Bridge', 'Chassis Device')
+
+
+def print_sdr_field(label: str, value: object) -> None:
+    print(f'{label + ":":<24}{value}')
+
+
+def print_sdr_list_field(label: str, values: list[str]) -> None:
+    """Print a field with one value per line."""
+    if not values:
+        print_sdr_field(label, 'none')
+        return
+    print_sdr_field(label, values[0])
+    for value in values[1:]:
+        print(f'{"":<24}{value}')
+
+
+def format_owner(owner_id: int, lun: int | None = None) -> str:
+    """Format the 8-bit IPMB address or the software ID of an owner."""
+    if owner_id & 0x1:
+        return f'Software 0x{owner_id >> 1:02x}'
+    if lun is None:
+        return f'IPMB 0x{owner_id:02x}'
+    return f'IPMB 0x{owner_id:02x} LUN {lun:d}'
+
+
+def format_sdr_value(record: pyipmi.sdr.SdrFullSensorRecord, raw: int | None,
+                     unit: str) -> str:
+    """Format a raw value converted to the sensor unit and the raw value."""
+    if raw is None:
         return 'na'
-    return f'0x{states:x}'
+    value = format_analog_value(record.convert_sensor_raw_to_value(raw))
+    if value != 'na' and unit:
+        value = f'{value} {unit}'
+    return f'[0x{raw:02x}] {value}'
 
 
-def sdr_show(ipmi: pyipmi.Ipmi, s: pyipmi.sdr.SdrCommon) -> None:
+def sdr_sensor_type(record: pyipmi.sdr.SdrCommon) -> int:
+    # the event-only record has another attribute name for the sensor type
+    if hasattr(record, 'sensor_type_code'):
+        return record.sensor_type_code
+    return record.sensor_type
 
-    print(f"SDR record ID:    0x{s.id:04x}")
-    print(f"SDR type:         0x{s.type:02x}")
+
+def sdr_event_strings(record: pyipmi.sdr.SdrCommon, mask: int) -> list[str]:
+    """Return the descriptions of the event offsets or states of a mask."""
+    strings = []
+    for offset in range(15):
+        if mask & (1 << offset):
+            string = pyipmi.sensor.event_offset_to_string(
+                record.event_reading_type_code, sdr_sensor_type(record),
+                offset)
+            strings.append(string or f'Offset 0x{offset:02x}')
+    return strings
+
+
+def sdr_show_sensor(s: pyipmi.sdr.SdrCommon) -> None:
+    """Print the fields of a full, compact or event-only sensor record."""
+    sensor_type = sdr_sensor_type(s)
+    event_type = s.event_reading_type_code
+    threshold_based = (event_type
+                       == pyipmi.sensor.EVENT_READING_TYPE_CODE_THRESHOLD)
+    unit = ''
+    if hasattr(s, 'units_1'):
+        unit = pyipmi.sdr.units_to_string(s.units_1, s.units_2, s.units_3)
+
+    print_sdr_field('Sensor Owner',
+                    f'[0x{s.owner_id:02x} 0x{s.owner_lun:02x}] '
+                    f'{format_owner(s.owner_id, s.owner_lun)}')
+    print_sdr_field('Sensor Number', f'0x{s.number:02x}')
+    type_name = pyipmi.sensor.sensor_type_to_string(sensor_type)
+    print_sdr_field('Sensor Type', f'[0x{sensor_type:02x}] {type_name}')
+    type_name = pyipmi.sensor.event_reading_type_to_string(event_type)
+    print_sdr_field('Event/Reading Type', f'[0x{event_type:02x}] {type_name}')
+    # the values of a full sensor record are printed with the unit
+    if unit and not isinstance(s, pyipmi.sdr.SdrFullSensorRecord):
+        print_sdr_field('Unit', f'[0x{s.units_1:02x} 0x{s.units_2:02x} '
+                                f'0x{s.units_3:02x}] {unit}')
+
+    if isinstance(s, pyipmi.sdr.SdrEventOnlySensorRecord):
+        return
+
+    if isinstance(s, pyipmi.sdr.SdrFullSensorRecord) and threshold_based:
+        # the readable thresholds are in the reading mask
+        readable = s.discrete_reading_mask & 0x3f
+        for key, name, bit in SDR_THRESHOLDS:
+            if readable & (1 << bit):
+                print_sdr_field(name,
+                                format_sdr_value(s, s.threshold[key], unit))
+        for key, name, value in (
+                ('nominal_reading', 'Nominal Reading', s.nominal_reading),
+                ('normal_max', 'Normal Maximum', s.normal_maximum),
+                ('normal_min', 'Normal Minimum', s.normal_minimum)):
+            if key in s.analog_characteristic:
+                print_sdr_field(name, format_sdr_value(s, value, unit))
+        print_sdr_field('Sensor Minimum',
+                        format_sdr_value(s, s.sensor_minimum_reading, unit))
+        print_sdr_field('Sensor Maximum',
+                        format_sdr_value(s, s.sensor_maximum_reading, unit))
+
+    # bits 14:12 of the masks of a threshold sensor are no events
+    events = 0x0fff if threshold_based else 0x7fff
+    for label, mask in (('Assertion Events', s.assertion_mask),
+                        ('Deassertion Events', s.deassertion_mask)):
+        print_sdr_list_field(label, [f'[0x{mask:04x}]']
+                             + sdr_event_strings(s, mask & events))
+
+
+def sdr_show(s: pyipmi.sdr.SdrCommon) -> None:
+    """Print the fields of a record, without reading the sensor."""
+    print_sdr_field('Record ID', f'0x{s.id:04x}')
+    type_name = pyipmi.sdr.sdr_type_to_string(s.type)
+    print_sdr_field('Record Type', f'[0x{s.type:02x}] {type_name}')
     # not all record types have an ID string and entity
-    if hasattr(s, 'device_id_string'):
-        print(f"Device Id string: {s.device_id_string}")
+    if getattr(s, 'device_id_string', None) is not None:
+        print_sdr_field('Name', s.device_id_string)
     if hasattr(s, 'entity_id'):
-        print(f"Entity:           {s.entity_id}.{s.entity_instance}")
-    if isinstance(s, pyipmi.sdr.SdrFullSensorRecord):
-        (raw, states) = ipmi.get_sensor_reading(s.number, s.owner_lun)
-        value = format_analog_value(s.convert_sensor_raw_to_value(raw))
-        t_unr = format_analog_value(
-            s.convert_sensor_raw_to_value(s.threshold['unr']))
-        t_ucr = format_analog_value(
-            s.convert_sensor_raw_to_value(s.threshold['ucr']))
-        t_unc = format_analog_value(
-            s.convert_sensor_raw_to_value(s.threshold['unc']))
-        t_lnc = format_analog_value(
-            s.convert_sensor_raw_to_value(s.threshold['lnc']))
-        t_lcr = format_analog_value(
-            s.convert_sensor_raw_to_value(s.threshold['lcr']))
-        t_lnr = format_analog_value(
-            s.convert_sensor_raw_to_value(s.threshold['lnr']))
-        print(f"Reading value:    {value}")
-        print(f"Reading state:    {format_states(states)}")
-        print(f"UNR:              {t_unr}")
-        print(f"UCR:              {t_ucr}")
-        print(f"UNC:              {t_unc}")
-        print(f"LNC:              {t_lnc}")
-        print(f"LCR:              {t_lcr}")
-        print(f"LNR:              {t_lnr}")
-    elif isinstance(s, pyipmi.sdr.SdrCompactSensorRecord):
-        (raw, states) = ipmi.get_sensor_reading(s.number, s.owner_lun)
-        print(f"Reading:          {raw}")
-        print(f"Reading state:    {format_states(states)}")
+        print_sdr_field('Entity',
+                        f'[0x{s.entity_id:02x} 0x{s.entity_instance:02x}] '
+                        f'{pyipmi.sdr.entity_id_to_string(s.entity_id)}')
+
+    if isinstance(s, (pyipmi.sdr.SdrFullSensorRecord,
+                      pyipmi.sdr.SdrCompactSensorRecord,
+                      pyipmi.sdr.SdrEventOnlySensorRecord)):
+        sdr_show_sensor(s)
+    elif isinstance(s, pyipmi.sdr.SdrFruDeviceLocator):
+        print_sdr_field('Device Access Address',
+                        f'0x{s.device_access_address << 1:02x}')
+        logical = f'[0x{s.logical_physical:02x}]'
+        if s.logical_physical & 0x80:
+            print_sdr_field('FRU Device ID',
+                            f'[0x{s.fru_device_id:02x}] {s.fru_device_id:d}')
+        else:
+            print_sdr_field('FRU Device Address', f'0x{s.fru_device_id:02x}')
+            print_sdr_field('Private Bus',
+                            f'{logical} {s.logical_physical & 0x7:d}')
+        print_sdr_field('Access LUN',
+                        f'{logical} {(s.logical_physical >> 3) & 0x3:d}')
+        print_sdr_field('Channel', f'[0x{s.channel_number:02x}] '
+                                   f'{s.channel_number >> 4:d}')
+        print_sdr_field('Device Type',
+                        f'0x{s.device_type:02x} '
+                        f'modifier 0x{s.device_type_modifier:02x}')
+    elif isinstance(s, pyipmi.sdr.SdrManagementControllerDeviceLocator):
+        print_sdr_field('Slave Address',
+                        f'0x{s.device_slave_address << 1:02x}')
+        print_sdr_field('Channel', f'[0x{s.channel_number:02x}] '
+                                   f'{s.channel_number:d}')
+        print_sdr_list_field('Device Capabilities',
+                             [f'[0x{s.device_capabilities:02x}]']
+                             + [name for bit, name
+                                in enumerate(MC_DEVICE_CAPABILITIES)
+                                if s.device_capabilities & (1 << bit)])
     elif isinstance(s,
                     pyipmi.sdr.SdrManagementControllerConfirmationRecord):
-        print(f"Slave address:    0x{s.device_slave_address << 1:02x}")
-        print(f"Device ID:        0x{s.device_id:02x}")
-        print(f"Device revision:  {s.device_revision:d}")
-        print(f"Channel:          {s.channel_number:d}")
-        print("Firmware:         "
-              f"{s.firmware_revision_1:d}.{s.firmware_revision_2:02x}")
-        print("IPMI version:     "
-              f"{s.ipmi_version & 0xf:d}.{s.ipmi_version >> 4:d}")
-        print(f"Manufacturer ID:  0x{s.manufacturer_id:05x}")
-        print(f"Manufacturer Name: {s.manufacturer_name or 'Unknown'}")
-        print(f"Product ID:       0x{s.product_id:04x}")
+        print_sdr_field('Slave Address',
+                        f'0x{s.device_slave_address << 1:02x}')
+        print_sdr_field('Device ID', f'0x{s.device_id:02x}')
+        print_sdr_field('Device Revision', f'[0x{s.device_revision:02x}] '
+                                           f'{s.device_revision:d}')
+        print_sdr_field('Channel', f'[0x{s.channel_number:02x}] '
+                                   f'{s.channel_number:d}')
+        print_sdr_field('Firmware Revision',
+                        f'[0x{s.firmware_revision_1:02x} '
+                        f'0x{s.firmware_revision_2:02x}] '
+                        f'{s.firmware_revision_1:d}.'
+                        f'{s.firmware_revision_2:02x}')
+        print_sdr_field('IPMI Version',
+                        f'[0x{s.ipmi_version:02x}] '
+                        f'{s.ipmi_version & 0xf:d}.{s.ipmi_version >> 4:d}')
+        print_sdr_field('Manufacturer',
+                        f'[0x{s.manufacturer_id:05x}] '
+                        f'{s.manufacturer_name or "Unknown"}')
+        print_sdr_field('Product ID', f'0x{s.product_id:04x}')
+    elif isinstance(s, pyipmi.sdr.SdrOEMSensorRecord):
+        if s.manufacturer_id is not None:
+            print_sdr_field('Manufacturer',
+                            f'[0x{s.manufacturer_id:05x}] '
+                            f'{s.manufacturer_name or "Unknown"}')
+        print_sdr_field('OEM Data', ' '.join(f'{b:02x}' for b in s.oem_data))
+    else:
+        print_sdr_field('Raw Data', ' '.join(f'{b:02x}' for b in s.data))
 
 
 def cmd_sdr_show_raw(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -326,7 +493,7 @@ def cmd_sdr_show_raw(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
 def cmd_sdr_show(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     try:
         s = ipmi.get_device_sdr(args.sdr_id)
-        sdr_show(ipmi, s)
+        sdr_show(s)
     except ValueError:
         print('')
 
@@ -334,10 +501,10 @@ def cmd_sdr_show(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
 def cmd_sdr_show_all(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     for s in ipmi.device_sdr_entries():
         try:
-            sdr_show(ipmi, s)
+            sdr_show(s)
         except ValueError:
-            print('')
-        print("\n")
+            pass
+        print()
 
 
 def print_sdr_list_entry(record_id: int, number: int | str | None,
@@ -352,22 +519,22 @@ def print_sdr_list_entry(record_id: int, number: int | str | None,
 
 
 def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
-    iter_fct = None
-
-    device_id = ipmi.get_device_id()
-    if device_id.supports_function('sdr_repository'):
-        iter_fct = ipmi.sdr_repository_entries
-    elif device_id.supports_function('sensor'):
-        iter_fct = ipmi.device_sdr_entries
-    else:
+    records = sdr_entries(ipmi)
+    if records is None:
         print("Device supports neither SDR repository nor sensor "
               "functions", file=sys.stderr)
+        return
+
+    if args.details:
+        for s in records:
+            sdr_show(s)
+            print()
         return
 
     print("SDR-ID |     | Device String      |")
     print("=======|=====|====================|====================")
 
-    for s in iter_fct():
+    for s in records:
         try:
             number = None
             value: int | str | None = None
@@ -1315,7 +1482,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     group = commands.group('sdr', 'Print Sensor Data Repository entries '
                            'and readings')
-    group.command('list', cmd_sdr_list, 'List all SDRs')
+    p = group.command('list', cmd_sdr_list, 'List all SDRs')
+    p.add_argument('-d', '--details', action='store_true',
+                   help='print all fields of the records')
     p = group.command('raw', cmd_sdr_show_raw, 'Show SDR raw data')
     p.add_argument('sdr_id', type=auto_int)
     p = group.command('show', cmd_sdr_show, 'Show detail for one SDR')
