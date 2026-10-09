@@ -8,6 +8,9 @@ from pyipmi import interfaces, create_connection
 from pyipmi.msgs.sensor import (SetSensorThresholdsRsp, GetSensorThresholdsRsp,
                                 GetSensorReadingRsp, PlatformEventRsp)
 from pyipmi.sensor import (EVENT_READING_TYPE_SENSOR_SPECIFIC, GENERATOR_ID_SMS,
+                           event_offset_to_string,
+                           event_reading_type_to_string,
+                           sensor_type_to_string,
                            SENSOR_TYPE_MODULE_HOT_SWAP)
 
 
@@ -166,3 +169,42 @@ class TestSensor:
         (reading, states) = self.ipmi.get_sensor_reading(0)
         assert reading == 0
         assert states == 0x5555
+
+
+@pytest.mark.parametrize('sensor_type, string', [
+    (0x01, 'Temperature'),
+    (0xf0, 'FRU Hot Swap'),
+    (0xc5, 'OEM (0xc5)'),
+    (0x00, 'Unknown (0x00)'),
+])
+def test_sensor_type_to_string(sensor_type, string):
+    assert sensor_type_to_string(sensor_type) == string
+
+
+@pytest.mark.parametrize('event_reading_type, string', [
+    (0x01, 'Threshold'),
+    (0x03, 'Generic Discrete'),
+    (0x0c, 'Generic Discrete'),
+    (0x6f, 'Sensor-specific'),
+    (0x70, 'OEM'),
+    (0x00, 'Unspecified'),
+])
+def test_event_reading_type_to_string(event_reading_type, string):
+    assert event_reading_type_to_string(event_reading_type) == string
+
+
+@pytest.mark.parametrize('event_reading_type, sensor_type, offset, string', [
+    (0x01, 0x01, 0x09, 'Upper Critical going high'),
+    (0x08, 0x25, 0x01, 'Device Present'),
+    (0x6f, 0x08, 0x01, 'Power Supply Failure Detected'),
+    (0x6f, 0x23, 0x08, 'Timer Interrupt'),
+    # reserved and unknown offsets
+    (0x6f, 0x23, 0x04, None),
+    (0x01, 0x01, 0x0c, None),
+    (0x6f, 0xc0, 0x00, None),
+    (0x70, 0x01, 0x00, None),
+])
+def test_event_offset_to_string(event_reading_type, sensor_type, offset,
+                                string):
+    assert event_offset_to_string(event_reading_type, sensor_type,
+                                  offset) == string
