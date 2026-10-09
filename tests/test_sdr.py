@@ -9,7 +9,9 @@ from pyipmi.sdr import (SdrCommon, SdrFullSensorRecord, SdrCompactSensorRecord,
                         SdrEventOnlySensorRecord, SdrFruDeviceLocator,
                         SdrManagementControllerDeviceLocator,
                         SdrManagementControllerConfirmationRecord,
-                        SdrOEMSensorRecord, SdrUnknownSensorRecord)
+                        SdrOEMSensorRecord, SdrUnknownSensorRecord,
+                        entity_id_to_string, sdr_type_to_string,
+                        units_to_string)
 
 from .ipmi_helper import create_ipmi
 
@@ -543,3 +545,40 @@ def test_oem_record_too_short():
     assert isinstance(record, SdrOEMSensorRecord)
     assert record.manufacturer_id is None
     assert record.oem_data == b'\x5a\x31'
+
+
+@pytest.mark.parametrize('sdr_type, string', [
+    (0x01, 'Full Sensor Record'),
+    (0x11, 'FRU Device Locator Record'),
+    (0x0a, 'Unknown Record'),
+])
+def test_sdr_type_to_string(sdr_type, string):
+    assert sdr_type_to_string(sdr_type) == string
+
+
+@pytest.mark.parametrize('entity_id, string', [
+    (0x03, 'Processor'),
+    (0x07, 'System Board'),
+    (0xa0, 'PICMG Front Board'),
+    (0x90, 'Chassis-specific'),
+    (0xb0, 'Board-set specific'),
+    (0xd0, 'OEM'),
+    (0x50, 'Unknown'),
+])
+def test_entity_id_to_string(entity_id, string):
+    assert entity_id_to_string(entity_id) == string
+
+
+@pytest.mark.parametrize('units, string', [
+    ((0x00, 0x00, 0x00), ''),
+    ((0x00, 0x01, 0x00), 'degrees C'),
+    ((0x80, 0x04, 0x00), 'Volts'),
+    ((0x01, 0x12, 0x00), '% RPM'),
+    ((0x01, 0x00, 0x00), '%'),
+    ((0x02, 0x06, 0x05), 'Watts/Amps'),
+    ((0x04, 0x06, 0x18), 'Watts*hour'),
+    ((0x20, 0x55, 0x00), 'packets per minute'),
+    ((0x00, 0xff, 0x00), 'unit 0xff'),
+])
+def test_units_to_string(units, string):
+    assert units_to_string(*units) == string

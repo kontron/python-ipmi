@@ -80,6 +80,183 @@ L_CUBE = 9
 L_SQRT = 10
 L_CUBERT = 11
 
+# Names of the record types
+SDR_TYPE_NAMES = {
+    SDR_TYPE_FULL_SENSOR_RECORD: 'Full Sensor Record',
+    SDR_TYPE_COMPACT_SENSOR_RECORD: 'Compact Sensor Record',
+    SDR_TYPE_EVENT_ONLY_SENSOR_RECORD: 'Event-Only Record',
+    SDR_TYPE_ENTITY_ASSOCIATION_RECORD: 'Entity Association Record',
+    0x09: 'Device-relative Entity Association Record',
+    0x10: 'Generic Device Locator Record',
+    SDR_TYPE_FRU_DEVICE_LOCATOR_RECORD: 'FRU Device Locator Record',
+    SDR_TYPE_MANAGEMENT_CONTROLLER_DEVICE_LOCATOR_RECORD:
+        'Management Controller Device Locator Record',
+    SDR_TYPE_MANAGEMENT_CONTROLLER_CONFIRMATION_RECORD:
+        'Management Controller Confirmation Record',
+    SDR_TYPE_BMC_MESSAGE_CHANNEL_INFO_RECORD:
+        'BMC Message Channel Info Record',
+    SDR_TYPE_OEM_SENSOR_RECORD: 'OEM Record',
+}
+
+# Names of the entity IDs (IPMI v2.0 table 43-13, PICMG 3.0 table 3-5)
+ENTITY_ID_NAMES = {
+    0x00: 'Unspecified',
+    0x01: 'Other',
+    0x02: 'Unknown',
+    0x03: 'Processor',
+    0x04: 'Disk or Disk Bay',
+    0x05: 'Peripheral Bay',
+    0x06: 'System Management Module',
+    0x07: 'System Board',
+    0x08: 'Memory Module',
+    0x09: 'Processor Module',
+    0x0a: 'Power Supply',
+    0x0b: 'Add-in Card',
+    0x0c: 'Front Panel Board',
+    0x0d: 'Back Panel Board',
+    0x0e: 'Power System Board',
+    0x0f: 'Drive Backplane',
+    0x10: 'System Internal Expansion Board',
+    0x11: 'Other System Board',
+    0x12: 'Processor Board',
+    0x13: 'Power Unit / Power Domain',
+    0x14: 'Power Module / DC-to-DC Converter',
+    0x15: 'Power Management / Power Distribution Board',
+    0x16: 'Chassis Back Panel Board',
+    0x17: 'System Chassis',
+    0x18: 'Sub-Chassis',
+    0x19: 'Other Chassis Board',
+    0x1a: 'Disk Drive Bay',
+    0x1b: 'Peripheral Bay',
+    0x1c: 'Device Bay',
+    0x1d: 'Fan / Cooling Device',
+    0x1e: 'Cooling Unit / Cooling Domain',
+    0x1f: 'Cable / Interconnect',
+    0x20: 'Memory Device',
+    0x21: 'System Management Software',
+    0x22: 'System Firmware',
+    0x23: 'Operating System',
+    0x24: 'System Bus',
+    0x25: 'Group',
+    0x26: 'Remote Management Communication Device',
+    0x27: 'External Environment',
+    0x28: 'Battery',
+    0x29: 'Processing Blade',
+    0x2a: 'Connectivity Switch',
+    0x2b: 'Processor / Memory Module',
+    0x2c: 'I/O Module',
+    0x2d: 'Processor / IO Module',
+    0x2e: 'Management Controller Firmware',
+    0x2f: 'IPMI Channel',
+    0x30: 'PCI Bus',
+    0x31: 'PCI Express Bus',
+    0x32: 'SCSI Bus (parallel)',
+    0x33: 'SATA / SAS Bus',
+    0x34: 'Processor / Front-side Bus',
+    0x35: 'Real Time Clock (RTC)',
+    0x37: 'Air Inlet',
+    0x40: 'Air Inlet',
+    0x41: 'Processor / CPU',
+    0x42: 'Baseboard',
+    0xa0: 'PICMG Front Board',
+    0xc0: 'PICMG Rear Transition Module',
+    0xc1: 'PICMG AdvancedMC Module',
+    0xc2: 'PICMG MicroTCA Carrier Hub',
+    0xf0: 'PICMG Shelf Management Controller',
+    0xf1: 'PICMG Filtration Unit',
+    0xf2: 'PICMG Shelf FRU Information',
+    0xf3: 'PICMG Alarm Panel',
+}
+
+# Names of the sensor unit type codes (IPMI v2.0 table 43-15)
+UNIT_NAMES = (
+    'unspecified', 'degrees C', 'degrees F', 'degrees K', 'Volts', 'Amps',
+    'Watts', 'Joules', 'Coulombs', 'VA', 'Nits', 'lumen', 'lux', 'Candela',
+    'kPa', 'PSI', 'Newton', 'CFM', 'RPM', 'Hz', 'microsecond',
+    'millisecond', 'second', 'minute', 'hour', 'day', 'week', 'mil',
+    'inches', 'feet', 'cu in', 'cu feet', 'mm', 'cm', 'm', 'cu cm', 'cu m',
+    'liters', 'fluid ounce', 'radians', 'steradians', 'revolutions',
+    'cycles', 'gravities', 'ounce', 'pound', 'ft-lb', 'oz-in', 'gauss',
+    'gilberts', 'henry', 'millihenry', 'farad', 'microfarad', 'ohms',
+    'siemens', 'mole', 'becquerel', 'PPM', 'reserved', 'Decibels', 'DbA',
+    'DbC', 'gray', 'sievert', 'color temp deg K', 'bit', 'kilobit',
+    'megabit', 'gigabit', 'byte', 'kilobyte', 'megabyte', 'gigabyte',
+    'word', 'dword', 'qword', 'line', 'hit', 'miss', 'retry', 'reset',
+    'overrun / overflow', 'underrun', 'collision', 'packets', 'messages',
+    'characters', 'error', 'correctable error', 'uncorrectable error',
+    'fatal error', 'grams',
+)
+
+# The rate units of the sensor units 1 byte, bits 5:3
+_RATE_UNITS = ('', ' per microsecond', ' per millisecond', ' per second',
+               ' per minute', ' per hour', ' per day')
+
+
+def sdr_type_to_string(sdr_type: int) -> str:
+    """Return the name of a record type.
+
+    Args:
+        sdr_type: The record type.
+
+    Returns:
+        The name of the record type, 'Unknown Record' for an unknown type.
+    """
+    return SDR_TYPE_NAMES.get(sdr_type, 'Unknown Record')
+
+
+def entity_id_to_string(entity_id: int) -> str:
+    """Return the name of an entity ID.
+
+    Args:
+        entity_id: The entity ID.
+
+    Returns:
+        The name of the entity, the kind of the range for an ID that is
+        chassis-specific, board-set specific or OEM.
+    """
+    name = ENTITY_ID_NAMES.get(entity_id)
+    if name is not None:
+        return name
+    if 0x90 <= entity_id <= 0xaf:
+        return 'Chassis-specific'
+    if 0xb0 <= entity_id <= 0xcf:
+        return 'Board-set specific'
+    if entity_id >= 0xd0:
+        return 'OEM'
+    return 'Unknown'
+
+
+def units_to_string(units_1: int, units_2: int, units_3: int) -> str:
+    """Return the unit of a sensor.
+
+    Args:
+        units_1: The sensor units 1 byte, with the rate unit, the modifier
+            unit and the percentage.
+        units_2: The base unit type code.
+        units_3: The modifier unit type code.
+
+    Returns:
+        The unit, e.g. 'degrees C', 'Volts' or '% RPM'. An empty
+        string for an unspecified unit.
+    """
+    def name(code: int) -> str:
+        if code < len(UNIT_NAMES):
+            return UNIT_NAMES[code]
+        return f'unit 0x{code:02x}'
+
+    unit = '' if units_2 == 0 else name(units_2)
+    modifier = (units_1 >> 1) & 0x3
+    if modifier == 1:
+        unit += f'/{name(units_3)}'
+    elif modifier == 2:
+        unit += f'*{name(units_3)}'
+    rate = (units_1 >> 3) & 0x7
+    if rate < len(_RATE_UNITS):
+        unit += _RATE_UNITS[rate]
+    if units_1 & 0x1:
+        unit = f'% {unit}'.rstrip()
+    return unit
+
 
 class Sdr(IpmiMixin):
     """SDR repository commands, available on :class:`pyipmi.Ipmi`.
