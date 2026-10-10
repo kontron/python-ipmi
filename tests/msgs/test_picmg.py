@@ -16,6 +16,22 @@ def test_get_picmg_properties_req():
     assert msg.group_extension == PICMG_IDENTIFIER
 
 
+def test_get_address_info_req():
+    m = pyipmi.msgs.picmg.GetAddressInfoReq()
+    decode_message(m, b'\x00\x02')
+    assert m.fru_id == 2
+    m.fru_id = 3
+    assert encode_message(m) == b'\x00\x03'
+
+
+def test_get_address_info_req_without_fru_id():
+    # the FRU device ID is optional, FRU 0 is meant without it
+    m = pyipmi.msgs.picmg.GetAddressInfoReq()
+    decode_message(m, b'\x00')
+    assert m.fru_id is None
+    assert encode_message(pyipmi.msgs.picmg.GetAddressInfoReq()) == b'\x00'
+
+
 def test_get_address_info_picmg_2_9_rsp():
     m = pyipmi.msgs.picmg.GetAddressInfoRsp()
     decode_message(m, b'\x00\x00\x01\x02\x03')

@@ -78,6 +78,15 @@ def test_VitaGetFruAddressInfoReq_encode():
     assert data == b'\x03\x05'
 
 
+def test_VitaGetFruAddressInfoReq_without_fru_id():
+    # the FRU device ID is optional, FRU 0 is meant without it
+    m = pyipmi.msgs.vita.VitaGetFruAddressInfoReq()
+    decode_message(m, b'\x03')
+    assert m.fru_id is None
+    assert encode_message(pyipmi.msgs.vita.VitaGetFruAddressInfoReq()) == \
+        b'\x03'
+
+
 def test_VitaGetFruAddressInfoRsp_decode():
     m = pyipmi.msgs.vita.VitaGetFruAddressInfoRsp()
     decode_message(m, b'\x00\x03\x22\x33\x44\x55\x66\x77\x88')

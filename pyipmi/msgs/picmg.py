@@ -132,7 +132,8 @@ class GetAddressInfoReq(PicmgMessage):
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
-        UnsignedInt('fru_id', 1),
+        # optional, FRU 0 if it is not given
+        Optional(UnsignedInt('fru_id', 1)),
     )
 
 
