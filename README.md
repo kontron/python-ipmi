@@ -25,6 +25,12 @@
 * IPMB interface
   * using the [Total Phase] Aardvark
   * using ipmb-dev driver on Linux
+  * using the openipmblink USB bridge
+  * answering incoming requests, e.g. to act as a BMC or MMC
+    ([IPMB message routing][doc-routing])
+* bridged requests to controllers behind the BMC
+* decoding of FRU data, SDRs and SEL entries, HPM.1 firmware upgrades
+* the command line tool `ipmitool.py`
 
 ## Tested Devices
 
@@ -40,9 +46,16 @@
 
 ## Requirements
 
-For IPMB interface a [Total Phase] Aardvark is needed.
-Another option is to use ipmb-dev driver on Linux with an I2C bus, driver of which supports slave mode:
-https://www.kernel.org/doc/html/latest/driver-api/ipmb.html
+Python 3.10 or newer is required, PyPy is supported as well. The library
+itself has no dependencies; some interfaces need additional packages,
+drivers or programs, as described below.
+
+For the IPMB interface one of these is needed:
+
+* a [Total Phase] Aardvark adapter and the `pyaardvark` package
+* the ipmb-dev driver on Linux with an I2C bus whose driver supports slave
+  mode: https://www.kernel.org/doc/html/latest/driver-api/ipmb.html
+* an openipmblink bridge and the `pyserial` package
 
 For the native system interface the Linux IPMI driver is needed
 (`ipmi_devintf` and e.g. `ipmi_si` or `ipmi_ssif`), which provides
@@ -72,11 +85,11 @@ pip install python-ipmi
 
 ### Manual installation
 
-Download the source distribution package for the library. Extract the package to
-a temporary location and install:
+Download the source distribution package for the library or clone the git
+repository, and install it from its top directory:
 
 ```shell
-python setup.py install
+pip install .
 ```
 
 ### Running from the source tree
@@ -152,7 +165,16 @@ version is available as `pyipmi.__version__` and with `ipmitool.py -V`.
 ## Documentation
 
 You can find the most up to date documentation at:
-http://python-ipmi.rtfd.org
+https://python-ipmi.readthedocs.io
+
+* [Quick start](https://python-ipmi.readthedocs.io/en/latest/quick_start.html)
+* [Commands and interfaces][doc-interfaces]: how the commands reach a device
+  through the interfaces, and how to implement an interface
+* [IPMB message routing][doc-routing]: how to answer requests on the IPMB
+* [API reference](https://python-ipmi.readthedocs.io/en/latest/api.html)
+
+[doc-interfaces]: https://python-ipmi.readthedocs.io/en/latest/interfaces.html
+[doc-routing]: https://python-ipmi.readthedocs.io/en/latest/message_routing.html
 
 ## Example
 
@@ -260,6 +282,32 @@ ipmitool command:
 
 ```shell
 ipmitool -I open -t 0x20 raw 0x06 0x01
+```
+
+Example with the IPMB interface, using bus 0 of an openipmblink bridge with
+the own IPMB address `0x24`:
+
+```python
+import pyipmi
+import pyipmi.interfaces
+
+interface = pyipmi.interfaces.create_interface('openipmblink',
+                                               slave_address=0x24,
+                                               port='/dev/ttyACM1', bus=0)
+
+connection = pyipmi.create_connection(interface)
+
+connection.target = pyipmi.Target(0x20)
+
+connection.open()
+connection.get_device_id()
+connection.close()
+```
+
+`ipmitool.py` command:
+
+```shell
+ipmitool.py -I openipmblink -o port=/dev/ttyACM1,bus=0,address=0x24 -t 0x20 bmc info
 ```
 
 ### Bridged targets
