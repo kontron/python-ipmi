@@ -131,6 +131,33 @@ class AddSelEntryRsp(Message):
 
 
 @register_message_class
+class PartialAddSelEntryReq(Message):
+    __cmdid__ = constants.CMDID_PARTIAL_ADD_SEL_ENTRY
+    __netfn__ = constants.NETFN_STORAGE
+    __fields__ = (
+            UnsignedInt('reservation_id', 2),
+            # 0 for the first part of a record
+            UnsignedInt('record_id', 2),
+            UnsignedInt('offset', 1),
+            Bitfield('progress', 1,
+                     # 0 partial add in progress, 1 last part of the record
+                     Bitfield.Bit('in_progress', 4),
+                     Bitfield.ReservedBit(4, 0),),
+            RemainingBytes('record_data'),
+    )
+
+
+@register_message_class
+class PartialAddSelEntryRsp(Message):
+    __cmdid__ = constants.CMDID_PARTIAL_ADD_SEL_ENTRY
+    __netfn__ = constants.NETFN_STORAGE | 1
+    __fields__ = (
+            CompletionCode(),
+            UnsignedInt('record_id', 2)
+    )
+
+
+@register_message_class
 class DeleteSelEntryReq(Message):
     __cmdid__ = constants.CMDID_DELETE_SEL_ENTRY
     __netfn__ = constants.NETFN_STORAGE
@@ -201,6 +228,85 @@ class SetSelTimeReq(Message):
 @register_message_class
 class SetSelTimeRsp(Message):
     __cmdid__ = constants.CMDID_SET_SEL_TIME
+    __netfn__ = constants.NETFN_STORAGE | 1
+    __fields__ = (
+            CompletionCode(),
+    )
+
+
+@register_message_class
+class GetAuxiliaryLogStatusReq(Message):
+    __cmdid__ = constants.CMDID_GET_AUXILIARY_LOG_STATUS
+    __netfn__ = constants.NETFN_STORAGE
+    __fields__ = (
+            Bitfield('log', 1,
+                     # 0 MCA log, 1 OEM 1, 2 OEM 2
+                     Bitfield.Bit('type', 4),
+                     Bitfield.ReservedBit(4, 0),),
+    )
+
+
+@register_message_class
+class GetAuxiliaryLogStatusRsp(Message):
+    __cmdid__ = constants.CMDID_GET_AUXILIARY_LOG_STATUS
+    __netfn__ = constants.NETFN_STORAGE | 1
+    __fields__ = (
+            CompletionCode(),
+            # the log-specific status, not decoded
+            RemainingBytes('log_data'),
+    )
+
+
+@register_message_class
+class SetAuxiliaryLogStatusReq(Message):
+    __cmdid__ = constants.CMDID_SET_AUXILIARY_LOG_STATUS
+    __netfn__ = constants.NETFN_STORAGE
+    __fields__ = (
+            Bitfield('log', 1,
+                     Bitfield.Bit('type', 4),
+                     Bitfield.ReservedBit(4, 0),),
+            RemainingBytes('log_data'),
+    )
+
+
+@register_message_class
+class SetAuxiliaryLogStatusRsp(Message):
+    __cmdid__ = constants.CMDID_SET_AUXILIARY_LOG_STATUS
+    __netfn__ = constants.NETFN_STORAGE | 1
+    __fields__ = (
+            CompletionCode(),
+    )
+
+
+@register_message_class
+class GetSelTimeUtcOffsetReq(Message):
+    __cmdid__ = constants.CMDID_GET_SEL_TIME_UTC_OFFSET
+    __netfn__ = constants.NETFN_STORAGE
+
+
+@register_message_class
+class GetSelTimeUtcOffsetRsp(Message):
+    __cmdid__ = constants.CMDID_GET_SEL_TIME_UTC_OFFSET
+    __netfn__ = constants.NETFN_STORAGE | 1
+    __fields__ = (
+            CompletionCode(),
+            # minutes, 2's complement, 0x07ff for unspecified
+            UnsignedInt('offset', 2),
+    )
+
+
+@register_message_class
+class SetSelTimeUtcOffsetReq(Message):
+    __cmdid__ = constants.CMDID_SET_SEL_TIME_UTC_OFFSET
+    __netfn__ = constants.NETFN_STORAGE
+    __fields__ = (
+            UnsignedInt('offset', 2),
+    )
+
+
+@register_message_class
+class SetSelTimeUtcOffsetRsp(Message):
+    __cmdid__ = constants.CMDID_SET_SEL_TIME_UTC_OFFSET
     __netfn__ = constants.NETFN_STORAGE | 1
     __fields__ = (
             CompletionCode(),
