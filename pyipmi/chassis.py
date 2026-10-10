@@ -14,12 +14,16 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
-"""Chassis commands: status, power control and boot options.
+"""Chassis commands: status, power control, identify and boot options.
 
 The commands are the methods of :class:`Chassis`, which are available on
 :class:`pyipmi.Ipmi`. The ``CONTROL_*`` constants are the options of
-:meth:`Chassis.chassis_control`, the ``BOOT_PARAMETER_*`` constants the
-boot option parameters of :meth:`Chassis.get_system_boot_options` and
+:meth:`Chassis.chassis_control`, the ``POWER_RESTORE_POLICY_*`` constants
+the policies of :meth:`Chassis.set_power_restore_policy`, the
+``RESTART_CAUSE_*`` constants the causes of
+:meth:`Chassis.get_system_restart_cause`, and the ``BOOT_PARAMETER_*``
+constants the boot option parameters of
+:meth:`Chassis.get_system_boot_options` and
 :meth:`Chassis.set_system_boot_options`.
 
 Example:
@@ -55,6 +59,56 @@ BOOT_PARAMETER_BOOT_INFO_ACKNOWLEDGE = 4
 BOOT_PARAMETER_BOOT_FLAGS = 5
 BOOT_PARAMETER_BOOT_INITIATOR_INFO = 6
 BOOT_PARAMETER_BOOT_INITIATOR_MAILBOX = 7
+
+# the power restore policies after AC/mains power returns
+POWER_RESTORE_POLICY_ALWAYS_OFF = 0
+POWER_RESTORE_POLICY_RESTORE_PREVIOUS = 1
+POWER_RESTORE_POLICY_ALWAYS_ON = 2
+# only for the request, to get the supported policies
+POWER_RESTORE_POLICY_NO_CHANGE = 3
+
+# the causes of the last system restart
+RESTART_CAUSE_UNKNOWN = 0x0
+RESTART_CAUSE_CHASSIS_CONTROL = 0x1
+RESTART_CAUSE_RESET_BUTTON = 0x2
+RESTART_CAUSE_POWER_BUTTON = 0x3
+RESTART_CAUSE_WATCHDOG = 0x4
+RESTART_CAUSE_OEM = 0x5
+RESTART_CAUSE_POWER_RESTORE_ALWAYS_ON = 0x6
+RESTART_CAUSE_POWER_RESTORE_PREVIOUS = 0x7
+RESTART_CAUSE_PEF_RESET = 0x8
+RESTART_CAUSE_PEF_POWER_CYCLE = 0x9
+RESTART_CAUSE_SOFT_RESET = 0xa
+RESTART_CAUSE_RTC_WAKEUP = 0xb
+
+RESTART_CAUSE_NAMES = {
+    RESTART_CAUSE_UNKNOWN: 'unknown',
+    RESTART_CAUSE_CHASSIS_CONTROL: 'Chassis Control command',
+    RESTART_CAUSE_RESET_BUTTON: 'reset via pushbutton',
+    RESTART_CAUSE_POWER_BUTTON: 'power-up via power pushbutton',
+    RESTART_CAUSE_WATCHDOG: 'watchdog expiration',
+    RESTART_CAUSE_OEM: 'OEM',
+    RESTART_CAUSE_POWER_RESTORE_ALWAYS_ON:
+        'automatic power-up on AC being applied (always restore policy)',
+    RESTART_CAUSE_POWER_RESTORE_PREVIOUS:
+        'automatic power-up on AC being applied (restore previous policy)',
+    RESTART_CAUSE_PEF_RESET: 'reset via PEF',
+    RESTART_CAUSE_PEF_POWER_CYCLE: 'power-cycle via PEF',
+    RESTART_CAUSE_SOFT_RESET: 'soft reset, e.g. Ctrl-Alt-Del',
+    RESTART_CAUSE_RTC_WAKEUP: 'power-up via RTC wakeup',
+}
+
+
+def restart_cause_to_string(cause: int) -> str:
+    """Return the description of a system restart cause.
+
+    Args:
+        cause: The restart cause, one of the ``RESTART_CAUSE_*`` constants.
+
+    Returns:
+        The description, 'reserved (0x..)' for an unknown cause.
+    """
+    return RESTART_CAUSE_NAMES.get(cause, f'reserved (0x{cause:x})')
 
 
 class BootDevice(str, Enum):
@@ -249,6 +303,181 @@ class Chassis(IpmiMixin):
         """Initiate a soft shutdown of the operating system."""
         self.chassis_control(CONTROL_SOFT_SHUTDOWN)
 
+    def chassis_reset(self) -> None:
+        """Reset the chassis with the Chassis Reset command.
+
+        Raises:
+            CompletionCodeError: The BMC rejected the request.
+        """
+        self.send_message_by_name('ChassisReset')
+
+    def chassis_identify(self, interval: int | None = None,
+                         force_on: bool = False) -> None:
+        """Turn on the chassis identification, e.g. a blinking LED.
+
+        Args:
+            interval: The time in seconds the identification stays on,
+                0 turns it off. The BMC uses its default of 15 seconds if
+                it is None.
+            force_on: Turn on the identification until it is turned off
+                with the interval 0. The interval is ignored then.
+
+        Raises:
+            ValueError: The interval is not in the range 0 - 255.
+            CompletionCodeError: The BMC rejected the request.
+        """
+        if interval is not None and not 0 <= interval <= 255:
+            raise ValueError(f'identify interval {interval} is not in the '
+                             'range 0 - 255')
+        if force_on:
+            # the force byte is only allowed after the interval byte
+            if interval is None:
+                interval = 0
+            self.send_message_by_name('ChassisIdentify', interval=interval,
+                                      force_on=1)
+        else:
+            self.send_message_by_name('ChassisIdentify', interval=interval)
+
+    def get_chassis_capabilities(self) -> ChassisCapabilities:
+        """Get the capabilities of the chassis.
+
+        Returns:
+            The capabilities and the addresses of the chassis devices.
+        """
+        return ChassisCapabilities(
+            self.send_message_by_name('GetChassisCapabilities'))
+
+    def set_chassis_capabilities(self,
+                                 capabilities: ChassisCapabilities) -> None:
+        """Set the capabilities of the chassis.
+
+        Only the intrusion sensor and the front panel lockout capabilities
+        and the addresses can be set. Read the capabilities with
+        :meth:`get_chassis_capabilities`, change them and set them.
+
+        Args:
+            capabilities: The capabilities and the addresses of the chassis
+                devices. The bridge address is only set if it is not None.
+
+        Raises:
+            CompletionCodeError: The BMC rejected the request.
+        """
+        req = create_request_by_name('SetChassisCapabilities')
+        req.capabilities_flags.intrusion_sensor = \
+            int(bool(capabilities.intrusion_sensor))
+        req.capabilities_flags.frontpanel_lockout = \
+            int(bool(capabilities.frontpanel_lockout))
+        req.fru_info_device_address = capabilities.fru_info_device_address
+        req.sdr_device_address = capabilities.sdr_device_address
+        req.sel_device_address = capabilities.sel_device_address
+        req.system_management_device_address = \
+            capabilities.system_management_device_address
+        req.bridge_device_address = capabilities.bridge_device_address
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
+    def set_power_restore_policy(self, policy: int) -> list[int]:
+        """Set the power restore policy after AC/mains power returns.
+
+        Args:
+            policy: The policy, one of the ``POWER_RESTORE_POLICY_*``
+                constants. ``POWER_RESTORE_POLICY_NO_CHANGE`` only returns
+                the supported policies, see
+                :meth:`get_supported_power_restore_policies`.
+
+        Returns:
+            The policies the chassis supports.
+
+        Raises:
+            ValueError: The policy is unknown.
+            CompletionCodeError: The BMC rejected the request.
+        """
+        if not 0 <= policy <= POWER_RESTORE_POLICY_NO_CHANGE:
+            raise ValueError(f'unknown power restore policy {policy}')
+        req = create_request_by_name('SetPowerRestorePolicy')
+        req.power_restore_policy.policy = policy
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        support = rsp.power_restore_policy_support
+        supported = []
+        if support.always_off:
+            supported.append(POWER_RESTORE_POLICY_ALWAYS_OFF)
+        if support.restore_previous:
+            supported.append(POWER_RESTORE_POLICY_RESTORE_PREVIOUS)
+        if support.always_on:
+            supported.append(POWER_RESTORE_POLICY_ALWAYS_ON)
+        return supported
+
+    def get_supported_power_restore_policies(self) -> list[int]:
+        """Get the power restore policies the chassis supports.
+
+        The current policy is not changed, it is reported by
+        :meth:`get_chassis_status`.
+
+        Returns:
+            The supported ``POWER_RESTORE_POLICY_*`` constants.
+        """
+        return self.set_power_restore_policy(POWER_RESTORE_POLICY_NO_CHANGE)
+
+    def get_system_restart_cause(self) -> SystemRestartCause:
+        """Get the cause of the last system restart.
+
+        Returns:
+            The restart cause and the channel of the restart command.
+        """
+        return SystemRestartCause(
+            self.send_message_by_name('GetSystemRestartCause'))
+
+    def get_poh_counter(self) -> PohCounter:
+        """Get the power-on hours (POH) counter.
+
+        Returns:
+            The counter and the minutes per count.
+        """
+        return PohCounter(self.send_message_by_name('GetPohCounter'))
+
+    def set_front_panel_button_enables(self, power_off: bool = True,
+                                       reset: bool = True,
+                                       diagnostic_interrupt: bool = True,
+                                       standby: bool = True) -> None:
+        """Enable or disable the front panel buttons.
+
+        Which buttons can be disabled is reported in
+        ``front_panel_button_capabilities`` of :meth:`get_chassis_status`.
+
+        Args:
+            power_off: Enable the power off function of the power button.
+            reset: Enable the reset button.
+            diagnostic_interrupt: Enable the diagnostic interrupt button.
+            standby: Enable the standby (sleep) button.
+
+        Raises:
+            CompletionCodeError: The BMC rejected the request.
+        """
+        req = create_request_by_name('SetFrontPanelButtonEnables')
+        req.disable.power_off_button = int(not power_off)
+        req.disable.reset_button = int(not reset)
+        req.disable.diagnostic_interrupt_button = \
+            int(not diagnostic_interrupt)
+        req.disable.standby_button = int(not standby)
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
+    def set_power_cycle_interval(self, interval: int) -> None:
+        """Set the time the power stays off during a power cycle.
+
+        Args:
+            interval: The interval in seconds, 0 - 255.
+
+        Raises:
+            ValueError: The interval is not in the range 0 - 255.
+            CompletionCodeError: The BMC rejected the request.
+        """
+        if not 0 <= interval <= 255:
+            raise ValueError(f'power cycle interval {interval} is not in the '
+                             'range 0 - 255')
+        self.send_message_by_name('SetPowerCycleInterval', interval=interval)
+
     def get_system_boot_options(self, parameter_selector: int = 0,
                                 set_selector: int = 0,
                                 block_selector: int = 0) -> array:
@@ -411,3 +640,82 @@ class ChassisStatus(State):
             self.chassis_state.append('drive_fault')
         if rsp.misc_chassis_state.cooling_fault_detected:
             self.chassis_state.append('cooling_fault')
+
+
+class ChassisCapabilities(State):
+    """The capabilities of the chassis and the addresses of its devices.
+
+    The addresses are 8-bit IPMB slave addresses.
+    """
+
+    #: The chassis has an intrusion (physical security) sensor.
+    intrusion_sensor: bool | None = None
+    #: The chassis provides a front panel lockout.
+    frontpanel_lockout: bool | None = None
+    #: The chassis provides a diagnostic interrupt (FP NMI).
+    diagnostic_interrupt: bool | None = None
+    #: The chassis provides a power interlock.
+    power_interlock: bool | None = None
+    #: The address of the FRU info device.
+    fru_info_device_address: int | None = None
+    #: The address of the SDR device.
+    sdr_device_address: int | None = None
+    #: The address of the SEL device.
+    sel_device_address: int | None = None
+    #: The address of the system management device.
+    system_management_device_address: int | None = None
+    #: The address of the chassis bridge device, None if the BMC does not
+    #: report it.
+    bridge_device_address: int | None = None
+
+    def _from_response(self, rsp: Message) -> None:
+        flags = rsp.capabilities_flags
+        self.intrusion_sensor = bool(flags.intrusion_sensor)
+        self.frontpanel_lockout = bool(flags.frontpanel_lockout)
+        self.diagnostic_interrupt = bool(flags.diagnostic_interrupt)
+        self.power_interlock = bool(flags.power_interlock)
+        self.fru_info_device_address = rsp.fru_info_device_address
+        self.sdr_device_address = rsp.sdr_device_address
+        self.sel_device_address = rsp.sel_device_address
+        self.system_management_device_address = \
+            rsp.system_management_device_address
+        self.bridge_device_address = rsp.bridge_device_address
+
+
+class SystemRestartCause(State):
+    """The cause of the last system restart."""
+
+    #: The restart cause, one of the ``RESTART_CAUSE_*`` constants.
+    cause: int | None = None
+    #: The channel the command that caused the restart was received on, 0
+    #: if unknown, None if the BMC does not report it.
+    channel_number: int | None = None
+
+    def _from_response(self, rsp: Message) -> None:
+        self.cause = rsp.restart_cause.cause
+        self.channel_number = rsp.channel_number
+
+    def __str__(self) -> str:
+        """Return the description of the cause."""
+        assert self.cause is not None
+        return restart_cause_to_string(self.cause)
+
+
+class PohCounter(State):
+    """The power-on hours (POH) counter."""
+
+    #: The minutes per count of the counter.
+    minutes_per_count: int | None = None
+    #: The counter reading.
+    counter: int | None = None
+
+    def _from_response(self, rsp: Message) -> None:
+        self.minutes_per_count = rsp.minutes_per_count
+        self.counter = rsp.counter_reading
+
+    @property
+    def minutes(self) -> int:
+        """The power-on time in minutes."""
+        assert self.minutes_per_count is not None
+        assert self.counter is not None
+        return self.minutes_per_count * self.counter
