@@ -2,6 +2,8 @@
 
 from array import array
 
+import pytest
+
 import pyipmi.msgs.sensor
 
 from pyipmi.msgs import encode_message
@@ -306,3 +308,71 @@ def test_platform_event_decode_rsp():
     m = pyipmi.msgs.sensor.PlatformEventRsp()
     decode_message(m, b'\x00')
     assert m.completion_code == 0x00
+
+
+def test_getsensorreadingfactors_encode_req():
+    m = pyipmi.msgs.sensor.GetSensorReadingFactorsReq()
+    m.sensor_number = 0x10
+    m.reading = 0x80
+    assert m.__netfn__ == 0x04
+    assert m.__cmdid__ == 0x23
+    assert encode_message(m) == b'\x10\x80'
+
+
+def test_getsensorreadingfactors_decode_rsp():
+    m = pyipmi.msgs.sensor.GetSensorReadingFactorsRsp()
+    decode_message(m, b'\x00\x90\xfe\xc5\x64\x05\x18\xd2')
+    assert m.completion_code == 0x00
+    assert m.next_reading == 0x90
+    assert bytes(m.factors) == b'\xfe\xc5\x64\x05\x18\xd2'
+
+
+@pytest.mark.parametrize('data, asserted_low, deasserted_high', [
+    (b'\x00\xc0\x05\x01\x00\x02', 0x05, 0x02),
+    # without the event bytes
+    (b'\x00\xe0', None, None),
+])
+def test_getsensoreventstatus_decode_rsp(data, asserted_low,
+                                         deasserted_high):
+    m = pyipmi.msgs.sensor.GetSensorEventStatusRsp()
+    decode_message(m, data)
+    assert m.__cmdid__ == 0x2b
+    assert m.status.event_messages_enabled == 1
+    assert m.status.sensor_scanning_enabled == 1
+    assert m.status.reading_unavailable == (data[1] >> 5) & 1
+    assert m.assertion_events_low == asserted_low
+    assert m.deassertion_events_high == deasserted_high
+
+
+def test_setsensortype_encode_req():
+    m = pyipmi.msgs.sensor.SetSensorTypeReq()
+    m.sensor_number = 0x10
+    m.sensor_type = 0x01
+    m.event_reading_type.code = 0x6f
+    assert m.__cmdid__ == 0x2e
+    assert encode_message(m) == b'\x10\x01\x6f'
+
+
+def test_getsensortype_decode_rsp():
+    m = pyipmi.msgs.sensor.GetSensorTypeRsp()
+    decode_message(m, b'\x00\x21\x6f')
+    assert m.__cmdid__ == 0x2f
+    assert m.sensor_type == 0x21
+    assert m.event_reading_type.code == 0x6f
+
+
+def test_setsensorreadingandeventstatus_encode_req():
+    m = pyipmi.msgs.sensor.SetSensorReadingAndEventStatusReq()
+    m.sensor_number = 0x10
+    m.operation.reading = 1
+    m.sensor_reading = 0x42
+    assert m.__cmdid__ == 0x30
+    # only the bytes up to the reading
+    assert encode_message(m) == b'\x10\x01\x42'
+    m.operation.assertion_bits = 3
+    m.operation.event_data = 2
+    m.assertion_mask = 0x0102
+    m.deassertion_mask = 0x0000
+    m.event_data = array('B', [0x01, 0xff, 0xff])
+    assert encode_message(m) == \
+        b'\x10\xb1\x42\x02\x01\x00\x00\x01\xff\xff'

@@ -17,6 +17,7 @@
 from . import constants
 from . import register_message_class
 from . import Message
+from . import ByteArray
 from . import UnsignedInt
 from . import Timestamp
 from . import Bitfield
@@ -96,6 +97,31 @@ class ReserveDeviceSdrRepositoryRsp(Message):
     __fields__ = (
             CompletionCode(),
             UnsignedInt('reservation_id', 2)
+    )
+
+
+@register_message_class
+class GetSensorReadingFactorsReq(Message):
+    __cmdid__ = constants.CMDID_GET_SENSOR_READING_FACTOR
+    __netfn__ = constants.NETFN_SENSOR_EVENT
+    __fields__ = (
+        UnsignedInt('sensor_number', 1),
+        # the raw reading the factors are requested for
+        UnsignedInt('reading', 1),
+    )
+
+
+@register_message_class
+class GetSensorReadingFactorsRsp(Message):
+    __cmdid__ = constants.CMDID_GET_SENSOR_READING_FACTOR
+    __netfn__ = constants.NETFN_SENSOR_EVENT | 1
+    __fields__ = (
+        CompletionCode(),
+        # the next raw reading at which the factors change
+        UnsignedInt('next_reading', 1),
+        # M, tolerance, B, accuracy, accuracy exponent, R and B exponent, in
+        # the layout of the bytes 25 - 30 of a full sensor record
+        ByteArray('factors', 6),
     )
 
 
@@ -284,6 +310,34 @@ class RearmSensorEventsRsp(Message):
 
 
 @register_message_class
+class GetSensorEventStatusReq(Message):
+    __cmdid__ = constants.CMDID_GET_SENSOR_EVENT_STATUS
+    __netfn__ = constants.NETFN_SENSOR_EVENT
+    __fields__ = (
+        UnsignedInt('sensor_number', 1),
+    )
+
+
+@register_message_class
+class GetSensorEventStatusRsp(Message):
+    __cmdid__ = constants.CMDID_GET_SENSOR_EVENT_STATUS
+    __netfn__ = constants.NETFN_SENSOR_EVENT | 1
+    __fields__ = (
+            CompletionCode(),
+            Bitfield('status', 1,
+                     Bitfield.ReservedBit(5, 0),
+                     Bitfield.Bit('reading_unavailable', 1, 0),
+                     Bitfield.Bit('sensor_scanning_enabled', 1, 0),
+                     Bitfield.Bit('event_messages_enabled', 1, 0),),
+            # the asserted and deasserted events, bits 0 - 7 and 8 - 14
+            Optional(UnsignedInt('assertion_events_low', 1)),
+            Optional(UnsignedInt('assertion_events_high', 1)),
+            Optional(UnsignedInt('deassertion_events_low', 1)),
+            Optional(UnsignedInt('deassertion_events_high', 1)),
+    )
+
+
+@register_message_class
 class GetSensorReadingReq(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_READING
     __netfn__ = constants.NETFN_SENSOR_EVENT
@@ -348,4 +402,82 @@ class PlatformEventRsp(Message):
     __netfn__ = constants.NETFN_SENSOR_EVENT | 1
     __fields__ = (
             CompletionCode(),
+    )
+
+
+@register_message_class
+class SetSensorTypeReq(Message):
+    __cmdid__ = constants.CMDID_SET_SENSOR_TYPE
+    __netfn__ = constants.NETFN_SENSOR_EVENT
+    __fields__ = (
+        UnsignedInt('sensor_number', 1),
+        UnsignedInt('sensor_type', 1),
+        Bitfield('event_reading_type', 1,
+                 Bitfield.Bit('code', 7, 0),
+                 Bitfield.ReservedBit(1, 0),),
+    )
+
+
+@register_message_class
+class SetSensorTypeRsp(Message):
+    __cmdid__ = constants.CMDID_SET_SENSOR_TYPE
+    __netfn__ = constants.NETFN_SENSOR_EVENT | 1
+    __fields__ = (
+        CompletionCode(),
+    )
+
+
+@register_message_class
+class GetSensorTypeReq(Message):
+    __cmdid__ = constants.CMDID_GET_SENSOR_TYPE
+    __netfn__ = constants.NETFN_SENSOR_EVENT
+    __fields__ = (
+        UnsignedInt('sensor_number', 1),
+    )
+
+
+@register_message_class
+class GetSensorTypeRsp(Message):
+    __cmdid__ = constants.CMDID_GET_SENSOR_TYPE
+    __netfn__ = constants.NETFN_SENSOR_EVENT | 1
+    __fields__ = (
+        CompletionCode(),
+        UnsignedInt('sensor_type', 1),
+        Bitfield('event_reading_type', 1,
+                 Bitfield.Bit('code', 7, 0),
+                 Bitfield.ReservedBit(1, 0),),
+    )
+
+
+@register_message_class
+class SetSensorReadingAndEventStatusReq(Message):
+    __cmdid__ = constants.CMDID_SET_SENSOR_READING_AND_EVENT_STATUS
+    __netfn__ = constants.NETFN_SENSOR_EVENT
+    __fields__ = (
+        UnsignedInt('sensor_number', 1),
+        Bitfield('operation', 1,
+                 # 0 don't change the reading, 1 write the reading
+                 Bitfield.Bit('reading', 2, 0),
+                 # 0 don't change, 1 set the given bits, 2 clear the given
+                 # bits, 3 write the bits
+                 Bitfield.Bit('deassertion_bits', 2, 0),
+                 Bitfield.Bit('assertion_bits', 2, 0),
+                 # 0 the BMC generates the event data, 1 write the event
+                 # data without the offset, 2 write the event data with the
+                 # offset
+                 Bitfield.Bit('event_data', 2, 0),),
+        # the following bytes are optional, but each needs the ones before
+        Optional(UnsignedInt('sensor_reading', 1)),
+        Optional(UnsignedInt('assertion_mask', 2)),
+        Optional(UnsignedInt('deassertion_mask', 2)),
+        Optional(ByteArray('event_data', 3)),
+    )
+
+
+@register_message_class
+class SetSensorReadingAndEventStatusRsp(Message):
+    __cmdid__ = constants.CMDID_SET_SENSOR_READING_AND_EVENT_STATUS
+    __netfn__ = constants.NETFN_SENSOR_EVENT | 1
+    __fields__ = (
+        CompletionCode(),
     )
