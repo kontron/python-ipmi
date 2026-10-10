@@ -208,6 +208,7 @@ class TestParser:
         ('picmg channel power 1 on 2.5', 'cmd_picmg_send_channel_power'),
         ('picmg send heartbeat', 'cmd_picmg_send_pm_heartbeat'),
         ('vita properties', 'cmd_vita_properties'),
+        ('vita sensors 1', 'cmd_vita_sensors'),
         ('vita led set 0 1 255 0 3', 'cmd_vita_led_set'),
         ('dcmi discover', 'cmd_dcmi_discover'),
         ('dcmi sensors', 'cmd_dcmi_sensors'),

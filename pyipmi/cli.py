@@ -1510,6 +1510,20 @@ def cmd_vita_addrinfo(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
         print(f'Channel 7 Address: 0x{rsp.address_on_channel_7:02x}')
 
 
+def cmd_vita_sensors(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    rsp = ipmi.get_vita_mandatory_sensor_numbers(args.fru_id)
+    for (name, number) in (
+            ('FRU State', rsp.fru_state_sensor),
+            ('FRU Health', rsp.fru_health_sensor),
+            ('FRU Voltage', rsp.fru_voltage_sensor),
+            ('FRU Temperature', rsp.fru_temperature_sensor),
+            ('Payload Test Results', rsp.test_result_sensor),
+            ('Payload Test Status', rsp.test_status_sensor),
+            ('Payload Mode', rsp.payload_mode_sensor)):
+        print(f'{name + " Sensor":<28}: '
+              + ('not supported' if number == 0xff else f'0x{number:02x}'))
+
+
 def cmd_vita_activate(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     ipmi.set_vita_fru_activation(args.fru_id)
     print('FRU has been successfully activated')
@@ -2377,6 +2391,9 @@ def build_parser() -> argparse.ArgumentParser:
                         '3: diagnostic interrupt')
     p = group.command('addrinfo', cmd_vita_addrinfo,
                       'Get address information')
+    p.add_argument('fru_id', type=auto_int, nargs='?', default=0)
+    p = group.command('sensors', cmd_vita_sensors,
+                      'Get the numbers of the mandatory sensors')
     p.add_argument('fru_id', type=auto_int, nargs='?', default=0)
     p = group.command('activate', cmd_vita_activate, 'Activate a FRU')
     p.add_argument('fru_id', type=auto_int)

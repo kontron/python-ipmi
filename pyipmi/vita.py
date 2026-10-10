@@ -133,6 +133,25 @@ class Vita(IpmiMixin):
         return self.send_message_by_name('VitaGetFruAddressInfo',
                                          fru_id=fru_id)
 
+    def get_vita_mandatory_sensor_numbers(self, fru_id: int = 0) -> Message:
+        """Get the numbers of the mandatory sensors of a FRU.
+
+        The System IPMB Link sensor is not reported, VITA 46.11 gives it
+        the number 1 for FRU 0, LUN 0.
+
+        Args:
+            fru_id: The FRU device ID.
+
+        Returns:
+            The response with the sensor numbers ``fru_state_sensor``,
+            ``fru_health_sensor``, ``fru_voltage_sensor``,
+            ``fru_temperature_sensor``, ``test_result_sensor``,
+            ``test_status_sensor`` and ``payload_mode_sensor``; 0xff for a
+            sensor the FRU does not support.
+        """
+        return self.send_message_by_name('VitaGetMandatorySensorNumbers',
+                                         fru_id=fru_id)
+
     def vita_fru_control(self, fru_id: int, option: int) -> None:
         """Control a FRU, e.g. reset it.
 

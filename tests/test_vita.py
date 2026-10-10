@@ -26,6 +26,10 @@ RESPONSES = {
     constants.CMDID_VITA_GET_FRU_LED_STATE:
         b'\x00\x03\x03\xff\x00\x03\x00\x00\x02',
     constants.CMDID_VITA_GET_FRU_STATE_POLICY_BITS: b'\x00\x03\x05',
+    # FRU state, health, voltage and temperature sensors, no payload test
+    # and payload mode sensors
+    constants.CMDID_VITA_GET_MANDATORY_SENSOR_NUMBERS:
+        b'\x00\x03\x00\x02\x03\x04\xff\xff\xff\xff',
 }
 
 
@@ -72,6 +76,17 @@ def test_get_fru_address_info(ipmi):
     assert rsp.hardware_address == 0x41
     assert rsp.ipmb_0_address == 0x82
     assert rsp.address_on_channel_7 == 0x84
+
+
+def test_get_mandatory_sensor_numbers(ipmi):
+    rsp = ipmi.get_vita_mandatory_sensor_numbers()
+    assert last_request(ipmi) == b'\x44\x03\x00'
+    assert rsp.fru_state_sensor == 0
+    assert rsp.fru_health_sensor == 2
+    assert rsp.fru_temperature_sensor == 4
+    assert rsp.test_result_sensor == 0xff
+    ipmi.get_vita_mandatory_sensor_numbers(1)
+    assert last_request(ipmi) == b'\x44\x03\x01'
 
 
 def test_fru_control(ipmi):
@@ -149,6 +164,15 @@ def test_cli_addrinfo(ipmi, capsys):
 
     run_cli(ipmi, 'vita addrinfo 0x02', capsys)
     assert last_request(ipmi) == b'\x40\x03\x02'
+
+
+def test_cli_sensors(ipmi, capsys):
+    out = run_cli(ipmi, 'vita sensors', capsys)
+    assert last_request(ipmi) == b'\x44\x03\x00'
+    assert 'FRU State Sensor            : 0x00' in out
+    assert 'FRU Health Sensor           : 0x02' in out
+    assert 'Payload Test Results Sensor : not supported' in out
+    assert 'Payload Mode Sensor         : not supported' in out
 
 
 def test_cli_set_commands(ipmi, capsys):

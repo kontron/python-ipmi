@@ -1,4 +1,4 @@
-.TH PYIPMI "1" "2026\-10\-10" "python\-ipmi" "python\-ipmi manual"
+.TH PYIPMI "1" "2026\-10\-11" "python\-ipmi" "python\-ipmi manual"
 .SH NAME
 pyipmi \- pure python IPMI tool
 .SH SYNOPSIS
@@ -1230,6 +1230,9 @@ FRU control
 \fBpyipmi vita\fR \fI\,addrinfo\/\fR
 Get address information
 .TP
+\fBpyipmi vita\fR \fI\,sensors\/\fR
+Get the numbers of the mandatory sensors
+.TP
 \fBpyipmi vita\fR \fI\,activate\/\fR
 Activate a FRU
 .TP
@@ -1263,6 +1266,14 @@ FRU control
 usage: pyipmi vita addrinfo [\-h] [fru_id]
 
 Get address information
+
+.TP
+\fBfru_id\fR
+
+.SH COMMAND \fI\,'pyipmi vita sensors'\/\fR
+usage: pyipmi vita sensors [\-h] [fru_id]
+
+Get the numbers of the mandatory sensors
 
 .TP
 \fBfru_id\fR
