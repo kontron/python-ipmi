@@ -40,6 +40,7 @@ from __future__ import annotations
 import math
 from array import array
 from collections.abc import Callable, Generator
+from typing import Protocol
 
 from . import errors
 
@@ -79,6 +80,10 @@ L_SQR = 8
 L_CUBE = 9
 L_SQRT = 10
 L_CUBERT = 11
+# The non-linear linearizations: the conversion factors depend on the
+# reading and are read with Get Sensor Reading Factors
+L_NON_LINEAR_FIRST = 0x70
+L_NON_LINEAR_LAST = 0x7f
 
 # Names of the record types
 SDR_TYPE_NAMES = {
@@ -742,6 +747,22 @@ class SdrCommon:
 ###
 # SDR type 0x01
 ##################################################
+class ConversionFactors(Protocol):
+    """The conversion factors of a reading, e.g. of a non-linear sensor.
+
+    :class:`pyipmi.sensor.SensorReadingFactors` has these attributes.
+    """
+
+    m: int
+    """The conversion factor M."""
+    b: int
+    """The conversion offset B."""
+    k1: int
+    """The exponent of B."""
+    k2: int
+    """The result exponent."""
+
+
 class SdrFullSensorRecord(SdrCommon):
     """A Full Sensor Record (type 0x01).
 
@@ -823,17 +844,34 @@ class SdrFullSensorRecord(SdrCommon):
              f'[{self.entity_id}:{self.entity_instance}] [{data}]')
         return s
 
-    def convert_sensor_raw_to_value(self, raw: int | None) -> float | None:
+    @property
+    def is_non_linear(self) -> bool:
+        """Whether the conversion factors depend on the reading.
+
+        The factors of a non-linear sensor are not in the record, they are
+        read for each reading with
+        :meth:`pyipmi.Ipmi.get_sensor_reading_factors`.
+        """
+        return (L_NON_LINEAR_FIRST <= self.linearization & 0x7f
+                <= L_NON_LINEAR_LAST)
+
+    def convert_sensor_raw_to_value(self, raw: int | None,
+                                    factors: ConversionFactors | None = None,
+                                    ) -> float | None:
         """Convert a raw sensor reading to the value in the sensor unit.
 
         Args:
             raw: The raw reading, e.g. of :meth:`pyipmi.Ipmi.get_sensor_reading`.
+            factors: The conversion factors of the reading, which replace
+                the factors and the linearization of the record. Needed for
+                a non-linear sensor, see :attr:`is_non_linear`.
 
         Returns:
             The converted value, None if ``raw`` is None.
 
         Raises:
-            DecodingError: The linearization is unknown.
+            DecodingError: The linearization is unknown, or the sensor is
+                non-linear and no ``factors`` are given.
         """
         if raw is None:
             return None
@@ -845,6 +883,12 @@ class SdrFullSensorRecord(SdrCommon):
             if raw & 0x80:
                 raw = -((raw & 0x7f) ^ 0x7f) - 1
 
+        if factors is not None:
+            return ((factors.m * float(raw) + (factors.b * 10**factors.k1))
+                    * 10**factors.k2)
+        if self.is_non_linear:
+            raise errors.DecodingError('non-linear sensor, the conversion '
+                                       'factors of the reading are needed')
         return self.lin((self.m * float(raw)
                          + (self.b * 10**self.k1)) * 10**self.k2)
 

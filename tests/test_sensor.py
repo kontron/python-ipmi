@@ -11,9 +11,11 @@ from pyipmi.sensor import (EVENT_READING_TYPE_SENSOR_SPECIFIC, GENERATOR_ID_SMS,
                            event_offset_to_string,
                            event_reading_type_to_string,
                            sensor_type_to_string,
-                           SENSOR_TYPE_MODULE_HOT_SWAP, EVENT_BITS_SET,
-                           EVENT_BITS_CLEAR, EVENT_BITS_WRITE)
-from pyipmi.errors import CompletionCodeError
+                           sensor_type_from_string,
+                           SENSOR_TYPE_MODULE_HOT_SWAP, SENSOR_TYPE_VOLTAGE,
+                           EVENT_BITS_SET, EVENT_BITS_CLEAR, EVENT_BITS_WRITE)
+from pyipmi.errors import CompletionCodeError, DecodingError, NotSupportedError
+from pyipmi.sdr import SdrCommon
 
 from .ipmi_helper import create_ipmi
 
@@ -375,3 +377,183 @@ def test_sensor_commands_error(method, args):
     ipmi = create_ipmi(b'\xcb')
     with pytest.raises(CompletionCodeError):
         getattr(ipmi, method)(*args)
+
+
+def device_id_rsp(functions):
+    # the additional device support byte: bit 0 sensor, bit 1 SDR repository
+    return b'\x00\x20\x81\x01\x02\x51' + bytes([functions]) + bytes(5)
+
+
+def full_record(name, sensor_type=0x01, units_1=0x00, linearization=0x00):
+    # threshold sensor 4 of the BMC 0x20, LUN 1, M = 1, unit degrees C
+    data = bytearray([
+        0x01, 0x00, 0x51, 0x01, 0x00, 0x20, 0x01, 0x04, 0x03, 0x01,
+        0x7f, 0x68, sensor_type, 0x01, 0x80, 0x0a, 0x80, 0x7a, 0x38, 0x38,
+        units_1, 0x01, 0x00, linearization, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x01, 40, 80, 10, 127, 0, 100, 90, 80, 0, 0, 0, 2, 2, 0, 0,
+        0, 0xc0 | len(name)])
+    return SdrCommon.from_data(bytes(data) + name.encode())
+
+
+# sensor-specific slot/connector sensor 0xd3
+COMPACT_RECORD = SdrCommon.from_data(bytes([
+    0xd3, 0x00, 0x51, 0x02, 0x28, 0x82, 0x00, 0xd3, 0xc1, 0x64,
+    0x03, 0x40, 0x21, 0x6f, 0x05, 0x00, 0x01, 0x00, 0x03, 0x00,
+    0xc0, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0xcd]) + b'A4:Pres SFP-1')
+
+# a record that is no sensor: FRU device locator of FRU 0
+FRU_LOCATOR = SdrCommon.from_data(bytes([
+    0x10, 0x00, 0x51, 0x11, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00,
+    0x10, 0x00, 0x0a, 0x01, 0x00, 0xc3]) + b'FRU')
+
+
+@pytest.mark.parametrize('functions, source', [
+    (0x03, 'sdr_repository_entries'),
+    # a satellite controller without SDR repository
+    (0x01, 'device_sdr_entries'),
+])
+def test_sdr_entries(functions, source):
+    ipmi = create_ipmi({'GetDeviceId': device_id_rsp(functions)})
+    records = [COMPACT_RECORD]
+    setattr(ipmi, source, lambda: iter(records))
+    assert list(ipmi.sdr_entries()) == records
+
+
+def test_sdr_entries_not_supported():
+    ipmi = create_ipmi({'GetDeviceId': device_id_rsp(0x00)})
+    with pytest.raises(NotSupportedError):
+        ipmi.sdr_entries()
+
+
+class TestFindSensors:
+    RECORDS = [full_record('CPU Temp'), FRU_LOCATOR,
+               full_record('P12V', sensor_type=SENSOR_TYPE_VOLTAGE),
+               COMPACT_RECORD, full_record('CPU1 Temp')]
+
+    def find(self, **kwargs):
+        ipmi = create_ipmi({})
+        ipmi.sdr_entries = lambda: iter(self.RECORDS)
+        return [str(record.device_id_string)
+                for record in ipmi.find_sensors(**kwargs)]
+
+    @pytest.mark.parametrize('kwargs, names', [
+        # all sensors, without the FRU locator
+        ({}, ['CPU Temp', 'P12V', 'A4:Pres SFP-1', 'CPU1 Temp']),
+        # the pattern matches the whole name and ignores case
+        ({'name': 'cpu*'}, ['CPU Temp', 'CPU1 Temp']),
+        ({'name': 'CPU?'}, []),
+        ({'name': 'cpu[0-9] temp'}, ['CPU1 Temp']),
+        ({'name': '*sfp*'}, ['A4:Pres SFP-1']),
+        ({'name': 'P12V'}, ['P12V']),
+        ({'sensor_type': 'temperature'}, ['CPU Temp', 'CPU1 Temp']),
+        ({'sensor_type': SENSOR_TYPE_VOLTAGE}, ['P12V']),
+        ({'sensor_type': 'slot-connector'}, ['A4:Pres SFP-1']),
+        ({'name': 'cpu1*', 'sensor_type': 'temperature'}, ['CPU1 Temp']),
+        ({'name': 'cpu*', 'sensor_type': 'voltage'}, []),
+    ])
+    def test_find_sensors(self, kwargs, names):
+        assert self.find(**kwargs) == names
+
+    def test_unknown_type(self):
+        with pytest.raises(ValueError):
+            self.find(sensor_type='humidity')
+
+
+@pytest.mark.parametrize('name, sensor_type', [
+    ('temperature', 0x01),
+    ('Voltage', 0x02),
+    ('power supply', 0x08),
+    ('POWER-SUPPLY', 0x08),
+    ('drive_slot_bay', 0x0d),
+    ('Drive Slot / Bay', 0x0d),
+    ('0x21', 0x21),
+    ('192', 0xc0),
+])
+def test_sensor_type_from_string(name, sensor_type):
+    assert sensor_type_from_string(name) == sensor_type
+
+
+@pytest.mark.parametrize('name', ['humidity', '', '0x100', '-1'])
+def test_sensor_type_from_string_invalid(name):
+    with pytest.raises(ValueError):
+        sensor_type_from_string(name)
+
+
+class TestReadSensor:
+    def test_full_record(self):
+        # reading 45, upper non-critical threshold crossed
+        ipmi = create_ipmi(b'\x00\x2d\xc0\x08\x00')
+        reading = ipmi.read_sensor(full_record('CPU Temp'))
+        # the sensor is read with its number and the LUN of its owner
+        assert ipmi.requests == [('GetSensorReadingReq', b'\x04')]
+        assert ipmi.interface.send_and_receive.call_args[0][0].lun == 1
+        assert reading.name == 'CPU Temp'
+        assert reading.raw == 45
+        assert reading.value == 45.0
+        assert reading.unit == 'degrees C'
+        assert reading.states == 0x08
+        assert reading.state_names() == ['Upper Non-critical']
+
+    def test_initial_update_in_progress(self):
+        ipmi = create_ipmi(b'\x00\x00\xe0\x00\x00')
+        reading = ipmi.read_sensor(full_record('CPU Temp'))
+        assert reading.raw is None
+        assert reading.value is None
+        assert reading.unit == 'degrees C'
+
+    def test_non_linear(self):
+        # M = -2, B = 100, K1 = 2, K2 = -3 for the reading 0x80
+        ipmi = create_ipmi({
+            'GetSensorReading': b'\x00\x80\xc0\x00\x00',
+            'GetSensorReadingFactors': b'\x00\x90\xfe\xc5\x64\x05\x18\xd2'})
+        reading = ipmi.read_sensor(full_record('Fan', linearization=0x70))
+        assert ipmi.requests == [('GetSensorReadingReq', b'\x04'),
+                                 ('GetSensorReadingFactorsReq', b'\x04\x80')]
+        assert reading.value == pytest.approx((-2 * 0x80 + 100 * 10**2)
+                                              * 10**-3)
+
+    def test_no_numeric_reading(self):
+        # analog data format 3: the sensor has no numeric reading
+        ipmi = create_ipmi(b'\x00\x01\xc0\x00\x00')
+        reading = ipmi.read_sensor(full_record('Status', units_1=0xc0))
+        assert reading.raw == 1
+        assert reading.value is None
+        assert reading.unit == ''
+
+    def test_compact_record(self):
+        # the states 0 and 2 of the slot/connector sensor are asserted
+        ipmi = create_ipmi(b'\x00\x00\xc0\x05\x00')
+        reading = ipmi.read_sensor(COMPACT_RECORD)
+        assert ipmi.requests == [('GetSensorReadingReq', b'\xd3')]
+        assert reading.value is None
+        assert reading.unit == ''
+        assert reading.state_names() == [
+            'Fault Status Asserted', 'Slot / Connector Device '
+            'Installed/Attached']
+
+    @pytest.mark.parametrize('record, rsp, states', [
+        # the reserved bits 7:6 of a threshold sensor are cleared
+        (full_record('CPU Temp'), b'\x00\x2d\xc0\xc8\xff', 0x08),
+        # the reserved bit 15 of a discrete sensor is cleared
+        (COMPACT_RECORD, b'\x00\x00\xc0\xff\xff', 0x7fff),
+    ])
+    def test_reserved_state_bits(self, record, rsp, states):
+        reading = create_ipmi(rsp).read_sensor(record)
+        assert reading.states == states
+
+    def test_no_states(self):
+        ipmi = create_ipmi(b'\x00\x2d\xc0')
+        reading = ipmi.read_sensor(full_record('CPU Temp'))
+        assert reading.states is None
+        assert reading.state_names() == []
+
+    def test_error(self):
+        ipmi = create_ipmi(b'\xcb')
+        with pytest.raises(CompletionCodeError):
+            ipmi.read_sensor(full_record('CPU Temp'))
+
+
+def test_convert_non_linear_without_factors():
+    with pytest.raises(DecodingError):
+        full_record('Fan', linearization=0x70).convert_sensor_raw_to_value(1)

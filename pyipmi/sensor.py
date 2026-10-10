@@ -26,21 +26,22 @@ the ``EVENT_READING_TYPE_*`` constants the event/reading types of the IPMI
 specification.
 
 Example:
-    Print the value of the full sensor records of a device::
+    Print the value of the temperature sensors whose name starts with
+    ``CPU``::
 
-        for record in ipmi.device_sdr_entries():
-            if isinstance(record, pyipmi.sdr.SdrFullSensorRecord):
-                raw, states = ipmi.get_sensor_reading(record.number,
-                                                      record.owner_lun)
-                value = record.convert_sensor_raw_to_value(raw)
-                print(record.device_id_string, value)
+        for record in ipmi.find_sensors(name='CPU*',
+                                        sensor_type='temperature'):
+            reading = ipmi.read_sensor(record)
+            print(reading.name, reading.value, reading.unit)
 """
 
 from __future__ import annotations
 
 from array import array
-from collections.abc import Generator
+from collections.abc import Generator, Iterator
+from fnmatch import fnmatchcase
 
+from .errors import NotSupportedError
 from .utils import check_rsp_completion_code, ByteSequence
 from .msgs import create_request_by_name, Message
 from .state import State
@@ -554,6 +555,133 @@ def event_offset_to_string(event_reading_type: int, sensor_type: int,
     return strings[offset]
 
 
+def _normalize_type_name(name: str) -> str:
+    # 'Drive Slot / Bay', 'drive-slot-bay' and 'drive_slot_bay' are equal
+    return ''.join(c for c in name.lower() if c.isalnum())
+
+
+def sensor_type_from_string(name: str) -> int:
+    """Return the sensor type of a name.
+
+    Case, spaces and punctuation are ignored, e.g. ``'temperature'``,
+    ``'Power Supply'`` and ``'power-supply'`` are valid names.
+
+    Args:
+        name: The name of the sensor type, as returned by
+            :func:`sensor_type_to_string`, or the number of the sensor
+            type, decimal or with 0x prefix.
+
+    Returns:
+        The sensor type.
+
+    Raises:
+        ValueError: The name is no known sensor type.
+    """
+    try:
+        sensor_type = int(name, 0)
+    except ValueError:
+        pass
+    else:
+        if not 0 <= sensor_type <= 0xff:
+            raise ValueError(f'sensor type out of range: {name}')
+        return sensor_type
+    normalized = _normalize_type_name(name)
+    for sensor_type, type_name in SENSOR_TYPE_NAMES.items():
+        if _normalize_type_name(type_name) == normalized:
+            return sensor_type
+    raise ValueError(f'unknown sensor type: {name}')
+
+
+# The threshold comparison states of a threshold sensor, by bit of the
+# states of Get Sensor Reading
+THRESHOLD_STATE_NAMES = (
+    'Lower Non-critical',
+    'Lower Critical',
+    'Lower Non-recoverable',
+    'Upper Non-critical',
+    'Upper Critical',
+    'Upper Non-recoverable',
+)
+
+
+class SensorReading:
+    """The reading of a sensor, see :meth:`Sensor.read_sensor`.
+
+    Attributes:
+        record (SdrFullSensorRecord | SdrCompactSensorRecord): The record
+            of the sensor.
+        raw (int | None): The raw reading, None while the initial update of
+            the sensor is in progress.
+        value (float | None): The reading converted to the sensor unit.
+            None for a sensor without numeric reading, e.g. a discrete
+            sensor of a compact record, or if ``raw`` is None.
+        unit (str): The unit of ``value``, e.g. ``'degrees C'``. An empty
+            string for a sensor without numeric reading or unit.
+        states (int | None): The states bit mask, the threshold comparison
+            status of a threshold sensor in bits 0-5 (see
+            ``THRESHOLD_STATE_NAMES``) or the asserted states of a discrete
+            sensor in bits 0-14. The reserved bits are cleared. None if
+            the sensor does not report them.
+    """
+
+    def __init__(self, record: sdr.SdrFullSensorRecord
+                 | sdr.SdrCompactSensorRecord, raw: int | None,
+                 value: float | None, unit: str,
+                 states: int | None) -> None:
+        """Initialize the reading.
+
+        Args:
+            record: The record of the sensor.
+            raw: The raw reading.
+            value: The converted reading.
+            unit: The unit of the converted reading.
+            states: The states bit mask.
+        """
+        self.record = record
+        self.raw = raw
+        self.value = value
+        self.unit = unit
+        self.states = states
+
+    def __repr__(self) -> str:
+        """Return the name, the value, the unit and the states."""
+        return (f'SensorReading(name={self.name!r}, value={self.value!r}, '
+                f'unit={self.unit!r}, states={self.states!r})')
+
+    @property
+    def name(self) -> str:
+        """The name of the sensor, the device ID string of its record."""
+        return str(self.record.device_id_string)
+
+    def state_names(self) -> list[str]:
+        """Return the names of the asserted states.
+
+        The states of a threshold sensor are the crossed thresholds, e.g.
+        ``'Upper Critical'``. The states of a discrete sensor are named by
+        :func:`event_offset_to_string`, an unknown state as
+        ``'Offset 0x..'``.
+
+        Returns:
+            The names, an empty list if no state is asserted or the
+            sensor does not report states.
+        """
+        if self.states is None:
+            return []
+        event_reading_type = self.record.event_reading_type_code
+        names = []
+        if event_reading_type == EVENT_READING_TYPE_CODE_THRESHOLD:
+            for (bit, name) in enumerate(THRESHOLD_STATE_NAMES):
+                if self.states & (1 << bit):
+                    names.append(name)
+            return names
+        for offset in range(15):
+            if self.states & (1 << offset):
+                description = event_offset_to_string(
+                    event_reading_type, self.record.sensor_type_code, offset)
+                names.append(description or f'Offset 0x{offset:02x}')
+        return names
+
+
 class Sensor(IpmiMixin):
     """Sensor device commands, available on :class:`pyipmi.Ipmi`.
 
@@ -671,6 +799,123 @@ class Sensor(IpmiMixin):
             The decoded records.
         """
         return list(self.device_sdr_entries())
+
+    def sdr_entries(self) -> Iterator[sdr.SdrCommon]:
+        """Return the records that describe the sensors of the device.
+
+        The records are read from the SDR repository, or from the device
+        SDR repository if the device has no SDR repository. A BMC normally
+        holds its records in the SDR repository, the device SDR repository
+        is mostly used by satellite controllers.
+
+        Returns:
+            A generator of the decoded records.
+
+        Raises:
+            NotSupportedError: The device has neither an SDR repository
+                nor a device SDR repository.
+        """
+        device_id = self.get_device_id()
+        if device_id.supports_function('sdr_repository'):
+            return self.sdr_repository_entries()
+        if device_id.supports_function('sensor'):
+            return self.device_sdr_entries()
+        raise NotSupportedError('device supports neither SDR repository '
+                                'nor sensor functions')
+
+    def find_sensors(self, name: str | None = None,
+                     sensor_type: int | str | None = None,
+                     ) -> list[sdr.SdrFullSensorRecord
+                               | sdr.SdrCompactSensorRecord]:
+        """Search the sensors of the device by name and type.
+
+        The sensors are the full and compact sensor records of
+        :meth:`sdr_entries`. Reading the records is slow, so keep the
+        records to read the sensors repeatedly with :meth:`read_sensor`.
+
+        Args:
+            name: A glob pattern for the sensor name, matched against the
+                whole device ID string and ignoring case, e.g. ``'CPU*'``
+                or ``'*temp*'``. None matches all names.
+            sensor_type: The sensor type, a ``SENSOR_TYPE_*`` constant or
+                a name for :func:`sensor_type_from_string`, e.g.
+                ``'temperature'`` or ``'voltage'``. None matches all types.
+
+        Returns:
+            The records of the matching sensors, in repository order.
+
+        Raises:
+            NotSupportedError: The device has neither an SDR repository
+                nor a device SDR repository.
+            ValueError: The sensor type name is unknown.
+        """
+        if isinstance(sensor_type, str):
+            sensor_type = sensor_type_from_string(sensor_type)
+        pattern = None if name is None else name.lower()
+
+        sensors: list[sdr.SdrFullSensorRecord
+                      | sdr.SdrCompactSensorRecord] = []
+        for record in self.sdr_entries():
+            if not isinstance(record, (sdr.SdrFullSensorRecord,
+                                       sdr.SdrCompactSensorRecord)):
+                continue
+            if (sensor_type is not None
+                    and record.sensor_type_code != sensor_type):
+                continue
+            if (pattern is not None and not fnmatchcase(
+                    str(record.device_id_string).lower(), pattern)):
+                continue
+            sensors.append(record)
+        return sensors
+
+    def read_sensor(self, record: sdr.SdrFullSensorRecord
+                    | sdr.SdrCompactSensorRecord) -> SensorReading:
+        """Read a sensor and convert the reading to the sensor unit.
+
+        The reading of a full sensor record with a numeric reading is
+        converted with the factors of the record, or with the factors
+        of the reading for a non-linear sensor. The reading of a compact
+        sensor record is not converted.
+
+        The sensor is read with the LUN of the record on the current
+        target. A sensor of another controller (``owner_id`` of the record)
+        is only read correctly if the target is set to that controller.
+
+        Args:
+            record: The record of the sensor, e.g. of
+                :meth:`find_sensors`.
+
+        Returns:
+            The raw and the converted reading, the unit and the states.
+
+        Raises:
+            CompletionCodeError: The sensor cannot be read, e.g. the
+                sensor is not present.
+            DecodingError: The linearization of the record is unknown.
+        """
+        (raw, states) = self.get_sensor_reading(record.number,
+                                                record.owner_lun)
+        if states is not None:
+            # the bits 7:6 of a threshold sensor are reserved, and often set
+            if (record.event_reading_type_code
+                    == EVENT_READING_TYPE_CODE_THRESHOLD):
+                states &= 0x3f
+            else:
+                states &= 0x7fff
+        value = None
+        unit = ''
+        if (isinstance(record, sdr.SdrFullSensorRecord)
+                and record.analog_data_format
+                != record.DATA_FMT_NONE):
+            unit = sdr.units_to_string(record.units_1, record.units_2,
+                                       record.units_3)
+            if raw is not None:
+                factors = None
+                if record.is_non_linear:
+                    factors = self.get_sensor_reading_factors(
+                        record.number, raw, lun=record.owner_lun)
+                value = record.convert_sensor_raw_to_value(raw, factors)
+        return SensorReading(record, raw, value, unit, states)
 
     def get_sensor_reading_factors(self, sensor_number: int, reading: int,
                                    lun: int = 0) -> SensorReadingFactors:

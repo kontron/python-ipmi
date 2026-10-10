@@ -2,7 +2,6 @@
 
 import pyipmi
 import pyipmi.interfaces
-import pyipmi.sdr
 
 # Read all sensor values of a BMC, similar to 'ipmitool sensor'.
 #
@@ -20,27 +19,13 @@ sess.set_priv_level("ADMINISTRATOR")
 target = pyipmi.Target(ipmb_address=0x20)
 
 with pyipmi.Ipmi(interface=intf, session=sess, target=target) as ipmi:
-    # A BMC normally holds its sensor records in the SDR repository. The
-    # device SDR commands (device_sdr_entries) are mostly used by satellite
-    # controllers and are rejected by many BMCs with cc=0xc1.
-    device_id = ipmi.get_device_id()
-    if device_id.supports_function('sdr_repository'):
-        entries = ipmi.sdr_repository_entries()
-    elif device_id.supports_function('sensor'):
-        entries = ipmi.device_sdr_entries()
-    else:
-        raise SystemExit('Device provides no SDRs')
-
-    for sdr in entries:
-        if sdr.type == pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD:
-            (raw, states) = ipmi.get_sensor_reading(sdr.number,
-                                                    sdr.owner_lun)
-            value = sdr.convert_sensor_raw_to_value(raw)
-            print(f'{sdr.device_id_string!s:<18} | {value!s:>10}')
-        elif sdr.type == pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD:
-            # compact records describe discrete sensors, there is no
-            # conversion to a physical value
-            (raw, states) = ipmi.get_sensor_reading(sdr.number,
-                                                    sdr.owner_lun)
-            print(f'{sdr.device_id_string!s:<18} | {raw!s:>10} | '
-                  f'states=0x{states or 0:04x}')
+    # The records are read from the SDR repository of a BMC, or from the
+    # device SDR repository of a satellite controller. Search them once,
+    # e.g. with name='CPU*' or sensor_type='temperature', and keep them to
+    # read the sensors repeatedly.
+    for record in ipmi.find_sensors():
+        reading = ipmi.read_sensor(record)
+        # compact records describe discrete sensors, which have no value
+        # in a physical unit but only states
+        print(f'{reading.name:<18} | {reading.value!s:>10} '
+              f'{reading.unit:<10} | {", ".join(reading.state_names())}')

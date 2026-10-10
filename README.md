@@ -30,6 +30,7 @@
     ([IPMB message routing][doc-routing])
 * bridged requests to controllers behind the BMC
 * decoding of FRU data, SDRs and SEL entries, HPM.1 firmware upgrades
+* searching sensors by name and type, and reading their converted values
 * the command line tool `pyipmi` (formerly `ipmitool.py`)
 
 ## Tested Devices

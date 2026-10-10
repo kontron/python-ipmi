@@ -19,10 +19,13 @@ from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
     from . import Target
     from .bmc import DeviceId
     from .messaging import ChannelInfo
     from .msgs import Message
+    from .sdr import SdrCommon
 
 
 class IpmiMixin:
@@ -47,6 +50,10 @@ class IpmiMixin:
 
         # bmc.Bmc
         def get_device_id(self) -> DeviceId: ...
+
+        # sdr.Sdr
+        def sdr_repository_entries(self) -> Generator[SdrCommon, None,
+                                                      None]: ...
 
         # messaging.Messaging
         def get_channel_info(self, channel: int) -> ChannelInfo: ...
