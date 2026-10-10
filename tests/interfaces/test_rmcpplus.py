@@ -14,7 +14,7 @@ from pyipmi.interfaces.ipmb import checksum
 from pyipmi.interfaces.rmcpplus import (CIPHER_SUITES, PAYLOAD_TYPE_IPMI,
                                         RmcpPlus, SessionKeys, aes_available,
                                         pack_rmcpplus, unpack_rmcpplus)
-from pyipmi.ipmitool import parse_interface_options
+from pyipmi.cli import parse_interface_options
 
 needs_aes = pytest.mark.skipif(not aes_available(),
                                reason='cryptography package not installed')

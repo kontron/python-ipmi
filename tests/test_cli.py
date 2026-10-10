@@ -8,10 +8,10 @@ import pytest
 
 from unittest.mock import MagicMock
 
-from pyipmi import ipmitool
+from pyipmi import cli
 from pyipmi.errors import CompletionCodeError
 from pyipmi.msgs import create_response_by_name, decode_message
-from pyipmi.ipmitool import build_parser, log_level, parse_interface_options
+from pyipmi.cli import build_parser, log_level, parse_interface_options
 from pyipmi.sdr import SdrCommon, SdrCompactSensorRecord, SdrFullSensorRecord
 from pyipmi.sel import SelEntry
 
@@ -88,7 +88,7 @@ class TestLogLevel:
             log_level(value)
 
     def test_logger_names(self):
-        names = ipmitool.logger_names()
+        names = cli.logger_names()
         assert 'interfaces.aardvark' in names
         assert 'interfaces.router' in names
         assert 'pyipmi' not in names
@@ -102,7 +102,7 @@ class TestLogLevel:
                     'pyipmi.interfaces.router')]
         saved = [(lg, lg.level, list(lg.handlers)) for lg in loggers]
         try:
-            ipmitool.setup_logging(False, [
+            cli.setup_logging(False, [
                 ('pyipmi.interfaces.aardvark', logging.DEBUG),
                 ('pyipmi.interfaces.router', logging.ERROR)])
             assert not loggers[0].isEnabledFor(logging.DEBUG)
@@ -146,7 +146,7 @@ class TestParser:
         assert args.target == 0x20
         assert args.port == 623
         assert args.options == ''
-        assert args.func is ipmitool.cmd_bmc_info
+        assert args.func is cli.cmd_bmc_info
         assert args.needs_connection
 
     @pytest.mark.parametrize('command, func', [
@@ -226,7 +226,7 @@ class TestParser:
         ('dcmi set_conf_param 3 64', 'cmd_dcmi_set_conf_param'),
     ])
     def test_commands(self, command, func):
-        assert self.parse(command).func is getattr(ipmitool, func)
+        assert self.parse(command).func is getattr(cli, func)
 
     def test_raw(self):
         args = self.parse('raw 0x06 0x01')
@@ -257,7 +257,7 @@ class TestParser:
                                                     expected, not_expected):
         path = os.path.join(os.path.dirname(__file__), 'fru_bin',
                             'HP_ProLiant_BL460c_Gen8.bin')
-        ipmitool.main(['fru', 'print-file', path] + extra)
+        cli.main(['fru', 'print-file', path] + extra)
         out = capsys.readouterr().out
         assert 'Product Name:       HP ProLiant BL460c Gen8' in out
         assert expected in out
@@ -269,7 +269,7 @@ class TestParser:
                                               data_printed):
         path = os.path.join(os.path.dirname(__file__), 'fru_bin',
                             'HP_ProLiant_BL460c_Gen8.bin')
-        ipmitool.main(['fru', 'print-file', path] + extra)
+        cli.main(['fru', 'print-file', path] + extra)
         out = capsys.readouterr().out
         assert ('Internal Use Area:\n'
                 '  Format Version:     1\n'
@@ -285,7 +285,7 @@ class TestParser:
         if content is not None:
             path.write_bytes(content)
         with pytest.raises(SystemExit) as e:
-            ipmitool.main(['fru', 'print-file', str(path)])
+            cli.main(['fru', 'print-file', str(path)])
         assert e.value.code == 1
         assert error in capsys.readouterr().err
 
@@ -355,7 +355,7 @@ class TestParser:
     def test_hpm_check_runs_without_connection(self, capsys):
         path = os.path.join(os.path.dirname(__file__), 'hpm_bin',
                             'firmware.hpm')
-        ipmitool.main(['hpm', 'check', path])
+        cli.main(['hpm', 'check', path])
         out = capsys.readouterr().out
         assert 'HPM Upgrade Image header' in out
         assert 'Upload Firmware Image' in out
@@ -368,7 +368,7 @@ class TestParser:
 
     def test_group_without_command_prints_help(self, capsys):
         with pytest.raises(SystemExit) as e:
-            ipmitool.main(['vita', 'led'])
+            cli.main(['vita', 'led'])
         assert e.value.code == 1
         out = capsys.readouterr().out
         assert 'usage: pyipmi vita led' in out
@@ -376,7 +376,7 @@ class TestParser:
 
     def test_no_command_prints_help(self, capsys):
         with pytest.raises(SystemExit):
-            ipmitool.main([])
+            cli.main([])
         assert 'interface options' in capsys.readouterr().out
 
     def test_main_runs_command(self, monkeypatch):
@@ -393,11 +393,11 @@ class TestParser:
             calls.append(('connect',) + args)
             return FakeIpmi()
 
-        monkeypatch.setattr(ipmitool, 'create_ipmi_connection',
+        monkeypatch.setattr(cli, 'create_ipmi_connection',
                             fake_connection)
-        monkeypatch.setattr(ipmitool, 'cmd_sel_clear',
+        monkeypatch.setattr(cli, 'cmd_sel_clear',
                             lambda ipmi, args: calls.append('sel clear'))
-        ipmitool.main(['-I', 'ipmbdev', '-o', 'port=/dev/ipmb-1',
+        cli.main(['-I', 'ipmbdev', '-o', 'port=/dev/ipmb-1',
                        '-t', '0x72', '-b', '7', 'sel', 'clear'])
 
         assert calls == [
@@ -419,7 +419,7 @@ class TestChassisPower:
     def test_chassis_power(self, action, control):
         ipmi = create_ipmi(b'\x00')
         args = build_parser().parse_args(['chassis', 'power', action])
-        ipmitool.cmd_chassis_power(ipmi, args)
+        cli.cmd_chassis_power(ipmi, args)
         assert ipmi.requests == [('ChassisControlReq', bytes([control]))]
 
 
@@ -560,14 +560,14 @@ class TestCreateIpmiConnection:
 
     def test_channel_rmcp(self):
         # like ipmitool -t 0x82 -b 0: bridged by the BMC on channel 0
-        ipmi = ipmitool.create_ipmi_connection('rmcp', None, 0x82, None,
+        ipmi = cli.create_ipmi_connection('rmcp', None, 0x82, None,
                                                '10.0.0.1', 623, 'admin',
                                                'admin', None, 0)
         assert ipmi.target.ipmb_address == 0x82
         assert self.routing(ipmi) == [(0x81, 0x20, 0), (0x20, 0x82, None)]
 
     def test_channel_ipmitool(self):
-        ipmi = ipmitool.create_ipmi_connection('ipmitool', None, 0x72, None,
+        ipmi = cli.create_ipmi_connection('ipmitool', None, 0x72, None,
                                                '10.0.0.1', 623, 'admin',
                                                'admin', None, 7)
         ipmi.interface.establish_session(ipmi.session)
@@ -577,15 +577,15 @@ class TestCreateIpmiConnection:
     def test_channel_uses_own_address(self, monkeypatch):
         # the requester of the first hop is the own address of the interface
         interface = MagicMock(slave_address=0x24)
-        monkeypatch.setattr(ipmitool.pyipmi.interfaces, 'create_interface',
+        monkeypatch.setattr(cli.pyipmi.interfaces, 'create_interface',
                             lambda name, **kwargs: interface)
-        ipmi = ipmitool.create_ipmi_connection('openipmblink', None, 0x72,
+        ipmi = cli.create_ipmi_connection('openipmblink', None, 0x72,
                                                None, None, 623, '', '', None,
                                                7)
         assert self.routing(ipmi) == [(0x24, 0x20, 7), (0x20, 0x72, None)]
 
     def test_routing(self):
-        ipmi = ipmitool.create_ipmi_connection('rmcp', None, 0x72,
+        ipmi = cli.create_ipmi_connection('rmcp', None, 0x72,
                                                '[(0x81,0x20,0),(0x20,0x72,None)]',
                                                '10.0.0.1', 623, 'admin',
                                                'admin', None)
@@ -598,7 +598,7 @@ class TestSdrShow:
                 0x02, 0x01, 0x51, 0x4a, 0xc1, 0x62, 0x06, 0x80,
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
-        ipmitool.sdr_show(SdrCommon.from_data(data))
+        cli.sdr_show(SdrCommon.from_data(data))
 
         out = capsys.readouterr().out
         assert out == (
@@ -622,7 +622,7 @@ class TestSdrShow:
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
         record = SdrCommon.from_data(data)
         assert record.manufacturer_name == 'Kontron'
-        ipmitool.sdr_show(record)
+        cli.sdr_show(record)
 
         out = capsys.readouterr().out
         assert 'Manufacturer:           [0x03a98] Kontron' in out
@@ -639,7 +639,7 @@ class TestSdrShow:
           'Raw Data:               01 00 51 0a 00']),
     ])
     def test_record_without_id_string(self, capsys, data, lines):
-        ipmitool.sdr_show(SdrCommon.from_data(data))
+        cli.sdr_show(SdrCommon.from_data(data))
 
         out = capsys.readouterr().out
         for line in lines:
@@ -650,7 +650,7 @@ class TestSdrShow:
         data = [0x02, 0x00, 0x51, 0x11, 0x10, 0x20, 0x00, 0x00,
                 0x00, 0x00, 0x10, 0x00, 0x0a, 0x01, 0x00, 0xc4,
                 0x46, 0x52, 0x55, 0x31]
-        ipmitool.sdr_show(SdrCommon.from_data(data))
+        cli.sdr_show(SdrCommon.from_data(data))
 
         out = capsys.readouterr().out
         assert out == (
@@ -681,7 +681,7 @@ class TestSdrShow:
         0x00, 0xcd]) + b'A4:Pres SFP-1'
 
     def test_full_sensor_record(self, capsys):
-        ipmitool.sdr_show(SdrCommon.from_data(self.FULL_RECORD))
+        cli.sdr_show(SdrCommon.from_data(self.FULL_RECORD))
 
         # the bits 14:12 of the deassertion mask are no events
         assert capsys.readouterr().out == (
@@ -709,7 +709,7 @@ class TestSdrShow:
             '                        Upper Non-recoverable going high\n')
 
     def test_compact_sensor_record(self, capsys):
-        ipmitool.sdr_show(SdrCommon.from_data(self.COMPACT_RECORD))
+        cli.sdr_show(SdrCommon.from_data(self.COMPACT_RECORD))
 
         assert capsys.readouterr().out == (
             'Record ID:              0x00d3\n'
@@ -733,7 +733,7 @@ class TestSdrShow:
         data = bytearray(self.COMPACT_RECORD)
         data[13] = 0x01
         data[21] = 0x04
-        ipmitool.sdr_show(SdrCommon.from_data(bytes(data)))
+        cli.sdr_show(SdrCommon.from_data(bytes(data)))
 
         out = capsys.readouterr().out
         assert ('Event/Reading Type:     [0x01] Threshold\n'
@@ -743,7 +743,7 @@ class TestSdrShow:
         data = [0x00, 0x01, 0x51, 0x12, 0x0f, 0x20, 0x00, 0x00,
                 0x29, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0xc4,
                 0x42, 0x4d, 0x43, 0x30]
-        ipmitool.sdr_show(SdrCommon.from_data(data))
+        cli.sdr_show(SdrCommon.from_data(data))
 
         assert capsys.readouterr().out.endswith(
             'Slave Address:          0x20\n'
@@ -922,7 +922,7 @@ def test_cmd_fru_read(tmp_path, capsys):
 def test_bmc_info_manufacturer_name(capsys, manufacturer, name):
     ipmi = create_ipmi(b'\x00\x04\x00\x01\x00\x02\x00' + manufacturer
                        + b'\xa5\x06')
-    ipmitool.cmd_bmc_info(ipmi, None)
+    cli.cmd_bmc_info(ipmi, None)
     out = capsys.readouterr().out
     assert f'Manufacturer Name:  {name}\n' in out
     # the IDs are shown in decimal and hex
@@ -1068,7 +1068,7 @@ class TestSdrList:
         # the states 0 are valid, as the sensor number 0
         ipmi.get_sensor_reading.return_value = (25, 0)
 
-        ipmitool.cmd_sdr_list(ipmi, argparse.Namespace(details=False))
+        cli.cmd_sdr_list(ipmi, argparse.Namespace(details=False))
 
         # the sensors are read with the LUN of their owner
         assert ipmi.get_sensor_reading.call_args_list == [
@@ -1085,7 +1085,7 @@ class TestSdrList:
         ipmi.sdr_repository_entries.return_value = [
             SdrCommon.from_data(TestSdrShow.FULL_RECORD),
             SdrCommon.from_data(TestSdrShow.COMPACT_RECORD)]
-        ipmitool.cmd_sdr_list(ipmi, argparse.Namespace(details=True))
+        cli.cmd_sdr_list(ipmi, argparse.Namespace(details=True))
 
         # only the values of the records are printed
         ipmi.get_sensor_reading.assert_not_called()
@@ -1105,7 +1105,7 @@ class TestSdrList:
         assert parser.parse_args(['sdr', 'list', '--details']).details
 
     def test_print_sdr_list_entry_not_available(self, capsys):
-        ipmitool.print_sdr_list_entry(3, None, 'Other', None, None)
+        cli.print_sdr_list_entry(3, None, 'Other', None, None)
         assert capsys.readouterr().out == (
             '0x0003 |  na | Other              |      None | na\n')
 
@@ -1155,7 +1155,7 @@ class TestSelList:
 
     def test_list(self, capsys):
         ipmi = self.ipmi()
-        ipmitool.cmd_sel_list(ipmi, argparse.Namespace(details=False,
+        cli.cmd_sel_list(ipmi, argparse.Namespace(details=False,
                                                        sdr=False))
         ipmi.sdr_repository_entries.assert_not_called()
         assert capsys.readouterr().out.splitlines() == [
@@ -1169,7 +1169,7 @@ class TestSelList:
         ]
 
     def test_list_sdr(self, capsys):
-        ipmitool.cmd_sel_list(self.ipmi(), argparse.Namespace(details=False,
+        cli.cmd_sel_list(self.ipmi(), argparse.Namespace(details=False,
                                                               sdr=True))
         lines = capsys.readouterr().out.splitlines()
         assert lines[0] == ('0x0001 | 2025-05-11 02:48:32 '
@@ -1181,7 +1181,7 @@ class TestSelList:
         assert 'FRU Hot Swap #0x00' in lines[1]
 
     def test_list_details(self, capsys):
-        ipmitool.cmd_sel_list(self.ipmi(), argparse.Namespace(details=True,
+        cli.cmd_sel_list(self.ipmi(), argparse.Namespace(details=True,
                                                               sdr=True))
         out = capsys.readouterr().out
         assert ('SEL Record ID:   0x0001\n'
@@ -1263,7 +1263,7 @@ class TestSelCommands:
         assert capsys.readouterr().out == '2025-05-11 02:48:32\n'
 
     def test_time_set_now(self, monkeypatch):
-        monkeypatch.setattr(ipmitool.time, 'time', lambda: 0x68201000 + 0.5)
+        monkeypatch.setattr(cli.time, 'time', lambda: 0x68201000 + 0.5)
         args = build_parser().parse_args(['sel', 'time', 'set', 'now'])
         assert args.time == 0x68201000
 
@@ -1596,15 +1596,15 @@ class TestCompletionCodeOutput:
         (CompletionCodeError(0xe0), '0xe0 (unknown completion code)'),
     ])
     def test_format_completion_code(self, error, output):
-        assert ipmitool.format_completion_code(error) == output
+        assert cli.format_completion_code(error) == output
 
     def test_main_prints_the_description(self, capsys, monkeypatch):
         ipmi = MagicMock()
         ipmi.get_device_id.side_effect = CompletionCodeError(0xd4)
-        monkeypatch.setattr(ipmitool, 'create_ipmi_connection',
+        monkeypatch.setattr(cli, 'create_ipmi_connection',
                             lambda *args: ipmi)
         with pytest.raises(SystemExit) as e:
-            ipmitool.main(['-I', 'ipmitool', '-H', '10.0.0.1', 'bmc',
+            cli.main(['-I', 'ipmitool', '-H', '10.0.0.1', 'bmc',
                            'info'])
         assert e.value.code == 1
         assert capsys.readouterr().out == (
@@ -1624,15 +1624,15 @@ class TestCompletionCodeOutput:
          'Command (netfn=0x30, cmd=0xff)'),
     ])
     def test_format_failed_command(self, error, output):
-        assert ipmitool.format_failed_command(error) == output
+        assert cli.format_failed_command(error) == output
 
     def test_main_prints_the_failed_command(self, capsys, monkeypatch):
         # the error raised by the library carries the failed command
         ipmi = create_ipmi({'GetDeviceId': b'\xc1'})
-        monkeypatch.setattr(ipmitool, 'create_ipmi_connection',
+        monkeypatch.setattr(cli, 'create_ipmi_connection',
                             lambda *args: ipmi)
         with pytest.raises(SystemExit):
-            ipmitool.main(['-I', 'ipmitool', '-H', '10.0.0.1', 'bmc',
+            cli.main(['-I', 'ipmitool', '-H', '10.0.0.1', 'bmc',
                            'info'])
         assert capsys.readouterr().out == (
             'Command "GetDeviceId" (netfn=0x06, cmd=0x01) failed due to '

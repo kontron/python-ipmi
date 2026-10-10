@@ -6,7 +6,7 @@ DESCRIPTION section comes from pyipmi.1.include.
 
 import argparse
 
-from pyipmi.ipmitool import build_parser as _build_parser
+from pyipmi.cli import build_parser as _build_parser
 
 
 def build_parser() -> argparse.ArgumentParser:

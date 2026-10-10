@@ -109,9 +109,9 @@ setup(name=name,
       ],
       entry_points={
           'console_scripts': [
-              'pyipmi = pyipmi.ipmitool:main',
+              'pyipmi = pyipmi.cli:main',
               # the former name of the command, kept for compatibility
-              'ipmitool.py = pyipmi.ipmitool:main',
+              'ipmitool.py = pyipmi.cli:main',
           ]
       },
       test_suite='tests',

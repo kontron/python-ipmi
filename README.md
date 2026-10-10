@@ -135,11 +135,11 @@ codespell
 Alternatively, the checkout can be used without installing by adding its top
 directory to `PYTHONPATH`. Then `pyipmi` can be imported from any directory,
 e.g. by your own scripts or the ones in `examples/`, and the tool is started
-with `python3 -m pyipmi.ipmitool`:
+with `python3 -m pyipmi.cli`:
 
 ```shell
 export PYTHONPATH=/path/to/python-ipmi
-python3 -m pyipmi.ipmitool -V
+python3 -m pyipmi.cli -V
 ```
 
 The optional packages have to be installed separately then, e.g.

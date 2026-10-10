@@ -3,7 +3,7 @@
 import pytest
 
 import pyipmi
-import pyipmi.ipmitool
+import pyipmi.cli
 from pyipmi.errors import CompletionCodeError
 from pyipmi.interfaces.base import Interface
 from pyipmi.msgs import constants
@@ -125,7 +125,7 @@ def test_completion_code_error(ipmi):
 
 
 def run_cli(ipmi, command, capsys):
-    args = pyipmi.ipmitool.build_parser().parse_args(command.split())
+    args = pyipmi.cli.build_parser().parse_args(command.split())
     args.func(ipmi, args)
     return capsys.readouterr().out
 
