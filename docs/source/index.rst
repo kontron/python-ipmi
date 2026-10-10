@@ -18,6 +18,7 @@ This documentation describes the usage of the python-ipmi library.
    ipmiMsgSupport_cmd
    bmcWatchdog_cmd
    chassis_cmd
+   interfaces
    api
 
 
