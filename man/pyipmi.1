@@ -654,6 +654,12 @@ Print the conversion factors for a raw reading
 .TP
 \fBpyipmi sensor\fR \fI\,set\-reading\/\fR
 Set the reading of a sensor (Set Sensor Reading and Event Status)
+.TP
+\fBpyipmi sensor\fR \fI\,find\/\fR
+Search the sensors by name and type
+.TP
+\fBpyipmi sensor\fR \fI\,read\/\fR
+Read the sensors by name and type, with the values converted to the sensor unit
 
 .SH COMMAND \fI\,'pyipmi sensor rearm'\/\fR
 usage: pyipmi sensor rearm [\-h] number
@@ -760,6 +766,34 @@ raw reading
 .TP
 \fB\-l\fR \fI\,LUN\/\fR, \fB\-\-lun\fR \fI\,LUN\/\fR
 LUN of the sensor owner (default 0)
+
+.SH COMMAND \fI\,'pyipmi sensor find'\/\fR
+usage: pyipmi sensor find [\-h] [\-t <type>] [<name>]
+
+Search the sensors by name and type
+
+.TP
+\fB<name>\fR
+glob pattern of the sensor name, ignoring case, e.g. 'CPU*' (default: all sensors)
+
+.SH OPTIONS \fI\,'pyipmi sensor find'\/\fR
+.TP
+\fB\-t\fR \fI\,<type>\/\fR, \fB\-\-type\fR \fI\,<type>\/\fR
+sensor type, a name like temperature, voltage, current, fan or power\-supply, or a number
+
+.SH COMMAND \fI\,'pyipmi sensor read'\/\fR
+usage: pyipmi sensor read [\-h] [\-t <type>] [<name>]
+
+Read the sensors by name and type, with the values converted to the sensor unit
+
+.TP
+\fB<name>\fR
+glob pattern of the sensor name, ignoring case, e.g. 'CPU*' (default: all sensors)
+
+.SH OPTIONS \fI\,'pyipmi sensor read'\/\fR
+.TP
+\fB\-t\fR \fI\,<type>\/\fR, \fB\-\-type\fR \fI\,<type>\/\fR
+sensor type, a name like temperature, voltage, current, fan or power\-supply, or a number
 
 .SH COMMAND \fI\,'pyipmi hpm'\/\fR
 usage: pyipmi hpm [\-h] <command> ...

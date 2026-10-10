@@ -529,6 +529,119 @@ def cmd_sensor_set_reading(ipmi: pyipmi.Ipmi,
                                              lun=args.lun)
 
 
+def sensor_type_value(value: str) -> int:
+    """Argument type for a sensor type, a name or a number."""
+    try:
+        return pyipmi.sensor.sensor_type_from_string(value)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(str(e)) from None
+
+
+def find_sensors(ipmi: pyipmi.Ipmi, args: argparse.Namespace,
+                 ) -> list[pyipmi.sdr.SdrFullSensorRecord
+                           | pyipmi.sdr.SdrCompactSensorRecord] | None:
+    """Return the sensors that match the name and type arguments.
+
+    None if the device has no SDRs, the error is printed.
+    """
+    try:
+        return ipmi.find_sensors(name=args.name, sensor_type=args.type)
+    except pyipmi.errors.NotSupportedError:
+        print("Device supports neither SDR repository nor sensor "
+              "functions", file=sys.stderr)
+        return None
+
+
+def cmd_sensor_find(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    sensors = find_sensors(ipmi, args)
+    if sensors is None:
+        return
+
+    if args.json:
+        print(json.dumps([{
+            'record_id': s.id,
+            'number': s.number,
+            'name': str(s.device_id_string),
+            'sensor_type': s.sensor_type_code,
+            'sensor_type_name': pyipmi.sensor.sensor_type_to_string(
+                s.sensor_type_code),
+        } for s in sensors]))
+        return
+
+    print("SDR-ID | Num | Name               | Sensor Type")
+    print("=======|=====|====================|====================")
+    for s in sensors:
+        type_name = pyipmi.sensor.sensor_type_to_string(s.sensor_type_code)
+        print(f'0x{s.id:04x} | {s.number:3d} | {s.device_id_string!s:<18} | '
+              f'[0x{s.sensor_type_code:02x}] {type_name}')
+
+
+def format_sensor_reading(reading: pyipmi.sensor.SensorReading,
+                          ) -> tuple[str, str]:
+    """Return the value with its unit and the states of a reading."""
+    record = reading.record
+    if isinstance(record, pyipmi.sdr.SdrFullSensorRecord) \
+            and record.analog_data_format != record.DATA_FMT_NONE:
+        value = format_analog_value(reading.value)
+        if reading.value is not None:
+            value = f'{value} {reading.unit}'
+    else:
+        # no numeric reading, e.g. a discrete sensor
+        value = '-'
+
+    if reading.states is None:
+        states = 'na'
+    else:
+        names = reading.state_names()
+        if names:
+            states = ', '.join(names)
+        elif record.event_reading_type_code == \
+                pyipmi.sensor.EVENT_READING_TYPE_CODE_THRESHOLD:
+            states = 'ok'
+        else:
+            states = '-'
+    return (value.rstrip(), states)
+
+
+def cmd_sensor_read(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    sensors = find_sensors(ipmi, args)
+    if sensors is None:
+        return
+
+    if not args.json:
+        print("Name               | Value                    | States")
+        print("===================|==========================|"
+              "====================")
+    readings = []
+    for s in sensors:
+        try:
+            reading = ipmi.read_sensor(s)
+        except pyipmi.errors.CompletionCodeError as e:
+            if args.json:
+                readings.append({'name': str(s.device_id_string),
+                                 'number': s.number,
+                                 'completion_code': e.cc})
+            else:
+                print(f'{s.device_id_string!s:<18} | ERR: '
+                      f'CC={format_completion_code(e)}')
+            continue
+
+        if args.json:
+            readings.append({'name': reading.name,
+                             'number': s.number,
+                             'raw': reading.raw,
+                             'value': reading.value,
+                             'unit': reading.unit,
+                             'states': reading.states,
+                             'state_names': reading.state_names()})
+        else:
+            (value, states) = format_sensor_reading(reading)
+            print(f'{reading.name:<18} | {value:<24} | {states}')
+
+    if args.json:
+        print(json.dumps(readings))
+
+
 def format_analog_value(value: float | None) -> str:
     """Format a converted analog sensor value with 3 decimal places."""
     if value is None:
@@ -542,12 +655,10 @@ def sdr_entries(ipmi: pyipmi.Ipmi) -> Iterator[pyipmi.sdr.SdrCommon] | None:
     The records are read from the device SDR repository of a device without
     SDR repository, None if the device has neither.
     """
-    device_id = ipmi.get_device_id()
-    if device_id.supports_function('sdr_repository'):
-        return ipmi.sdr_repository_entries()
-    if device_id.supports_function('sensor'):
-        return ipmi.device_sdr_entries()
-    return None
+    try:
+        return ipmi.sdr_entries()
+    except pyipmi.errors.NotSupportedError:
+        return None
 
 
 # The thresholds of a full sensor record: the key, the name and the bit of
@@ -2123,6 +2234,24 @@ def build_parser() -> argparse.ArgumentParser:
                        'Set the reading of a sensor (Set Sensor Reading and '
                        'Event Status)')
     p.add_argument('reading', type=byte_value, help='raw reading')
+
+    def sensor_search_command(name: str, func: Callable,
+                              help: str) -> argparse.ArgumentParser:
+        p = group.command(name, func, help)
+        p.add_argument('name', nargs='?', metavar='<name>',
+                       help="glob pattern of the sensor name, ignoring case, "
+                            "e.g. 'CPU*' (default: all sensors)")
+        p.add_argument('-t', '--type', type=sensor_type_value,
+                       metavar='<type>',
+                       help='sensor type, a name like temperature, voltage, '
+                            'current, fan or power-supply, or a number')
+        return p
+
+    sensor_search_command('find', cmd_sensor_find,
+                          'Search the sensors by name and type')
+    sensor_search_command('read', cmd_sensor_read,
+                          'Read the sensors by name and type, with the '
+                          'values converted to the sensor unit')
 
     group = commands.group('hpm', 'HPM.1 commands')
     group.command('capabilities', cmd_hpm_capabilities,

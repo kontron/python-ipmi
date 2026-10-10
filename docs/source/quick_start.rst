@@ -464,6 +464,26 @@ The following example requests the device ID:
 
   The returned object in this case is different from the one shown for the native :abbr:`RMCP (Remote Management Control Protocol)` example shown above.
 
+Reading sensors
+---------------
+
+:meth:`~pyipmi.sensor.Sensor.find_sensors` searches the sensor records by
+name and sensor type. The name is a glob pattern that ignores case, the
+type a ``SENSOR_TYPE_*`` constant or a name like ``'temperature'``,
+``'voltage'`` or ``'fan'``. :meth:`~pyipmi.sensor.Sensor.read_sensor`
+reads a sensor and converts the raw reading to the sensor unit:
+
+.. code:: python
+
+  for record in ipmi.find_sensors(name='CPU*', sensor_type='temperature'):
+      reading = ipmi.read_sensor(record)
+      print(reading.name, reading.value, reading.unit,
+            reading.state_names())
+
+Reading the records is slow, keep them to read the sensors repeatedly. The
+command line tool does the same with ``pyipmi sensor find`` and
+``pyipmi sensor read``, e.g. ``pyipmi sensor read 'CPU*' -t temperature``.
+
 Closing the session
 -------------------
 

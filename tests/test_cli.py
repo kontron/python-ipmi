@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import json
 import logging
 import os
 
@@ -9,11 +10,12 @@ import pytest
 from unittest.mock import MagicMock
 
 from pyipmi import cli
-from pyipmi.errors import CompletionCodeError
+from pyipmi.errors import CompletionCodeError, NotSupportedError
 from pyipmi.msgs import create_response_by_name, decode_message
 from pyipmi.cli import build_parser, log_level, parse_interface_options
 from pyipmi.sdr import SdrCommon, SdrCompactSensorRecord, SdrFullSensorRecord
 from pyipmi.sel import SelEntry
+from pyipmi.sensor import SensorReading
 
 from .ipmi_helper import create_ipmi
 
@@ -1063,7 +1065,7 @@ class TestSdrList:
     def test_sdr_list(self, capsys):
         ipmi = MagicMock()
         ipmi.get_device_id.return_value.supports_function.return_value = True
-        ipmi.sdr_repository_entries.return_value = [self.full_record(),
+        ipmi.sdr_entries.return_value = [self.full_record(),
                                                     self.compact_record()]
         # the states 0 are valid, as the sensor number 0
         ipmi.get_sensor_reading.return_value = (25, 0)
@@ -1082,7 +1084,7 @@ class TestSdrList:
     def test_sdr_list_details(self, capsys):
         ipmi = MagicMock()
         ipmi.get_device_id.return_value.supports_function.return_value = True
-        ipmi.sdr_repository_entries.return_value = [
+        ipmi.sdr_entries.return_value = [
             SdrCommon.from_data(TestSdrShow.FULL_RECORD),
             SdrCommon.from_data(TestSdrShow.COMPACT_RECORD)]
         cli.cmd_sdr_list(ipmi, argparse.Namespace(details=True))
@@ -1139,7 +1141,7 @@ class TestSelList:
         record.k1 = 0
         record.k2 = 0
         record.linearization = 0
-        ipmi.sdr_repository_entries.return_value = [record]
+        ipmi.sdr_entries.return_value = [record]
         return ipmi
 
     def test_options(self):
@@ -1580,6 +1582,110 @@ class TestSensorCommands:
     def test_invalid(self, command):
         with pytest.raises(SystemExit):
             build_parser().parse_args(['sensor'] + command.split())
+
+
+class TestSensorFindRead:
+    FULL = SdrCommon.from_data(TestSdrShow.FULL_RECORD)
+    COMPACT = SdrCommon.from_data(TestSdrShow.COMPACT_RECORD)
+
+    @staticmethod
+    def args(command):
+        return build_parser().parse_args(['sensor'] + command.split())
+
+    @pytest.mark.parametrize('command, name, sensor_type', [
+        ('find', None, None),
+        ('read', None, None),
+        ('find cpu*', 'cpu*', None),
+        ('read cpu* -t temperature', 'cpu*', 0x01),
+        ('read --type power-supply', None, 0x08),
+        ('find -t 0x02', None, 0x02),
+    ])
+    def test_options(self, command, name, sensor_type):
+        args = self.args(command)
+        assert args.name == name
+        assert args.type == sensor_type
+
+    def test_invalid_type(self, capsys):
+        with pytest.raises(SystemExit):
+            self.args('find -t humidity')
+        assert 'unknown sensor type: humidity' in capsys.readouterr().err
+
+    def test_find(self, capsys):
+        ipmi = MagicMock()
+        ipmi.find_sensors.return_value = [self.FULL, self.COMPACT]
+        cli.cmd_sensor_find(ipmi, self.args('find cpu* -t temperature'))
+        ipmi.find_sensors.assert_called_once_with(name='cpu*',
+                                                  sensor_type=0x01)
+        assert capsys.readouterr().out.splitlines() == [
+            'SDR-ID | Num | Name               | Sensor Type',
+            '=======|=====|====================|====================',
+            '0x0001 |   4 | CPU Temp           | [0x01] Temperature',
+            '0x00d3 | 211 | A4:Pres SFP-1      | [0x21] Slot / Connector']
+
+    def test_find_json(self, capsys):
+        ipmi = MagicMock()
+        ipmi.find_sensors.return_value = [self.FULL]
+        args = build_parser().parse_args(['-J', 'sensor', 'find'])
+        cli.cmd_sensor_find(ipmi, args)
+        assert json.loads(capsys.readouterr().out) == [
+            {'record_id': 1, 'number': 4, 'name': 'CPU Temp',
+             'sensor_type': 1, 'sensor_type_name': 'Temperature'}]
+
+    def test_find_not_supported(self, capsys):
+        ipmi = MagicMock()
+        ipmi.find_sensors.side_effect = NotSupportedError()
+        cli.cmd_sensor_find(ipmi, self.args('find'))
+        out = capsys.readouterr()
+        assert out.out == ''
+        assert 'neither SDR repository nor sensor' in out.err
+
+    def readings(self):
+        return [
+            SensorReading(self.FULL, 45, 45.0, 'degrees C', 0x00),
+            SensorReading(self.FULL, 90, 90.0, 'degrees C', 0x18),
+            SensorReading(self.FULL, None, None, 'degrees C', None),
+            SensorReading(self.COMPACT, 0, None, '', 0x04),
+            SensorReading(self.COMPACT, 0, None, '', 0x00),
+            CompletionCodeError(0xcb),
+        ]
+
+    def test_read(self, capsys):
+        ipmi = MagicMock()
+        ipmi.find_sensors.return_value = [self.FULL] * 3 + [self.COMPACT] * 3
+        ipmi.read_sensor.side_effect = self.readings()
+        cli.cmd_sensor_read(ipmi, self.args('read'))
+        assert ipmi.read_sensor.call_args_list[0] == ((self.FULL,),)
+        assert capsys.readouterr().out.splitlines() == [
+            'Name               | Value                    | States',
+            '===================|==========================|'
+            '====================',
+            'CPU Temp           | 45.000 degrees C         | ok',
+            'CPU Temp           | 90.000 degrees C         | '
+            'Upper Non-critical, Upper Critical',
+            'CPU Temp           | na                       | na',
+            'A4:Pres SFP-1      | -                        | '
+            'Slot / Connector Device Installed/Attached',
+            'A4:Pres SFP-1      | -                        | -',
+            'A4:Pres SFP-1      | ERR: CC=0xcb (Requested data not present)']
+
+    def test_read_json(self, capsys):
+        ipmi = MagicMock()
+        ipmi.find_sensors.return_value = [self.FULL, self.COMPACT,
+                                          self.COMPACT]
+        readings = self.readings()
+        ipmi.read_sensor.side_effect = [readings[1], readings[3],
+                                        readings[5]]
+        args = build_parser().parse_args(['-J', 'sensor', 'read'])
+        cli.cmd_sensor_read(ipmi, args)
+        assert json.loads(capsys.readouterr().out) == [
+            {'name': 'CPU Temp', 'number': 4, 'raw': 90, 'value': 90.0,
+             'unit': 'degrees C', 'states': 0x18,
+             'state_names': ['Upper Non-critical', 'Upper Critical']},
+            {'name': 'A4:Pres SFP-1', 'number': 211, 'raw': 0,
+             'value': None, 'unit': '', 'states': 0x04,
+             'state_names': ['Slot / Connector Device Installed/Attached']},
+            {'name': 'A4:Pres SFP-1', 'number': 211,
+             'completion_code': 0xcb}]
 
 
 class TestCompletionCodeOutput:
