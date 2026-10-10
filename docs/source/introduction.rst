@@ -1,31 +1,108 @@
 Introduction
 ============
 
-The :abbr:`IPMI (Intelligent Platform Management Interface)` is a set of computer interface specifications for an autonomous computer subsystem that provides management and monitoring capabilities independently of the host system's :abbr:`CPU (Central Processor Unit)`, firmware (:abbr:`BIOS (Basic Input/Output System)` or :abbr:`UEFI (Unified Extensible Firmware Interface)`) and operating system. The python-ipmi library provides :abbr:`API (Application Programming Interface)` for using IPMI protocol within the python environment. This library supports :abbr:`IPMI (Intelligent Platform Management Interface)` version 2.0 as described in the `IPMI standard`_.
+The :abbr:`IPMI (Intelligent Platform Management Interface)` is a set of
+computer interface specifications for an autonomous computer subsystem
+that provides management and monitoring capabilities independently of the
+host system's :abbr:`CPU (Central Processing Unit)`, firmware
+(:abbr:`BIOS (Basic Input/Output System)` or
+:abbr:`UEFI (Unified Extensible Firmware Interface)`) and operating system.
 
-There are two ways to communicate with a server using :abbr:`IPMI (Intelligent Platform Management Interface)` interface:
+python-ipmi is a pure Python implementation of IPMI version 2.0 as
+described in the `IPMI standard`_, including the PICMG (AdvancedTCA,
+MicroTCA), VITA and DCMI extensions. It provides an
+:abbr:`API (Application Programming Interface)` to send IPMI commands to a
+device, and the command line tool ``ipmitool.py``.
 
-1. :abbr:`IPMI (Intelligent Platform Management Interface)` over :abbr:`LAN (Local Area Network)` using :abbr:`RMCP (Remote Management Control Protocol)` packet datagrams
-2. :abbr:`IPMB (Intelligent Platform Management Bus)` is an |I2C| -based bus
+A device can be reached in three ways:
+
+#. over the :abbr:`LAN (Local Area Network)` with
+   :abbr:`RMCP (Remote Management Control Protocol)` (IPMI v1.5) or RMCP+
+   (IPMI v2.0) to the :abbr:`BMC (Baseboard Management Controller)`,
+#. over the system interface (KCS, SMIC, BT or SSIF) from the host to its
+   own BMC,
+#. over the :abbr:`IPMB (Intelligent Platform Management Bus)`, an
+   |I2C|-based bus between the controllers of a system.
+
+Controllers behind the BMC, e.g. the boards of a MicroTCA or AdvancedTCA
+chassis, are reached by bridging over the BMC, see
+:meth:`pyipmi.Target.set_routing`.
 
 Features
 --------
-* native :abbr:`RMCP (Remote Management Control Protocol)` interface (using python libraries only)
-* native :abbr:`RMCP (Remote Management Control Protocol)`\+ interface (IPMI v2.0, encryption requires the `cryptography`_ package)
-* legacy :abbr:`RMCP (Remote Management Control Protocol)` interface (requires `ipmitool`_ to be installed)
-* :abbr:`IPMB (Intelligent Platform Management Bus)` interface (using the `Total Phase`_ Aardvark)
+
+* RMCP and RMCP+ interfaces
+
+  * native, using Python only (encryption of RMCP+ sessions requires the
+    `cryptography`_ package)
+  * legacy, using `ipmitool`_ as backend
+
+* system interface
+
+  * native (KCS, SMIC, BT, SSIF), using the IPMI driver on Linux
+  * legacy, using `ipmitool`_ as backend
+
+* IPMB interface
+
+  * using the `Total Phase`_ Aardvark |I2C| adapter
+  * using the ipmb-dev driver on Linux
+  * using the openipmblink USB bridge
+  * answering incoming requests, e.g. to act as a BMC or MMC, see
+    :doc:`message_routing`
+
+* bridged requests to controllers behind the BMC, over one or more bridges
+* decoding of FRU data, SDRs and SEL entries, and HPM.1 firmware upgrades
+* the command line tool ``ipmitool.py``, see ``ipmitool.py --help`` and
+  the man page ``man/ipmitool.py.1`` in the source
+
+The interfaces and how the commands use them are described in
+:doc:`interfaces`.
 
 Tested Devices
 --------------
-* Kontron mTCA Carrier Manager
-* Kontron CompactPCI boards
+
+* Kontron
+
+  * mTCA Carrier Manager
+  * CompactPCI boards
+  * VPX boards
+
 * Pigeon Point Shelf Manager
-* HPE iLO3/iLO4 and T5224DN 2U24
+* HPE iLO3/iLO4
+* N.A.T. NAT-MCH
+* DESY MMC STAMP & related AMCs (DAMC-FMC2ZUP, DAMC-FMC1Z7IO)
+* Supermicro
 
 Requirements
 ------------
 
-For :abbr:`IPMB (Intelligent Platform Management Bus)` interface a `Total Phase`_ Aardvark is needed.
+python-ipmi requires Python 3.10 or newer; PyPy is supported as well. The
+library itself has no dependencies. Some interfaces need additional
+packages, drivers or programs:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Interface
+     - Requirement
+   * - native RMCP+ with encryption
+     - the `cryptography`_ package for encrypted sessions (AES-CBC-128,
+       cipher suites 3 and 17), installed with
+       ``pip install python-ipmi[rmcpplus]``
+   * - native system interface
+     - the Linux `IPMI driver`_ (``ipmi_devintf`` and e.g. ``ipmi_si`` or
+       ``ipmi_ssif``), which provides ``/dev/ipmi0``
+   * - legacy RMCP, RMCP+ and system interface
+     - `ipmitool`_ 1.8.x, at least 1.8.13 for the serial interface
+       (``serial-terminal``)
+   * - IPMB with the Aardvark
+     - a `Total Phase`_ Aardvark adapter and the ``pyaardvark`` package
+   * - IPMB with ipmb-dev
+     - the Linux `ipmb-dev driver`_ on an |I2C| bus whose driver supports
+       slave mode
+   * - IPMB with openipmblink
+     - an openipmblink bridge and the ``pyserial`` package
 
 Installation
 ------------
@@ -33,22 +110,34 @@ Installation
 Using ``pip``
 '''''''''''''
 
-The recommended installation method is using
-`pip <http://pip-installer.org>`__::
+The recommended installation method is using `pip
+<https://pip.pypa.io>`__::
 
     pip install python-ipmi
 
-.. warning::
+or, with the support for encrypted RMCP+ sessions::
 
-  If you are using Anaconda, still the above installation procedure shall be used as **conda install python-ipmi** will not find the installation package.
+    pip install python-ipmi[rmcpplus]
 
-Manual installation
-'''''''''''''''''''
+Both install the library and the command line tool ``ipmitool.py``.
 
-Download the source distribution package for the library. Extract the package to
-a temporary location and install::
+.. note::
 
-    python setup.py install
+  ``conda install python-ipmi`` does not find the package. Use the
+  ``pip`` command above also with Anaconda.
+
+From the source
+'''''''''''''''
+
+Download and extract the source distribution, or clone the git
+repository, and install it from its top directory::
+
+    pip install .
+
+To work on the library, install the checkout in editable mode, so that
+changes to the source are active without reinstalling::
+
+    pip install -e '.[rmcpplus]'
 
 Package version
 '''''''''''''''
@@ -66,23 +155,26 @@ The version of the package is taken from, in this order:
 If none of them is available, the version is ``0+unknown``. The installed
 version is available as ``pyipmi.__version__`` and with ``ipmitool.py -V``.
 
+Next Steps
+----------
 
-Compatibility
--------------
-
-Python 2.7 is currently  supported.
-Python 3.x support is in beta
+* :doc:`quick_start` shows how to connect to a device and send commands.
+* :doc:`interfaces` explains the layers between the commands and the
+  interfaces.
+* :doc:`message_routing` describes how to answer requests on the IPMB.
+* :doc:`api` lists all commands and data types.
 
 Contributing
 ------------
 
-Contributions are always welcome. You may send patches directly (eg. ``git
-send-email``), do a github pull request or just file an issue.
+Contributions are always welcome. You may send patches directly (e.g.
+``git send-email``), open a pull request on `GitHub`_ or just file an
+issue.
 
-* respect the coding style (eg. PEP8),
-* provide well-formed commit message (see `this blog post
-  <http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html>`_.)
-* add a Signed-off-by line (eg. ``git commit -s``)
+* respect the coding style (e.g. PEP 8),
+* provide well-formed commit messages (see `this blog post
+  <https://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html>`_),
+* add a Signed-off-by line (e.g. ``git commit -s``).
 
 License
 -------
@@ -101,8 +193,11 @@ You should have received a copy of the GNU Lesser General Public License
 along with this library; if not, write to the Free Software Foundation,
 Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-.. _Total Phase: http://www.totalphase.com
+.. _Total Phase: https://www.totalphase.com
 .. _ipmitool: https://codeberg.org/IPMITool/ipmitool
 .. _IPMI standard: https://www.intel.com/content/dam/www/public/us/en/documents/product-briefs/ipmi-second-gen-interface-spec-v2-rev1-1.pdf
-.. |I2C| replace:: I\ :sup:`2`\ C
+.. _IPMI driver: https://www.kernel.org/doc/html/latest/driver-api/ipmi.html
+.. _ipmb-dev driver: https://www.kernel.org/doc/html/latest/driver-api/ipmb.html
 .. _cryptography: https://pypi.org/project/cryptography/
+.. _GitHub: https://github.com/kontron/python-ipmi
+.. |I2C| replace:: I\ :sup:`2`\ C
