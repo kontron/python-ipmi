@@ -499,6 +499,12 @@ SENSOR_SPECIFIC_EVENT_STRINGS = {
            'FRU Deactivation In Progress',
            'FRU Communication Lost'),
     0xf0: _FRU_STATES,
+    # the Physical IPMB-0 sensor of PICMG 3.0, also the System IPMB Link
+    # sensor of VITA 46.11
+    0xf1: ('IPMB-A disabled, IPMB-B disabled',
+           'IPMB-A enabled, IPMB-B disabled',
+           'IPMB-A disabled, IPMB-B enabled',
+           'IPMB-A enabled, IPMB-B enabled'),
     0xf2: ('Module Handle Closed',
            'Module Handle Opened',
            'Quiesced',

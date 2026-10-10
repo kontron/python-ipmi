@@ -205,6 +205,7 @@ def test_event_reading_type_to_string(event_reading_type, string):
     (0x08, 0x25, 0x01, 'Device Present'),
     (0x6f, 0x08, 0x01, 'Power Supply Failure Detected'),
     (0x6f, 0x23, 0x08, 'Timer Interrupt'),
+    (0x6f, 0xf1, 0x03, 'IPMB-A enabled, IPMB-B enabled'),
     # reserved and unknown offsets
     (0x6f, 0x23, 0x04, None),
     (0x01, 0x01, 0x0c, None),
