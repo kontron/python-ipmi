@@ -38,7 +38,7 @@ Print and set the LAN configuration
 Print Sensor Data Repository entries and readings
 .TP
 \fBipmitool.py\fR \fI\,sel\/\fR
-Print System Event Log (SEL)
+Print and manage the System Event Log (SEL)
 .TP
 \fBipmitool.py\fR \fI\,sensor\/\fR
 Sensor commands
@@ -396,7 +396,7 @@ Show detail for all SDRs
 .SH COMMAND \fI\,'ipmitool.py sel'\/\fR
 usage: ipmitool.py sel [\-h] <command> ...
 
-Print System Event Log (SEL)
+Print and manage the System Event Log (SEL)
 
 .SH
 POSITIONAL ARGUMENTS \fI\,'ipmitool.py sel'\/\fR
@@ -406,6 +406,27 @@ List all SEL entries
 .TP
 \fBipmitool.py sel\fR \fI\,clear\/\fR
 Clear SEL
+.TP
+\fBipmitool.py sel\fR \fI\,info\/\fR
+Print the information about the SEL
+.TP
+\fBipmitool.py sel\fR \fI\,time\/\fR
+Get or set the SEL time (UTC)
+.TP
+\fBipmitool.py sel\fR \fI\,utc\-offset\/\fR
+Print or set the offset of the SEL time to UTC
+.TP
+\fBipmitool.py sel\fR \fI\,get\/\fR
+Print the details of SEL entries
+.TP
+\fBipmitool.py sel\fR \fI\,add\/\fR
+Add an entry to the SEL
+.TP
+\fBipmitool.py sel\fR \fI\,delete\/\fR
+Delete SEL entries
+.TP
+\fBipmitool.py sel\fR \fI\,aux\-status\/\fR
+Print the status data of an auxiliary log
 
 .SH COMMAND \fI\,'ipmitool.py sel list'\/\fR
 usage: ipmitool.py sel list [\-h] [\-d] [\-s]
@@ -425,6 +446,92 @@ read the SDRs to print the sensor names and the converted values of threshold ev
 usage: ipmitool.py sel clear [\-h]
 
 Clear SEL
+
+.SH COMMAND \fI\,'ipmitool.py sel info'\/\fR
+usage: ipmitool.py sel info [\-h]
+
+Print the information about the SEL
+
+.SH COMMAND \fI\,'ipmitool.py sel time'\/\fR
+usage: ipmitool.py sel time [\-h] <command> ...
+
+Get or set the SEL time (UTC)
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'ipmitool.py sel time'\/\fR
+.TP
+\fBipmitool.py sel time\fR \fI\,get\/\fR
+Print the SEL time
+.TP
+\fBipmitool.py sel time\fR \fI\,set\/\fR
+Set the SEL time
+
+.SH COMMAND \fI\,'ipmitool.py sel time get'\/\fR
+usage: ipmitool.py sel time get [\-h]
+
+Print the SEL time
+
+.SH COMMAND \fI\,'ipmitool.py sel time set'\/\fR
+usage: ipmitool.py sel time set [\-h] {"YYYY\-MM\-DD HH:MM:SS",now}
+
+Set the SEL time
+
+.TP
+\fB{"YYYY\-MM\-DD HH:MM:SS",now}\fR
+the time in UTC, or now for the time of this host
+
+.SH COMMAND \fI\,'ipmitool.py sel utc\-offset'\/\fR
+usage: ipmitool.py sel utc\-offset [\-h] [{<minutes>,unspecified}]
+
+Print or set the offset of the SEL time to UTC
+
+.TP
+\fB{<minutes>,unspecified}\fR
+\-1440 \- 1440, print the offset if not given
+
+.SH COMMAND \fI\,'ipmitool.py sel get'\/\fR
+usage: ipmitool.py sel get [\-h] [\-s] <record id> [<record id> ...]
+
+Print the details of SEL entries
+
+.TP
+\fB<record id>\fR
+
+.SH OPTIONS \fI\,'ipmitool.py sel get'\/\fR
+.TP
+\fB\-s\fR, \fB\-\-sdr\fR
+read the SDRs to print the sensor names and the converted values of threshold events
+
+.SH COMMAND \fI\,'ipmitool.py sel add'\/\fR
+usage: ipmitool.py sel add [\-h] [\-p]
+                           <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte>
+
+Add an entry to the SEL
+
+.TP
+\fB<byte>\fR
+the 16 bytes of the record, the BMC sets the record ID and the timestamp
+
+.SH OPTIONS \fI\,'ipmitool.py sel add'\/\fR
+.TP
+\fB\-p\fR, \fB\-\-partial\fR
+send the record in parts (Partial Add SEL Entry)
+
+.SH COMMAND \fI\,'ipmitool.py sel delete'\/\fR
+usage: ipmitool.py sel delete [\-h] <record id> [<record id> ...]
+
+Delete SEL entries
+
+.TP
+\fB<record id>\fR
+
+.SH COMMAND \fI\,'ipmitool.py sel aux\-status'\/\fR
+usage: ipmitool.py sel aux\-status [\-h] {mca,oem1,oem2}
+
+Print the status data of an auxiliary log
+
+.TP
+\fB{mca,oem1,oem2}\fR
 
 .SH COMMAND \fI\,'ipmitool.py sensor'\/\fR
 usage: ipmitool.py sensor [\-h] <command> ...

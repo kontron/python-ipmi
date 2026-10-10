@@ -25,8 +25,10 @@ import logging
 import pprint
 import sys
 import textwrap
+import time
 import traceback
 from array import array
+from datetime import datetime, timezone
 from collections.abc import Callable, Iterator
 from typing import Any
 
@@ -256,6 +258,129 @@ def cmd_sel_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
 
 def cmd_sel_clear(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     ipmi.clear_sel()
+
+
+def cmd_sel_info(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    info = ipmi.get_sel_info()
+    ts = pyipmi.sel.timestamp_to_string
+    operations = [op for op in info.operation_support
+                  if op != 'overflow_flag']
+    print(f'''
+Version:                 {info.version & 0xf:d}.{info.version >> 4:d}
+Entries:                 {info.entries:d}
+Free Space:              {info.free_bytes:d} bytes
+Last Add Time:           {ts(info.most_recent_addition)}
+Last Erase Time:         {ts(info.most_recent_erase)}
+Overflow:                {'overflow_flag' in info.operation_support}
+Supported Commands:      {', '.join(operations) or 'none'}
+'''[1:-1])
+    if 'get_sel_allocation_info' in info.operation_support:
+        alloc = ipmi.get_sel_allocation_info()
+        print(f'''
+Allocation Units:        {alloc.possible_alloc_units:d}
+Allocation Unit Size:    {alloc.alloc_unit_size:d} bytes
+Free Allocation Units:   {alloc.free_alloc_units:d}
+Largest Free Block:      {alloc.largest_free_block:d} units
+Maximum Record Size:     {alloc.max_record_size:d} units
+'''[1:-1])
+
+
+def sel_time(value: str) -> int:
+    """Argument type for a SEL time, 'now' or 'YYYY-MM-DD HH:MM:SS' (UTC)."""
+    if value == 'now':
+        return int(time.time())
+    try:
+        dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+    except ValueError:
+        raise argparse.ArgumentTypeError(f'invalid time: {value}, use '
+                                         '"YYYY-MM-DD HH:MM:SS" or now') \
+            from None
+    return int(dt.replace(tzinfo=timezone.utc).timestamp())
+
+
+def cmd_sel_time_get(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    print(pyipmi.sel.timestamp_to_string(ipmi.get_sel_time()))
+
+
+def cmd_sel_time_set(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.set_sel_time(args.time)
+    print(pyipmi.sel.timestamp_to_string(ipmi.get_sel_time()))
+
+
+def utc_offset(value: str) -> int | str:
+    """Argument type for the UTC offset, minutes or 'unspecified'."""
+    if value == 'unspecified':
+        return value
+    try:
+        offset = int(value, 0)
+    except ValueError:
+        offset = None
+    if offset is None or not -1440 <= offset <= 1440:
+        raise argparse.ArgumentTypeError(f'invalid UTC offset: {value}, use '
+                                         '-1440 - 1440 minutes or '
+                                         'unspecified')
+    return offset
+
+
+def cmd_sel_utc_offset(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    if args.offset is not None:
+        ipmi.set_sel_time_utc_offset(None if args.offset == 'unspecified'
+                                     else args.offset)
+    offset = ipmi.get_sel_time_utc_offset()
+    if offset is None:
+        print('UTC offset: unspecified')
+    else:
+        print(f'UTC offset: {offset:+d} minutes')
+
+
+def cmd_sel_get(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    records = sel_sensor_records(ipmi) if args.sdr else {}
+    reservation = ipmi.get_sel_reservation_id()
+    for record_id in args.record_ids:
+        entry, _ = ipmi.get_sel_entry(record_id, reservation)
+        record = None
+        if entry.type == pyipmi.sel.SelEntry.TYPE_SYSTEM_EVENT:
+            record = sel_entry_sensor(entry, records)
+        print_sel_entry_details(entry, record)
+
+
+def byte_value(value: str) -> int:
+    """Argument type for a byte, decimal or with 0x prefix."""
+    try:
+        byte = int(value, 0)
+    except ValueError:
+        byte = -1
+    if not 0 <= byte <= 0xff:
+        raise argparse.ArgumentTypeError(f'invalid byte: {value}')
+    return byte
+
+
+def cmd_sel_add(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    data = bytes(args.record_data)
+    if args.partial:
+        record_id = ipmi.partial_add_sel_entry(data)
+    else:
+        record_id = ipmi.add_sel_entry(data)
+    print(f'Added SEL entry 0x{record_id:04x}')
+
+
+def cmd_sel_delete(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    reservation = ipmi.get_sel_reservation_id()
+    for record_id in args.record_ids:
+        ipmi.delete_sel_entry(record_id, reservation)
+        print(f'Deleted SEL entry 0x{record_id:04x}')
+
+
+SEL_AUXILIARY_LOGS = {
+    'mca': pyipmi.sel.AUXILIARY_LOG_MCA,
+    'oem1': pyipmi.sel.AUXILIARY_LOG_OEM1,
+    'oem2': pyipmi.sel.AUXILIARY_LOG_OEM2,
+}
+
+
+def cmd_sel_aux_status(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    data = ipmi.get_auxiliary_log_status(SEL_AUXILIARY_LOGS[args.log])
+    print(data.hex(' ') or 'no status data')
 
 
 def cmd_sensor_rearm(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -1668,7 +1793,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('sdr_id', type=auto_int)
     group.command('showall', cmd_sdr_show_all, 'Show detail for all SDRs')
 
-    group = commands.group('sel', 'Print System Event Log (SEL)')
+    group = commands.group('sel', 'Print and manage the System Event '
+                           'Log (SEL)')
     p = group.command('list', cmd_sel_list, 'List all SEL entries')
     p.add_argument('-d', '--details', action='store_true',
                    help='print all fields of the entries')
@@ -1676,6 +1802,39 @@ def build_parser() -> argparse.ArgumentParser:
                    help='read the SDRs to print the sensor names and the '
                         'converted values of threshold events')
     group.command('clear', cmd_sel_clear, 'Clear SEL')
+    group.command('info', cmd_sel_info,
+                  'Print the information about the SEL')
+    sub = group.group('time', 'Get or set the SEL time (UTC)')
+    sub.command('get', cmd_sel_time_get, 'Print the SEL time')
+    p = sub.command('set', cmd_sel_time_set, 'Set the SEL time')
+    p.add_argument('time', type=sel_time,
+                   metavar='{"YYYY-MM-DD HH:MM:SS",now}',
+                   help='the time in UTC, or now for the time of this host')
+    p = group.command('utc-offset', cmd_sel_utc_offset,
+                      'Print or set the offset of the SEL time to UTC')
+    p.add_argument('offset', type=utc_offset, nargs='?',
+                   metavar='{<minutes>,unspecified}',
+                   help='-1440 - 1440, print the offset if not given')
+    p = group.command('get', cmd_sel_get,
+                      'Print the details of SEL entries')
+    p.add_argument('record_ids', type=auto_int, nargs='+',
+                   metavar='<record id>')
+    p.add_argument('-s', '--sdr', action='store_true',
+                   help='read the SDRs to print the sensor names and the '
+                        'converted values of threshold events')
+    p = group.command('add', cmd_sel_add, 'Add an entry to the SEL')
+    p.add_argument('record_data', type=byte_value, nargs=16,
+                   metavar='<byte>',
+                   help='the 16 bytes of the record, the BMC sets the record '
+                        'ID and the timestamp')
+    p.add_argument('-p', '--partial', action='store_true',
+                   help='send the record in parts (Partial Add SEL Entry)')
+    p = group.command('delete', cmd_sel_delete, 'Delete SEL entries')
+    p.add_argument('record_ids', type=auto_int, nargs='+',
+                   metavar='<record id>')
+    p = group.command('aux-status', cmd_sel_aux_status,
+                      'Print the status data of an auxiliary log')
+    p.add_argument('log', choices=tuple(SEL_AUXILIARY_LOGS))
 
     group = commands.group('sensor', 'Sensor commands')
     p = group.command('rearm', cmd_sensor_rearm, 'Rearm sensor events')

@@ -175,6 +175,14 @@ class TestParser:
         ('sdr showall', 'cmd_sdr_show_all'),
         ('sel list', 'cmd_sel_list'),
         ('sel clear', 'cmd_sel_clear'),
+        ('sel info', 'cmd_sel_info'),
+        ('sel time get', 'cmd_sel_time_get'),
+        ('sel time set now', 'cmd_sel_time_set'),
+        ('sel utc-offset', 'cmd_sel_utc_offset'),
+        ('sel get 1', 'cmd_sel_get'),
+        ('sel add' + ' 0' * 16, 'cmd_sel_add'),
+        ('sel delete 1', 'cmd_sel_delete'),
+        ('sel aux-status mca', 'cmd_sel_aux_status'),
         ('sensor rearm 3', 'cmd_sensor_rearm'),
         ('hpm capabilities', 'cmd_hpm_capabilities'),
         ('hpm install file.img 2', 'cmd_hpm_install'),
@@ -1184,3 +1192,150 @@ class TestSelList:
                 'Record Type:     [0xe0] OEM non-timestamped\n'
                 'Timestamp:       Unspecified\n'
                 'Raw Data:        03 00 e0 01 02') in out
+
+
+class TestSelCommands:
+    @staticmethod
+    def run(command, rsp_data):
+        ipmi = create_ipmi(rsp_data)
+        args = build_parser().parse_args(['sel'] + command.split())
+        args.func(ipmi, args)
+        return ipmi
+
+    # version 1.5, 3 entries, 0x0400 free bytes, the last addition, never
+    # erased, all operations supported and the overflow flag
+    SEL_INFO_RSP = (b'\x00\x51\x03\x00\x00\x04\x00\x10\x20\x68'
+                    b'\xff\xff\xff\xff\x8f')
+    ALLOC_INFO_RSP = b'\x00\x00\x02\x10\x00\x80\x01\x40\x00\x01'
+
+    def test_info(self, capsys):
+        ipmi = self.run('info', {'GetSelInfo': self.SEL_INFO_RSP,
+                                 'GetSelAllocationInfo': self.ALLOC_INFO_RSP})
+        assert [name for name, _ in ipmi.requests] == [
+            'GetSelInfoReq', 'GetSelAllocationInfoReq']
+        assert capsys.readouterr().out == (
+            'Version:                 1.5\n'
+            'Entries:                 3\n'
+            'Free Space:              1024 bytes\n'
+            'Last Add Time:           2025-05-11 02:48:32\n'
+            'Last Erase Time:         Unspecified\n'
+            'Overflow:                True\n'
+            'Supported Commands:      get_sel_allocation_info, reserve_sel, '
+            'partial_add_sel_entry, delete_sel\n'
+            'Allocation Units:        512\n'
+            'Allocation Unit Size:    16 bytes\n'
+            'Free Allocation Units:   384\n'
+            'Largest Free Block:      64 units\n'
+            'Maximum Record Size:     1 units\n')
+
+    def test_info_without_allocation_info(self, capsys):
+        # only Reserve SEL supported
+        ipmi = self.run('info', self.SEL_INFO_RSP[:-1] + b'\x02')
+        assert [name for name, _ in ipmi.requests] == ['GetSelInfoReq']
+        out = capsys.readouterr().out
+        assert 'Supported Commands:      reserve_sel\n' in out
+        assert 'Allocation' not in out
+
+    def test_time_get(self, capsys):
+        ipmi = self.run('time get', b'\x00\x00\x10\x20\x68')
+        assert ipmi.requests == [('GetSelTimeReq', b'')]
+        assert capsys.readouterr().out == '2025-05-11 02:48:32\n'
+
+    def test_time_set(self, capsys):
+        ipmi = create_ipmi({'SetSelTime': b'\x00',
+                            'GetSelTime': b'\x00\x00\x10\x20\x68'})
+        args = build_parser().parse_args(['sel', 'time', 'set',
+                                          '2025-05-11 02:48:32'])
+        args.func(ipmi, args)
+        assert ipmi.requests[0] == ('SetSelTimeReq', b'\x00\x10\x20\x68')
+        assert capsys.readouterr().out == '2025-05-11 02:48:32\n'
+
+    def test_time_set_now(self, monkeypatch):
+        monkeypatch.setattr(ipmitool.time, 'time', lambda: 0x68201000 + 0.5)
+        args = build_parser().parse_args(['sel', 'time', 'set', 'now'])
+        assert args.time == 0x68201000
+
+    def test_time_set_invalid(self, capsys):
+        with pytest.raises(SystemExit):
+            build_parser().parse_args(['sel', 'time', 'set', '11.05.2025'])
+        assert 'invalid time' in capsys.readouterr().err
+
+    @pytest.mark.parametrize('rsp, output', [
+        (b'\x00\x3c\x00', '+60 minutes'),
+        (b'\x00\xc4\xff', '-60 minutes'),
+        (b'\x00\xff\x07', 'unspecified'),
+    ])
+    def test_utc_offset_get(self, capsys, rsp, output):
+        ipmi = self.run('utc-offset', rsp)
+        assert ipmi.requests == [('GetSelTimeUtcOffsetReq', b'')]
+        assert capsys.readouterr().out == f'UTC offset: {output}\n'
+
+    @pytest.mark.parametrize('offset, data', [
+        ('60', b'\x3c\x00'),
+        ('-60', b'\xc4\xff'),
+        ('unspecified', b'\xff\x07'),
+    ])
+    def test_utc_offset_set(self, offset, data):
+        ipmi = create_ipmi({'SetSelTimeUtcOffset': b'\x00',
+                            'GetSelTimeUtcOffset': b'\x00' + data})
+        args = build_parser().parse_args(['sel', 'utc-offset', offset])
+        args.func(ipmi, args)
+        assert ipmi.requests[0] == ('SetSelTimeUtcOffsetReq', data)
+
+    @pytest.mark.parametrize('offset', ['1441', '-1441', 'local'])
+    def test_utc_offset_invalid(self, capsys, offset):
+        with pytest.raises(SystemExit):
+            build_parser().parse_args(['sel', 'utc-offset', offset])
+        assert 'invalid UTC offset' in capsys.readouterr().err
+
+    def test_get(self, capsys):
+        entry = TestSelList.ENTRIES[0]
+        ipmi = self.run('get 1', {'ReserveSel': b'\x00\x34\x12',
+                                  'GetSelEntry': b'\x00\xff\xff' + entry})
+        assert ipmi.requests == [
+            ('ReserveSelReq', b''),
+            ('GetSelEntryReq', b'\x34\x12\x01\x00\x00\xff')]
+        out = capsys.readouterr().out
+        assert out.startswith('SEL Record ID:   0x0001\n')
+        assert 'Description:     [0x09] Upper Critical going high\n' in out
+
+    RECORD = ' '.join(f'0x{b:02x}' for b in TestSelList.ENTRIES[0])
+
+    def test_add(self, capsys):
+        ipmi = self.run(f'add {self.RECORD}', b'\x00\x07\x00')
+        assert ipmi.requests == [('AddSelEntryReq', TestSelList.ENTRIES[0])]
+        assert capsys.readouterr().out == 'Added SEL entry 0x0007\n'
+
+    def test_add_partial(self, capsys):
+        ipmi = self.run(f'add -p {self.RECORD}',
+                        {'ReserveSel': b'\x00\x34\x12',
+                         'PartialAddSelEntry': [b'\x00\x07\x00'] * 2})
+        assert [name for name, _ in ipmi.requests] == [
+            'ReserveSelReq', 'PartialAddSelEntryReq', 'PartialAddSelEntryReq']
+        assert capsys.readouterr().out == 'Added SEL entry 0x0007\n'
+
+    @pytest.mark.parametrize('data', ['0 ' * 15, '0 ' * 15 + '256'])
+    def test_add_invalid(self, data):
+        with pytest.raises(SystemExit):
+            build_parser().parse_args(['sel', 'add'] + data.split())
+
+    def test_delete(self, capsys):
+        ipmi = self.run('delete 1 0x0a',
+                        {'ReserveSel': b'\x00\x34\x12',
+                         'DeleteSelEntry': [b'\x00\x01\x00',
+                                            b'\x00\x0a\x00']})
+        assert ipmi.requests == [
+            ('ReserveSelReq', b''),
+            ('DeleteSelEntryReq', b'\x34\x12\x01\x00'),
+            ('DeleteSelEntryReq', b'\x34\x12\x0a\x00')]
+        assert capsys.readouterr().out == ('Deleted SEL entry 0x0001\n'
+                                           'Deleted SEL entry 0x000a\n')
+
+    @pytest.mark.parametrize('log, data, rsp, output', [
+        ('mca', b'\x00', b'\x00\x11\x22\x33', '11 22 33\n'),
+        ('oem2', b'\x02', b'\x00', 'no status data\n'),
+    ])
+    def test_aux_status(self, capsys, log, data, rsp, output):
+        ipmi = self.run(f'aux-status {log}', rsp)
+        assert ipmi.requests == [('GetAuxiliaryLogStatusReq', data)]
+        assert capsys.readouterr().out == output
