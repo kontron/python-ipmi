@@ -56,7 +56,8 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from .ipmb import IpmbInterface
 
-RawHandler = Callable[['IpmbInterface', IpmbHeaderReq, bytes], 'bytes | None']
+RawHandler = Callable[['IpmbInterface | None', IpmbHeaderReq, bytes],
+                      'bytes | None']
 MessageHandler = Callable[[Message], 'Message | None']
 
 
@@ -102,6 +103,10 @@ class MessageRouter:
     receive thread of an interface. A handler may therefore send requests
     itself, e.g. to forward a request to another bus. The worker thread is
     started with the first incoming request.
+
+    A transport that is not an IPMB interface, e.g. the server side of
+    RMCP, passes its requests to `answer_request()` and sends the returned
+    response itself.
     """
 
     def __init__(self, unhandled_cc: int | None = CC_INV_CMD) -> None:
@@ -133,7 +138,8 @@ class MessageRouter:
                              group_extension: int | None = None) -> None:
         """Register a handler for incoming requests.
 
-        The handler is called with the interface, the request header and the
+        The handler is called with the interface (None for a request
+        passed to :meth:`answer_request`), the request header and the
         request data (without the checksum). It returns the response data,
         starting with the completion code, or None to send no response. If
         the handler raises an exception, the response has the completion
@@ -169,8 +175,8 @@ class MessageRouter:
             group_extension: The group extension of the requests, None
                 for all requests of the command.
         """
-        def raw_handler(interface: IpmbInterface, header: IpmbHeaderReq,
-                        data: bytes) -> bytes | None:
+        def raw_handler(interface: IpmbInterface | None,
+                        header: IpmbHeaderReq, data: bytes) -> bytes | None:
             req = create_message(netfn, cmdid, group_extension)
             decode_message(req, data)
             rsp = handler(req)
@@ -243,11 +249,7 @@ class MessageRouter:
             interface: The interface the message was received on.
             frame: The IPMB message, starting with the rsSA.
         """
-        if len(frame) < IPMB_MIN_MSG_LEN:
-            logger.debug('IPMB RX message too short [%s]', frame.hex(' '))
-            return
-        if checksum(frame[0:3]) or checksum(frame[3:]):
-            logger.debug('IPMB RX checksum error [%s]', frame.hex(' '))
+        if not self._is_valid_frame(frame):
             return
 
         netfn = frame[1] >> 2
@@ -256,6 +258,16 @@ class MessageRouter:
         else:
             self._start_worker()
             self._requests.put((interface, frame))
+
+    @staticmethod
+    def _is_valid_frame(frame: bytes) -> bool:
+        if len(frame) < IPMB_MIN_MSG_LEN:
+            logger.debug('IPMB RX message too short [%s]', frame.hex(' '))
+            return False
+        if checksum(frame[0:3]) or checksum(frame[3:]):
+            logger.debug('IPMB RX checksum error [%s]', frame.hex(' '))
+            return False
+        return True
 
     def _handle_response(self, interface: IpmbInterface, netfn: int,
                          frame: bytes) -> None:
@@ -278,7 +290,33 @@ class MessageRouter:
                 return handler
         return self._handlers.get((header.netfn, header.cmdid, None))
 
-    def _handle_request(self, interface: IpmbInterface, frame: bytes) -> None:
+    def answer_request(self, frame: bytes) -> bytes | None:
+        """Answer a request with the registered handlers.
+
+        The request is handled in the calling thread, and the response is
+        returned instead of sent. This is for transports that are not an
+        IPMB interface, e.g. an RMCP server; the raw handlers get None as
+        the interface.
+
+        Args:
+            frame: The IPMB request message, starting with the rsSA.
+
+        Returns:
+            The IPMB response message, starting with the rqSA, or None if
+            the request is not answered: the message is invalid or a
+            response, it has no handler and ``unhandled_cc`` is None, or
+            the handler returned None.
+        """
+        if not self._is_valid_frame(frame):
+            return None
+        if (frame[1] >> 2) & 1:
+            logger.debug('IPMB RX response without a pending request [%s]',
+                         frame.hex(' '))
+            return None
+        return self._answer(None, frame)
+
+    def _answer(self, interface: IpmbInterface | None,
+                frame: bytes) -> bytes | None:
         header = IpmbHeaderReq(data=frame)
         data = frame[6:-1]
         logger.debug('IPMB RX request [%s]', header)
@@ -287,7 +325,7 @@ class MessageRouter:
         rsp_data: bytes | None
         if handler is None:
             if self.unhandled_cc is None:
-                return
+                return None
             rsp_data = bytes((self.unhandled_cc,))
         else:
             try:
@@ -296,10 +334,15 @@ class MessageRouter:
                 logger.exception('IPMB request handler failed')
                 rsp_data = bytes((CC_UNSPECIFIED_ERROR,))
             if rsp_data is None:
-                return
+                return None
+        return encode_ipmb_response(header, rsp_data)
 
+    def _handle_request(self, interface: IpmbInterface, frame: bytes) -> None:
+        rsp = self._answer(interface, frame)
+        if rsp is None:
+            return
         try:
-            interface.send_frame(encode_ipmb_response(header, rsp_data))
+            interface.send_frame(rsp)
         except OSError as e:
             logger.warning('IPMB sending response failed: %s', e)
 

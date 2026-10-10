@@ -145,7 +145,9 @@ message:
 
 **Raw handlers**, registered with
 :meth:`~pyipmi.interfaces.router.MessageRouter.register_raw_handler`, get
-the interface, the IPMB header and the request data (after the command
+the interface (``None`` for the requests passed to
+:meth:`~pyipmi.interfaces.router.MessageRouter.answer_request`), the IPMB
+header and the request data (after the command
 ID, without the checksum), and return the response data starting with
 the completion code, or ``None``. Use them for commands without a message
 class, or to see the header, e.g. the requester address:
@@ -245,6 +247,27 @@ device on another bus and return its response:
 
    bus0.open()
    bus1.open()
+
+Answering requests of other transports
+--------------------------------------
+
+The handlers can also answer requests that do not come from an IPMB
+interface, e.g. in a server for RMCP.
+:meth:`~pyipmi.interfaces.router.MessageRouter.answer_request` takes the
+IPMB request message and returns the IPMB response message, or ``None``
+if there is no response. The request is handled in the calling thread,
+and raw handlers get ``None`` as the interface:
+
+.. code-block:: python
+
+   router = MessageRouter()
+   router.register_handler(constants.NETFN_APP,
+                           constants.CMDID_GET_DEVICE_ID, get_device_id)
+
+   # the IPMB message from the payload of an RMCP packet
+   rsp = router.answer_request(ipmi_msg)
+   if rsp is not None:
+       ...    # send the response in an RMCP packet
 
 Debugging
 ---------

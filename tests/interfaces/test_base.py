@@ -8,7 +8,8 @@ import pyipmi
 import pyipmi.msgs.bmc
 from pyipmi.interfaces import INTERFACES
 from pyipmi.interfaces.base import Interface
-from pyipmi.interfaces.ipmb import IpmbInterface, IpmbHeaderReq
+from pyipmi.interfaces.ipmb import (IpmbInterface, IpmbHeaderReq,
+                                   encode_ipmb_msg)
 from pyipmi.interfaces.router import MessageRouter, encode_ipmb_response
 from pyipmi.interfaces.aardvark import Aardvark
 from pyipmi.interfaces.ipmbdev import IpmbDev
@@ -131,3 +132,88 @@ def test_ipmb_inc_sequence_number():
     intf.next_sequence_number = 63
     intf._inc_sequence_number()
     assert intf.next_sequence_number == 0
+
+
+def request_frame(netfn, cmdid, data=b''):
+    header = IpmbHeaderReq()
+    header.rs_sa = 0x20
+    header.rs_lun = 0
+    header.rq_sa = 0x81
+    header.rq_lun = 2
+    header.rq_seq = 5
+    header.netfn = netfn
+    header.cmdid = cmdid
+    return header, encode_ipmb_msg(header, data)
+
+
+def test_answer_request_message_handler():
+    def get_device_id(req):
+        rsp = pyipmi.msgs.bmc.GetDeviceIdRsp()
+        rsp.completion_code = 0
+        rsp.device_id = 0x42
+        return rsp
+
+    router = MessageRouter()
+    router.register_handler(6, 1, get_device_id)
+    header, frame = request_frame(6, 1)
+
+    rsp = router.answer_request(frame)
+
+    expected = pyipmi.msgs.bmc.GetDeviceIdRsp()
+    expected.completion_code = 0
+    expected.device_id = 0x42
+    assert rsp == encode_ipmb_response(
+        header, pyipmi.msgs.encode_message(expected))
+    # answered in the calling thread, no worker is started
+    assert router._worker is None
+
+
+def test_answer_request_raw_handler_gets_no_interface():
+    calls = []
+
+    def handler(interface, header, data):
+        calls.append((interface, header.cmdid, data))
+        return b'\x00\x01'
+
+    router = MessageRouter()
+    router.register_raw_handler(0x2e, 0x10, handler)
+    header, frame = request_frame(0x2e, 0x10, b'\xaa\xbb')
+
+    assert router.answer_request(frame) == encode_ipmb_response(
+        header, b'\x00\x01')
+    assert calls == [(None, 0x10, b'\xaa\xbb')]
+
+
+def test_answer_request_unhandled():
+    header, frame = request_frame(6, 1)
+    assert MessageRouter().answer_request(frame) == encode_ipmb_response(
+        header, b'\xc1')
+    assert MessageRouter(unhandled_cc=None).answer_request(frame) is None
+
+
+def test_answer_request_handler_fails():
+    def handler(interface, header, data):
+        raise RuntimeError('failed')
+
+    router = MessageRouter()
+    router.register_raw_handler(6, 1, handler)
+    header, frame = request_frame(6, 1)
+    assert router.answer_request(frame) == encode_ipmb_response(
+        header, b'\xff')
+
+
+def test_answer_request_handler_returns_none():
+    router = MessageRouter()
+    router.register_raw_handler(6, 1, lambda intf, hdr, data: None)
+    assert router.answer_request(request_frame(6, 1)[1]) is None
+
+
+@pytest.mark.parametrize('frame', [
+    b'\x20\x18\xc8',                         # too short
+    b'\x20\x18\xc8\x81\x14\x01\x00',         # wrong checksum
+    encode_ipmb_response(request_frame(6, 1)[0], b'\x00'),  # a response
+])
+def test_answer_request_invalid(frame):
+    router = MessageRouter()
+    router.register_raw_handler(6, 1, lambda intf, hdr, data: b'\x00')
+    assert router.answer_request(frame) is None
