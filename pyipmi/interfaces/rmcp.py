@@ -63,8 +63,7 @@ from .base import Interface
 from ..interfaces.ipmb import (IpmbHeaderReq, encode_ipmb_msg,
                                encode_bridged_message, decode_bridged_message,
                                rx_filter, target_ipmb_address)
-from ..utils import (check_completion_code, check_rsp_completion_code,
-                     py3_array_tobytes)
+from ..utils import check_rsp_completion_code, py3_array_tobytes
 
 logger = logging.getLogger(__name__)
 
@@ -727,7 +726,7 @@ class Rmcp(Interface):
         req.channel.number = CHANNEL_NUMBER_FOR_THIS
         req.privilege_level.requested = session.priv_level
         rsp = self.send_and_receive(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         caps = ChannelAuthenticationCapabilities(rsp)
         return caps
 
@@ -767,7 +766,7 @@ class Rmcp(Interface):
         req = create_request_by_name('GetDeviceId')
         req.target = self.host_target
         rsp = self.send_and_receive(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def _keep_alive(self) -> None:
         # every request keeps the session alive, so only send a keep-alive
@@ -884,7 +883,7 @@ class Rmcp(Interface):
         req.target = self.host_target
         req.session_id = self._session.sid
         rsp = self.send_and_receive(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         self._session.activated = False
 
     def _inc_sequence_number(self) -> int:

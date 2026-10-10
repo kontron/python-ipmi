@@ -440,8 +440,7 @@ CMDID_SET_DCMI_CONFIGURATION_PARAMETERS = 0x12
 CMDID_GET_DCMI_CONFIGURATION_PARAMETERS = 0x13
 
 # Command-specific completion codes. The key in this dictionary is a tuple
-# (NetFn, Command ID, Group extension).
-# The operation NetFn | 1 is here because it's the NetFn of an IPMI response.
+# (NetFn, Command ID, Group extension) of the request.
 CC_ERR_CMD_SPECIFIC_DESC = {
     (NETFN_APP, CMDID_GET_SESSION_CHALLENGE, None): {
         0x81: 'invalid user name',

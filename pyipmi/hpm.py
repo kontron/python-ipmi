@@ -47,7 +47,7 @@ from collections.abc import Sequence
 from .errors import CompletionCodeError, HpmError, IpmiTimeoutError
 from .msgs import create_request_by_name, Message
 from .msgs import constants
-from .utils import check_completion_code, bcd_search
+from .utils import check_rsp_completion_code, bcd_search
 from .utils import py3dec_unic_bytes_fix, py3_array_tobytes
 from .state import State
 from .fields import VersionField
@@ -373,7 +373,7 @@ class Hpm(IpmiMixin):
         """
         try:
             rsp = self.finish_firmware_upload(component, length)
-            check_completion_code(rsp.completion_code)
+            check_rsp_completion_code(rsp)
         except CompletionCodeError as e:
             if e.cc == CC_LONG_DURATION_CMD_IN_PROGRESS:
                 self.wait_for_long_duration_command(
@@ -445,7 +445,7 @@ class Hpm(IpmiMixin):
         if rollback_override is not None:
             req.rollback_override_policy = rollback_override
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def activate_firmware_and_wait(self, rollback_override: int | None = None,
                                    timeout: float = 2,

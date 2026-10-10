@@ -99,7 +99,9 @@ def no_sleep(monkeypatch):
 
 
 def chunk_rsp(cc):
-    return SimpleNamespace(completion_code=cc)
+    # the command of a Get SDR response, for the error description
+    return SimpleNamespace(completion_code=cc, cmdid=0x23, netfn=0x0b,
+                           group_extension=None)
 
 
 @pytest.mark.parametrize('cc', [CC_TIMEOUT, CC_RESP_COULD_NOT_BE_PRV])

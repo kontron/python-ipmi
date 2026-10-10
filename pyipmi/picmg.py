@@ -40,7 +40,7 @@ from __future__ import annotations
 from .errors import DecodingError, EncodingError
 from .msgs import create_request_by_name, Message
 from .msgs import picmg
-from .utils import check_completion_code
+from .utils import check_rsp_completion_code
 from .state import State
 from .mixin import IpmiMixin
 
@@ -222,7 +222,7 @@ class Picmg(IpmiMixin):
         req = create_request_by_name('SetFruLedState')
         req = led.to_request(req)
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def _set_fru_activation(self, fru_id: int, control: int) -> None:
         self.send_message_by_name('SetFruActivation',
@@ -276,7 +276,7 @@ class Picmg(IpmiMixin):
             req.set.deactivation_locked = 0
 
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def set_fru_activation_lock(self, fru_id: int) -> None:
         """Set the activation lock of a FRU.
@@ -331,7 +331,7 @@ class Picmg(IpmiMixin):
         req.link_info.grouping_id = link_descr.grouping_id
         req.state = state
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def get_port_state(self, channel_number: int, channel_interface: int,
                        ) -> tuple[LinkDescriptor | None, int | None]:
@@ -350,7 +350,7 @@ class Picmg(IpmiMixin):
         req.channel.number = channel_number
         req.channel.interface = channel_interface
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
         # no link information if the port is not supported
         link = None
@@ -443,7 +443,7 @@ class Picmg(IpmiMixin):
         req.channel_info.interface = interface
         req.channel_signaling.class_capability = signaling_class
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def get_signaling_class(self, interface: int, channel: int) -> int:
         """Get the signaling class of a channel.
@@ -461,7 +461,7 @@ class Picmg(IpmiMixin):
         req.channel_info.channel_number = channel
         req.channel_info.interface = interface
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         return rsp.channel_signaling.class_capability
 
 

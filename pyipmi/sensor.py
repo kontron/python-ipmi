@@ -41,7 +41,7 @@ from __future__ import annotations
 from array import array
 from collections.abc import Generator
 
-from .utils import check_completion_code, ByteSequence
+from .utils import check_rsp_completion_code, ByteSequence
 from .msgs import create_request_by_name, Message
 from .state import State
 
@@ -767,7 +767,7 @@ class Sensor(IpmiMixin):
             req.byte5 = deassertion_mask & 0xff
             req.byte6 = (deassertion_mask >> 8) & 0x7f
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def get_sensor_event_enable(self, sensor_number: int,
                                 lun: int = 0) -> SensorEventEnable:
@@ -824,7 +824,7 @@ class Sensor(IpmiMixin):
         req.sensor_type = sensor_type
         req.event_reading_type.code = event_reading_type
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def get_sensor_type(self, sensor_number: int,
                         lun: int = 0) -> tuple[int, int]:
@@ -909,7 +909,7 @@ class Sensor(IpmiMixin):
                 setattr(req, name, 0)
 
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def rearm_sensor_events(self, sensor_number: int) -> None:
         """Rearm the events of a sensor.
@@ -990,7 +990,7 @@ class Sensor(IpmiMixin):
                 setattr(req.threshold, key, value)
 
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def get_sensor_thresholds(self, sensor_number: int, lun: int = 0) -> dict[str, int]:
         """Get the readable thresholds of a sensor.
@@ -1051,7 +1051,7 @@ class Sensor(IpmiMixin):
         req.event_type.dir = 0 if asserted else 1
         req.event_data = [0] if event_data is None else event_data
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
 
 class DeviceSdrInfo(State):

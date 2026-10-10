@@ -31,7 +31,7 @@ from __future__ import annotations
 from array import array
 
 from .msgs import create_request_by_name, Message
-from .utils import check_completion_code
+from .utils import check_rsp_completion_code
 from .state import State
 from .fields import VersionField
 from .constants import manufacturer_name
@@ -97,7 +97,7 @@ class Bmc(IpmiMixin):
         if data:
             req.data = data
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         return rsp.data
 
     def i2c_write(self, bus_type: int, bus_id: int, channel: int,
@@ -161,7 +161,7 @@ class Bmc(IpmiMixin):
         req.timer_use_expiration_flags = config.timer_use_expiration_flags
         req.initial_countdown = config.initial_countdown
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def get_watchdog_timer(self) -> Watchdog:
         """Get the settings and the present countdown of the watchdog timer.

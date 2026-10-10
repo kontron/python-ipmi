@@ -38,6 +38,23 @@ import pyipmi.logger
 from pyipmi.utils import py3_array_tobytes
 
 
+def format_completion_code(e: pyipmi.errors.CompletionCodeError) -> str:
+    """Format a completion code with its description.
+
+    E.g. '0xc1 (Invalid Command)'. A code without a known description is
+    described by its range.
+    """
+    description = e.cc_desc
+    if description == 'Unknown error description':
+        if 0x01 <= e.cc <= 0x7e:
+            description = 'device specific (OEM) completion code'
+        elif 0x80 <= e.cc <= 0xbe:
+            description = 'command-specific completion code'
+        else:
+            description = 'unknown completion code'
+    return f'0x{e.cc:02x} ({description})'
+
+
 def auto_int(value: str) -> int:
     """Argument type for numbers, decimal or with 0x prefix."""
     return int(value, 0)
@@ -791,7 +808,7 @@ def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
         except pyipmi.errors.CompletionCodeError as e:
             if s.type in (pyipmi.sdr.SDR_TYPE_COMPACT_SENSOR_RECORD,
                           pyipmi.sdr.SDR_TYPE_FULL_SENSOR_RECORD):
-                print(f'0x{s.id:04x} | {s.number:3d} | {s.device_id_string:18s} | ERR: CC=0x{e.cc:02x}')
+                print(f'0x{s.id:04x} | {s.number:3d} | {s.device_id_string:18s} | ERR: CC={format_completion_code(e)}')
 
 
 # the update types of the SDR repository info
@@ -1643,7 +1660,7 @@ def cmd_dcmi_discover(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
         try:
             rsp = ipmi.get_dcmi_capabilities(selector)
         except pyipmi.errors.CompletionCodeError as e:
-            print(f'{name!s:<45}: ERR: CC=0x{e.cc:02x}')
+            print(f'{name!s:<45}: ERR: CC={format_completion_code(e)}')
             continue
         conformance = rsp.specification_conformance
         print(f'{name!s:<45}: {hex_bytes(rsp.parameter_data)} (DCMI '
@@ -1713,7 +1730,7 @@ def cmd_dcmi_get_temp_reading(ipmi: pyipmi.Ipmi,
             readings = ipmi.get_temperature_readings(entity_id)
         except pyipmi.errors.CompletionCodeError as e:
             print(f'{dcmi_entity_name(entity_id)!s:<10} | ERR: '
-                  f'CC=0x{e.cc:02x}')
+                  f'CC={format_completion_code(e)}')
             continue
         for (instance, temperature) in readings:
             print(f'{dcmi_entity_name(entity_id)!s:<10} | {instance:3d} | '
@@ -1773,7 +1790,7 @@ def cmd_dcmi_get_conf_param(ipmi: pyipmi.Ipmi,
         try:
             rsp = ipmi.get_dcmi_configuration_parameters(selector)
         except pyipmi.errors.CompletionCodeError as e:
-            print(f'{name!s:<24}: ERR: CC=0x{e.cc:02x}')
+            print(f'{name!s:<24}: ERR: CC={format_completion_code(e)}')
             continue
         print(f'{name!s:<24}: {hex_bytes(rsp.parameter_data)}')
 
@@ -2287,7 +2304,8 @@ def main(argv: list[str] | None = None) -> None:
             ipmi.open()  # this will open interface and session
         args.func(ipmi, args)
     except pyipmi.errors.CompletionCodeError as e:
-        print(f'Command returned with completion code 0x{e.cc:02x}')
+        print('Command returned with completion code '
+              f'{format_completion_code(e)}')
         if args.verbose:
             traceback.print_exc()
         sys.exit(1)

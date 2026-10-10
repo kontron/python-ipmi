@@ -45,7 +45,7 @@ from . import errors
 
 from .errors import DecodingError
 from .fields import SdrTypeLengthString
-from .utils import check_completion_code, ByteBuffer, ByteSequence
+from .utils import check_rsp_completion_code, ByteBuffer, ByteSequence
 from .msgs import create_request_by_name, Message
 
 from .helper import get_sdr_data_helper, clear_repository_helper
@@ -441,7 +441,7 @@ class Sdr(IpmiMixin):
         req.status.in_progress = progress
         req.record_data = array('B', data)
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         return rsp.record_id
 
     def delete_sdr(self, record_id: int) -> int:

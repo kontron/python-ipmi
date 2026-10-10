@@ -42,7 +42,7 @@ from enum import Enum
 
 
 from .msgs import create_request_by_name, Message
-from .utils import check_completion_code, check_rsp_completion_code, ByteBuffer
+from .utils import check_rsp_completion_code, ByteBuffer
 from .state import State
 from .mixin import IpmiMixin
 
@@ -277,7 +277,7 @@ class Chassis(IpmiMixin):
         req = create_request_by_name('ChassisControl')
         req.control.option = option
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def chassis_control_power_down(self) -> None:
         """Power down the chassis."""
@@ -374,7 +374,7 @@ class Chassis(IpmiMixin):
             capabilities.system_management_device_address
         req.bridge_device_address = capabilities.bridge_device_address
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def set_power_restore_policy(self, policy: int) -> list[int]:
         """Set the power restore policy after AC/mains power returns.
@@ -397,7 +397,7 @@ class Chassis(IpmiMixin):
         req = create_request_by_name('SetPowerRestorePolicy')
         req.power_restore_policy.policy = policy
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         support = rsp.power_restore_policy_support
         supported = []
         if support.always_off:
@@ -461,7 +461,7 @@ class Chassis(IpmiMixin):
             int(not diagnostic_interrupt)
         req.disable.standby_button = int(not standby)
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def set_power_cycle_interval(self, interval: int) -> None:
         """Set the time the power stays off during a power cycle.

@@ -61,7 +61,7 @@ from ..errors import (AuthenticationError, DecodingError,
 from ..messaging import ChannelAuthenticationCapabilities
 from ..msgs import constants, create_request_by_name
 from ..session import Session
-from ..utils import check_completion_code
+from ..utils import check_rsp_completion_code
 from .rmcp import RMCP_CLASS_IPMI, Rmcp, call_repeatedly
 
 logger = logging.getLogger(__name__)
@@ -519,7 +519,7 @@ class RmcpPlus(Rmcp):
         req.channel.type = 1
         req.privilege_level.requested = session.priv_level
         rsp = self.send_and_receive(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         return ChannelAuthenticationCapabilities(rsp)
 
     def _handshake(self, request_type: int, request: bytes,

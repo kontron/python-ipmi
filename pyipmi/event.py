@@ -31,7 +31,7 @@ Example:
 
 from __future__ import annotations
 
-from .utils import check_completion_code
+from .utils import check_rsp_completion_code
 from .msgs import create_request_by_name
 from .mixin import IpmiMixin
 
@@ -65,7 +65,7 @@ class Event(IpmiMixin):
         req.event_receiver.ipmb_i2c_slave_address = ipmb_address
         req.event_receiver.lun = lun
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def disable_event_message_generation(self) -> None:
         """Disable the event message generation of the target.
@@ -81,7 +81,7 @@ class Event(IpmiMixin):
         # the address byte 0xFF includes its reserved bit 0
         req.event_receiver._value = 0xff
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def get_event_receiver(self) -> tuple[int, int]:
         """Get the event receiver of the target.
@@ -92,7 +92,7 @@ class Event(IpmiMixin):
         """
         req = create_request_by_name('GetEventReceiver')
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         ipmb_address = rsp.event_receiver.ipmb_i2c_slave_address
         lun = rsp.event_receiver.lun
         return (ipmb_address, lun)

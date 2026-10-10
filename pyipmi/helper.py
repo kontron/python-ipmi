@@ -21,7 +21,7 @@ from array import array
 from collections.abc import Callable
 
 from .errors import CompletionCodeError, RetryError
-from .utils import check_completion_code, ByteBuffer
+from .utils import check_rsp_completion_code, ByteBuffer
 from .msgs import constants, Message
 
 
@@ -56,7 +56,7 @@ def get_sdr_chunk_helper(send_fn: Callable[[Message], Message], req: Message,
             time.sleep(0.1 * retry)
             continue
         else:
-            check_completion_code(rsp.completion_code)
+            check_rsp_completion_code(rsp)
 
     return rsp
 
@@ -185,7 +185,7 @@ def _clear_repository(reserve_fn: Callable[[], int], clear_fn: Callable,
                 reservation = reserve_fn()
                 continue
             else:
-                check_completion_code(e.cc)
+                raise
 
         if in_progress == constants.REPOSITORY_ERASURE_IN_PROGRESS:
             time.sleep(0.5)

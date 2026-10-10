@@ -40,7 +40,7 @@ from .. import Routing, Target
 from ..errors import IpmiTimeoutError
 from ..msgs import (create_message, create_request_by_name,
                     encode_message, decode_message, constants)
-from ..utils import check_completion_code
+from ..utils import check_rsp_completion_code
 from ..utils import py3_array_tobytes, py3_array_frombytes
 from .base import Interface
 
@@ -326,7 +326,7 @@ def decode_bridged_message(rx_data: bytes) -> bytes:
         rsp = create_message(constants.NETFN_APP + 1,
                              constants.CMDID_SEND_MESSAGE, None)
         decode_message(rsp, rx_data[6:])
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         rx_data = rx_data[7:-1]
 
         if len(rx_data) < 6:

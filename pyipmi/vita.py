@@ -45,7 +45,7 @@ Example:
 from __future__ import annotations
 
 from .msgs import create_request_by_name, Message
-from .utils import check_completion_code
+from .utils import check_rsp_completion_code
 from .mixin import IpmiMixin
 from .msgs.vita import (VITA_FRU_CONTROL_COLD_RESET,  # noqa: F401
                         VITA_FRU_CONTROL_WARM_RESET,
@@ -206,7 +206,7 @@ class Vita(IpmiMixin):
         req.activation_policy_mask._value = mask
         req.activation_policy_set._value = value
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def get_vita_led_properties(self, fru_id: int) -> Message:
         """Get the LED properties of a FRU.

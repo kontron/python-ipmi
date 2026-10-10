@@ -775,7 +775,7 @@ class TestDcmiCommands:
         assert len(out) == 5
         assert out[0] == ('Supported DCMI capabilities                  : '
                           '00 01 05 (DCMI 1.5, revision 2)')
-        assert out[3].endswith('ERR: CC=0xcc')
+        assert out[3].endswith('ERR: CC=0xcc (Invalid data field in Request)')
 
     def test_power_reading(self, capsys):
         rsp = create_response_by_name('GetPowerReading')
@@ -836,7 +836,7 @@ class TestDcmiCommands:
             'inlet      |   1 |  +25 C',
             'cpu        |   1 |  +45 C',
             'cpu        |   2 |   -5 C',
-            'baseboard  | ERR: CC=0xcb']
+            'baseboard  | ERR: CC=0xcb (Requested data not present)']
 
     def test_get_temp_reading_entity(self):
         self.ipmi.get_temperature_readings.return_value = []
@@ -1580,3 +1580,33 @@ class TestSensorCommands:
     def test_invalid(self, command):
         with pytest.raises(SystemExit):
             build_parser().parse_args(['sensor'] + command.split())
+
+
+class TestCompletionCodeOutput:
+    @pytest.mark.parametrize('error, output', [
+        (CompletionCodeError(0xc1), '0xc1 (Invalid Command)'),
+        # a command-specific code with its description
+        (CompletionCodeError(0x81, cmdid=0x47, netfn=0x06),
+         '0x81 (password test failed. Wrong password size was used.)'),
+        # codes without description are described by their range
+        (CompletionCodeError(0x42), '0x42 (device specific (OEM) completion '
+                                    'code)'),
+        (CompletionCodeError(0x85), '0x85 (command-specific completion '
+                                    'code)'),
+        (CompletionCodeError(0xe0), '0xe0 (unknown completion code)'),
+    ])
+    def test_format_completion_code(self, error, output):
+        assert ipmitool.format_completion_code(error) == output
+
+    def test_main_prints_the_description(self, capsys, monkeypatch):
+        ipmi = MagicMock()
+        ipmi.get_device_id.side_effect = CompletionCodeError(0xd4)
+        monkeypatch.setattr(ipmitool, 'create_ipmi_connection',
+                            lambda *args: ipmi)
+        with pytest.raises(SystemExit) as e:
+            ipmitool.main(['-I', 'ipmitool', '-H', '10.0.0.1', 'bmc',
+                           'info'])
+        assert e.value.code == 1
+        assert capsys.readouterr().out == (
+            'Command returned with completion code 0xd4 (Cannot execute '
+            'command due to insufficient privilege level)\n')

@@ -43,7 +43,7 @@ from enum import Enum
 
 from .session import Session
 from .msgs import create_request_by_name, Message
-from .utils import check_completion_code, check_rsp_completion_code
+from .utils import check_rsp_completion_code
 from .state import State
 from .mixin import IpmiMixin
 
@@ -110,7 +110,7 @@ class Messaging(IpmiMixin):
         req.channel.number = channel
         req.privilege_level.requested = priv_lvl
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         caps = ChannelAuthenticationCapabilities(rsp)
         return caps
 
@@ -130,7 +130,7 @@ class Messaging(IpmiMixin):
         req = create_request_by_name('GetChannelInfo')
         req.channel.number = channel
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         return ChannelInfo(rsp)
 
     def set_username(self, userid: int = 0, username: str = '') -> None:
@@ -144,7 +144,7 @@ class Messaging(IpmiMixin):
         req.userid.userid = userid
         req.user_name = username.ljust(16, '\x00')
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def get_username(self, userid: int = 0) -> bytes:
         """Get the name of a user.
@@ -159,7 +159,7 @@ class Messaging(IpmiMixin):
         req = create_request_by_name('GetUserName')
         req.userid.userid = userid
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         return rsp.user_name
 
     def get_user_access(self, userid: int = 0, channel: int = 0) -> UserAccess:
@@ -176,7 +176,7 @@ class Messaging(IpmiMixin):
         req.userid.userid = userid
         req.channel.channel_number = channel
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         return UserAccess(rsp)
 
     def set_user_access(self, userid: int, ipmi_msg: bool, link_auth: bool,
@@ -208,7 +208,7 @@ class Messaging(IpmiMixin):
             priv_level, 0x0F)
         req.session_limit.simultaneous_session_limit = user_session_limit
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def set_user_password(self, userid: int, password: str = '') -> None:
         """Set the password of a user.
@@ -239,7 +239,7 @@ class Messaging(IpmiMixin):
         req.userid.userid = userid
         req.operation.operation = PasswordOperation.ENABLE
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def disable_user(self, userid: int) -> None:
         """Disable a user.
@@ -251,7 +251,7 @@ class Messaging(IpmiMixin):
         req.userid.userid = userid
         req.operation.operation = PasswordOperation.DISABLE
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
 
 class ChannelAuthenticationCapabilities(State):

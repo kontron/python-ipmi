@@ -39,7 +39,7 @@ from collections.abc import Generator
 from datetime import datetime, timezone
 
 from .errors import CompletionCodeError, DecodingError
-from .utils import check_completion_code, ByteBuffer, ByteSequence
+from .utils import check_rsp_completion_code, ByteBuffer, ByteSequence
 from .msgs import create_request_by_name, Message
 from .msgs import constants
 from .event import EVENT_ASSERTION, EVENT_DEASSERTION
@@ -183,7 +183,7 @@ class Sel(IpmiMixin):
                 int(offset + part_size >= len(record_data))
             req.record_data = array('B', part)
             rsp = self.send_message(req)
-            check_completion_code(rsp.completion_code)
+            check_rsp_completion_code(rsp)
             record_id = rsp.record_id
         return record_id
 
@@ -260,7 +260,7 @@ class Sel(IpmiMixin):
         req = create_request_by_name('GetAuxiliaryLogStatus')
         req.log.type = log_type
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
         return bytes(rsp.log_data)
 
     def set_auxiliary_log_status(self, log_type: int,
@@ -278,7 +278,7 @@ class Sel(IpmiMixin):
         req.log.type = log_type
         req.log_data = array('B', log_data)
         rsp = self.send_message(req)
-        check_completion_code(rsp.completion_code)
+        check_rsp_completion_code(rsp)
 
     def get_sel_reservation_id(self) -> int:
         """Reserve the SEL.
@@ -404,7 +404,7 @@ class Sel(IpmiMixin):
                     self.max_req_len -= 1
                 continue
             else:
-                check_completion_code(rsp.completion_code)
+                check_rsp_completion_code(rsp)
 
             record_data.extend(rsp.record_data)
             req.offset = len(record_data)
