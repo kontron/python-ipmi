@@ -582,3 +582,10 @@ def test_entity_id_to_string(entity_id, string):
 ])
 def test_units_to_string(units, string):
     assert units_to_string(*units) == string
+
+
+def test_partial_add_sdr_sends_the_data():
+    ipmi = create_ipmi(b'\x00\x05\x00')
+    assert ipmi.partial_add_sdr(0x1234, 0, 0, 1, b'\x01\x02\x03') == 5
+    assert ipmi.requests == [
+        ('PartialAddSdrReq', b'\x34\x12\x00\x00\x00\x01\x01\x02\x03')]

@@ -397,7 +397,7 @@ class Sdr(IpmiMixin):
         req.record_id = record_id
         req.offset = offset
         req.status.in_progress = progress
-        req.data = data
+        req.record_data = array('B', data)
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
         return rsp.record_id
