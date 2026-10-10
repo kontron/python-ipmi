@@ -219,3 +219,67 @@ class RunInitializationAgentRsp(Message):
                      Bitfield.Bit('initialization_completed', 1),
                      Bitfield.ReservedBit(7, 0),),
     )
+
+
+@register_message_class
+class GetSdrRepositoryTimeReq(Message):
+    __cmdid__ = constants.CMDID_GET_SDR_REPOSITORY_TIME
+    __netfn__ = constants.NETFN_STORAGE
+
+
+@register_message_class
+class GetSdrRepositoryTimeRsp(Message):
+    __cmdid__ = constants.CMDID_GET_SDR_REPOSITORY_TIME
+    __netfn__ = constants.NETFN_STORAGE | 1
+    __fields__ = (
+            CompletionCode(),
+            Timestamp('timestamp'),
+    )
+
+
+@register_message_class
+class SetSdrRepositoryTimeReq(Message):
+    __cmdid__ = constants.CMDID_SET_SDR_REPOSITORY_TIME
+    __netfn__ = constants.NETFN_STORAGE
+    __fields__ = (
+            Timestamp('timestamp'),
+    )
+
+
+@register_message_class
+class SetSdrRepositoryTimeRsp(Message):
+    __cmdid__ = constants.CMDID_SET_SDR_REPOSITORY_TIME
+    __netfn__ = constants.NETFN_STORAGE | 1
+    __fields__ = (
+            CompletionCode(),
+    )
+
+
+@register_message_class
+class EnterSdrRepositoryUpdateModeReq(Message):
+    __cmdid__ = constants.CMDID_ENTER_SDR_REPOSITORY_UPDATE_MODE
+    __netfn__ = constants.NETFN_STORAGE
+
+
+@register_message_class
+class EnterSdrRepositoryUpdateModeRsp(Message):
+    __cmdid__ = constants.CMDID_ENTER_SDR_REPOSITORY_UPDATE_MODE
+    __netfn__ = constants.NETFN_STORAGE | 1
+    __fields__ = (
+            CompletionCode(),
+    )
+
+
+@register_message_class
+class ExitSdrRepositoryUpdateModeReq(Message):
+    __cmdid__ = constants.CMDID_EXIT_SDR_REPOSITORY_UPDATE_MODE
+    __netfn__ = constants.NETFN_STORAGE
+
+
+@register_message_class
+class ExitSdrRepositoryUpdateModeRsp(Message):
+    __cmdid__ = constants.CMDID_EXIT_SDR_REPOSITORY_UPDATE_MODE
+    __netfn__ = constants.NETFN_STORAGE | 1
+    __fields__ = (
+            CompletionCode(),
+    )

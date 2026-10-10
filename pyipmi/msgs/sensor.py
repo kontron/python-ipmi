@@ -31,6 +31,13 @@ from . import EventMessageRevision
 class GetDeviceSdrInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_SDR_INFO
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __fields__ = (
+            # bit 0: 1 returns the number of SDRs, 0 the number of sensors
+            # (default)
+            Optional(
+                UnsignedInt('operation', 1)
+            ),
+    )
 
 
 @register_message_class

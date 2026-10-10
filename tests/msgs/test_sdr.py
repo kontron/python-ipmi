@@ -139,3 +139,34 @@ def test_clearsdrrepository_decode_rsp():
     decode_message(m, b'\x00\x11')
     assert m.completion_code == 0x00
     assert m.status.erase_in_progress == 0x1
+
+
+def test_getsdrrepositorytime_decode_rsp():
+    m = pyipmi.msgs.sdr.GetSdrRepositoryTimeRsp()
+    decode_message(m, b'\x00\x00\x10\x20\x68')
+    assert m.__netfn__ == 0x0b
+    assert m.__cmdid__ == 0x28
+    assert m.completion_code == 0x00
+    assert m.timestamp == 0x68201000
+
+
+def test_setsdrrepositorytime_encode_req():
+    m = pyipmi.msgs.sdr.SetSdrRepositoryTimeReq()
+    m.timestamp = 0x68201000
+    assert m.__netfn__ == 0x0a
+    assert m.__cmdid__ == 0x29
+    assert encode_message(m) == b'\x00\x10\x20\x68'
+
+
+def test_entersdrrepositoryupdatemode_encode_req():
+    m = pyipmi.msgs.sdr.EnterSdrRepositoryUpdateModeReq()
+    assert m.__netfn__ == 0x0a
+    assert m.__cmdid__ == 0x2a
+    assert encode_message(m) == b''
+
+
+def test_exitsdrrepositoryupdatemode_encode_req():
+    m = pyipmi.msgs.sdr.ExitSdrRepositoryUpdateModeReq()
+    assert m.__netfn__ == 0x0a
+    assert m.__cmdid__ == 0x2b
+    assert encode_message(m) == b''
