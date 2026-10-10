@@ -7,7 +7,8 @@ import pytest
 from pyipmi import interfaces, create_connection
 from pyipmi.errors import CompletionCodeError, DecodingError
 from pyipmi.msgs.registry import create_response_by_name
-from pyipmi.sel import SelEntry, SelInfo
+from pyipmi.sel import (SelEntry, SelInfo, AUXILIARY_LOG_MCA,
+                        AUXILIARY_LOG_OEM2)
 from pyipmi.utils import ByteBuffer
 
 from .ipmi_helper import create_ipmi
@@ -344,3 +345,165 @@ def test_sel_entry_direction_to_string():
 def test_sel_entry_threshold_event_values(event_desc, event_data, values):
     entry = sel_entry(event_desc=event_desc, event_data=event_data)
     assert entry.threshold_event_values() == values
+
+
+# SEL info: version 0x51, 3 entries, 0x0400 free bytes, the timestamps of
+# the last addition and erase, all operations supported
+SEL_INFO_RSP = (b'\x00\x51\x03\x00\x00\x04\x78\x56\x34\x12'
+                b'\x00\x00\x00\x00\x0f')
+
+
+def test_get_sel_info():
+    ipmi = create_ipmi(SEL_INFO_RSP)
+    info = ipmi.get_sel_info()
+    assert ipmi.requests == [('GetSelInfoReq', b'')]
+    assert info.version == 0x51
+    assert info.entries == 3
+    assert info.free_bytes == 0x400
+    assert info.most_recent_addition == 0x12345678
+    assert info.operation_support == ['get_sel_allocation_info',
+                                      'reserve_sel', 'partial_add_sel_entry',
+                                      'delete_sel']
+
+
+def test_get_sel_entries_count():
+    assert create_ipmi(SEL_INFO_RSP).get_sel_entries_count() == 3
+
+
+def test_get_sel_allocation_info():
+    ipmi = create_ipmi(b'\x00\x00\x02\x10\x00\x80\x01\x40\x00\x01')
+    info = ipmi.get_sel_allocation_info()
+    assert ipmi.requests == [('GetSelAllocationInfoReq', b'')]
+    assert info.possible_alloc_units == 0x200
+    assert info.alloc_unit_size == 16
+    assert info.free_alloc_units == 0x180
+    assert info.largest_free_block == 0x40
+    assert info.max_record_size == 1
+
+
+def test_add_sel_entry():
+    ipmi = create_ipmi(b'\x00\x07\x00')
+    assert ipmi.add_sel_entry(SEL_RECORD) == 7
+    assert ipmi.requests == [('AddSelEntryReq', SEL_RECORD)]
+
+
+@pytest.mark.parametrize('method', ['add_sel_entry', 'partial_add_sel_entry'])
+def test_add_sel_entry_invalid_length(method):
+    ipmi = create_ipmi(b'\x00\x07\x00')
+    with pytest.raises(ValueError):
+        getattr(ipmi, method)(SEL_RECORD[:15])
+    assert ipmi.requests == []
+
+
+def test_partial_add_sel_entry():
+    ipmi = create_ipmi({'ReserveSel': b'\x00\x34\x12',
+                        'PartialAddSelEntry': [b'\x00\x09\x00',
+                                               b'\x00\x09\x00']})
+    assert ipmi.partial_add_sel_entry(SEL_RECORD) == 9
+    # the first part with the record ID 0, the last part flagged
+    assert ipmi.requests == [
+        ('ReserveSelReq', b''),
+        ('PartialAddSelEntryReq', b'\x34\x12\x00\x00\x00\x00'
+                                  + SEL_RECORD[:8]),
+        ('PartialAddSelEntryReq', b'\x34\x12\x09\x00\x08\x01'
+                                  + SEL_RECORD[8:]),
+    ]
+
+
+def test_partial_add_sel_entry_part_size():
+    ipmi = create_ipmi({'ReserveSel': b'\x00\x34\x12',
+                        'PartialAddSelEntry': [b'\x00\x09\x00'] * 3})
+    ipmi.partial_add_sel_entry(SEL_RECORD, part_size=6)
+    parts = [data for name, data in ipmi.requests
+             if name == 'PartialAddSelEntryReq']
+    # offsets 0, 6 and 12, only the last part is flagged
+    assert [(p[4], p[5], len(p) - 6) for p in parts] == \
+        [(0, 0, 6), (6, 0, 6), (12, 1, 4)]
+
+
+def test_get_sel_time():
+    ipmi = create_ipmi(b'\x00\x00\x10\x20\x68')
+    assert ipmi.get_sel_time() == 0x68201000
+    assert ipmi.requests == [('GetSelTimeReq', b'')]
+
+
+def test_set_sel_time():
+    ipmi = create_ipmi(b'\x00')
+    ipmi.set_sel_time(0x68201000)
+    assert ipmi.requests == [('SetSelTimeReq', b'\x00\x10\x20\x68')]
+
+
+@pytest.mark.parametrize('timestamp', [-1, 0x100000000])
+def test_set_sel_time_invalid(timestamp):
+    ipmi = create_ipmi(b'\x00')
+    with pytest.raises(ValueError):
+        ipmi.set_sel_time(timestamp)
+
+
+@pytest.mark.parametrize('data, offset', [
+    (b'\x3c\x00', 60),
+    (b'\xc4\xff', -60),
+    (b'\x00\x00', 0),
+    (b'\xff\x07', None),
+])
+def test_get_sel_time_utc_offset(data, offset):
+    ipmi = create_ipmi(b'\x00' + data)
+    assert ipmi.get_sel_time_utc_offset() == offset
+    assert ipmi.requests == [('GetSelTimeUtcOffsetReq', b'')]
+
+
+@pytest.mark.parametrize('offset, data', [
+    (60, b'\x3c\x00'),
+    (-60, b'\xc4\xff'),
+    (1440, b'\xa0\x05'),
+    (-1440, b'\x60\xfa'),
+    (None, b'\xff\x07'),
+])
+def test_set_sel_time_utc_offset(offset, data):
+    ipmi = create_ipmi(b'\x00')
+    ipmi.set_sel_time_utc_offset(offset)
+    assert ipmi.requests == [('SetSelTimeUtcOffsetReq', data)]
+
+
+@pytest.mark.parametrize('offset', [-1441, 1441])
+def test_set_sel_time_utc_offset_invalid(offset):
+    ipmi = create_ipmi(b'\x00')
+    with pytest.raises(ValueError):
+        ipmi.set_sel_time_utc_offset(offset)
+    assert ipmi.requests == []
+
+
+def test_get_auxiliary_log_status():
+    ipmi = create_ipmi(b'\x00\x11\x22\x33\x44\x02\x00\x00\x00')
+    data = ipmi.get_auxiliary_log_status(AUXILIARY_LOG_OEM2)
+    assert ipmi.requests == [('GetAuxiliaryLogStatusReq', b'\x02')]
+    assert data == b'\x11\x22\x33\x44\x02\x00\x00\x00'
+
+
+def test_set_auxiliary_log_status():
+    ipmi = create_ipmi(b'\x00')
+    ipmi.set_auxiliary_log_status(AUXILIARY_LOG_MCA, b'\x11\x22')
+    assert ipmi.requests == [('SetAuxiliaryLogStatusReq', b'\x00\x11\x22')]
+
+
+@pytest.mark.parametrize('method, args', [
+    ('get_sel_allocation_info', ()),
+    ('add_sel_entry', (SEL_RECORD,)),
+    ('get_sel_time', ()),
+    ('set_sel_time', (0,)),
+    ('get_sel_time_utc_offset', ()),
+    ('set_sel_time_utc_offset', (0,)),
+    ('get_auxiliary_log_status', (AUXILIARY_LOG_MCA,)),
+    ('set_auxiliary_log_status', (AUXILIARY_LOG_MCA, b'')),
+])
+def test_sel_commands_error(method, args):
+    ipmi = create_ipmi(b'\xc1')
+    with pytest.raises(CompletionCodeError):
+        getattr(ipmi, method)(*args)
+
+
+def test_partial_add_sel_entry_error():
+    ipmi = create_ipmi({'ReserveSel': b'\x00\x34\x12',
+                        'PartialAddSelEntry': b'\xc5'})
+    with pytest.raises(CompletionCodeError):
+        ipmi.partial_add_sel_entry(SEL_RECORD)

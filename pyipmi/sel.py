@@ -57,6 +57,35 @@ TIMESTAMP_UNSPECIFIED = 0xffffffff
 TIMESTAMP_PRE_INIT_MAX = 0x20000000
 
 
+def timestamp_to_string(timestamp: int) -> str:
+    """Return a SEL timestamp as date and time (UTC).
+
+    Args:
+        timestamp: The time in seconds since 1970-01-01, or the time since
+            the initialization of the BMC for a value up to
+            ``TIMESTAMP_PRE_INIT_MAX``.
+
+    Returns:
+        The date and time as 'YYYY-MM-DD HH:MM:SS', 'Pre-Init <n>s' for a
+        time since the initialization of the BMC, or 'Unspecified'.
+    """
+    if timestamp == TIMESTAMP_UNSPECIFIED:
+        return 'Unspecified'
+    if timestamp <= TIMESTAMP_PRE_INIT_MAX:
+        return f'Pre-Init {timestamp:d}s'
+    time = datetime.fromtimestamp(timestamp, timezone.utc)
+    return time.strftime('%Y-%m-%d %H:%M:%S')
+
+
+# the SEL time UTC offset of Get SEL Time UTC Offset if it is not set
+UTC_OFFSET_UNSPECIFIED = 0x07ff
+
+# the auxiliary logs of Get/Set Auxiliary Log Status
+AUXILIARY_LOG_MCA = 0
+AUXILIARY_LOG_OEM1 = 1
+AUXILIARY_LOG_OEM2 = 2
+
+
 class Sel(IpmiMixin):
     """SEL commands, available on :class:`pyipmi.Ipmi`."""
 
@@ -66,8 +95,190 @@ class Sel(IpmiMixin):
         Returns:
             The number of entries.
         """
-        info = SelInfo(self.send_message_by_name('GetSelInfo'))
-        return info.entries
+        return self.get_sel_info().entries
+
+    def get_sel_info(self) -> SelInfo:
+        """Get the information about the SEL.
+
+        Returns:
+            The version, the number of entries, the free space, the times
+            of the last addition and erase, and the supported operations.
+        """
+        return SelInfo(self.send_message_by_name('GetSelInfo'))
+
+    def get_sel_allocation_info(self) -> SelAllocationInfo:
+        """Get the allocation information of the SEL.
+
+        Returns:
+            The number and size of the allocation units.
+
+        Raises:
+            CompletionCodeError: The BMC does not support the command, see
+                the ``operation_support`` of :meth:`get_sel_info`.
+        """
+        return SelAllocationInfo(
+            self.send_message_by_name('GetSelAllocationInfo'))
+
+    def add_sel_entry(self, record_data: ByteSequence) -> int:
+        """Add an entry to the SEL.
+
+        The BMC sets the record ID, and the timestamp of a timestamped
+        record.
+
+        Args:
+            record_data: The 16 bytes of the record, the record ID is
+                ignored.
+
+        Returns:
+            The record ID of the added entry.
+
+        Raises:
+            ValueError: The record is not 16 bytes long.
+            CompletionCodeError: The BMC rejected the request.
+        """
+        if len(record_data) != 16:
+            raise ValueError(f'SEL record has {len(record_data)} bytes, '
+                             'not 16')
+        rsp = self.send_message_by_name('AddSelEntry',
+                                        record_data=array('B', record_data))
+        return rsp.record_id
+
+    def partial_add_sel_entry(self, record_data: ByteSequence,
+                              part_size: int = 8) -> int:
+        """Add an entry to the SEL in parts.
+
+        The SEL is reserved, and the record is sent in parts with Partial
+        Add SEL Entry requests, e.g. for interfaces that cannot send a
+        whole record in one request.
+
+        Args:
+            record_data: The 16 bytes of the record, the record ID is
+                ignored.
+            part_size: The number of record bytes per request.
+
+        Returns:
+            The record ID of the added entry.
+
+        Raises:
+            ValueError: The record is not 16 bytes long or the part size is
+                not positive.
+            CompletionCodeError: The BMC rejected a request, e.g. because
+                the reservation was canceled.
+        """
+        if len(record_data) != 16:
+            raise ValueError(f'SEL record has {len(record_data)} bytes, '
+                             'not 16')
+        if part_size < 1:
+            raise ValueError(f'invalid part size {part_size}')
+        reservation = self.get_sel_reservation_id()
+        # 0 for the first part, then the record ID returned by the BMC
+        record_id = 0
+        for offset in range(0, len(record_data), part_size):
+            part = record_data[offset:offset + part_size]
+            req = create_request_by_name('PartialAddSelEntry')
+            req.reservation_id = reservation
+            req.record_id = record_id
+            req.offset = offset
+            req.progress.in_progress = \
+                int(offset + part_size >= len(record_data))
+            req.record_data = array('B', part)
+            rsp = self.send_message(req)
+            check_completion_code(rsp.completion_code)
+            record_id = rsp.record_id
+        return record_id
+
+    def get_sel_time(self) -> int:
+        """Get the time of the SEL clock.
+
+        Returns:
+            The time in seconds since 1970-01-01, see
+            :meth:`SelEntry.timestamp_to_string`.
+        """
+        return self.send_message_by_name('GetSelTime').timestamp
+
+    def set_sel_time(self, timestamp: int) -> None:
+        """Set the time of the SEL clock.
+
+        Args:
+            timestamp: The time in seconds since 1970-01-01.
+
+        Raises:
+            ValueError: The time does not fit in 32 bits.
+            CompletionCodeError: The BMC rejected the request.
+        """
+        if not 0 <= timestamp <= 0xffffffff:
+            raise ValueError(f'SEL time {timestamp} does not fit in 32 bits')
+        self.send_message_by_name('SetSelTime', timestamp=timestamp)
+
+    def get_sel_time_utc_offset(self) -> int | None:
+        """Get the offset of the SEL time to UTC.
+
+        Returns:
+            The offset in minutes, -1440 to 1440, or None if it is not set.
+        """
+        offset = self.send_message_by_name('GetSelTimeUtcOffset').offset
+        if offset == UTC_OFFSET_UNSPECIFIED:
+            return None
+        # 2's complement
+        if offset & 0x8000:
+            offset -= 0x10000
+        return offset
+
+    def set_sel_time_utc_offset(self, offset: int | None) -> None:
+        """Set the offset of the SEL time to UTC.
+
+        Args:
+            offset: The offset in minutes, -1440 to 1440, or None to set it
+                as unspecified.
+
+        Raises:
+            ValueError: The offset is not in the range -1440 to 1440.
+            CompletionCodeError: The BMC rejected the request.
+        """
+        if offset is None:
+            raw = UTC_OFFSET_UNSPECIFIED
+        elif -1440 <= offset <= 1440:
+            raw = offset & 0xffff
+        else:
+            raise ValueError(f'UTC offset {offset} is not in the range '
+                             '-1440 to 1440 minutes')
+        self.send_message_by_name('SetSelTimeUtcOffset', offset=raw)
+
+    def get_auxiliary_log_status(self, log_type: int) -> bytes:
+        """Get the status of an auxiliary log.
+
+        Args:
+            log_type: The log, one of the ``AUXILIARY_LOG_*`` constants.
+
+        Returns:
+            The log-specific status data, not decoded.
+
+        Raises:
+            CompletionCodeError: The BMC rejected the request, e.g. it has
+                no such log.
+        """
+        req = create_request_by_name('GetAuxiliaryLogStatus')
+        req.log.type = log_type
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+        return bytes(rsp.log_data)
+
+    def set_auxiliary_log_status(self, log_type: int,
+                                 log_data: ByteSequence) -> None:
+        """Set the status of an auxiliary log.
+
+        Args:
+            log_type: The log, one of the ``AUXILIARY_LOG_*`` constants.
+            log_data: The log-specific status data.
+
+        Raises:
+            CompletionCodeError: The BMC rejected the request.
+        """
+        req = create_request_by_name('SetAuxiliaryLogStatus')
+        req.log.type = log_type
+        req.log_data = array('B', log_data)
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
 
     def get_sel_reservation_id(self) -> int:
         """Reserve the SEL.
@@ -270,6 +481,28 @@ class SelInfo(State):
             self.operation_support.append('overflow_flag')
 
 
+class SelAllocationInfo(State):
+    """The allocation information of the SEL.
+
+    Attributes:
+        possible_alloc_units (int): The number of possible allocation
+            units, 0 if unspecified.
+        alloc_unit_size (int): The allocation unit size in bytes, 0 if
+            unspecified.
+        free_alloc_units (int): The number of free allocation units.
+        largest_free_block (int): The largest free block in allocation
+            units.
+        max_record_size (int): The maximum record size in allocation units.
+    """
+
+    def _from_response(self, rsp: Message) -> None:
+        self.possible_alloc_units = rsp.possible_alloc_units
+        self.alloc_unit_size = rsp.alloc_unit_size
+        self.free_alloc_units = rsp.free_alloc_units
+        self.largest_free_block = rsp.largest_free_block
+        self.max_record_size = rsp.max_record_size
+
+
 class SelEntry(State):
     """An entry of the SEL.
 
@@ -375,13 +608,9 @@ class SelEntry(State):
             The date and time as 'YYYY-MM-DD HH:MM:SS', 'Pre-Init <n>s' for
             a time since the initialization of the BMC, or 'Unspecified'.
         """
-        if (not self.is_timestamped()
-                or self.timestamp == TIMESTAMP_UNSPECIFIED):
+        if not self.is_timestamped():
             return 'Unspecified'
-        if self.timestamp <= TIMESTAMP_PRE_INIT_MAX:
-            return f'Pre-Init {self.timestamp:d}s'
-        time = datetime.fromtimestamp(self.timestamp, timezone.utc)
-        return time.strftime('%Y-%m-%d %H:%M:%S')
+        return timestamp_to_string(self.timestamp)
 
     def generator_to_string(self) -> str:
         """Return the generator ID as IPMB address or software ID.
