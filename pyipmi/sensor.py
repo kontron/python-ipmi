@@ -41,7 +41,7 @@ from __future__ import annotations
 from array import array
 from collections.abc import Generator
 
-from .utils import check_completion_code
+from .utils import check_completion_code, ByteSequence
 from .msgs import create_request_by_name, Message
 from .state import State
 
@@ -51,6 +51,12 @@ from .helper import (get_sdr_data_helper, get_sdr_chunk_helper,
 from . import sdr
 from .mixin import IpmiMixin
 
+
+# The operations on the event status bits of
+# Sensor.set_sensor_reading_and_event_status
+EVENT_BITS_SET = 1
+EVENT_BITS_CLEAR = 2
+EVENT_BITS_WRITE = 3
 
 # Generator ID of system management software (software ID 0x20), sent in a
 # Platform Event request over the system interface
@@ -666,6 +672,245 @@ class Sensor(IpmiMixin):
         """
         return list(self.device_sdr_entries())
 
+    def get_sensor_reading_factors(self, sensor_number: int, reading: int,
+                                   lun: int = 0) -> SensorReadingFactors:
+        """Get the conversion factors of a sensor for a raw reading.
+
+        The factors of a non-linear sensor depend on the reading. They are
+        valid up to the next reading that is returned.
+
+        Args:
+            sensor_number: The sensor number.
+            reading: The raw reading.
+            lun: The LUN of the sensor owner, ``owner_lun`` of its record.
+
+        Returns:
+            The factors M, B, K1 (B exponent) and K2 (result exponent), the
+            tolerance and the accuracy, as in a full sensor record.
+        """
+        rsp = self.send_message_by_name('GetSensorReadingFactors',
+                                        sensor_number=sensor_number,
+                                        reading=reading, lun=lun)
+        return SensorReadingFactors(rsp)
+
+    def set_sensor_hysteresis(self, sensor_number: int, positive: int,
+                              negative: int, lun: int = 0) -> None:
+        """Set the hysteresis of a threshold sensor.
+
+        Args:
+            sensor_number: The sensor number.
+            positive: The raw positive-going hysteresis.
+            negative: The raw negative-going hysteresis.
+            lun: The LUN of the sensor owner, ``owner_lun`` of its record.
+
+        Raises:
+            CompletionCodeError: The device rejected the request, e.g. if the
+                hysteresis is not settable.
+        """
+        self.send_message_by_name('SetSensorHysteresis',
+                                  sensor_number=sensor_number,
+                                  positive_going_hysteresis=positive,
+                                  negative_going_hysteresis=negative,
+                                  lun=lun)
+
+    def get_sensor_hysteresis(self, sensor_number: int,
+                              lun: int = 0) -> tuple[int, int]:
+        """Get the hysteresis of a threshold sensor.
+
+        Args:
+            sensor_number: The sensor number.
+            lun: The LUN of the sensor owner, ``owner_lun`` of its record.
+
+        Returns:
+            A tuple of the raw positive-going and negative-going hysteresis.
+        """
+        rsp = self.send_message_by_name('GetSensorHysteresis',
+                                        sensor_number=sensor_number,
+                                        lun=lun)
+        return (rsp.positive_going_hysteresis, rsp.negative_going_hysteresis)
+
+    def set_sensor_event_enable(self, sensor_number: int,
+                                event_messages: bool = True,
+                                sensor_scanning: bool = True,
+                                assertion_mask: int | None = None,
+                                deassertion_mask: int | None = None,
+                                enable: bool = True, lun: int = 0) -> None:
+        """Enable or disable the event messages and the scanning of a sensor.
+
+        Args:
+            sensor_number: The sensor number.
+            event_messages: Enable the event messages of the sensor, False
+                disables all of them.
+            sensor_scanning: Enable the scanning of the sensor.
+            assertion_mask: The assertion events (bits 0 - 14) to enable or
+                disable, the individual events are not changed if both
+                masks are None.
+            deassertion_mask: The deassertion events to enable or disable.
+            enable: Enable the events of the masks, False disables them.
+            lun: The LUN of the sensor owner, ``owner_lun`` of its record.
+
+        Raises:
+            CompletionCodeError: The device rejected the request.
+        """
+        req = create_request_by_name('SetSensorEventEnable')
+        req.sensor_number = sensor_number
+        req.lun = lun
+        req.enable.event_message = int(event_messages)
+        req.enable.sensor_scanning = int(sensor_scanning)
+        if assertion_mask is not None or deassertion_mask is not None:
+            # 1 enables, 2 disables the selected events
+            req.enable.config = 1 if enable else 2
+            assertion_mask = assertion_mask or 0
+            deassertion_mask = deassertion_mask or 0
+            req.byte3 = assertion_mask & 0xff
+            req.byte4 = (assertion_mask >> 8) & 0x7f
+            req.byte5 = deassertion_mask & 0xff
+            req.byte6 = (deassertion_mask >> 8) & 0x7f
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
+    def get_sensor_event_enable(self, sensor_number: int,
+                                lun: int = 0) -> SensorEventEnable:
+        """Get which event messages of a sensor are enabled.
+
+        Args:
+            sensor_number: The sensor number.
+            lun: The LUN of the sensor owner, ``owner_lun`` of its record.
+
+        Returns:
+            If the event messages and the scanning are enabled, and the
+            enabled assertion and deassertion events.
+        """
+        rsp = self.send_message_by_name('GetSensorEventEnable',
+                                        sensor_number=sensor_number,
+                                        lun=lun)
+        return SensorEventEnable(rsp)
+
+    def get_sensor_event_status(self, sensor_number: int,
+                                lun: int = 0) -> SensorEventStatus:
+        """Get the asserted and deasserted events of a sensor.
+
+        Args:
+            sensor_number: The sensor number.
+            lun: The LUN of the sensor owner, ``owner_lun`` of its record.
+
+        Returns:
+            If the event messages and the scanning are enabled, if the
+            reading is unavailable, and the asserted and deasserted events.
+        """
+        rsp = self.send_message_by_name('GetSensorEventStatus',
+                                        sensor_number=sensor_number,
+                                        lun=lun)
+        return SensorEventStatus(rsp)
+
+    def set_sensor_type(self, sensor_number: int, sensor_type: int,
+                        event_reading_type: int, lun: int = 0) -> None:
+        """Set the sensor type and the event/reading type of a sensor.
+
+        Args:
+            sensor_number: The sensor number.
+            sensor_type: The sensor type, one of the ``SENSOR_TYPE_*``
+                constants.
+            event_reading_type: The event/reading type, one of the
+                ``EVENT_READING_TYPE_*`` constants.
+            lun: The LUN of the sensor owner, ``owner_lun`` of its record.
+
+        Raises:
+            CompletionCodeError: The device rejected the request.
+        """
+        req = create_request_by_name('SetSensorType')
+        req.sensor_number = sensor_number
+        req.lun = lun
+        req.sensor_type = sensor_type
+        req.event_reading_type.code = event_reading_type
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
+    def get_sensor_type(self, sensor_number: int,
+                        lun: int = 0) -> tuple[int, int]:
+        """Get the sensor type and the event/reading type of a sensor.
+
+        Args:
+            sensor_number: The sensor number.
+            lun: The LUN of the sensor owner, ``owner_lun`` of its record.
+
+        Returns:
+            A tuple of the sensor type and the event/reading type, see
+            :func:`sensor_type_to_string` and
+            :func:`event_reading_type_to_string`.
+        """
+        rsp = self.send_message_by_name('GetSensorType',
+                                        sensor_number=sensor_number,
+                                        lun=lun)
+        return (rsp.sensor_type, rsp.event_reading_type.code)
+
+    def set_sensor_reading_and_event_status(
+            self, sensor_number: int, reading: int | None = None,
+            assertion_mask: int | None = None,
+            deassertion_mask: int | None = None,
+            mask_operation: int = EVENT_BITS_WRITE,
+            event_data: ByteSequence | None = None,
+            event_data_with_offset: bool = False,
+            lun: int = 0) -> None:
+        """Set the reading and the event status of a sensor.
+
+        This is used by a controller whose sensors are read by software
+        and set in the BMC. Only the given values are changed.
+
+        Args:
+            sensor_number: The sensor number.
+            reading: The raw reading.
+            assertion_mask: The assertion event status bits (bits 0 - 14).
+            deassertion_mask: The deassertion event status bits.
+            mask_operation: How the bits of the masks are applied, one of
+                ``EVENT_BITS_SET``, ``EVENT_BITS_CLEAR`` and
+                ``EVENT_BITS_WRITE``.
+            event_data: The 3 event data bytes of the event message, the BMC
+                generates them if not given.
+            event_data_with_offset: Use the event offset of the event data
+                byte 1 instead of the offset the BMC determines.
+            lun: The LUN of the sensor owner, ``owner_lun`` of its record.
+
+        Raises:
+            ValueError: The event data is not 3 bytes long or the mask
+                operation is unknown.
+            CompletionCodeError: The device rejected the request.
+        """
+        if mask_operation not in (EVENT_BITS_SET, EVENT_BITS_CLEAR,
+                                  EVENT_BITS_WRITE):
+            raise ValueError(f'unknown mask operation {mask_operation}')
+        if event_data is not None and len(event_data) != 3:
+            raise ValueError(f'event data has {len(event_data)} bytes, not 3')
+
+        req = create_request_by_name('SetSensorReadingAndEventStatus')
+        req.sensor_number = sensor_number
+        req.lun = lun
+        # each optional byte needs the bytes before it, they are sent with
+        # the operation "don't change"
+        if reading is not None:
+            req.operation.reading = 1
+            req.sensor_reading = reading
+        if assertion_mask is not None:
+            req.operation.assertion_bits = mask_operation
+            req.assertion_mask = assertion_mask & 0x7fff
+        if deassertion_mask is not None:
+            req.operation.deassertion_bits = mask_operation
+            req.deassertion_mask = deassertion_mask & 0x7fff
+        if event_data is not None:
+            req.operation.event_data = 2 if event_data_with_offset else 1
+            req.event_data = array('B', event_data)
+
+        fields = ('sensor_reading', 'assertion_mask', 'deassertion_mask',
+                  'event_data')
+        given = [i for i, name in enumerate(fields)
+                 if getattr(req, name) is not None]
+        for name in fields[:max(given, default=0)]:
+            if getattr(req, name) is None:
+                setattr(req, name, 0)
+
+        rsp = self.send_message(req)
+        check_completion_code(rsp.completion_code)
+
     def rearm_sensor_events(self, sensor_number: int) -> None:
         """Rearm the events of a sensor.
 
@@ -829,3 +1074,83 @@ class DeviceSdrInfo(State):
             if getattr(rsp.flags, f'lun{lun}_has_sensors')]
         self.dynamic_population = bool(rsp.flags.dynamic_population)
         self.sensor_population_change = rsp.sensor_population_change
+
+
+class SensorReadingFactors(State):
+    """The conversion factors of a sensor for a reading.
+
+    The reading is converted with ``y = (M * x + B * 10^K1) * 10^K2``, see
+    :meth:`pyipmi.sdr.SdrFullSensorRecord.convert_sensor_raw_to_value`.
+
+    Attributes:
+        next_reading (int): The next raw reading at which the factors
+            change.
+        m (int): The conversion factor M.
+        tolerance (int): The tolerance in +/- half raw counts.
+        b (int): The conversion offset B.
+        accuracy (int): The accuracy in 0.01 percent units.
+        accuracy_exp (int): The accuracy exponent.
+        k1 (int): The exponent of B.
+        k2 (int): The result exponent.
+    """
+
+    def _from_response(self, rsp: Message) -> None:
+        self.next_reading = rsp.next_reading
+        (m, m_tol, b, b_acc, acc_accexp, rexp_bexp) = rsp.factors
+        complement = sdr.SdrFullSensorRecord._convert_complement
+        self.m = complement((m & 0xff) | ((m_tol & 0xc0) << 2), 10)
+        self.tolerance = m_tol & 0x3f
+        self.b = complement((b & 0xff) | ((b_acc & 0xc0) << 2), 10)
+        self.accuracy = (b_acc & 0x3f) | ((acc_accexp & 0xf0) << 2)
+        self.accuracy_exp = (acc_accexp & 0x0c) >> 2
+        self.k2 = complement((rexp_bexp & 0xf0) >> 4, 4)
+        self.k1 = complement(rexp_bexp & 0x0f, 4)
+
+
+def _event_mask(low: int | None, high: int | None) -> int | None:
+    """Combine the event bytes 0 - 7 and 8 - 14 to a mask."""
+    if low is None:
+        return None
+    return low | ((high or 0) & 0x7f) << 8
+
+
+class SensorEventEnable(State):
+    """The enabled event messages of a sensor.
+
+    Attributes:
+        event_messages (bool): The event messages are enabled.
+        sensor_scanning (bool): The scanning of the sensor is enabled.
+        assertion_mask (int | None): The enabled assertion events, bits
+            0 - 14, None if the sensor does not report them.
+        deassertion_mask (int | None): The enabled deassertion events.
+    """
+
+    def _from_response(self, rsp: Message) -> None:
+        self.event_messages = bool(rsp.enabled.event_message)
+        self.sensor_scanning = bool(rsp.enabled.sensor_scanning)
+        self.assertion_mask = _event_mask(rsp.byte3, rsp.byte4)
+        self.deassertion_mask = _event_mask(rsp.byte5, rsp.byte6)
+
+
+class SensorEventStatus(State):
+    """The event status of a sensor.
+
+    Attributes:
+        event_messages_enabled (bool): The event messages are enabled.
+        sensor_scanning_enabled (bool): The scanning of the sensor is
+            enabled.
+        reading_unavailable (bool): The reading or state is unavailable.
+        asserted (int | None): The asserted events, bits 0 - 14, None if
+            the sensor does not report them.
+        deasserted (int | None): The deasserted events.
+    """
+
+    def _from_response(self, rsp: Message) -> None:
+        self.event_messages_enabled = bool(rsp.status.event_messages_enabled)
+        self.sensor_scanning_enabled = \
+            bool(rsp.status.sensor_scanning_enabled)
+        self.reading_unavailable = bool(rsp.status.reading_unavailable)
+        self.asserted = _event_mask(rsp.assertion_events_low,
+                                    rsp.assertion_events_high)
+        self.deasserted = _event_mask(rsp.deassertion_events_low,
+                                      rsp.deassertion_events_high)

@@ -11,7 +11,9 @@ from pyipmi.sensor import (EVENT_READING_TYPE_SENSOR_SPECIFIC, GENERATOR_ID_SMS,
                            event_offset_to_string,
                            event_reading_type_to_string,
                            sensor_type_to_string,
-                           SENSOR_TYPE_MODULE_HOT_SWAP)
+                           SENSOR_TYPE_MODULE_HOT_SWAP, EVENT_BITS_SET,
+                           EVENT_BITS_CLEAR, EVENT_BITS_WRITE)
+from pyipmi.errors import CompletionCodeError
 
 from .ipmi_helper import create_ipmi
 
@@ -231,3 +233,145 @@ def test_get_device_sdr_info_static():
     assert info.luns_with_sensors == [0]
     assert not info.dynamic_population
     assert info.sensor_population_change is None
+
+
+def test_get_sensor_reading_factors():
+    # M = -2, tolerance 5, B = 100, accuracy 0x45, accuracy exponent 2,
+    # K2 = -3, K1 = 2
+    ipmi = create_ipmi(b'\x00\x90\xfe\xc5\x64\x05\x18\xd2')
+    factors = ipmi.get_sensor_reading_factors(0x10, 0x80, lun=1)
+    assert ipmi.requests == [('GetSensorReadingFactorsReq', b'\x10\x80')]
+    assert factors.next_reading == 0x90
+    assert factors.m == -2
+    assert factors.tolerance == 5
+    assert factors.b == 100
+    assert factors.accuracy == 0x45
+    assert factors.accuracy_exp == 2
+    assert factors.k2 == -3
+    assert factors.k1 == 2
+
+
+def test_set_sensor_hysteresis():
+    ipmi = create_ipmi(b'\x00')
+    ipmi.set_sensor_hysteresis(0x10, 2, 3)
+    assert ipmi.requests == [('SetSensorHysteresisReq',
+                              b'\x10\xff\x02\x03')]
+
+
+def test_get_sensor_hysteresis():
+    ipmi = create_ipmi(b'\x00\x02\x03')
+    assert ipmi.get_sensor_hysteresis(0x10) == (2, 3)
+    assert ipmi.requests == [('GetSensorHysteresisReq', b'\x10\xff')]
+
+
+@pytest.mark.parametrize('kwargs, data', [
+    # only the global enables
+    ({}, b'\x10\xc0'),
+    ({'event_messages': False}, b'\x10\x40'),
+    ({'sensor_scanning': False}, b'\x10\x80'),
+    # enable or disable selected events
+    ({'assertion_mask': 0x0201}, b'\x10\xd0\x01\x02\x00\x00'),
+    ({'deassertion_mask': 0x4080, 'enable': False},
+     b'\x10\xe0\x00\x00\x80\x40'),
+])
+def test_set_sensor_event_enable(kwargs, data):
+    ipmi = create_ipmi(b'\x00')
+    ipmi.set_sensor_event_enable(0x10, **kwargs)
+    assert ipmi.requests == [('SetSensorEventEnableReq', data)]
+
+
+@pytest.mark.parametrize('rsp, messages, scanning, assertion, deassertion', [
+    (b'\x00\xc0\x01\x02\x80\x40', True, True, 0x0201, 0x4080),
+    (b'\x00\x40', False, True, None, None),
+])
+def test_get_sensor_event_enable(rsp, messages, scanning, assertion,
+                                 deassertion):
+    ipmi = create_ipmi(rsp)
+    enable = ipmi.get_sensor_event_enable(0x10)
+    assert ipmi.requests == [('GetSensorEventEnableReq', b'\x10')]
+    assert enable.event_messages == messages
+    assert enable.sensor_scanning == scanning
+    assert enable.assertion_mask == assertion
+    assert enable.deassertion_mask == deassertion
+
+
+@pytest.mark.parametrize('rsp, unavailable, asserted, deasserted', [
+    (b'\x00\xc0\x05\x01\x00\x02', False, 0x0105, 0x0200),
+    (b'\x00\xe0', True, None, None),
+])
+def test_get_sensor_event_status(rsp, unavailable, asserted, deasserted):
+    ipmi = create_ipmi(rsp)
+    status = ipmi.get_sensor_event_status(0x10)
+    assert ipmi.requests == [('GetSensorEventStatusReq', b'\x10')]
+    assert status.event_messages_enabled
+    assert status.sensor_scanning_enabled
+    assert status.reading_unavailable == unavailable
+    assert status.asserted == asserted
+    assert status.deasserted == deasserted
+
+
+def test_set_sensor_type():
+    ipmi = create_ipmi(b'\x00')
+    ipmi.set_sensor_type(0x10, 0x01, 0x6f)
+    assert ipmi.requests == [('SetSensorTypeReq', b'\x10\x01\x6f')]
+
+
+def test_get_sensor_type():
+    ipmi = create_ipmi(b'\x00\x21\x6f')
+    assert ipmi.get_sensor_type(0x10) == (0x21, 0x6f)
+    assert ipmi.requests == [('GetSensorTypeReq', b'\x10')]
+
+
+@pytest.mark.parametrize('kwargs, data', [
+    # only the reading
+    ({'reading': 0x42}, b'\x10\x01\x42'),
+    # the earlier bytes are filled with 0 and "don't change"
+    ({'deassertion_mask': 0x0003},
+     b'\x10\x0c\x00\x00\x00\x03\x00'),
+    ({'assertion_mask': 0x0101, 'mask_operation': EVENT_BITS_SET},
+     b'\x10\x10\x00\x01\x01'),
+    ({'assertion_mask': 0x0001, 'mask_operation': EVENT_BITS_CLEAR},
+     b'\x10\x20\x00\x01\x00'),
+    ({'assertion_mask': 0x0001, 'mask_operation': EVENT_BITS_WRITE},
+     b'\x10\x30\x00\x01\x00'),
+    # the event data with and without the offset
+    ({'reading': 0x42, 'assertion_mask': 0x0002,
+      'event_data': b'\x01\xff\xff', 'event_data_with_offset': True},
+     b'\x10\xb1\x42\x02\x00\x00\x00\x01\xff\xff'),
+    ({'event_data': b'\x01\xff\xff'},
+     b'\x10\x40\x00\x00\x00\x00\x00\x01\xff\xff'),
+    # nothing changed
+    ({}, b'\x10\x00'),
+])
+def test_set_sensor_reading_and_event_status(kwargs, data):
+    ipmi = create_ipmi(b'\x00')
+    ipmi.set_sensor_reading_and_event_status(0x10, **kwargs)
+    assert ipmi.requests == [('SetSensorReadingAndEventStatusReq', data)]
+
+
+@pytest.mark.parametrize('kwargs', [
+    {'mask_operation': 0},
+    {'event_data': b'\x01\x02'},
+])
+def test_set_sensor_reading_and_event_status_invalid(kwargs):
+    ipmi = create_ipmi(b'\x00')
+    with pytest.raises(ValueError):
+        ipmi.set_sensor_reading_and_event_status(0x10, **kwargs)
+    assert ipmi.requests == []
+
+
+@pytest.mark.parametrize('method, args', [
+    ('get_sensor_reading_factors', (0x10, 0x80)),
+    ('set_sensor_hysteresis', (0x10, 1, 1)),
+    ('get_sensor_hysteresis', (0x10,)),
+    ('set_sensor_event_enable', (0x10,)),
+    ('get_sensor_event_enable', (0x10,)),
+    ('get_sensor_event_status', (0x10,)),
+    ('set_sensor_type', (0x10, 1, 1)),
+    ('get_sensor_type', (0x10,)),
+    ('set_sensor_reading_and_event_status', (0x10, 0x42)),
+])
+def test_sensor_commands_error(method, args):
+    ipmi = create_ipmi(b'\xcb')
+    with pytest.raises(CompletionCodeError):
+        getattr(ipmi, method)(*args)
