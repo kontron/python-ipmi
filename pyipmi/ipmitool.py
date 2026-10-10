@@ -693,6 +693,86 @@ def cmd_sdr_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
                 print(f'0x{s.id:04x} | {s.number:3d} | {s.device_id_string:18s} | ERR: CC=0x{e.cc:02x}')
 
 
+# the update types of the SDR repository info
+SDR_UPDATE_TYPES = ('unspecified', 'non-modal', 'modal', 'modal and '
+                    'non-modal')
+
+
+def cmd_sdr_info(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    info = ipmi.get_sdr_repository_info()
+    ts = pyipmi.sel.timestamp_to_string
+    operations = [name for name, supported in (
+        ('get_allocation_info', info.support_get_allocation_info),
+        ('reserve', info.support_reserve),
+        ('partial_add', info.support_partial_add),
+        ('delete', info.support_delete)) if supported]
+    # 0xffff: unspecified, 0xfffe: 64 KB - 2 bytes or more
+    if info.free_space == 0xffff:
+        free_space = 'unspecified'
+    else:
+        free_space = f'{info.free_space:d} bytes'
+    print(f'''
+Version:                 {info.sdr_version & 0xf:d}.{info.sdr_version >> 4:d}
+Records:                 {info.record_count:d}
+Free Space:              {free_space}
+Last Add Time:           {ts(info.most_recent_addition)}
+Last Erase Time:         {ts(info.most_recent_erase)}
+Overflow:                {bool(info.support_overflow_flag)}
+Update Type:             {SDR_UPDATE_TYPES[info.support_update_type]}
+Supported Commands:      {', '.join(operations) or 'none'}
+'''[1:-1])
+    if info.support_get_allocation_info:
+        alloc = ipmi.get_sdr_repository_allocation_info()
+        print(f'''
+Allocation Units:        {alloc.number_of_units:d}
+Allocation Unit Size:    {alloc.unit_size:d} bytes
+Free Allocation Units:   {alloc.free_units:d}
+Largest Free Block:      {alloc.largest_free_block:d} units
+Maximum Record Size:     {alloc.maximum_record_size:d} units
+'''[1:-1])
+
+
+def cmd_sdr_device_info(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    info = ipmi.get_device_sdr_info(sdr_count=args.sdr_count)
+    change = info.sensor_population_change
+    luns = ', '.join(str(lun) for lun in info.luns_with_sensors)
+    print(f'''
+{'SDRs:' if args.sdr_count else 'Sensors:':<25}{info.count:d}
+LUNs with Sensors:       {luns or 'none'}
+Dynamic Population:      {info.dynamic_population}
+Population Change:       {'na' if change is None else
+                          pyipmi.sel.timestamp_to_string(change)}
+'''[1:-1])
+
+
+def cmd_sdr_time_get(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    print(pyipmi.sel.timestamp_to_string(ipmi.get_sdr_repository_time()))
+
+
+def cmd_sdr_time_set(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.set_sdr_repository_time(args.time)
+    print(pyipmi.sel.timestamp_to_string(ipmi.get_sdr_repository_time()))
+
+
+def cmd_sdr_add(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    record_id = ipmi.add_sdr(bytes(args.record_data),
+                             part_size=args.part_size)
+    print(f'Added SDR 0x{record_id:04x}')
+
+
+def cmd_sdr_delete(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    for record_id in args.record_ids:
+        ipmi.delete_sdr(record_id)
+        print(f'Deleted SDR 0x{record_id:04x}')
+
+
+def cmd_sdr_update_mode(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    if args.mode == 'enter':
+        ipmi.enter_sdr_repository_update_mode()
+    else:
+        ipmi.exit_sdr_repository_update_mode()
+
+
 def cmd_fru_read(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     data = ipmi.read_fru_data_full(args.fru_id)
     with open(args.filename, 'wb') as f:
@@ -1782,8 +1862,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('lan_channel', metavar='channel', type=auto_int, nargs='?',
                    help=lan_channel_help)
 
-    group = commands.group('sdr', 'Print Sensor Data Repository entries '
-                           'and readings')
+    group = commands.group('sdr', 'Print and manage the Sensor Data '
+                           'Repository (SDR) and the sensor readings')
     p = group.command('list', cmd_sdr_list, 'List all SDRs')
     p.add_argument('-d', '--details', action='store_true',
                    help='print all fields of the records')
@@ -1792,6 +1872,34 @@ def build_parser() -> argparse.ArgumentParser:
     p = group.command('show', cmd_sdr_show, 'Show detail for one SDR')
     p.add_argument('sdr_id', type=auto_int)
     group.command('showall', cmd_sdr_show_all, 'Show detail for all SDRs')
+    group.command('info', cmd_sdr_info,
+                  'Print the information about the SDR repository')
+    p = group.command('device-info', cmd_sdr_device_info,
+                      'Print the information about the device SDRs')
+    p.add_argument('-c', '--sdr-count', action='store_true',
+                   help='print the number of SDRs instead of sensors')
+    sub = group.group('time', 'Get or set the SDR repository time (UTC)')
+    sub.command('get', cmd_sdr_time_get, 'Print the SDR repository time')
+    p = sub.command('set', cmd_sdr_time_set, 'Set the SDR repository time')
+    p.add_argument('time', type=sel_time,
+                   metavar='{"YYYY-MM-DD HH:MM:SS",now}',
+                   help='the time in UTC, or now for the time of this host')
+    p = group.command('add', cmd_sdr_add,
+                      'Add a record to the SDR repository')
+    p.add_argument('record_data', type=byte_value, nargs='+',
+                   metavar='<byte>',
+                   help='the record, starting with the record header; the '
+                        'BMC sets the record ID')
+    p.add_argument('-p', '--part-size', type=auto_int, metavar='<bytes>',
+                   help='send the record in parts of this size (Partial Add '
+                        'SDR)')
+    p = group.command('delete', cmd_sdr_delete,
+                      'Delete records of the SDR repository')
+    p.add_argument('record_ids', type=auto_int, nargs='+',
+                   metavar='<record id>')
+    p = group.command('update-mode', cmd_sdr_update_mode,
+                      'Enter or exit the SDR repository update mode')
+    p.add_argument('mode', choices=('enter', 'exit'))
 
     group = commands.group('sel', 'Print and manage the System Event '
                            'Log (SEL)')

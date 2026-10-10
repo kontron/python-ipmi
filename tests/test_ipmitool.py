@@ -173,6 +173,13 @@ class TestParser:
         ('sdr raw 1', 'cmd_sdr_show_raw'),
         ('sdr show 1', 'cmd_sdr_show'),
         ('sdr showall', 'cmd_sdr_show_all'),
+        ('sdr info', 'cmd_sdr_info'),
+        ('sdr device-info', 'cmd_sdr_device_info'),
+        ('sdr time get', 'cmd_sdr_time_get'),
+        ('sdr time set now', 'cmd_sdr_time_set'),
+        ('sdr add 0 0 0x51 1 0', 'cmd_sdr_add'),
+        ('sdr delete 1', 'cmd_sdr_delete'),
+        ('sdr update-mode enter', 'cmd_sdr_update_mode'),
         ('sel list', 'cmd_sel_list'),
         ('sel clear', 'cmd_sel_clear'),
         ('sel info', 'cmd_sel_info'),
@@ -1339,3 +1346,131 @@ class TestSelCommands:
         ipmi = self.run(f'aux-status {log}', rsp)
         assert ipmi.requests == [('GetAuxiliaryLogStatusReq', data)]
         assert capsys.readouterr().out == output
+
+
+class TestSdrCommands:
+    @staticmethod
+    def run(command, rsp_data):
+        ipmi = create_ipmi(rsp_data)
+        args = build_parser().parse_args(['sdr'] + command.split())
+        args.func(ipmi, args)
+        return ipmi
+
+    # version 1.5, 29 records, 0x0400 free bytes, the last addition, never
+    # erased, modal updates, all operations supported
+    REPOSITORY_INFO_RSP = (b'\x00\x51\x1d\x00\x00\x04\x00\x10\x20\x68'
+                           b'\xff\xff\xff\xff\x4f')
+    ALLOC_INFO_RSP = b'\x00\x00\x02\x10\x00\x80\x01\x40\x00\x04'
+
+    def test_info(self, capsys):
+        ipmi = self.run('info', {
+            'GetSdrRepositoryInfo': self.REPOSITORY_INFO_RSP,
+            'GetSdrRepositoryAllocationInfo': self.ALLOC_INFO_RSP})
+        assert [name for name, _ in ipmi.requests] == [
+            'GetSdrRepositoryInfoReq', 'GetSdrRepositoryAllocationInfoReq']
+        assert capsys.readouterr().out == (
+            'Version:                 1.5\n'
+            'Records:                 29\n'
+            'Free Space:              1024 bytes\n'
+            'Last Add Time:           2025-05-11 02:48:32\n'
+            'Last Erase Time:         Unspecified\n'
+            'Overflow:                False\n'
+            'Update Type:             modal\n'
+            'Supported Commands:      get_allocation_info, reserve, '
+            'partial_add, delete\n'
+            'Allocation Units:        512\n'
+            'Allocation Unit Size:    16 bytes\n'
+            'Free Allocation Units:   384\n'
+            'Largest Free Block:      64 units\n'
+            'Maximum Record Size:     4 units\n')
+
+    def test_info_without_allocation_info(self, capsys):
+        # unspecified free space, non-modal updates, only Reserve supported
+        rsp = (self.REPOSITORY_INFO_RSP[:4] + b'\xff\xff'
+               + self.REPOSITORY_INFO_RSP[6:-1] + b'\x22')
+        ipmi = self.run('info', rsp)
+        assert [name for name, _ in ipmi.requests] == [
+            'GetSdrRepositoryInfoReq']
+        out = capsys.readouterr().out
+        assert 'Free Space:              unspecified\n' in out
+        assert 'Update Type:             non-modal\n' in out
+        assert 'Supported Commands:      reserve\n' in out
+        assert 'Allocation' not in out
+
+    @pytest.mark.parametrize('command, data, label', [
+        ('device-info', b'', 'Sensors:'),
+        ('device-info -c', b'\x01', 'SDRs:'),
+    ])
+    def test_device_info(self, capsys, command, data, label):
+        ipmi = self.run(command, b'\x00\x03\x85\x00\x10\x20\x68')
+        assert ipmi.requests == [('GetDeviceSdrInfoReq', data)]
+        assert capsys.readouterr().out == (
+            f'{label:<25}3\n'
+            'LUNs with Sensors:       0, 2\n'
+            'Dynamic Population:      True\n'
+            'Population Change:       2025-05-11 02:48:32\n')
+
+    def test_device_info_static(self, capsys):
+        self.run('device-info', b'\x00\x00\x00')
+        out = capsys.readouterr().out
+        assert 'LUNs with Sensors:       none\n' in out
+        assert out.endswith('Population Change:       na\n')
+
+    def test_time_get(self, capsys):
+        ipmi = self.run('time get', b'\x00\x00\x10\x20\x68')
+        assert ipmi.requests == [('GetSdrRepositoryTimeReq', b'')]
+        assert capsys.readouterr().out == '2025-05-11 02:48:32\n'
+
+    def test_time_set(self, capsys):
+        ipmi = create_ipmi({'SetSdrRepositoryTime': b'\x00',
+                            'GetSdrRepositoryTime':
+                                b'\x00\x00\x10\x20\x68'})
+        args = build_parser().parse_args(['sdr', 'time', 'set',
+                                          '2025-05-11 02:48:32'])
+        args.func(ipmi, args)
+        assert ipmi.requests[0] == ('SetSdrRepositoryTimeReq',
+                                    b'\x00\x10\x20\x68')
+        assert capsys.readouterr().out == '2025-05-11 02:48:32\n'
+
+    RECORD = '0 0 0x51 0x08 0x05 0x07 0x01 0x00 0x0a 0x01'
+    RECORD_DATA = bytes([0, 0, 0x51, 0x08, 0x05, 0x07, 0x01, 0x00, 0x0a,
+                         0x01])
+
+    def test_add(self, capsys):
+        ipmi = self.run(f'add {self.RECORD}', b'\x00\x2a\x00')
+        assert ipmi.requests == [('AddSdrReq', self.RECORD_DATA)]
+        assert capsys.readouterr().out == 'Added SDR 0x002a\n'
+
+    def test_add_in_parts(self, capsys):
+        ipmi = self.run(f'add -p 4 {self.RECORD}',
+                        {'ReserveSdrRepository': b'\x00\x34\x12',
+                         'PartialAddSdr': [b'\x00\x2a\x00'] * 3})
+        assert [name for name, _ in ipmi.requests] == [
+            'ReserveSdrRepositoryReq'] + ['PartialAddSdrReq'] * 3
+        assert capsys.readouterr().out == 'Added SDR 0x002a\n'
+
+    def test_add_invalid_byte(self):
+        with pytest.raises(SystemExit):
+            build_parser().parse_args(['sdr', 'add', '0', '256'])
+
+    def test_delete(self, capsys):
+        ipmi = self.run('delete 1 0x0a',
+                        {'ReserveSdrRepository': [b'\x00\x34\x12',
+                                                  b'\x00\x35\x12'],
+                         'DeleteSdr': [b'\x00\x01\x00',
+                                       b'\x00\x0a\x00']})
+        assert ipmi.requests == [
+            ('ReserveSdrRepositoryReq', b''),
+            ('DeleteSdrReq', b'\x34\x12\x01\x00'),
+            ('ReserveSdrRepositoryReq', b''),
+            ('DeleteSdrReq', b'\x35\x12\x0a\x00')]
+        assert capsys.readouterr().out == ('Deleted SDR 0x0001\n'
+                                           'Deleted SDR 0x000a\n')
+
+    @pytest.mark.parametrize('mode, name', [
+        ('enter', 'EnterSdrRepositoryUpdateModeReq'),
+        ('exit', 'ExitSdrRepositoryUpdateModeReq'),
+    ])
+    def test_update_mode(self, mode, name):
+        ipmi = self.run(f'update-mode {mode}', b'\x00')
+        assert ipmi.requests == [(name, b'')]

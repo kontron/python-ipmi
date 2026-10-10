@@ -35,7 +35,7 @@ Print and read built\-in FRU
 Print and set the LAN configuration
 .TP
 \fBipmitool.py\fR \fI\,sdr\/\fR
-Print Sensor Data Repository entries and readings
+Print and manage the Sensor Data Repository (SDR) and the sensor readings
 .TP
 \fBipmitool.py\fR \fI\,sel\/\fR
 Print and manage the System Event Log (SEL)
@@ -345,7 +345,7 @@ the LAN channel, the first LAN channel if not given
 .SH COMMAND \fI\,'ipmitool.py sdr'\/\fR
 usage: ipmitool.py sdr [\-h] <command> ...
 
-Print Sensor Data Repository entries and readings
+Print and manage the Sensor Data Repository (SDR) and the sensor readings
 
 .SH
 POSITIONAL ARGUMENTS \fI\,'ipmitool.py sdr'\/\fR
@@ -361,6 +361,24 @@ Show detail for one SDR
 .TP
 \fBipmitool.py sdr\fR \fI\,showall\/\fR
 Show detail for all SDRs
+.TP
+\fBipmitool.py sdr\fR \fI\,info\/\fR
+Print the information about the SDR repository
+.TP
+\fBipmitool.py sdr\fR \fI\,device\-info\/\fR
+Print the information about the device SDRs
+.TP
+\fBipmitool.py sdr\fR \fI\,time\/\fR
+Get or set the SDR repository time (UTC)
+.TP
+\fBipmitool.py sdr\fR \fI\,add\/\fR
+Add a record to the SDR repository
+.TP
+\fBipmitool.py sdr\fR \fI\,delete\/\fR
+Delete records of the SDR repository
+.TP
+\fBipmitool.py sdr\fR \fI\,update\-mode\/\fR
+Enter or exit the SDR repository update mode
 
 .SH COMMAND \fI\,'ipmitool.py sdr list'\/\fR
 usage: ipmitool.py sdr list [\-h] [\-d]
@@ -392,6 +410,79 @@ Show detail for one SDR
 usage: ipmitool.py sdr showall [\-h]
 
 Show detail for all SDRs
+
+.SH COMMAND \fI\,'ipmitool.py sdr info'\/\fR
+usage: ipmitool.py sdr info [\-h]
+
+Print the information about the SDR repository
+
+.SH COMMAND \fI\,'ipmitool.py sdr device\-info'\/\fR
+usage: ipmitool.py sdr device\-info [\-h] [\-c]
+
+Print the information about the device SDRs
+
+.SH OPTIONS \fI\,'ipmitool.py sdr device\-info'\/\fR
+.TP
+\fB\-c\fR, \fB\-\-sdr\-count\fR
+print the number of SDRs instead of sensors
+
+.SH COMMAND \fI\,'ipmitool.py sdr time'\/\fR
+usage: ipmitool.py sdr time [\-h] <command> ...
+
+Get or set the SDR repository time (UTC)
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'ipmitool.py sdr time'\/\fR
+.TP
+\fBipmitool.py sdr time\fR \fI\,get\/\fR
+Print the SDR repository time
+.TP
+\fBipmitool.py sdr time\fR \fI\,set\/\fR
+Set the SDR repository time
+
+.SH COMMAND \fI\,'ipmitool.py sdr time get'\/\fR
+usage: ipmitool.py sdr time get [\-h]
+
+Print the SDR repository time
+
+.SH COMMAND \fI\,'ipmitool.py sdr time set'\/\fR
+usage: ipmitool.py sdr time set [\-h] {"YYYY\-MM\-DD HH:MM:SS",now}
+
+Set the SDR repository time
+
+.TP
+\fB{"YYYY\-MM\-DD HH:MM:SS",now}\fR
+the time in UTC, or now for the time of this host
+
+.SH COMMAND \fI\,'ipmitool.py sdr add'\/\fR
+usage: ipmitool.py sdr add [\-h] [\-p <bytes>] <byte> [<byte> ...]
+
+Add a record to the SDR repository
+
+.TP
+\fB<byte>\fR
+the record, starting with the record header; the BMC sets the record ID
+
+.SH OPTIONS \fI\,'ipmitool.py sdr add'\/\fR
+.TP
+\fB\-p\fR \fI\,<bytes>\/\fR, \fB\-\-part\-size\fR \fI\,<bytes>\/\fR
+send the record in parts of this size (Partial Add SDR)
+
+.SH COMMAND \fI\,'ipmitool.py sdr delete'\/\fR
+usage: ipmitool.py sdr delete [\-h] <record id> [<record id> ...]
+
+Delete records of the SDR repository
+
+.TP
+\fB<record id>\fR
+
+.SH COMMAND \fI\,'ipmitool.py sdr update\-mode'\/\fR
+usage: ipmitool.py sdr update\-mode [\-h] {enter,exit}
+
+Enter or exit the SDR repository update mode
+
+.TP
+\fB{enter,exit}\fR
 
 .SH COMMAND \fI\,'ipmitool.py sel'\/\fR
 usage: ipmitool.py sel [\-h] <command> ...
