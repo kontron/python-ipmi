@@ -464,6 +464,21 @@ The following example requests the device ID:
 
   The returned object in this case is different from the one shown for the native :abbr:`RMCP (Remote Management Control Protocol)` example shown above.
 
+The fields of a request or response message are returned by
+``field_values()``, by name and in the order of the message, and as text
+by ``format_fields()``, e.g. to print a response:
+
+.. code:: python
+
+  rsp = ipmi.send_message_by_name('GetDeviceId')
+  for (name, value) in rsp.format_fields():
+      print(f'{name}: {value}')
+
+The raw value comes first, then the decoded one: a number in hex and in
+decimal (``0x3a98 (15000)``), a bitfield as its raw value and its bits
+(``[0x89] device_revision=9, provides_device_sdrs=1``), and byte data as hex
+bytes.
+
 Reading sensors
 ---------------
 

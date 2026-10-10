@@ -427,6 +427,62 @@ class Message:
     def __str__(self) -> str:
         return f'{type(self).__name__} [netfn={self.netfn}, cmd={self.cmdid}, grp={self.group_extension}]'
 
+    def field_values(self) -> dict[str, Any]:
+        """Return the values of the fields of the message, in their order.
+
+        A bitfield is returned as dict of its bits, without the reserved
+        bits. An optional or conditional field that is not in the
+        message, e.g. after decoding, is left out.
+
+        Returns:
+            The values by field name.
+        """
+        values: dict[str, Any] = {}
+        for field in getattr(self, '__fields__', ()):
+            value = getattr(self, field.name, None)
+            if value is None:
+                continue
+            if isinstance(value, Bitfield.BitWrapper):
+                value = {bit.name: getattr(value, bit.name)
+                         for bit in value._bits
+                         if not isinstance(bit, Bitfield.ReservedBit)}
+            values[field.name] = value
+        return values
+
+    def format_fields(self) -> list[tuple[str, str]]:
+        """Return the fields of the message as text, e.g. for a log.
+
+        The raw value comes first, then the decoded one: a number in hex
+        with the length of its field and in decimal (``0x3a98 (15000)``),
+        a bitfield as its raw value and its bits
+        (``[0x89] device_revision=9, provides_device_sdrs=1``), byte data
+        as hex bytes.
+
+        Returns:
+            The (name, value) pairs of the fields of :meth:`field_values`.
+        """
+        values = self.field_values()
+        fields = []
+        for field in getattr(self, '__fields__', ()):
+            if field.name not in values:
+                continue
+            raw = getattr(self, field.name)
+            value = values[field.name]
+            digits = 2 * (getattr(field, 'length', None) or 1)
+            if isinstance(value, dict):
+                bits = ', '.join(f'{name}={bit}' for (name, bit) in value.items())
+                text = f'[0x{int(raw):0{digits}x}] {bits}'
+            elif isinstance(value, bool):
+                text = str(value)
+            elif isinstance(value, int):
+                text = f'0x{value:0{digits}x} ({value})'
+            elif isinstance(value, (bytes, bytearray, array, list, tuple)):
+                text = ' '.join(f'{b:02x}' for b in value) or '(none)'
+            else:
+                text = str(value)
+            fields.append((field.name, text))
+        return fields
+
     def _create_fields(self) -> None:
         for field in self.__fields__:
             if field.name in self.RESERVED_FIELD_NAMES:

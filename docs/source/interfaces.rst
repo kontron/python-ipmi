@@ -73,9 +73,10 @@ check the code.
 :mod:`pyipmi.msgs`, e.g. ``GetSelInfoReq`` and ``GetSelInfoRsp``,
 registered with ``@register_message_class``. Their ``__fields__``
 describe the encoding, and ``encode_message()`` and ``decode_message()``
-convert between a message and its bytes. A message carries the network
-function, command ID, LUN and group extension the interface needs to
-address it.
+convert between a message and its bytes; ``field_values()`` and
+``format_fields()`` return the decoded fields. A message carries the
+network function, command ID, LUN and group extension the interface
+needs to address it.
 
 **Interface.** An interface sends a request to the target and returns
 the response. It is the only layer that knows the transport: how to

@@ -4,6 +4,9 @@ from array import array
 
 import pytest
 
+import pyipmi.msgs.bmc
+import pyipmi.msgs.fru
+
 from pyipmi.errors import DecodingError, EncodingError
 from pyipmi.msgs import (create_request_by_name, create_response_by_name,
                          decode_message, encode_message)
@@ -168,3 +171,40 @@ def test_message_data_field_not_replaced():
     req = create_request_by_name('ManufacturingTestOn')
     assert not isinstance(req.data, str)
     req.data.extend(b'\x01')
+
+
+def test_field_values():
+    rsp = pyipmi.msgs.bmc.GetDeviceIdRsp()
+    pyipmi.msgs.decode_message(
+        rsp, bytes.fromhex('00 0c 89 00 00 02 3d 98 3a 00 be 14'))
+    values = rsp.field_values()
+    assert list(values)[:3] == ['completion_code', 'device_id',
+                                'device_revision']
+    assert values['device_id'] == 0x0c
+    # a bitfield as dict of its bits, without the reserved bits
+    assert values['device_revision'] == {'device_revision': 9,
+                                         'provides_device_sdrs': 1}
+    # the optional auxiliary field is not in the message
+    assert 'auxiliary' not in values
+
+
+def test_field_values_without_fields():
+    assert pyipmi.msgs.bmc.GetDeviceIdReq().field_values() == {}
+
+
+def test_format_fields():
+    rsp = pyipmi.msgs.fru.ReadFruDataRsp()
+    pyipmi.msgs.decode_message(rsp, bytes.fromhex('00 03 01 02 ff'))
+    assert rsp.format_fields() == [('completion_code', '0x00 (0)'),
+                                   ('count', '0x03 (3)'),
+                                   ('data', '01 02 ff')]
+
+    rsp = pyipmi.msgs.bmc.GetDeviceIdRsp()
+    pyipmi.msgs.decode_message(
+        rsp, bytes.fromhex('00 0c 89 00 00 02 3d 98 3a 00 be 14'))
+    fields = dict(rsp.format_fields())
+    # the raw value first, in hex with the length of the field
+    assert fields['device_id'] == '0x0c (12)'
+    assert fields['manufacturer_id'] == '0x003a98 (15000)'
+    assert fields['device_revision'] == ('[0x89] device_revision=9, '
+                                         'provides_device_sdrs=1')
