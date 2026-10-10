@@ -375,6 +375,48 @@ class Sdr(IpmiMixin):
         """
         return list(self.sdr_repository_entries())
 
+    def add_sdr(self, record_data: ByteSequence,
+                part_size: int | None = None) -> int:
+        """Add a record to the SDR repository.
+
+        The BMC sets the record ID. A record that does not fit in one
+        request is sent in parts with Partial Add SDR requests, under one
+        reservation.
+
+        Args:
+            record_data: The record, starting with the record header. The
+                record ID in the header is ignored.
+            part_size: The number of record bytes per Partial Add SDR
+                request, None to send the record with one Add SDR request.
+
+        Returns:
+            The record ID of the added record.
+
+        Raises:
+            ValueError: The record is empty or the part size is not
+                positive.
+            CompletionCodeError: The BMC rejected a request, e.g. because
+                the repository is full or the reservation was canceled.
+        """
+        if not record_data:
+            raise ValueError('the SDR record is empty')
+        if part_size is None:
+            rsp = self.send_message_by_name(
+                'AddSdr', record_data=array('B', record_data))
+            return rsp.record_id
+        if part_size < 1:
+            raise ValueError(f'invalid part size {part_size}')
+
+        reservation_id = self.reserve_sdr_repository()
+        # 0 for the first part, then the record ID returned by the BMC
+        record_id = 0
+        for offset in range(0, len(record_data), part_size):
+            last = offset + part_size >= len(record_data)
+            record_id = self.partial_add_sdr(
+                reservation_id, record_id, offset, int(last),
+                bytes(record_data[offset:offset + part_size]))
+        return record_id
+
     def partial_add_sdr(self, reservation_id: int, record_id: int,
                         offset: int, progress: int, data: bytes) -> int:
         """Add a part of a record to the SDR repository.
@@ -437,6 +479,51 @@ class Sdr(IpmiMixin):
         clear_repository_helper(self.reserve_sdr_repository,
                                 self._clear_sdr_repository, retry)
 
+    def get_sdr_repository_time(self) -> int:
+        """Get the time of the SDR repository clock.
+
+        Returns:
+            The time in seconds since 1970-01-01, see
+            :func:`pyipmi.sel.timestamp_to_string`.
+        """
+        return self.send_message_by_name('GetSdrRepositoryTime').timestamp
+
+    def set_sdr_repository_time(self, timestamp: int) -> None:
+        """Set the time of the SDR repository clock.
+
+        Args:
+            timestamp: The time in seconds since 1970-01-01.
+
+        Raises:
+            ValueError: The time does not fit in 32 bits.
+            CompletionCodeError: The BMC rejected the request.
+        """
+        if not 0 <= timestamp <= 0xffffffff:
+            raise ValueError(f'SDR repository time {timestamp} does not fit '
+                             'in 32 bits')
+        self.send_message_by_name('SetSdrRepositoryTime', timestamp=timestamp)
+
+    def enter_sdr_repository_update_mode(self) -> None:
+        """Enter the update mode of the SDR repository.
+
+        A repository with modal updates (see ``support_update_type`` of
+        :meth:`get_sdr_repository_info`) can only be changed in the update
+        mode, in which other commands may be unavailable. Exit it with
+        :meth:`exit_sdr_repository_update_mode`.
+
+        Raises:
+            CompletionCodeError: The BMC rejected the request.
+        """
+        self.send_message_by_name('EnterSdrRepositoryUpdateMode')
+
+    def exit_sdr_repository_update_mode(self) -> None:
+        """Exit the update mode of the SDR repository.
+
+        Raises:
+            CompletionCodeError: The BMC rejected the request.
+        """
+        self.send_message_by_name('ExitSdrRepositoryUpdateMode')
+
     def _run_initialization_agent(self, cmd: int) -> int:
         rsp = self.send_message_by_name('RunInitializationAgent', cmd=cmd)
         return rsp.status.initialization_completed
@@ -468,6 +555,7 @@ class SdrRepositoryInfo(State):
         record_count (int): The number of records.
         free_space (int): The free space in bytes.
         most_recent_addition (int): The time of the most recent addition.
+        most_recent_erase (int): The time of the most recent erase.
         support_get_allocation_info (int): Get SDR Repository Allocation
             Info is supported.
         support_reserve (int): Reserve SDR Repository is supported.
@@ -494,6 +582,7 @@ class SdrRepositoryInfo(State):
         self.record_count = rsp.record_count
         self.free_space = rsp.free_space
         self.most_recent_addition = rsp.most_recent_addition
+        self.most_recent_erase = rsp.most_recent_erase
         self.support_get_allocation_info = rsp.support.get_allocation_info
         self.support_reserve = rsp.support.reserve
         self.support_partial_add = rsp.support.partial_add

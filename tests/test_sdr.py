@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from pyipmi.errors import DecodingError
+from pyipmi.errors import CompletionCodeError, DecodingError
 from pyipmi.sdr import (SdrCommon, SdrFullSensorRecord, SdrCompactSensorRecord,
                         SdrEventOnlySensorRecord, SdrFruDeviceLocator,
                         SdrManagementControllerDeviceLocator,
@@ -584,8 +584,87 @@ def test_units_to_string(units, string):
     assert units_to_string(*units) == string
 
 
+# an Entity Association record of 10 bytes, the record ID is ignored
+ADD_SDR_RECORD = bytes([0x00, 0x00, 0x51, 0x08, 0x05,
+                        0x07, 0x01, 0x00, 0x0a, 0x01])
+
+
+def test_add_sdr():
+    ipmi = create_ipmi(b'\x00\x2a\x00')
+    assert ipmi.add_sdr(ADD_SDR_RECORD) == 0x2a
+    assert ipmi.requests == [('AddSdrReq', ADD_SDR_RECORD)]
+
+
+def test_add_sdr_in_parts():
+    ipmi = create_ipmi({'ReserveSdrRepository': b'\x00\x34\x12',
+                        'PartialAddSdr': [b'\x00\x2a\x00'] * 3})
+    assert ipmi.add_sdr(ADD_SDR_RECORD, part_size=4) == 0x2a
+    # the first part with the record ID 0, the next with the returned ID,
+    # only the last part flagged
+    assert ipmi.requests == [
+        ('ReserveSdrRepositoryReq', b''),
+        ('PartialAddSdrReq', b'\x34\x12\x00\x00\x00\x00'
+                             + ADD_SDR_RECORD[0:4]),
+        ('PartialAddSdrReq', b'\x34\x12\x2a\x00\x04\x00'
+                             + ADD_SDR_RECORD[4:8]),
+        ('PartialAddSdrReq', b'\x34\x12\x2a\x00\x08\x01'
+                             + ADD_SDR_RECORD[8:10]),
+    ]
+
+
+@pytest.mark.parametrize('record, part_size', [(b'', None),
+                                               (ADD_SDR_RECORD, 0)])
+def test_add_sdr_invalid(record, part_size):
+    ipmi = create_ipmi(b'\x00\x2a\x00')
+    with pytest.raises(ValueError):
+        ipmi.add_sdr(record, part_size=part_size)
+    assert ipmi.requests == []
+
+
 def test_partial_add_sdr_sends_the_data():
     ipmi = create_ipmi(b'\x00\x05\x00')
     assert ipmi.partial_add_sdr(0x1234, 0, 0, 1, b'\x01\x02\x03') == 5
     assert ipmi.requests == [
         ('PartialAddSdrReq', b'\x34\x12\x00\x00\x00\x01\x01\x02\x03')]
+
+
+def test_get_sdr_repository_time():
+    ipmi = create_ipmi(b'\x00\x00\x10\x20\x68')
+    assert ipmi.get_sdr_repository_time() == 0x68201000
+    assert ipmi.requests == [('GetSdrRepositoryTimeReq', b'')]
+
+
+def test_set_sdr_repository_time():
+    ipmi = create_ipmi(b'\x00')
+    ipmi.set_sdr_repository_time(0x68201000)
+    assert ipmi.requests == [('SetSdrRepositoryTimeReq',
+                              b'\x00\x10\x20\x68')]
+
+
+@pytest.mark.parametrize('timestamp', [-1, 0x100000000])
+def test_set_sdr_repository_time_invalid(timestamp):
+    ipmi = create_ipmi(b'\x00')
+    with pytest.raises(ValueError):
+        ipmi.set_sdr_repository_time(timestamp)
+    assert ipmi.requests == []
+
+
+def test_sdr_repository_update_mode():
+    ipmi = create_ipmi(b'\x00')
+    ipmi.enter_sdr_repository_update_mode()
+    ipmi.exit_sdr_repository_update_mode()
+    assert ipmi.requests == [('EnterSdrRepositoryUpdateModeReq', b''),
+                             ('ExitSdrRepositoryUpdateModeReq', b'')]
+
+
+@pytest.mark.parametrize('method, args', [
+    ('add_sdr', (ADD_SDR_RECORD,)),
+    ('get_sdr_repository_time', ()),
+    ('set_sdr_repository_time', (0,)),
+    ('enter_sdr_repository_update_mode', ()),
+    ('exit_sdr_repository_update_mode', ()),
+])
+def test_sdr_repository_commands_error(method, args):
+    ipmi = create_ipmi(b'\xc1')
+    with pytest.raises(CompletionCodeError):
+        getattr(ipmi, method)(*args)

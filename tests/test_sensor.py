@@ -13,6 +13,8 @@ from pyipmi.sensor import (EVENT_READING_TYPE_SENSOR_SPECIFIC, GENERATOR_ID_SMS,
                            sensor_type_to_string,
                            SENSOR_TYPE_MODULE_HOT_SWAP)
 
+from .ipmi_helper import create_ipmi
+
 
 class TestSensor:
 
@@ -208,3 +210,24 @@ def test_event_offset_to_string(event_reading_type, sensor_type, offset,
                                 string):
     assert event_offset_to_string(event_reading_type, sensor_type,
                                   offset) == string
+
+
+@pytest.mark.parametrize('sdr_count, data', [(False, b''), (True, b'\x01')])
+def test_get_device_sdr_info(sdr_count, data):
+    # 3 sensors on LUN 0 and 2, dynamic population with the change time
+    ipmi = create_ipmi(b'\x00\x03\x85\x00\x10\x20\x68')
+    info = ipmi.get_device_sdr_info(sdr_count=sdr_count)
+    assert ipmi.requests == [('GetDeviceSdrInfoReq', data)]
+    assert info.count == 3
+    assert info.luns_with_sensors == [0, 2]
+    assert info.dynamic_population
+    assert info.sensor_population_change == 0x68201000
+
+
+def test_get_device_sdr_info_static():
+    ipmi = create_ipmi(b'\x00\x05\x01')
+    info = ipmi.get_device_sdr_info()
+    assert info.count == 5
+    assert info.luns_with_sensors == [0]
+    assert not info.dynamic_population
+    assert info.sensor_population_change is None

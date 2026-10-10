@@ -42,7 +42,8 @@ from array import array
 from collections.abc import Generator
 
 from .utils import check_completion_code
-from .msgs import create_request_by_name
+from .msgs import create_request_by_name, Message
+from .state import State
 
 from .helper import (get_sdr_data_helper, get_sdr_chunk_helper,
                      ReadLength)
@@ -561,6 +562,24 @@ class Sensor(IpmiMixin):
         # following records
         self._device_sdr_read_length = ReadLength()
 
+    def get_device_sdr_info(self,
+                            sdr_count: bool = False) -> DeviceSdrInfo:
+        """Get the information about the device SDR repository.
+
+        Args:
+            sdr_count: Return the number of SDRs instead of the number of
+                sensors in ``count``.
+
+        Returns:
+            The number of sensors or SDRs, the LUNs with sensors, and if
+            the sensors are populated dynamically.
+        """
+        if sdr_count:
+            rsp = self.send_message_by_name('GetDeviceSdrInfo', operation=1)
+        else:
+            rsp = self.send_message_by_name('GetDeviceSdrInfo')
+        return DeviceSdrInfo(rsp)
+
     def reserve_device_sdr_repository(self) -> int:
         """Reserve the device SDR repository.
 
@@ -788,3 +807,25 @@ class Sensor(IpmiMixin):
         req.event_data = [0] if event_data is None else event_data
         rsp = self.send_message(req)
         check_completion_code(rsp.completion_code)
+
+
+class DeviceSdrInfo(State):
+    """The information about the device SDR repository.
+
+    Attributes:
+        count (int): The number of sensors on the LUN of the request, or
+            the number of SDRs, see :meth:`Sensor.get_device_sdr_info`.
+        luns_with_sensors (list[int]): The LUNs that have sensors.
+        dynamic_population (bool): The sensors are populated dynamically.
+        sensor_population_change (int | None): The time of the last change
+            of the sensor population, None if the sensors are static or the
+            device does not report it.
+    """
+
+    def _from_response(self, rsp: Message) -> None:
+        self.count = rsp.number_of_sensors
+        self.luns_with_sensors = [
+            lun for lun in range(4)
+            if getattr(rsp.flags, f'lun{lun}_has_sensors')]
+        self.dynamic_population = bool(rsp.flags.dynamic_population)
+        self.sensor_population_change = rsp.sensor_population_change
