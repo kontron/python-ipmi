@@ -35,24 +35,48 @@ from typing import Any
 import pyipmi
 import pyipmi.interfaces
 import pyipmi.logger
+import pyipmi.msgs
 from pyipmi.utils import py3_array_tobytes
+
+
+def completion_code_description(e: pyipmi.errors.CompletionCodeError) -> str:
+    """Get the description of a completion code.
+
+    A code without a known description is described by its range.
+    """
+    if e.cc_desc != 'Unknown error description':
+        return e.cc_desc
+    if 0x01 <= e.cc <= 0x7e:
+        return 'device specific (OEM) completion code'
+    if 0x80 <= e.cc <= 0xbe:
+        return 'command-specific completion code'
+    return 'unknown completion code'
 
 
 def format_completion_code(e: pyipmi.errors.CompletionCodeError) -> str:
     """Format a completion code with its description.
 
-    E.g. '0xc1 (Invalid Command)'. A code without a known description is
-    described by its range.
+    E.g. '0xc1 (Invalid Command)'.
     """
-    description = e.cc_desc
-    if description == 'Unknown error description':
-        if 0x01 <= e.cc <= 0x7e:
-            description = 'device specific (OEM) completion code'
-        elif 0x80 <= e.cc <= 0xbe:
-            description = 'command-specific completion code'
-        else:
-            description = 'unknown completion code'
-    return f'0x{e.cc:02x} ({description})'
+    return f'0x{e.cc:02x} ({completion_code_description(e)})'
+
+
+def format_failed_command(e: pyipmi.errors.CompletionCodeError) -> str:
+    """Format the command of a completion code error.
+
+    E.g. 'Command "GetDeviceId" (netfn=0x06, cmd=0x01)', or 'Command' if the
+    command is not known.
+    """
+    if e.netfn is None or e.cmdid is None:
+        return 'Command'
+    ids = f'netfn=0x{e.netfn:02x}, cmd=0x{e.cmdid:02x}'
+    if e.group_extension is not None:
+        ids += f', group=0x{e.group_extension:02x}'
+    try:
+        req = pyipmi.msgs.create_message(e.netfn, e.cmdid, e.group_extension)
+    except KeyError:
+        return f'Command ({ids})'
+    return f'Command "{type(req).__name__[:-len("Req")]}" ({ids})'
 
 
 def auto_int(value: str) -> int:
@@ -2304,8 +2328,8 @@ def main(argv: list[str] | None = None) -> None:
             ipmi.open()  # this will open interface and session
         args.func(ipmi, args)
     except pyipmi.errors.CompletionCodeError as e:
-        print('Command returned with completion code '
-              f'{format_completion_code(e)}')
+        print(f'{format_failed_command(e)} failed due to '
+              f'"{completion_code_description(e)}" (CC=0x{e.cc:02x})')
         if args.verbose:
             traceback.print_exc()
         sys.exit(1)

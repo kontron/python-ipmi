@@ -39,6 +39,10 @@ class CompletionCodeError(Exception):
                  netfn: int | None = None,
                  group_extension: int | None = None) -> None:
         self.cc = cc
+        # the request of the failed command, if known
+        self.cmdid = cmdid
+        self.netfn = netfn
+        self.group_extension = group_extension
         self.cc_desc = self.find_cc_desc(cc, cmdid, netfn, group_extension)
 
     def __str__(self) -> str:

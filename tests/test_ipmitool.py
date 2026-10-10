@@ -1608,5 +1608,32 @@ class TestCompletionCodeOutput:
                            'info'])
         assert e.value.code == 1
         assert capsys.readouterr().out == (
-            'Command returned with completion code 0xd4 (Cannot execute '
-            'command due to insufficient privilege level)\n')
+            'Command failed due to "Cannot execute command due to '
+            'insufficient privilege level" (CC=0xd4)\n')
+
+    @pytest.mark.parametrize('error, output', [
+        (CompletionCodeError(0xc1), 'Command'),
+        (CompletionCodeError(0xc1, cmdid=0x01, netfn=0x06),
+         'Command "GetDeviceId" (netfn=0x06, cmd=0x01)'),
+        (CompletionCodeError(0xc1, cmdid=0x00, netfn=0x2c,
+                             group_extension=0x00),
+         'Command "GetPicmgProperties" (netfn=0x2c, cmd=0x00, '
+         'group=0x00)'),
+        # a command without message class
+        (CompletionCodeError(0xc1, cmdid=0xff, netfn=0x30),
+         'Command (netfn=0x30, cmd=0xff)'),
+    ])
+    def test_format_failed_command(self, error, output):
+        assert ipmitool.format_failed_command(error) == output
+
+    def test_main_prints_the_failed_command(self, capsys, monkeypatch):
+        # the error raised by the library carries the failed command
+        ipmi = create_ipmi({'GetDeviceId': b'\xc1'})
+        monkeypatch.setattr(ipmitool, 'create_ipmi_connection',
+                            lambda *args: ipmi)
+        with pytest.raises(SystemExit):
+            ipmitool.main(['-I', 'ipmitool', '-H', '10.0.0.1', 'bmc',
+                           'info'])
+        assert capsys.readouterr().out == (
+            'Command "GetDeviceId" (netfn=0x06, cmd=0x01) failed due to '
+            '"Invalid Command" (CC=0xc1)\n')
