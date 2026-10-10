@@ -1,7 +1,8 @@
 IPMB Message Routing
 ====================
 
-The IPMB interfaces (``aardvark``, ``ipmbdev`` and ``openipmblink``) are
+The IPMB interfaces (``aardvark``, ``ipmbdev``, ``openipmblink`` and the
+simulated IPMB ``ipmbsim``) are
 nodes on the IPMB with their own slave address. They do not only send
 requests and wait for the responses, they receive every message addressed
 to them, including requests from other devices. A
@@ -268,6 +269,67 @@ and raw handlers get ``None`` as the interface:
    rsp = router.answer_request(ipmi_msg)
    if rsp is not None:
        ...    # send the response in an RMCP packet
+
+The emulator of the project `pyipmi-chassis`_ uses it to emulate a BMC
+on RMCP.
+
+.. _pyipmi-chassis: https://github.com/kontron/python-ipmi-chassis
+
+A simulated IPMB
+----------------
+
+Without hardware, the devices can be connected by a simulated IPMB
+(:mod:`pyipmi.interfaces.ipmbsim`). Its broker is a server on a Unix
+domain socket, and acts as the bus: each ``ipmbsim`` interface connects
+to it and registers its slave address, and the broker forwards every
+message to the interface registered with the responder address (rsSA) of
+the message. A message to an address without an interface is not
+delivered: the sender gets a NAK, as on I2C, and its request fails at
+once instead of after the timeout. An address can be registered by one
+interface only.
+
+Start the broker on its own, it logs the connections and with ``-v``
+every message:
+
+.. code-block:: console
+
+   $ pyipmi -v ipmbsim broker --socket /tmp/ipmb.sock
+
+or in the program of a device, e.g. a BMC emulator:
+
+.. code-block:: python
+
+   from pyipmi.interfaces.ipmbsim import IpmbSimBroker
+
+   broker = IpmbSimBroker('/tmp/ipmb.sock')
+   broker.start()      # forwards the messages in a thread
+   ...
+   broker.close()
+
+A responder and a requester on the bus:
+
+.. code-block:: python
+
+   bmc = pyipmi.interfaces.create_interface(
+       'ipmbsim', slave_address=0x20, path='/tmp/ipmb.sock', router=router)
+   bmc.open()
+
+   interface = pyipmi.interfaces.create_interface(
+       'ipmbsim', slave_address=0x81, path='/tmp/ipmb.sock')
+   ipmi = pyipmi.create_connection(interface)
+   ipmi.target = pyipmi.Target(ipmb_address=0x20)
+   with ipmi:
+       print(ipmi.get_device_id())
+
+With ``pyipmi``:
+
+.. code-block:: console
+
+   $ pyipmi -I ipmbsim -o path=/tmp/ipmb.sock,address=0x81 -t 0x20 bmc info
+
+The emulator and the chassis manager of `pyipmi-chassis`_ use the
+simulated IPMB to connect emulated boards, power supplies and fan trays
+to their manager.
 
 Debugging
 ---------

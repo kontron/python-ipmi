@@ -19,8 +19,9 @@
 The Intelligent Platform Management Bus (IPMB) is the I2C bus between the
 management controllers. :class:`IpmbInterface` is the base class of the
 interfaces that are directly connected to an IPMB:
-:class:`~pyipmi.interfaces.Aardvark`, :class:`~pyipmi.interfaces.IpmbDev`
-and :class:`~pyipmi.interfaces.OpenIpmbLink`.
+:class:`~pyipmi.interfaces.Aardvark`, :class:`~pyipmi.interfaces.IpmbDev`,
+:class:`~pyipmi.interfaces.OpenIpmbLink` and the simulated IPMB
+:class:`~pyipmi.interfaces.IpmbSim`.
 
 The functions encode and decode IPMB messages, including the bridged
 messages embedded in Send Message requests. The RMCP interface uses them

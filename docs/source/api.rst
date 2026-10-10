@@ -61,6 +61,12 @@ Interfaces
 .. autoclass:: pyipmi.interfaces.OpenIpmbLink
    :no-members:
 
+.. autoclass:: pyipmi.interfaces.IpmbSim
+   :no-members:
+
+.. autoclass:: pyipmi.interfaces.ipmbsim.IpmbSimBroker
+   :members: start, serve_forever, close, addresses
+
 .. autoclass:: pyipmi.interfaces.router.MessageRouter
    :members:
 

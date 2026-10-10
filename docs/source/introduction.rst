@@ -104,6 +104,8 @@ packages, drivers or programs:
        slave mode
    * - IPMB with openipmblink
      - an openipmblink bridge and the ``pyserial`` package
+   * - simulated IPMB (``ipmbsim``)
+     - Unix domain sockets, no hardware
 
 Installation
 ------------

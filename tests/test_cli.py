@@ -207,6 +207,7 @@ class TestParser:
         ('picmg channel status 1', 'cmd_picmg_getpower_channel_status'),
         ('picmg channel power 1 on 2.5', 'cmd_picmg_send_channel_power'),
         ('picmg send heartbeat', 'cmd_picmg_send_pm_heartbeat'),
+        ('ipmbsim broker --socket /tmp/x.sock', 'cmd_ipmbsim_broker'),
         ('vita properties', 'cmd_vita_properties'),
         ('vita sensors 1', 'cmd_vita_sensors'),
         ('vita led set 0 1 255 0 3', 'cmd_vita_led_set'),

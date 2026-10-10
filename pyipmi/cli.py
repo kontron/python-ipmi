@@ -1469,6 +1469,21 @@ def _vita_led_function(function: int) -> str:
     return 'BLINKING'
 
 
+def cmd_ipmbsim_broker(ipmi: pyipmi.Ipmi | None,
+                       args: argparse.Namespace) -> None:
+    broker = pyipmi.interfaces.ipmbsim.IpmbSimBroker(args.socket)
+    try:
+        broker.listen()
+    except OSError as e:
+        print(f'cannot start the broker: {e}')
+        sys.exit(1)
+    print(f'IPMB broker on {args.socket}, stop with Ctrl-C')
+    try:
+        broker.serve_forever()
+    except KeyboardInterrupt:
+        pass
+
+
 def cmd_vita_properties(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     rsp = ipmi.get_vita_vso_capabilities()
     ipmc = rsp.ipmc_identifier
@@ -1666,6 +1681,13 @@ def parse_interface_options(interface_name: str,
                 interface_options['slave_address'] = int(value, 0)
             else:
                 print(f'Warning: unknown option {name}')
+        elif interface_name == 'ipmbsim':
+            if name == 'path':
+                interface_options['path'] = value
+            elif name == 'address':
+                interface_options['slave_address'] = int(value, 0)
+            else:
+                print(f'Warning: unknown option {name}')
         elif interface_name == 'rmcpplus':
             if name == 'cipher':
                 interface_options['cipher_suite'] = int(value)
@@ -1739,6 +1761,10 @@ interface options (-o name=value,...):
                        or pyserial URL of a shared bridge
                        (e.g. socket://localhost:5555)
     bus=<n>            IPMB bus of the bridge (default 0)
+    address=<addr>     own IPMB address (default 0x20)
+  ipmbsim:
+    path=<path>        Unix domain socket of the broker of the simulated
+                       IPMB (default /tmp/pyipmi-ipmb.sock)
     address=<addr>     own IPMB address (default 0x20)
   rmcpplus:
     cipher=<id>        cipher suite (1, 2, 3, 15, 16, 17; default: try 17,
@@ -2014,7 +2040,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help='print the output as JSON (if supported)')
     parser.add_argument('-I', dest='interface', metavar='<interface>',
                         help='interface (rmcp, rmcpplus, aardvark, ipmitool, '
-                             'ipmbdev, ipmidev, openipmblink)')
+                             'ipmbdev, ipmidev, openipmblink, ipmbsim)')
     parser.add_argument('-o', dest='options', metavar='<options>',
                         default='',
                         help='interface specific options (name=value, '
@@ -2381,6 +2407,16 @@ def build_parser() -> argparse.ArgumentParser:
                    help='1: activate DHCP, 2: discovery configuration, '
                         '3-5: DHCP timing 1-3')
     p.add_argument('value', type=auto_int)
+
+    group = commands.group('ipmbsim', 'Simulated IPMB')
+    p = group.command('broker', cmd_ipmbsim_broker,
+                      'Run the broker of a simulated IPMB, the ipmbsim '
+                      'interfaces connect to it; -v logs every message',
+                      needs_connection=False)
+    p.add_argument('--socket', metavar='<path>',
+                   default=pyipmi.interfaces.ipmbsim.DEFAULT_PATH,
+                   help='Unix domain socket of the broker (default '
+                        f'{pyipmi.interfaces.ipmbsim.DEFAULT_PATH})')
 
     group = commands.group('vita', 'VITA 46.11 commands')
     group.command('properties', cmd_vita_properties, 'Get VSO properties')

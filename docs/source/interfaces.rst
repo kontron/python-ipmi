@@ -215,7 +215,7 @@ each interface decides how to reach it:
      - The BMC (``0x20``, not bridged) is addressed through the system
        interface, other targets by an IPMB address on a channel, with at
        most one bridge.
-   * - ``ipmbdev``, ``aardvark``, ``openipmblink``
+   * - ``ipmbdev``, ``aardvark``, ``openipmblink``, ``ipmbsim``
      - The interface is a node on the IPMB itself: the request is sent
        directly to the IPMB address of the target, the routing is not
        used. A ``MessageRouter`` (:mod:`pyipmi.interfaces.router`) matches

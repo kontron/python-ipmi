@@ -56,6 +56,9 @@ PICMG commands
 \fBpyipmi\fR \fI\,dcmi\/\fR
 Data Center Manageability Interface (DCMI) commands
 .TP
+\fBpyipmi\fR \fI\,ipmbsim\/\fR
+Simulated IPMB
+.TP
 \fBpyipmi\fR \fI\,vita\/\fR
 VITA 46.11 commands
 
@@ -1213,6 +1216,27 @@ Set a DCMI configuration parameter
 .TP
 \fBvalue\fR
 
+.SH COMMAND \fI\,'pyipmi ipmbsim'\/\fR
+usage: pyipmi ipmbsim [\-h] <command> ...
+
+Simulated IPMB
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi ipmbsim'\/\fR
+.TP
+\fBpyipmi ipmbsim\fR \fI\,broker\/\fR
+Run the broker of a simulated IPMB, the ipmbsim interfaces connect to it; \-v logs every message
+
+.SH COMMAND \fI\,'pyipmi ipmbsim broker'\/\fR
+usage: pyipmi ipmbsim broker [\-h] [\-\-socket <path>]
+
+Run the broker of a simulated IPMB, the ipmbsim interfaces connect to it; \-v logs every message
+
+.SH OPTIONS \fI\,'pyipmi ipmbsim broker'\/\fR
+.TP
+\fB\-\-socket\fR \fI\,<path>\/\fR
+Unix domain socket of the broker (default /tmp/pyipmi\-ipmb.sock)
+
 .SH COMMAND \fI\,'pyipmi vita'\/\fR
 usage: pyipmi vita [\-h] <command> ...
 
@@ -1425,7 +1449,7 @@ print the output as JSON (if supported)
 
 .TP
 \fB\-I\fR \fI\,<interface>\/\fR
-interface (rmcp, rmcpplus, aardvark, ipmitool, ipmbdev, ipmidev, openipmblink)
+interface (rmcp, rmcpplus, aardvark, ipmitool, ipmbdev, ipmidev, openipmblink, ipmbsim)
 
 .TP
 \fB\-o\fR \fI\,<options>\/\fR
@@ -1486,6 +1510,10 @@ interface options (\-o name=value,...):
                        (e.g. socket://localhost:5555)
     bus=<n>            IPMB bus of the bridge (default 0)
     address=<addr>     own IPMB address (default 0x20)
+  ipmbsim:
+    path=<path>        Unix domain socket of the broker of the simulated
+                       IPMB (default /tmp/pyipmi\-ipmb.sock)
+    address=<addr>     own IPMB address (default 0x20)
   rmcpplus:
     cipher=<id>        cipher suite (1, 2, 3, 15, 16, 17; default: try 17,
                        then 3)
@@ -1493,8 +1521,9 @@ interface options (\-o name=value,...):
 
 loggers (\-\-log\-level <logger>=<level>):
   interfaces.aardvark, interfaces.base, interfaces.ipmb, interfaces.ipmbdev,
-  interfaces.ipmidev, interfaces.ipmitool, interfaces.openipmblink,
-  interfaces.rmcp, interfaces.rmcpplus, interfaces.router
+  interfaces.ipmbsim, interfaces.ipmidev, interfaces.ipmitool,
+  interfaces.openipmblink, interfaces.rmcp, interfaces.rmcpplus,
+  interfaces.router
   A parent name sets all its children, e.g. 'interfaces', and without a
   name the level applies to all loggers.
 .SH EXAMPLES
