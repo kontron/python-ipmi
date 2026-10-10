@@ -19,6 +19,7 @@ This documentation describes the usage of the python-ipmi library.
    bmcWatchdog_cmd
    chassis_cmd
    interfaces
+   message_routing
    api
 
 

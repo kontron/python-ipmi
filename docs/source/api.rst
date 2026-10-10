@@ -61,6 +61,9 @@ Interfaces
 .. autoclass:: pyipmi.interfaces.OpenIpmbLink
    :no-members:
 
+.. autoclass:: pyipmi.interfaces.router.MessageRouter
+   :members:
+
 Errors
 ------
 
