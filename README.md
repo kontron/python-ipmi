@@ -30,7 +30,7 @@
     ([IPMB message routing][doc-routing])
 * bridged requests to controllers behind the BMC
 * decoding of FRU data, SDRs and SEL entries, HPM.1 firmware upgrades
-* the command line tool `ipmitool.py`
+* the command line tool `pyipmi` (formerly `ipmitool.py`)
 
 ## Tested Devices
 
@@ -106,7 +106,7 @@ python3 -m venv .venv
 pip install -e '.[rmcpplus]'
 ```
 
-This also installs the `ipmitool.py` command line tool and generates
+This also installs the `pyipmi` command line tool and generates
 `pyipmi/version.py` with the version from `git describe`. Install the
 optional packages for the interfaces you need: `pyserial` for the
 openipmblink interface and `pyaardvark` for the Aardvark IPMB interface.
@@ -160,7 +160,7 @@ The version of the package is taken from, in this order:
    e.g. for distribution packages.
 
 If none of them is available, the version is `0+unknown`. The installed
-version is available as `pyipmi.__version__` and with `ipmitool.py -V`.
+version is available as `pyipmi.__version__` and with `pyipmi -V`.
 
 ## Documentation
 
@@ -304,10 +304,10 @@ connection.get_device_id()
 connection.close()
 ```
 
-`ipmitool.py` command:
+`pyipmi` command:
 
 ```shell
-ipmitool.py -I openipmblink -o port=/dev/ttyACM1,bus=0,address=0x24 -t 0x20 bmc info
+pyipmi -I openipmblink -o port=/dev/ttyACM1,bus=0,address=0x24 -t 0x20 bmc info
 ```
 
 ### Bridged targets

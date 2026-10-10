@@ -1870,14 +1870,14 @@ loggers (--log-level <logger>=<level>):
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog='ipmitool.py',
+        prog='pyipmi',
         description='Pure python IPMI tool',
         epilog=INTERFACE_OPTIONS_HELP + log_level_help(),
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.set_defaults(func=None, help_parser=parser)
 
     parser.add_argument('-V', '--version', action='version',
-                        version=f'ipmitool v{pyipmi.__version__}')
+                        version=f'pyipmi v{pyipmi.__version__}')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='be verbose')
     parser.add_argument('--log-level', dest='log_levels',

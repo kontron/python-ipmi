@@ -112,7 +112,7 @@ Reading the number of SEL entries shows every step:
    :meth:`~pyipmi.Ipmi.send_message_by_name` checks the completion code.
 #. The command returns ``rsp.entries``.
 
-:meth:`~pyipmi.Ipmi.send_raw` (``ipmitool.py raw``) skips the message
+:meth:`~pyipmi.Ipmi.send_raw` (``pyipmi raw``) skips the message
 layer and calls
 :meth:`~pyipmi.interfaces.base.Interface.send_and_receive_raw` directly.
 

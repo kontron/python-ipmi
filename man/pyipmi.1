@@ -1,0 +1,1479 @@
+.TH PYIPMI "1" "2026\-10\-10" "python\-ipmi" "python\-ipmi manual"
+.SH NAME
+pyipmi \- pure python IPMI tool
+.SH SYNOPSIS
+.B pyipmi
+[-h] [-V] [-v] [--log-level [<logger>=]<level>] [-J] [-I <interface>] [-o <options>] [-t <addr>] [-b <channel>] [-r <routing>] [-H <host>] [-p <port>] [-U <user>] [-P <password>] [-L <level>] <command> ...
+.SH DESCRIPTION
+.B pyipmi
+is the command line tool of the python\-ipmi library. It talks to IPMI
+devices over the native RMCP and RMCP+ interfaces, the Linux IPMI and IPMB
+drivers, an IPMB bus adapter or the
+.BR ipmitool (1)
+command as backend.
+.PP
+It is not
+.BR ipmitool (1)
+and does not accept the same options and commands.
+.PP
+The command was formerly called
+.BR ipmitool.py ,
+which is still installed as an alias.
+
+.SH
+POSITIONAL ARGUMENTS
+.TP
+\fBpyipmi\fR \fI\,raw\/\fR
+Send a RAW IPMI request and print response
+.TP
+\fBpyipmi\fR \fI\,bmc\/\fR
+Management Controller status and global enables
+.TP
+\fBpyipmi\fR \fI\,chassis\/\fR
+Get the chassis status, control the power and set the chassis settings
+.TP
+\fBpyipmi\fR \fI\,fru\/\fR
+Print and read built\-in FRU
+.TP
+\fBpyipmi\fR \fI\,lan\/\fR
+Print and set the LAN configuration
+.TP
+\fBpyipmi\fR \fI\,sdr\/\fR
+Print and manage the Sensor Data Repository (SDR) and the sensor readings
+.TP
+\fBpyipmi\fR \fI\,sel\/\fR
+Print and manage the System Event Log (SEL)
+.TP
+\fBpyipmi\fR \fI\,sensor\/\fR
+Sensor commands
+.TP
+\fBpyipmi\fR \fI\,hpm\/\fR
+HPM.1 commands
+.TP
+\fBpyipmi\fR \fI\,picmg\/\fR
+PICMG commands
+.TP
+\fBpyipmi\fR \fI\,dcmi\/\fR
+Data Center Manageability Interface (DCMI) commands
+.TP
+\fBpyipmi\fR \fI\,vita\/\fR
+VITA 46.11 commands
+
+.SH COMMAND \fI\,'pyipmi raw'\/\fR
+usage: pyipmi raw [\-h] [\-l LUN] netfn data [data ...]
+
+Send a RAW IPMI request and print response
+
+.TP
+\fBnetfn\fR
+
+.TP
+\fBdata\fR
+command id and data bytes
+
+.SH OPTIONS \fI\,'pyipmi raw'\/\fR
+.TP
+\fB\-l\fR \fI\,LUN\/\fR, \fB\-\-lun\fR \fI\,LUN\/\fR
+LUN
+
+.SH COMMAND \fI\,'pyipmi bmc'\/\fR
+usage: pyipmi bmc [\-h] <command> ...
+
+Management Controller status and global enables
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi bmc'\/\fR
+.TP
+\fBpyipmi bmc\fR \fI\,info\/\fR
+BMC Device ID information
+.TP
+\fBpyipmi bmc\fR \fI\,reset\/\fR
+BMC reset control
+
+.SH COMMAND \fI\,'pyipmi bmc info'\/\fR
+usage: pyipmi bmc info [\-h]
+
+BMC Device ID information
+
+.SH COMMAND \fI\,'pyipmi bmc reset'\/\fR
+usage: pyipmi bmc reset [\-h] {cold,warm}
+
+BMC reset control
+
+.TP
+\fB{cold,warm}\fR
+
+.SH COMMAND \fI\,'pyipmi chassis'\/\fR
+usage: pyipmi chassis [\-h] <command> ...
+
+Get the chassis status, control the power and set the chassis settings
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi chassis'\/\fR
+.TP
+\fBpyipmi chassis\fR \fI\,status\/\fR
+Get chassis status
+.TP
+\fBpyipmi chassis\fR \fI\,power\/\fR
+Set power state
+.TP
+\fBpyipmi chassis\fR \fI\,reset\/\fR
+Reset the chassis with the Chassis Reset command
+.TP
+\fBpyipmi chassis\fR \fI\,identify\/\fR
+Turn on the chassis identification, e.g. an LED
+.TP
+\fBpyipmi chassis\fR \fI\,policy\/\fR
+Set the power restore policy after AC power returns
+.TP
+\fBpyipmi chassis\fR \fI\,restart\-cause\/\fR
+Print the cause of the last system restart
+.TP
+\fBpyipmi chassis\fR \fI\,poh\/\fR
+Print the power\-on hours counter
+.TP
+\fBpyipmi chassis\fR \fI\,capabilities\/\fR
+Print the chassis capabilities
+.TP
+\fBpyipmi chassis\fR \fI\,buttons\/\fR
+Print, enable or disable the front panel buttons
+.TP
+\fBpyipmi chassis\fR \fI\,cycle\-interval\/\fR
+Set the time the power stays off in a power cycle
+
+.SH COMMAND \fI\,'pyipmi chassis status'\/\fR
+usage: pyipmi chassis status [\-h]
+
+Get chassis status
+
+.SH COMMAND \fI\,'pyipmi chassis power'\/\fR
+usage: pyipmi chassis power [\-h] {off,on,cycle,reset,diag,soft}
+
+Set power state
+
+.TP
+\fB{off,on,cycle,reset,diag,soft}\fR
+
+.SH COMMAND \fI\,'pyipmi chassis reset'\/\fR
+usage: pyipmi chassis reset [\-h]
+
+Reset the chassis with the Chassis Reset command
+
+.SH COMMAND \fI\,'pyipmi chassis identify'\/\fR
+usage: pyipmi chassis identify [\-h] [{<seconds>,force}]
+
+Turn on the chassis identification, e.g. an LED
+
+.TP
+\fB{<seconds>,force}\fR
+the time in seconds, 0 turns it off, force turns it on until it is turned off (default: 15 seconds)
+
+.SH COMMAND \fI\,'pyipmi chassis policy'\/\fR
+usage: pyipmi chassis policy [\-h] {list,always\-off,previous,always\-on}
+
+Set the power restore policy after AC power returns
+
+.TP
+\fB{list,always\-off,previous,always\-on}\fR
+list prints the supported policies
+
+.SH COMMAND \fI\,'pyipmi chassis restart\-cause'\/\fR
+usage: pyipmi chassis restart\-cause [\-h]
+
+Print the cause of the last system restart
+
+.SH COMMAND \fI\,'pyipmi chassis poh'\/\fR
+usage: pyipmi chassis poh [\-h]
+
+Print the power\-on hours counter
+
+.SH COMMAND \fI\,'pyipmi chassis capabilities'\/\fR
+usage: pyipmi chassis capabilities [\-h]
+
+Print the chassis capabilities
+
+.SH COMMAND \fI\,'pyipmi chassis buttons'\/\fR
+usage: pyipmi chassis buttons [\-h] [{enable,disable}] [<button> ...]
+
+Print, enable or disable the front panel buttons
+
+.TP
+\fB{enable,disable}\fR
+print the state of the buttons if not given
+
+.TP
+\fB<button>\fR
+the buttons: power\-off, reset, diag, standby
+
+.SH COMMAND \fI\,'pyipmi chassis cycle\-interval'\/\fR
+usage: pyipmi chassis cycle\-interval [\-h] <seconds>
+
+Set the time the power stays off in a power cycle
+
+.TP
+\fB<seconds>\fR
+0 \- 255
+
+.SH COMMAND \fI\,'pyipmi fru'\/\fR
+usage: pyipmi fru [\-h] <command> ...
+
+Print and read built\-in FRU
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi fru'\/\fR
+.TP
+\fBpyipmi fru\fR \fI\,print\/\fR
+Print FRU inventory
+.TP
+\fBpyipmi fru\fR \fI\,read\/\fR
+Read the FRU data and write it to a file
+.TP
+\fBpyipmi fru\fR \fI\,print\-file\/\fR
+Print the FRU inventory of a file
+
+.SH COMMAND \fI\,'pyipmi fru print'\/\fR
+usage: pyipmi fru print [\-h] [fru_id] [{all}]
+
+Print FRU inventory
+
+.TP
+\fBfru_id\fR
+
+.TP
+\fB{all}\fR
+also print the multirecord area
+
+.SH COMMAND \fI\,'pyipmi fru read'\/\fR
+usage: pyipmi fru read [\-h] fru_id filename
+
+Read the FRU data and write it to a file
+
+.TP
+\fBfru_id\fR
+
+.TP
+\fBfilename\fR
+file to write the FRU data to
+
+.SH COMMAND \fI\,'pyipmi fru print\-file'\/\fR
+usage: pyipmi fru print\-file [\-h] filename [{all}]
+
+Print the FRU inventory of a file
+
+.TP
+\fBfilename\fR
+file with the FRU data, e.g. written by "fru read"
+
+.TP
+\fB{all}\fR
+also print the multirecord area
+
+.SH COMMAND \fI\,'pyipmi lan'\/\fR
+usage: pyipmi lan [\-h] <command> ...
+
+Print and set the LAN configuration
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi lan'\/\fR
+.TP
+\fBpyipmi lan\fR \fI\,print\/\fR
+Print the LAN configuration
+.TP
+\fBpyipmi lan\fR \fI\,set\/\fR
+Set the LAN configuration
+
+.SH COMMAND \fI\,'pyipmi lan print'\/\fR
+usage: pyipmi lan print [\-h] [channel]
+
+Print the LAN configuration
+
+.TP
+\fBchannel\fR
+the LAN channel, the first LAN channel if not given
+
+.SH COMMAND \fI\,'pyipmi lan set'\/\fR
+usage: pyipmi lan set [\-h] <command> ...
+
+Set the LAN configuration
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi lan set'\/\fR
+.TP
+\fBpyipmi lan set\fR \fI\,ipaddr\/\fR
+Set the IP address
+.TP
+\fBpyipmi lan set\fR \fI\,ipsrc\/\fR
+Set the IP address source
+.TP
+\fBpyipmi lan set\fR \fI\,vlan\/\fR
+Set the 802.1q VLAN ID
+
+.SH COMMAND \fI\,'pyipmi lan set ipaddr'\/\fR
+usage: pyipmi lan set ipaddr [\-h] address [channel]
+
+Set the IP address
+
+.TP
+\fBaddress\fR
+the IP address, xxx.xxx.xxx.xxx
+
+.TP
+\fBchannel\fR
+the LAN channel, the first LAN channel if not given
+
+.SH COMMAND \fI\,'pyipmi lan set ipsrc'\/\fR
+usage: pyipmi lan set ipsrc [\-h] {static,dhcp} [channel]
+
+Set the IP address source
+
+.TP
+\fB{static,dhcp}\fR
+
+.TP
+\fBchannel\fR
+the LAN channel, the first LAN channel if not given
+
+.SH COMMAND \fI\,'pyipmi lan set vlan'\/\fR
+usage: pyipmi lan set vlan [\-h] {<id>,off} [channel]
+
+Set the 802.1q VLAN ID
+
+.TP
+\fB{<id>,off}\fR
+the VLAN ID 1 \- 4095, off to disable the VLAN
+
+.TP
+\fBchannel\fR
+the LAN channel, the first LAN channel if not given
+
+.SH COMMAND \fI\,'pyipmi sdr'\/\fR
+usage: pyipmi sdr [\-h] <command> ...
+
+Print and manage the Sensor Data Repository (SDR) and the sensor readings
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi sdr'\/\fR
+.TP
+\fBpyipmi sdr\fR \fI\,list\/\fR
+List all SDRs
+.TP
+\fBpyipmi sdr\fR \fI\,raw\/\fR
+Show SDR raw data
+.TP
+\fBpyipmi sdr\fR \fI\,show\/\fR
+Show detail for one SDR
+.TP
+\fBpyipmi sdr\fR \fI\,showall\/\fR
+Show detail for all SDRs
+.TP
+\fBpyipmi sdr\fR \fI\,info\/\fR
+Print the information about the SDR repository
+.TP
+\fBpyipmi sdr\fR \fI\,device\-info\/\fR
+Print the information about the device SDRs
+.TP
+\fBpyipmi sdr\fR \fI\,time\/\fR
+Get or set the SDR repository time (UTC)
+.TP
+\fBpyipmi sdr\fR \fI\,add\/\fR
+Add a record to the SDR repository
+.TP
+\fBpyipmi sdr\fR \fI\,delete\/\fR
+Delete records of the SDR repository
+.TP
+\fBpyipmi sdr\fR \fI\,update\-mode\/\fR
+Enter or exit the SDR repository update mode
+
+.SH COMMAND \fI\,'pyipmi sdr list'\/\fR
+usage: pyipmi sdr list [\-h] [\-d]
+
+List all SDRs
+
+.SH OPTIONS \fI\,'pyipmi sdr list'\/\fR
+.TP
+\fB\-d\fR, \fB\-\-details\fR
+print all fields of the records
+
+.SH COMMAND \fI\,'pyipmi sdr raw'\/\fR
+usage: pyipmi sdr raw [\-h] sdr_id
+
+Show SDR raw data
+
+.TP
+\fBsdr_id\fR
+
+.SH COMMAND \fI\,'pyipmi sdr show'\/\fR
+usage: pyipmi sdr show [\-h] sdr_id
+
+Show detail for one SDR
+
+.TP
+\fBsdr_id\fR
+
+.SH COMMAND \fI\,'pyipmi sdr showall'\/\fR
+usage: pyipmi sdr showall [\-h]
+
+Show detail for all SDRs
+
+.SH COMMAND \fI\,'pyipmi sdr info'\/\fR
+usage: pyipmi sdr info [\-h]
+
+Print the information about the SDR repository
+
+.SH COMMAND \fI\,'pyipmi sdr device\-info'\/\fR
+usage: pyipmi sdr device\-info [\-h] [\-c]
+
+Print the information about the device SDRs
+
+.SH OPTIONS \fI\,'pyipmi sdr device\-info'\/\fR
+.TP
+\fB\-c\fR, \fB\-\-sdr\-count\fR
+print the number of SDRs instead of sensors
+
+.SH COMMAND \fI\,'pyipmi sdr time'\/\fR
+usage: pyipmi sdr time [\-h] <command> ...
+
+Get or set the SDR repository time (UTC)
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi sdr time'\/\fR
+.TP
+\fBpyipmi sdr time\fR \fI\,get\/\fR
+Print the SDR repository time
+.TP
+\fBpyipmi sdr time\fR \fI\,set\/\fR
+Set the SDR repository time
+
+.SH COMMAND \fI\,'pyipmi sdr time get'\/\fR
+usage: pyipmi sdr time get [\-h]
+
+Print the SDR repository time
+
+.SH COMMAND \fI\,'pyipmi sdr time set'\/\fR
+usage: pyipmi sdr time set [\-h] {"YYYY\-MM\-DD HH:MM:SS",now}
+
+Set the SDR repository time
+
+.TP
+\fB{"YYYY\-MM\-DD HH:MM:SS",now}\fR
+the time in UTC, or now for the time of this host
+
+.SH COMMAND \fI\,'pyipmi sdr add'\/\fR
+usage: pyipmi sdr add [\-h] [\-p <bytes>] <byte> [<byte> ...]
+
+Add a record to the SDR repository
+
+.TP
+\fB<byte>\fR
+the record, starting with the record header; the BMC sets the record ID
+
+.SH OPTIONS \fI\,'pyipmi sdr add'\/\fR
+.TP
+\fB\-p\fR \fI\,<bytes>\/\fR, \fB\-\-part\-size\fR \fI\,<bytes>\/\fR
+send the record in parts of this size (Partial Add SDR)
+
+.SH COMMAND \fI\,'pyipmi sdr delete'\/\fR
+usage: pyipmi sdr delete [\-h] <record id> [<record id> ...]
+
+Delete records of the SDR repository
+
+.TP
+\fB<record id>\fR
+
+.SH COMMAND \fI\,'pyipmi sdr update\-mode'\/\fR
+usage: pyipmi sdr update\-mode [\-h] {enter,exit}
+
+Enter or exit the SDR repository update mode
+
+.TP
+\fB{enter,exit}\fR
+
+.SH COMMAND \fI\,'pyipmi sel'\/\fR
+usage: pyipmi sel [\-h] <command> ...
+
+Print and manage the System Event Log (SEL)
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi sel'\/\fR
+.TP
+\fBpyipmi sel\fR \fI\,list\/\fR
+List all SEL entries
+.TP
+\fBpyipmi sel\fR \fI\,clear\/\fR
+Clear SEL
+.TP
+\fBpyipmi sel\fR \fI\,info\/\fR
+Print the information about the SEL
+.TP
+\fBpyipmi sel\fR \fI\,time\/\fR
+Get or set the SEL time (UTC)
+.TP
+\fBpyipmi sel\fR \fI\,utc\-offset\/\fR
+Print or set the offset of the SEL time to UTC
+.TP
+\fBpyipmi sel\fR \fI\,get\/\fR
+Print the details of SEL entries
+.TP
+\fBpyipmi sel\fR \fI\,add\/\fR
+Add an entry to the SEL
+.TP
+\fBpyipmi sel\fR \fI\,delete\/\fR
+Delete SEL entries
+.TP
+\fBpyipmi sel\fR \fI\,aux\-status\/\fR
+Print the status data of an auxiliary log
+
+.SH COMMAND \fI\,'pyipmi sel list'\/\fR
+usage: pyipmi sel list [\-h] [\-d] [\-s]
+
+List all SEL entries
+
+.SH OPTIONS \fI\,'pyipmi sel list'\/\fR
+.TP
+\fB\-d\fR, \fB\-\-details\fR
+print all fields of the entries
+
+.TP
+\fB\-s\fR, \fB\-\-sdr\fR
+read the SDRs to print the sensor names and the converted values of threshold events
+
+.SH COMMAND \fI\,'pyipmi sel clear'\/\fR
+usage: pyipmi sel clear [\-h]
+
+Clear SEL
+
+.SH COMMAND \fI\,'pyipmi sel info'\/\fR
+usage: pyipmi sel info [\-h]
+
+Print the information about the SEL
+
+.SH COMMAND \fI\,'pyipmi sel time'\/\fR
+usage: pyipmi sel time [\-h] <command> ...
+
+Get or set the SEL time (UTC)
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi sel time'\/\fR
+.TP
+\fBpyipmi sel time\fR \fI\,get\/\fR
+Print the SEL time
+.TP
+\fBpyipmi sel time\fR \fI\,set\/\fR
+Set the SEL time
+
+.SH COMMAND \fI\,'pyipmi sel time get'\/\fR
+usage: pyipmi sel time get [\-h]
+
+Print the SEL time
+
+.SH COMMAND \fI\,'pyipmi sel time set'\/\fR
+usage: pyipmi sel time set [\-h] {"YYYY\-MM\-DD HH:MM:SS",now}
+
+Set the SEL time
+
+.TP
+\fB{"YYYY\-MM\-DD HH:MM:SS",now}\fR
+the time in UTC, or now for the time of this host
+
+.SH COMMAND \fI\,'pyipmi sel utc\-offset'\/\fR
+usage: pyipmi sel utc\-offset [\-h] [{<minutes>,unspecified}]
+
+Print or set the offset of the SEL time to UTC
+
+.TP
+\fB{<minutes>,unspecified}\fR
+\-1440 \- 1440, print the offset if not given
+
+.SH COMMAND \fI\,'pyipmi sel get'\/\fR
+usage: pyipmi sel get [\-h] [\-s] <record id> [<record id> ...]
+
+Print the details of SEL entries
+
+.TP
+\fB<record id>\fR
+
+.SH OPTIONS \fI\,'pyipmi sel get'\/\fR
+.TP
+\fB\-s\fR, \fB\-\-sdr\fR
+read the SDRs to print the sensor names and the converted values of threshold events
+
+.SH COMMAND \fI\,'pyipmi sel add'\/\fR
+usage: pyipmi sel add [\-h] [\-p]
+                      <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte>
+                      <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte>
+
+Add an entry to the SEL
+
+.TP
+\fB<byte>\fR
+the 16 bytes of the record, the BMC sets the record ID and the timestamp
+
+.SH OPTIONS \fI\,'pyipmi sel add'\/\fR
+.TP
+\fB\-p\fR, \fB\-\-partial\fR
+send the record in parts (Partial Add SEL Entry)
+
+.SH COMMAND \fI\,'pyipmi sel delete'\/\fR
+usage: pyipmi sel delete [\-h] <record id> [<record id> ...]
+
+Delete SEL entries
+
+.TP
+\fB<record id>\fR
+
+.SH COMMAND \fI\,'pyipmi sel aux\-status'\/\fR
+usage: pyipmi sel aux\-status [\-h] {mca,oem1,oem2}
+
+Print the status data of an auxiliary log
+
+.TP
+\fB{mca,oem1,oem2}\fR
+
+.SH COMMAND \fI\,'pyipmi sensor'\/\fR
+usage: pyipmi sensor [\-h] <command> ...
+
+Sensor commands
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi sensor'\/\fR
+.TP
+\fBpyipmi sensor\fR \fI\,rearm\/\fR
+Rearm sensor events
+.TP
+\fBpyipmi sensor\fR \fI\,type\/\fR
+Print or set the sensor type
+.TP
+\fBpyipmi sensor\fR \fI\,hysteresis\/\fR
+Print or set the hysteresis of a threshold sensor
+.TP
+\fBpyipmi sensor\fR \fI\,events\/\fR
+Print the enabled and the asserted events, enable or disable the event messages and the scanning
+.TP
+\fBpyipmi sensor\fR \fI\,factors\/\fR
+Print the conversion factors for a raw reading
+.TP
+\fBpyipmi sensor\fR \fI\,set\-reading\/\fR
+Set the reading of a sensor (Set Sensor Reading and Event Status)
+
+.SH COMMAND \fI\,'pyipmi sensor rearm'\/\fR
+usage: pyipmi sensor rearm [\-h] number
+
+Rearm sensor events
+
+.TP
+\fBnumber\fR
+sensor number
+
+.SH COMMAND \fI\,'pyipmi sensor type'\/\fR
+usage: pyipmi sensor type [\-h] [\-l LUN]
+                          [\-s <sensor type> <event/reading type>]
+                          number
+
+Print or set the sensor type
+
+.TP
+\fBnumber\fR
+sensor number
+
+.SH OPTIONS \fI\,'pyipmi sensor type'\/\fR
+.TP
+\fB\-l\fR \fI\,LUN\/\fR, \fB\-\-lun\fR \fI\,LUN\/\fR
+LUN of the sensor owner (default 0)
+
+.TP
+\fB\-s\fR \fI\,<sensor type> <event/reading type>\/\fR, \fB\-\-set\fR \fI\,<sensor type> <event/reading type>\/\fR
+set the sensor type and the event/reading type
+
+.SH COMMAND \fI\,'pyipmi sensor hysteresis'\/\fR
+usage: pyipmi sensor hysteresis [\-h] [\-l LUN] [\-s <positive> <negative>]
+                                number
+
+Print or set the hysteresis of a threshold sensor
+
+.TP
+\fBnumber\fR
+sensor number
+
+.SH OPTIONS \fI\,'pyipmi sensor hysteresis'\/\fR
+.TP
+\fB\-l\fR \fI\,LUN\/\fR, \fB\-\-lun\fR \fI\,LUN\/\fR
+LUN of the sensor owner (default 0)
+
+.TP
+\fB\-s\fR \fI\,<positive> <negative>\/\fR, \fB\-\-set\fR \fI\,<positive> <negative>\/\fR
+set the raw positive\- and negative\-going hysteresis
+
+.SH COMMAND \fI\,'pyipmi sensor events'\/\fR
+usage: pyipmi sensor events [\-h] [\-l LUN] [\-m {on,off}] [\-s {on,off}] number
+
+Print the enabled and the asserted events, enable or disable the event messages and the scanning
+
+.TP
+\fBnumber\fR
+sensor number
+
+.SH OPTIONS \fI\,'pyipmi sensor events'\/\fR
+.TP
+\fB\-l\fR \fI\,LUN\/\fR, \fB\-\-lun\fR \fI\,LUN\/\fR
+LUN of the sensor owner (default 0)
+
+.TP
+\fB\-m\fR \fI\,{on,off}\/\fR, \fB\-\-messages\fR \fI\,{on,off}\/\fR
+enable or disable the event messages
+
+.TP
+\fB\-s\fR \fI\,{on,off}\/\fR, \fB\-\-scanning\fR \fI\,{on,off}\/\fR
+enable or disable the sensor scanning
+
+.SH COMMAND \fI\,'pyipmi sensor factors'\/\fR
+usage: pyipmi sensor factors [\-h] [\-l LUN] number reading
+
+Print the conversion factors for a raw reading
+
+.TP
+\fBnumber\fR
+sensor number
+
+.TP
+\fBreading\fR
+raw reading
+
+.SH OPTIONS \fI\,'pyipmi sensor factors'\/\fR
+.TP
+\fB\-l\fR \fI\,LUN\/\fR, \fB\-\-lun\fR \fI\,LUN\/\fR
+LUN of the sensor owner (default 0)
+
+.SH COMMAND \fI\,'pyipmi sensor set\-reading'\/\fR
+usage: pyipmi sensor set\-reading [\-h] [\-l LUN] number reading
+
+Set the reading of a sensor (Set Sensor Reading and Event Status)
+
+.TP
+\fBnumber\fR
+sensor number
+
+.TP
+\fBreading\fR
+raw reading
+
+.SH OPTIONS \fI\,'pyipmi sensor set\-reading'\/\fR
+.TP
+\fB\-l\fR \fI\,LUN\/\fR, \fB\-\-lun\fR \fI\,LUN\/\fR
+LUN of the sensor owner (default 0)
+
+.SH COMMAND \fI\,'pyipmi hpm'\/\fR
+usage: pyipmi hpm [\-h] <command> ...
+
+HPM.1 commands
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi hpm'\/\fR
+.TP
+\fBpyipmi hpm\fR \fI\,capabilities\/\fR
+Request the target upgrade capabilities
+.TP
+\fBpyipmi hpm\fR \fI\,check\/\fR
+Check the specified HPM.1 file
+.TP
+\fBpyipmi hpm\fR \fI\,install\/\fR
+Install the specified HPM.1 file to the controller
+
+.SH COMMAND \fI\,'pyipmi hpm capabilities'\/\fR
+usage: pyipmi hpm capabilities [\-h]
+
+Request the target upgrade capabilities
+
+.SH COMMAND \fI\,'pyipmi hpm check'\/\fR
+usage: pyipmi hpm check [\-h] file
+
+Check the specified HPM.1 file
+
+.TP
+\fBfile\fR
+
+.SH COMMAND \fI\,'pyipmi hpm install'\/\fR
+usage: pyipmi hpm install [\-h] file component_id
+
+Install the specified HPM.1 file to the controller
+
+.TP
+\fBfile\fR
+
+.TP
+\fBcomponent_id\fR
+
+.SH COMMAND \fI\,'pyipmi picmg'\/\fR
+usage: pyipmi picmg [\-h] <command> ...
+
+PICMG commands
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi picmg'\/\fR
+.TP
+\fBpyipmi picmg\fR \fI\,frucontrol\/\fR
+FRU control
+.TP
+\fBpyipmi picmg\fR \fI\,power\/\fR
+Power level
+.TP
+\fBpyipmi picmg\fR \fI\,portstate\/\fR
+Port state
+.TP
+\fBpyipmi picmg\fR \fI\,channel\/\fR
+Power channel
+.TP
+\fBpyipmi picmg\fR \fI\,send\/\fR
+Send
+
+.SH COMMAND \fI\,'pyipmi picmg frucontrol'\/\fR
+usage: pyipmi picmg frucontrol [\-h] <command> ...
+
+FRU control
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi picmg frucontrol'\/\fR
+.TP
+\fBpyipmi picmg frucontrol\fR \fI\,cr\/\fR
+Cold reset
+
+.SH COMMAND \fI\,'pyipmi picmg frucontrol cr'\/\fR
+usage: pyipmi picmg frucontrol cr [\-h]
+
+Cold reset
+
+.SH COMMAND \fI\,'pyipmi picmg power'\/\fR
+usage: pyipmi picmg power [\-h] <command> ...
+
+Power level
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi picmg power'\/\fR
+.TP
+\fBpyipmi picmg power\fR \fI\,get\/\fR
+Request the power level
+
+.SH COMMAND \fI\,'pyipmi picmg power get'\/\fR
+usage: pyipmi picmg power get [\-h]
+
+Request the power level
+
+.SH COMMAND \fI\,'pyipmi picmg portstate'\/\fR
+usage: pyipmi picmg portstate [\-h] <command> ...
+
+Port state
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi picmg portstate'\/\fR
+.TP
+\fBpyipmi picmg portstate\fR \fI\,get\/\fR
+Request the port state for an interface
+.TP
+\fBpyipmi picmg portstate\fR \fI\,getall\/\fR
+Request all port states for all interfaces
+
+.SH COMMAND \fI\,'pyipmi picmg portstate get'\/\fR
+usage: pyipmi picmg portstate get [\-h] channel interface
+
+Request the port state for an interface
+
+.TP
+\fBchannel\fR
+
+.TP
+\fBinterface\fR
+
+.SH COMMAND \fI\,'pyipmi picmg portstate getall'\/\fR
+usage: pyipmi picmg portstate getall [\-h]
+
+Request all port states for all interfaces
+
+.SH COMMAND \fI\,'pyipmi picmg channel'\/\fR
+usage: pyipmi picmg channel [\-h] <command> ...
+
+Power channel
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi picmg channel'\/\fR
+.TP
+\fBpyipmi picmg channel\fR \fI\,status\/\fR
+Request the power channel status
+.TP
+\fBpyipmi picmg channel\fR \fI\,power\/\fR
+Send channel power
+
+.SH COMMAND \fI\,'pyipmi picmg channel status'\/\fR
+usage: pyipmi picmg channel status [\-h] start
+
+Request the power channel status
+
+.TP
+\fBstart\fR
+starting power channel
+
+.SH COMMAND \fI\,'pyipmi picmg channel power'\/\fR
+usage: pyipmi picmg channel power [\-h] channel {on,off} current_limit
+
+Send channel power
+
+.TP
+\fBchannel\fR
+
+.TP
+\fB{on,off}\fR
+enable or disable the payload power
+
+.TP
+\fBcurrent_limit\fR
+current limit in amperes
+
+.SH COMMAND \fI\,'pyipmi picmg send'\/\fR
+usage: pyipmi picmg send [\-h] <command> ...
+
+Send
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi picmg send'\/\fR
+.TP
+\fBpyipmi picmg send\fR \fI\,heartbeat\/\fR
+Send PM heartbeat
+
+.SH COMMAND \fI\,'pyipmi picmg send heartbeat'\/\fR
+usage: pyipmi picmg send heartbeat [\-h]
+
+Send PM heartbeat
+
+.SH COMMAND \fI\,'pyipmi dcmi'\/\fR
+usage: pyipmi dcmi [\-h] <command> ...
+
+Data Center Manageability Interface (DCMI) commands
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi dcmi'\/\fR
+.TP
+\fBpyipmi dcmi\fR \fI\,discover\/\fR
+Discover the supported DCMI capabilities
+.TP
+\fBpyipmi dcmi\fR \fI\,sensors\/\fR
+List the DCMI temperature sensors
+.TP
+\fBpyipmi dcmi\fR \fI\,get_temp_reading\/\fR
+Get the temperature readings
+.TP
+\fBpyipmi dcmi\fR \fI\,power\/\fR
+Platform power management
+.TP
+\fBpyipmi dcmi\fR \fI\,thermalpolicy\/\fR
+Thermal limit policy
+.TP
+\fBpyipmi dcmi\fR \fI\,asset_tag\/\fR
+Get the asset tag
+.TP
+\fBpyipmi dcmi\fR \fI\,set_asset_tag\/\fR
+Set the asset tag
+.TP
+\fBpyipmi dcmi\fR \fI\,get_mc_id_string\/\fR
+Get the management controller identifier string
+.TP
+\fBpyipmi dcmi\fR \fI\,set_mc_id_string\/\fR
+Set the management controller identifier string
+.TP
+\fBpyipmi dcmi\fR \fI\,get_conf_param\/\fR
+Get the DCMI configuration parameters
+.TP
+\fBpyipmi dcmi\fR \fI\,set_conf_param\/\fR
+Set a DCMI configuration parameter
+
+.SH COMMAND \fI\,'pyipmi dcmi discover'\/\fR
+usage: pyipmi dcmi discover [\-h]
+
+Discover the supported DCMI capabilities
+
+.SH COMMAND \fI\,'pyipmi dcmi sensors'\/\fR
+usage: pyipmi dcmi sensors [\-h]
+
+List the DCMI temperature sensors
+
+.SH COMMAND \fI\,'pyipmi dcmi get_temp_reading'\/\fR
+usage: pyipmi dcmi get_temp_reading [\-h] [entity]
+
+Get the temperature readings
+
+.TP
+\fBentity\fR
+inlet, cpu, baseboard or entity ID (default: all DCMI entities)
+
+.SH COMMAND \fI\,'pyipmi dcmi power'\/\fR
+usage: pyipmi dcmi power [\-h] <command> ...
+
+Platform power management
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi dcmi power'\/\fR
+.TP
+\fBpyipmi dcmi power\fR \fI\,reading\/\fR
+Get the power reading
+.TP
+\fBpyipmi dcmi power\fR \fI\,get_limit\/\fR
+Get the power limit
+.TP
+\fBpyipmi dcmi power\fR \fI\,set_limit\/\fR
+Set the power limit
+.TP
+\fBpyipmi dcmi power\fR \fI\,activate\/\fR
+Activate the power limit
+.TP
+\fBpyipmi dcmi power\fR \fI\,deactivate\/\fR
+Deactivate the power limit
+
+.SH COMMAND \fI\,'pyipmi dcmi power reading'\/\fR
+usage: pyipmi dcmi power reading [\-h]
+
+Get the power reading
+
+.SH COMMAND \fI\,'pyipmi dcmi power get_limit'\/\fR
+usage: pyipmi dcmi power get_limit [\-h]
+
+Get the power limit
+
+.SH COMMAND \fI\,'pyipmi dcmi power set_limit'\/\fR
+usage: pyipmi dcmi power set_limit [\-h]
+                                   [\-\-action {no_action,power_off,sel_logging}]
+                                   limit correction_time sampling_period
+
+Set the power limit
+
+.TP
+\fBlimit\fR
+power limit in watts
+
+.TP
+\fBcorrection_time\fR
+correction time limit in milliseconds
+
+.TP
+\fBsampling_period\fR
+statistics sampling period in seconds
+
+.SH OPTIONS \fI\,'pyipmi dcmi power set_limit'\/\fR
+.TP
+\fB\-\-action\fR \fI\,{no_action,power_off,sel_logging}\/\fR
+exception action (default: no_action)
+
+.SH COMMAND \fI\,'pyipmi dcmi power activate'\/\fR
+usage: pyipmi dcmi power activate [\-h]
+
+Activate the power limit
+
+.SH COMMAND \fI\,'pyipmi dcmi power deactivate'\/\fR
+usage: pyipmi dcmi power deactivate [\-h]
+
+Deactivate the power limit
+
+.SH COMMAND \fI\,'pyipmi dcmi thermalpolicy'\/\fR
+usage: pyipmi dcmi thermalpolicy [\-h] <command> ...
+
+Thermal limit policy
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi dcmi thermalpolicy'\/\fR
+.TP
+\fBpyipmi dcmi thermalpolicy\fR \fI\,get\/\fR
+Get the thermal limit
+.TP
+\fBpyipmi dcmi thermalpolicy\fR \fI\,set\/\fR
+Set the thermal limit
+
+.SH COMMAND \fI\,'pyipmi dcmi thermalpolicy get'\/\fR
+usage: pyipmi dcmi thermalpolicy get [\-h] entity instance
+
+Get the thermal limit
+
+.TP
+\fBentity\fR
+inlet, cpu, baseboard or entity ID
+
+.TP
+\fBinstance\fR
+entity instance
+
+.SH COMMAND \fI\,'pyipmi dcmi thermalpolicy set'\/\fR
+usage: pyipmi dcmi thermalpolicy set [\-h] [\-\-power\-off] [\-\-log\-sel]
+                                     [\-\-disable]
+                                     entity instance limit exception_time
+
+Set the thermal limit
+
+.TP
+\fBentity\fR
+inlet, cpu, baseboard or entity ID
+
+.TP
+\fBinstance\fR
+entity instance
+
+.TP
+\fBlimit\fR
+temperature limit in degree Celsius
+
+.TP
+\fBexception_time\fR
+exception time in seconds
+
+.SH OPTIONS \fI\,'pyipmi dcmi thermalpolicy set'\/\fR
+.TP
+\fB\-\-power\-off\fR
+hard power off and log event to SEL
+
+.TP
+\fB\-\-log\-sel\fR
+log event to SEL only
+
+.TP
+\fB\-\-disable\fR
+disable the exception actions
+
+.SH COMMAND \fI\,'pyipmi dcmi asset_tag'\/\fR
+usage: pyipmi dcmi asset_tag [\-h]
+
+Get the asset tag
+
+.SH COMMAND \fI\,'pyipmi dcmi set_asset_tag'\/\fR
+usage: pyipmi dcmi set_asset_tag [\-h] asset_tag
+
+Set the asset tag
+
+.TP
+\fBasset_tag\fR
+
+.SH COMMAND \fI\,'pyipmi dcmi get_mc_id_string'\/\fR
+usage: pyipmi dcmi get_mc_id_string [\-h]
+
+Get the management controller identifier string
+
+.SH COMMAND \fI\,'pyipmi dcmi set_mc_id_string'\/\fR
+usage: pyipmi dcmi set_mc_id_string [\-h] id_string
+
+Set the management controller identifier string
+
+.TP
+\fBid_string\fR
+
+.SH COMMAND \fI\,'pyipmi dcmi get_conf_param'\/\fR
+usage: pyipmi dcmi get_conf_param [\-h] [selector]
+
+Get the DCMI configuration parameters
+
+.TP
+\fBselector\fR
+parameter selector (default: all)
+
+.SH COMMAND \fI\,'pyipmi dcmi set_conf_param'\/\fR
+usage: pyipmi dcmi set_conf_param [\-h] {1,2,3,4,5} value
+
+Set a DCMI configuration parameter
+
+.TP
+\fB{1,2,3,4,5}\fR
+1: activate DHCP, 2: discovery configuration, 3\-5: DHCP timing 1\-3
+
+.TP
+\fBvalue\fR
+
+.SH COMMAND \fI\,'pyipmi vita'\/\fR
+usage: pyipmi vita [\-h] <command> ...
+
+VITA 46.11 commands
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi vita'\/\fR
+.TP
+\fBpyipmi vita\fR \fI\,properties\/\fR
+Get VSO properties
+.TP
+\fBpyipmi vita\fR \fI\,frucontrol\/\fR
+FRU control
+.TP
+\fBpyipmi vita\fR \fI\,addrinfo\/\fR
+Get address information
+.TP
+\fBpyipmi vita\fR \fI\,activate\/\fR
+Activate a FRU
+.TP
+\fBpyipmi vita\fR \fI\,deactivate\/\fR
+Deactivate a FRU
+.TP
+\fBpyipmi vita\fR \fI\,policy\/\fR
+FRU state policy bits
+.TP
+\fBpyipmi vita\fR \fI\,led\/\fR
+FRU LED commands
+
+.SH COMMAND \fI\,'pyipmi vita properties'\/\fR
+usage: pyipmi vita properties [\-h]
+
+Get VSO properties
+
+.SH COMMAND \fI\,'pyipmi vita frucontrol'\/\fR
+usage: pyipmi vita frucontrol [\-h] fru_id option
+
+FRU control
+
+.TP
+\fBfru_id\fR
+
+.TP
+\fBoption\fR
+0: cold reset, 1: warm reset, 2: graceful reboot, 3: diagnostic interrupt
+
+.SH COMMAND \fI\,'pyipmi vita addrinfo'\/\fR
+usage: pyipmi vita addrinfo [\-h] [fru_id]
+
+Get address information
+
+.TP
+\fBfru_id\fR
+
+.SH COMMAND \fI\,'pyipmi vita activate'\/\fR
+usage: pyipmi vita activate [\-h] fru_id
+
+Activate a FRU
+
+.TP
+\fBfru_id\fR
+
+.SH COMMAND \fI\,'pyipmi vita deactivate'\/\fR
+usage: pyipmi vita deactivate [\-h] fru_id
+
+Deactivate a FRU
+
+.TP
+\fBfru_id\fR
+
+.SH COMMAND \fI\,'pyipmi vita policy'\/\fR
+usage: pyipmi vita policy [\-h] <command> ...
+
+FRU state policy bits
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi vita policy'\/\fR
+.TP
+\fBpyipmi vita policy\fR \fI\,get\/\fR
+Get the FRU activation policy
+.TP
+\fBpyipmi vita policy\fR \fI\,set\/\fR
+Set the FRU activation policy
+
+.SH COMMAND \fI\,'pyipmi vita policy get'\/\fR
+usage: pyipmi vita policy get [\-h] fru_id
+
+Get the FRU activation policy
+
+.TP
+\fBfru_id\fR
+
+.SH COMMAND \fI\,'pyipmi vita policy set'\/\fR
+usage: pyipmi vita policy set [\-h] fru_id mask value
+
+Set the FRU activation policy
+
+.TP
+\fBfru_id\fR
+
+.TP
+\fBmask\fR
+policy bits to change (bit 0: activation locked, 1: deactivation locked, 2: commanded deactivation ignored, 3: default activation locked)
+
+.TP
+\fBvalue\fR
+new policy bits
+
+.SH COMMAND \fI\,'pyipmi vita led'\/\fR
+usage: pyipmi vita led [\-h] <command> ...
+
+FRU LED commands
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi vita led'\/\fR
+.TP
+\fBpyipmi vita led\fR \fI\,prop\/\fR
+Get LED properties
+.TP
+\fBpyipmi vita led\fR \fI\,cap\/\fR
+Get LED color capabilities
+.TP
+\fBpyipmi vita led\fR \fI\,get\/\fR
+Get LED state
+.TP
+\fBpyipmi vita led\fR \fI\,set\/\fR
+Set LED state
+
+.SH COMMAND \fI\,'pyipmi vita led prop'\/\fR
+usage: pyipmi vita led prop [\-h] fru_id
+
+Get LED properties
+
+.TP
+\fBfru_id\fR
+
+.SH COMMAND \fI\,'pyipmi vita led cap'\/\fR
+usage: pyipmi vita led cap [\-h] fru_id led_id
+
+Get LED color capabilities
+
+.TP
+\fBfru_id\fR
+
+.TP
+\fBled_id\fR
+
+.SH COMMAND \fI\,'pyipmi vita led get'\/\fR
+usage: pyipmi vita led get [\-h] fru_id led_id
+
+Get LED state
+
+.TP
+\fBfru_id\fR
+
+.TP
+\fBled_id\fR
+
+.SH COMMAND \fI\,'pyipmi vita led set'\/\fR
+usage: pyipmi vita led set [\-h] fru_id led_id function duration color
+
+Set LED state
+
+.TP
+\fBfru_id\fR
+
+.TP
+\fBled_id\fR
+0\-0xfe: LED, 0xff: all LEDs
+
+.TP
+\fBfunction\fR
+0: off, 1\-250: blinking (off duration), 251: lamp test, 252: local control, 255: on
+
+.TP
+\fBduration\fR
+lamp test or on duration
+
+.TP
+\fBcolor\fR
+1: blue, 2: red, 3: green, 4: amber, 5: orange, 6: white, 0xe: do not change, 0xf: default
+
+.SH OPTIONS
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+show program's version number and exit
+
+.TP
+\fB\-v\fR, \fB\-\-verbose\fR
+be verbose
+
+.TP
+\fB\-\-log\-level\fR \fI\,[<logger>=]<level>\/\fR
+set the log level of a logger, e.g. interfaces.aardvark=DEBUG (can be repeated)
+
+.TP
+\fB\-J\fR, \fB\-\-json\fR
+print the output as JSON (if supported)
+
+.TP
+\fB\-I\fR \fI\,<interface>\/\fR
+interface (rmcp, rmcpplus, aardvark, ipmitool, ipmbdev, ipmidev, openipmblink)
+
+.TP
+\fB\-o\fR \fI\,<options>\/\fR
+interface specific options (name=value, separated by commas, see below)
+
+.TP
+\fB\-t\fR \fI\,<addr>\/\fR
+target IPMB address
+
+.TP
+\fB\-b\fR \fI\,<channel>\/\fR
+target channel
+
+.TP
+\fB\-r\fR \fI\,<routing>\/\fR
+target routing
+
+.TP
+\fB\-H\fR \fI\,<host>\/\fR
+RMCP host
+
+.TP
+\fB\-p\fR \fI\,<port>\/\fR
+RMCP port (default 623)
+
+.TP
+\fB\-U\fR \fI\,<user>\/\fR
+RMCP user
+
+.TP
+\fB\-P\fR \fI\,<password>\/\fR
+RMCP password
+
+.TP
+\fB\-L\fR \fI\,<level>\/\fR
+RMCP privilege level (user, operator, administrator)
+
+.SH COMMENTS
+interface options (\-o name=value,...):
+  aardvark:
+    serial=<SN>        serial number of the device
+    pullups=<on|off>   enable/disable pullups
+    power=<on|off>     enable/disable target power
+    fastmode=<on|off>  enable/disable 400kHz I2C bitrate (default 100kHz)
+  ipmitool:
+    interface_type     interface type to be used (lan, lanplus, serial, open)
+    cipher             cipher to be used (0\-255)
+    retries=<n>        number of retries for lan/lanplus (ipmitool \-R)
+    timeout=<sec>      timeout of each try for lan/lanplus (ipmitool \-N)
+  ipmbdev:
+    port=<path>        path to Linux IPMB device (default /dev/ipmb\-0)
+  ipmidev:
+    port=<path>        path to Linux IPMI device (default /dev/ipmi0)
+    timeout=<sec>      response timeout in seconds (default 10)
+  openipmblink:
+    port=<path>        data serial port of the bridge (default /dev/ttyACM1)
+                       or pyserial URL of a shared bridge
+                       (e.g. socket://localhost:5555)
+    bus=<n>            IPMB bus of the bridge (default 0)
+    address=<addr>     own IPMB address (default 0x20)
+  rmcpplus:
+    cipher=<id>        cipher suite (1, 2, 3, 15, 16, 17; default: try 17,
+                       then 3)
+    kg=<hex>           BMC key K_G as hex string (default: user password)
+
+loggers (\-\-log\-level <logger>=<level>):
+  interfaces.aardvark, interfaces.base, interfaces.ipmb, interfaces.ipmbdev,
+  interfaces.ipmidev, interfaces.ipmitool, interfaces.openipmblink,
+  interfaces.rmcp, interfaces.rmcpplus, interfaces.router
+  A parent name sets all its children, e.g. 'interfaces', and without a
+  name the level applies to all loggers.
+.SH EXAMPLES
+Print the device ID of a BMC over RMCP+ (IPMI v2.0, like \fBipmitool \-I lanplus\fR):
+.PP
+.RS
+pyipmi \-I rmcpplus \-H 10.0.0.1 \-U admin \-P admin bmc info
+.RE
+.PP
+List the sensors of a BMC over RMCP (IPMI v1.5):
+.PP
+.RS
+pyipmi \-I rmcp \-H 10.0.0.1 \-U admin \-P admin sdr list
+.RE
+.PP
+Print the FRU of the local BMC using the Linux IPMI driver:
+.PP
+.RS
+pyipmi \-I ipmidev fru print
+.RE
+.SH SEE ALSO
+.BR ipmitool (1)
+
+.SH DISTRIBUTION
+The latest version of python\-ipmi may be downloaded from
+.UR https://github.com/kontron/python\-ipmi
+.UE

@@ -1,7 +1,7 @@
-"""Parser of ipmitool.py as input for argparse-manpage.
+"""Parser of pyipmi as input for argparse-manpage.
 
 The short description is already in the NAME section of the man page, the
-DESCRIPTION section comes from ipmitool.py.1.include.
+DESCRIPTION section comes from pyipmi.1.include.
 """
 
 import argparse

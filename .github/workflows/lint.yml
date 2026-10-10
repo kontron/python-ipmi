@@ -94,4 +94,4 @@ jobs:
 
       # the date in the .TH header changes with every build
       - name: Check for changes
-        run: git diff --exit-code -I '^\.TH ' man/ipmitool.py.1
+        run: git diff --exit-code -I '^\.TH ' man/pyipmi.1

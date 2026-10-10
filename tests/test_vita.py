@@ -189,5 +189,5 @@ def test_cli_missing_argument(ipmi, capsys):
     with pytest.raises(SystemExit):
         run_cli(ipmi, 'vita led get 0', capsys)
     err = capsys.readouterr().err
-    assert 'usage: ipmitool.py vita led get' in err
+    assert 'usage: pyipmi vita led get' in err
     assert 'required: led_id' in err

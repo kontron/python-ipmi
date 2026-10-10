@@ -371,7 +371,7 @@ class TestParser:
             ipmitool.main(['vita', 'led'])
         assert e.value.code == 1
         out = capsys.readouterr().out
-        assert 'usage: ipmitool.py vita led' in out
+        assert 'usage: pyipmi vita led' in out
         assert 'prop' in out and 'set' in out
 
     def test_no_command_prints_help(self, capsys):

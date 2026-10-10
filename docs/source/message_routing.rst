@@ -252,4 +252,4 @@ Debugging
 With the log level ``DEBUG`` for ``pyipmi.interfaces``, the interfaces log
 every sent and received message and the router logs the dropped messages,
 e.g. responses without a pending request or messages with a wrong
-checksum. With ``ipmitool.py`` use ``--log-level interfaces=DEBUG``.
+checksum. With ``pyipmi`` use ``--log-level interfaces=DEBUG``.

@@ -346,7 +346,7 @@ ipmitool command:
 
 .. code:: shell
 
-    ipmitool.py -I ipmidev bmc info
+    pyipmi -I ipmidev bmc info
 
 IPMB with openipmblink
 **********************
@@ -391,11 +391,11 @@ The interface also answers requests addressed to its own IPMB address. This work
 
 Handlers run in a worker thread of the router. ``register_raw_handler()`` registers a handler that gets the interface, the IPMB header and the raw request data and returns the raw response data. See ``examples/interface_openipmblink.py`` for the bridge self-test.
 
-The ``port`` can also be a pyserial URL, e.g. ``socket://localhost:5555`` for a bridge shared over TCP. ``examples/bmc_openipmblink.py`` runs a BMC on bus 1 and shares the bridge this way, so ``ipmitool.py`` can send requests from bus 0:
+The ``port`` can also be a pyserial URL, e.g. ``socket://localhost:5555`` for a bridge shared over TCP. ``examples/bmc_openipmblink.py`` runs a BMC on bus 1 and shares the bridge this way, so ``pyipmi`` can send requests from bus 0:
 
 .. code:: shell
 
-  ipmitool.py -I openipmblink -o port=socket://localhost:5555,bus=0,address=0x24 -t 0x20 bmc info
+  pyipmi -I openipmblink -o port=socket://localhost:5555,bus=0,address=0x24 -t 0x20 bmc info
 
 IPMB with Aardvark
 ******************

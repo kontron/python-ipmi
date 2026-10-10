@@ -12,7 +12,7 @@ python-ipmi is a pure Python implementation of IPMI version 2.0 as
 described in the `IPMI standard`_, including the PICMG (AdvancedTCA,
 MicroTCA), VITA and DCMI extensions. It provides an
 :abbr:`API (Application Programming Interface)` to send IPMI commands to a
-device, and the command line tool ``ipmitool.py``.
+device, and the command line tool ``pyipmi``.
 
 A device can be reached in three ways:
 
@@ -52,8 +52,9 @@ Features
 
 * bridged requests to controllers behind the BMC, over one or more bridges
 * decoding of FRU data, SDRs and SEL entries, and HPM.1 firmware upgrades
-* the command line tool ``ipmitool.py``, see ``ipmitool.py --help`` and
-  the man page ``man/ipmitool.py.1`` in the source
+* the command line tool ``pyipmi`` (formerly ``ipmitool.py``, still
+  installed as an alias), see ``pyipmi --help`` and the man page
+  ``man/pyipmi.1`` in the source
 
 The interfaces and how the commands use them are described in
 :doc:`interfaces`.
@@ -119,7 +120,7 @@ or, with the support for encrypted RMCP+ sessions::
 
     pip install python-ipmi[rmcpplus]
 
-Both install the library and the command line tool ``ipmitool.py``.
+Both install the library and the command line tool ``pyipmi``.
 
 .. note::
 
@@ -153,7 +154,7 @@ The version of the package is taken from, in this order:
    e.g. for distribution packages.
 
 If none of them is available, the version is ``0+unknown``. The installed
-version is available as ``pyipmi.__version__`` and with ``ipmitool.py -V``.
+version is available as ``pyipmi.__version__`` and with ``pyipmi -V``.
 
 Next Steps
 ----------
