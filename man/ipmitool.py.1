@@ -634,6 +634,21 @@ POSITIONAL ARGUMENTS \fI\,'ipmitool.py sensor'\/\fR
 .TP
 \fBipmitool.py sensor\fR \fI\,rearm\/\fR
 Rearm sensor events
+.TP
+\fBipmitool.py sensor\fR \fI\,type\/\fR
+Print or set the sensor type
+.TP
+\fBipmitool.py sensor\fR \fI\,hysteresis\/\fR
+Print or set the hysteresis of a threshold sensor
+.TP
+\fBipmitool.py sensor\fR \fI\,events\/\fR
+Print the enabled and the asserted events, enable or disable the event messages and the scanning
+.TP
+\fBipmitool.py sensor\fR \fI\,factors\/\fR
+Print the conversion factors for a raw reading
+.TP
+\fBipmitool.py sensor\fR \fI\,set\-reading\/\fR
+Set the reading of a sensor (Set Sensor Reading and Event Status)
 
 .SH COMMAND \fI\,'ipmitool.py sensor rearm'\/\fR
 usage: ipmitool.py sensor rearm [\-h] number
@@ -643,6 +658,104 @@ Rearm sensor events
 .TP
 \fBnumber\fR
 sensor number
+
+.SH COMMAND \fI\,'ipmitool.py sensor type'\/\fR
+usage: ipmitool.py sensor type [\-h] [\-l LUN]
+                               [\-s <sensor type> <event/reading type>]
+                               number
+
+Print or set the sensor type
+
+.TP
+\fBnumber\fR
+sensor number
+
+.SH OPTIONS \fI\,'ipmitool.py sensor type'\/\fR
+.TP
+\fB\-l\fR \fI\,LUN\/\fR, \fB\-\-lun\fR \fI\,LUN\/\fR
+LUN of the sensor owner (default 0)
+
+.TP
+\fB\-s\fR \fI\,<sensor type> <event/reading type>\/\fR, \fB\-\-set\fR \fI\,<sensor type> <event/reading type>\/\fR
+set the sensor type and the event/reading type
+
+.SH COMMAND \fI\,'ipmitool.py sensor hysteresis'\/\fR
+usage: ipmitool.py sensor hysteresis [\-h] [\-l LUN] [\-s <positive> <negative>]
+                                     number
+
+Print or set the hysteresis of a threshold sensor
+
+.TP
+\fBnumber\fR
+sensor number
+
+.SH OPTIONS \fI\,'ipmitool.py sensor hysteresis'\/\fR
+.TP
+\fB\-l\fR \fI\,LUN\/\fR, \fB\-\-lun\fR \fI\,LUN\/\fR
+LUN of the sensor owner (default 0)
+
+.TP
+\fB\-s\fR \fI\,<positive> <negative>\/\fR, \fB\-\-set\fR \fI\,<positive> <negative>\/\fR
+set the raw positive\- and negative\-going hysteresis
+
+.SH COMMAND \fI\,'ipmitool.py sensor events'\/\fR
+usage: ipmitool.py sensor events [\-h] [\-l LUN] [\-m {on,off}] [\-s {on,off}]
+                                 number
+
+Print the enabled and the asserted events, enable or disable the event messages and the scanning
+
+.TP
+\fBnumber\fR
+sensor number
+
+.SH OPTIONS \fI\,'ipmitool.py sensor events'\/\fR
+.TP
+\fB\-l\fR \fI\,LUN\/\fR, \fB\-\-lun\fR \fI\,LUN\/\fR
+LUN of the sensor owner (default 0)
+
+.TP
+\fB\-m\fR \fI\,{on,off}\/\fR, \fB\-\-messages\fR \fI\,{on,off}\/\fR
+enable or disable the event messages
+
+.TP
+\fB\-s\fR \fI\,{on,off}\/\fR, \fB\-\-scanning\fR \fI\,{on,off}\/\fR
+enable or disable the sensor scanning
+
+.SH COMMAND \fI\,'ipmitool.py sensor factors'\/\fR
+usage: ipmitool.py sensor factors [\-h] [\-l LUN] number reading
+
+Print the conversion factors for a raw reading
+
+.TP
+\fBnumber\fR
+sensor number
+
+.TP
+\fBreading\fR
+raw reading
+
+.SH OPTIONS \fI\,'ipmitool.py sensor factors'\/\fR
+.TP
+\fB\-l\fR \fI\,LUN\/\fR, \fB\-\-lun\fR \fI\,LUN\/\fR
+LUN of the sensor owner (default 0)
+
+.SH COMMAND \fI\,'ipmitool.py sensor set\-reading'\/\fR
+usage: ipmitool.py sensor set\-reading [\-h] [\-l LUN] number reading
+
+Set the reading of a sensor (Set Sensor Reading and Event Status)
+
+.TP
+\fBnumber\fR
+sensor number
+
+.TP
+\fBreading\fR
+raw reading
+
+.SH OPTIONS \fI\,'ipmitool.py sensor set\-reading'\/\fR
+.TP
+\fB\-l\fR \fI\,LUN\/\fR, \fB\-\-lun\fR \fI\,LUN\/\fR
+LUN of the sensor owner (default 0)
 
 .SH COMMAND \fI\,'ipmitool.py hpm'\/\fR
 usage: ipmitool.py hpm [\-h] <command> ...

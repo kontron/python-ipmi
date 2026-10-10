@@ -387,6 +387,107 @@ def cmd_sensor_rearm(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     ipmi.rearm_sensor_events(args.number)
 
 
+def format_sensor_type(sensor_type: int, event_reading_type: int) -> str:
+    type_name = pyipmi.sensor.sensor_type_to_string(sensor_type)
+    event_name = pyipmi.sensor.event_reading_type_to_string(
+        event_reading_type)
+    return (f'Sensor Type:             [0x{sensor_type:02x}] {type_name}\n'
+            f'Event/Reading Type:      [0x{event_reading_type:02x}] '
+            f'{event_name}')
+
+
+def cmd_sensor_type(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    if args.type is not None:
+        ipmi.set_sensor_type(args.number, args.type[0], args.type[1],
+                             lun=args.lun)
+    print(format_sensor_type(*ipmi.get_sensor_type(args.number,
+                                                   lun=args.lun)))
+
+
+def cmd_sensor_hysteresis(ipmi: pyipmi.Ipmi,
+                          args: argparse.Namespace) -> None:
+    if args.hysteresis is not None:
+        ipmi.set_sensor_hysteresis(args.number, args.hysteresis[0],
+                                   args.hysteresis[1], lun=args.lun)
+    positive, negative = ipmi.get_sensor_hysteresis(args.number, lun=args.lun)
+    print(f'''
+Positive Hysteresis:     [0x{positive:02x}] {positive:d}
+Negative Hysteresis:     [0x{negative:02x}] {negative:d}
+'''[1:-1])
+
+
+def sensor_events_to_strings(mask: int | None, sensor_type: int,
+                             event_reading_type: int) -> list[str]:
+    """Return the raw mask and the names of the events of a mask."""
+    if mask is None:
+        return ['na']
+    names = []
+    for offset in range(15):
+        if mask & (1 << offset):
+            name = pyipmi.sensor.event_offset_to_string(
+                event_reading_type, sensor_type, offset)
+            names.append(name or f'Offset 0x{offset:02x}')
+    return [f'[0x{mask:04x}]'] + names
+
+
+def print_sensor_events(label: str, mask: int | None, sensor_type: int,
+                        event_reading_type: int) -> None:
+    lines = sensor_events_to_strings(mask, sensor_type, event_reading_type)
+    print(f'{label + ":":<25}{lines[0]}')
+    for line in lines[1:]:
+        print(f'{"":<25}{line}')
+
+
+def cmd_sensor_events(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    if args.messages is not None or args.scanning is not None:
+        # both are set at once, keep the one that is not given
+        enable = ipmi.get_sensor_event_enable(args.number, lun=args.lun)
+        messages = enable.event_messages if args.messages is None \
+            else args.messages == 'on'
+        scanning = enable.sensor_scanning if args.scanning is None \
+            else args.scanning == 'on'
+        ipmi.set_sensor_event_enable(args.number, event_messages=messages,
+                                     sensor_scanning=scanning, lun=args.lun)
+
+    sensor_type, event_reading_type = ipmi.get_sensor_type(args.number,
+                                                           lun=args.lun)
+    enable = ipmi.get_sensor_event_enable(args.number, lun=args.lun)
+    status = ipmi.get_sensor_event_status(args.number, lun=args.lun)
+    print(format_sensor_type(sensor_type, event_reading_type))
+    print(f'''
+Event Messages:          {'enabled' if enable.event_messages else 'disabled'}
+Sensor Scanning:         {'enabled' if enable.sensor_scanning else 'disabled'}
+Reading Unavailable:     {status.reading_unavailable}
+'''[1:-1])
+    types = (sensor_type, event_reading_type)
+    print_sensor_events('Enabled Assertions', enable.assertion_mask, *types)
+    print_sensor_events('Enabled Deassertions', enable.deassertion_mask,
+                        *types)
+    print_sensor_events('Asserted Events', status.asserted, *types)
+    print_sensor_events('Deasserted Events', status.deasserted, *types)
+
+
+def cmd_sensor_factors(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    factors = ipmi.get_sensor_reading_factors(args.number, args.reading,
+                                              lun=args.lun)
+    print(f'''
+M:                       {factors.m:d}
+B:                       {factors.b:d}
+K1 (B Exponent):         {factors.k1:d}
+K2 (Result Exponent):    {factors.k2:d}
+Tolerance:               {factors.tolerance:d}
+Accuracy:                {factors.accuracy:d}
+Accuracy Exponent:       {factors.accuracy_exp:d}
+Next Reading:            [0x{factors.next_reading:02x}] {factors.next_reading:d}
+'''[1:-1])
+
+
+def cmd_sensor_set_reading(ipmi: pyipmi.Ipmi,
+                           args: argparse.Namespace) -> None:
+    ipmi.set_sensor_reading_and_event_status(args.number, reading=args.reading,
+                                             lun=args.lun)
+
+
 def format_analog_value(value: float | None) -> str:
     """Format a converted analog sensor value with 3 decimal places."""
     if value is None:
@@ -1947,6 +2048,40 @@ def build_parser() -> argparse.ArgumentParser:
     group = commands.group('sensor', 'Sensor commands')
     p = group.command('rearm', cmd_sensor_rearm, 'Rearm sensor events')
     p.add_argument('number', type=auto_int, help='sensor number')
+
+    def sensor_command(name: str, func: Callable,
+                       help: str) -> argparse.ArgumentParser:
+        p = group.command(name, func, help)
+        p.add_argument('number', type=auto_int, help='sensor number')
+        p.add_argument('-l', '--lun', type=auto_int, default=0,
+                       help='LUN of the sensor owner (default 0)')
+        return p
+
+    p = sensor_command('type', cmd_sensor_type,
+                       'Print or set the sensor type')
+    p.add_argument('-s', '--set', dest='type', nargs=2, type=byte_value,
+                   metavar=('<sensor type>', '<event/reading type>'),
+                   help='set the sensor type and the event/reading type')
+    p = sensor_command('hysteresis', cmd_sensor_hysteresis,
+                       'Print or set the hysteresis of a threshold sensor')
+    p.add_argument('-s', '--set', dest='hysteresis', nargs=2,
+                   type=byte_value, metavar=('<positive>', '<negative>'),
+                   help='set the raw positive- and negative-going '
+                        'hysteresis')
+    p = sensor_command('events', cmd_sensor_events,
+                       'Print the enabled and the asserted events, enable '
+                       'or disable the event messages and the scanning')
+    p.add_argument('-m', '--messages', choices=('on', 'off'),
+                   help='enable or disable the event messages')
+    p.add_argument('-s', '--scanning', choices=('on', 'off'),
+                   help='enable or disable the sensor scanning')
+    p = sensor_command('factors', cmd_sensor_factors,
+                       'Print the conversion factors for a raw reading')
+    p.add_argument('reading', type=byte_value, help='raw reading')
+    p = sensor_command('set-reading', cmd_sensor_set_reading,
+                       'Set the reading of a sensor (Set Sensor Reading and '
+                       'Event Status)')
+    p.add_argument('reading', type=byte_value, help='raw reading')
 
     group = commands.group('hpm', 'HPM.1 commands')
     group.command('capabilities', cmd_hpm_capabilities,

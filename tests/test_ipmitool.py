@@ -180,6 +180,11 @@ class TestParser:
         ('sdr add 0 0 0x51 1 0', 'cmd_sdr_add'),
         ('sdr delete 1', 'cmd_sdr_delete'),
         ('sdr update-mode enter', 'cmd_sdr_update_mode'),
+        ('sensor type 1', 'cmd_sensor_type'),
+        ('sensor hysteresis 1', 'cmd_sensor_hysteresis'),
+        ('sensor events 1', 'cmd_sensor_events'),
+        ('sensor factors 1 0x80', 'cmd_sensor_factors'),
+        ('sensor set-reading 1 0x42', 'cmd_sensor_set_reading'),
         ('sel list', 'cmd_sel_list'),
         ('sel clear', 'cmd_sel_clear'),
         ('sel info', 'cmd_sel_info'),
@@ -1474,3 +1479,104 @@ class TestSdrCommands:
     def test_update_mode(self, mode, name):
         ipmi = self.run(f'update-mode {mode}', b'\x00')
         assert ipmi.requests == [(name, b'')]
+
+
+class TestSensorCommands:
+    @staticmethod
+    def run(command, rsp_data):
+        ipmi = create_ipmi(rsp_data)
+        args = build_parser().parse_args(['sensor'] + command.split())
+        args.func(ipmi, args)
+        return ipmi
+
+    TYPE_OUTPUT = ('Sensor Type:             [0x01] Temperature\n'
+                   'Event/Reading Type:      [0x01] Threshold\n')
+
+    def test_type(self, capsys):
+        ipmi = self.run('type 0x10 -l 1', b'\x00\x01\x01')
+        assert ipmi.requests == [('GetSensorTypeReq', b'\x10')]
+        assert capsys.readouterr().out == self.TYPE_OUTPUT
+
+    def test_type_set(self, capsys):
+        ipmi = self.run('type 0x10 --set 0x01 0x01',
+                        {'SetSensorType': b'\x00',
+                         'GetSensorType': b'\x00\x01\x01'})
+        assert ipmi.requests == [('SetSensorTypeReq', b'\x10\x01\x01'),
+                                 ('GetSensorTypeReq', b'\x10')]
+        assert capsys.readouterr().out == self.TYPE_OUTPUT
+
+    def test_hysteresis(self, capsys):
+        ipmi = self.run('hysteresis 0x10', b'\x00\x02\x03')
+        assert ipmi.requests == [('GetSensorHysteresisReq', b'\x10\xff')]
+        assert capsys.readouterr().out == (
+            'Positive Hysteresis:     [0x02] 2\n'
+            'Negative Hysteresis:     [0x03] 3\n')
+
+    def test_hysteresis_set(self):
+        ipmi = self.run('hysteresis 0x10 -s 4 5',
+                        {'SetSensorHysteresis': b'\x00',
+                         'GetSensorHysteresis': b'\x00\x04\x05'})
+        assert ipmi.requests[0] == ('SetSensorHysteresisReq',
+                                    b'\x10\xff\x04\x05')
+
+    # temperature threshold sensor, upper critical going high (bit 9)
+    # enabled, upper non-critical going high (bit 7) asserted
+    EVENTS_RSP = {'GetSensorType': b'\x00\x01\x01',
+                  'GetSensorEventEnable': b'\x00\xc0\x00\x02\x00\x02',
+                  'GetSensorEventStatus': b'\x00\xc0\x80\x00'}
+
+    def test_events(self, capsys):
+        self.run('events 0x10', self.EVENTS_RSP)
+        assert capsys.readouterr().out == self.TYPE_OUTPUT + (
+            'Event Messages:          enabled\n'
+            'Sensor Scanning:         enabled\n'
+            'Reading Unavailable:     False\n'
+            'Enabled Assertions:      [0x0200]\n'
+            '                         Upper Critical going high\n'
+            'Enabled Deassertions:    [0x0200]\n'
+            '                         Upper Critical going high\n'
+            'Asserted Events:         [0x0080]\n'
+            '                         Upper Non-critical going high\n'
+            'Deasserted Events:       na\n')
+
+    @pytest.mark.parametrize('options, data', [
+        # the other setting is kept
+        ('-m off', b'\x10\x40'),
+        ('-s off', b'\x10\x80'),
+        ('-m off -s off', b'\x10\x00'),
+        ('-m on', b'\x10\xc0'),
+    ])
+    def test_events_set(self, options, data):
+        ipmi = self.run(f'events 0x10 {options}',
+                        dict(self.EVENTS_RSP, SetSensorEventEnable=b'\x00'))
+        assert ipmi.requests[1] == ('SetSensorEventEnableReq', data)
+
+    def test_factors(self, capsys):
+        ipmi = self.run('factors 0x10 0x80',
+                        b'\x00\x90\xfe\xc5\x64\x05\x18\xd2')
+        assert ipmi.requests == [('GetSensorReadingFactorsReq',
+                                  b'\x10\x80')]
+        assert capsys.readouterr().out == (
+            'M:                       -2\n'
+            'B:                       100\n'
+            'K1 (B Exponent):         2\n'
+            'K2 (Result Exponent):    -3\n'
+            'Tolerance:               5\n'
+            'Accuracy:                69\n'
+            'Accuracy Exponent:       2\n'
+            'Next Reading:            [0x90] 144\n')
+
+    def test_set_reading(self):
+        ipmi = self.run('set-reading 0x10 0x42', b'\x00')
+        assert ipmi.requests == [('SetSensorReadingAndEventStatusReq',
+                                  b'\x10\x01\x42')]
+
+    @pytest.mark.parametrize('command', [
+        'type 0x10 --set 0x01',
+        'hysteresis 0x10 -s 256 1',
+        'events 0x10 -m yes',
+        'factors 0x10',
+    ])
+    def test_invalid(self, command):
+        with pytest.raises(SystemExit):
+            build_parser().parse_args(['sensor'] + command.split())
