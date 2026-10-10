@@ -14,10 +14,6 @@ This documentation describes the usage of the python-ipmi library.
    
    introduction
    quick_start
-   ipmDevGlobal_cmd
-   ipmiMsgSupport_cmd
-   bmcWatchdog_cmd
-   chassis_cmd
    interfaces
    message_routing
    api
