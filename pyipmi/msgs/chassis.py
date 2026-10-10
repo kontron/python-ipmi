@@ -122,6 +122,123 @@ class ChassisControlRsp(Message):
 
 
 @register_message_class
+class ChassisResetReq(Message):
+    __cmdid__ = constants.CMDID_CHASSIS_RESET
+    __netfn__ = constants.NETFN_CHASSIS
+
+
+@register_message_class
+class ChassisResetRsp(Message):
+    __cmdid__ = constants.CMDID_CHASSIS_RESET
+    __netfn__ = constants.NETFN_CHASSIS | 1
+    __fields__ = (
+        CompletionCode(),
+    )
+
+
+@register_message_class
+class ChassisIdentifyReq(Message):
+    __cmdid__ = constants.CMDID_CHASSIS_IDENTIFY
+    __netfn__ = constants.NETFN_CHASSIS
+    __fields__ = (
+        # identify interval in seconds, 0 turns off the identify, the BMC
+        # uses its default (15 seconds) without it
+        Optional(
+            UnsignedInt('interval', 1)
+        ),
+        # only allowed with the interval: bit 0 set forces the identify on,
+        # until it is turned off with the interval 0
+        Optional(
+            UnsignedInt('force_on', 1)
+        ),
+    )
+
+
+@register_message_class
+class ChassisIdentifyRsp(Message):
+    __cmdid__ = constants.CMDID_CHASSIS_IDENTIFY
+    __netfn__ = constants.NETFN_CHASSIS | 1
+    __fields__ = (
+        CompletionCode(),
+    )
+
+
+@register_message_class
+class SetChassisCapabilitiesReq(Message):
+    __cmdid__ = constants.CMDID_SET_CHASSIS_CAPABILITIES
+    __netfn__ = constants.NETFN_CHASSIS
+    __fields__ = (
+        Bitfield('capabilities_flags', 1,
+                 Bitfield.Bit('intrusion_sensor', 1),
+                 Bitfield.Bit('frontpanel_lockout', 1),
+                 Bitfield.ReservedBit(6, 0)),
+        UnsignedInt('fru_info_device_address', 1),
+        UnsignedInt('sdr_device_address', 1),
+        UnsignedInt('sel_device_address', 1),
+        UnsignedInt('system_management_device_address', 1),
+        Optional(
+            UnsignedInt('bridge_device_address', 1)
+        ),
+    )
+
+
+@register_message_class
+class SetChassisCapabilitiesRsp(Message):
+    __cmdid__ = constants.CMDID_SET_CHASSIS_CAPABILITIES
+    __netfn__ = constants.NETFN_CHASSIS | 1
+    __fields__ = (
+        CompletionCode(),
+    )
+
+
+@register_message_class
+class SetPowerRestorePolicyReq(Message):
+    __cmdid__ = constants.CMDID_SET_POWER_RESTORE_POLICY
+    __netfn__ = constants.NETFN_CHASSIS
+    __fields__ = (
+        Bitfield('power_restore_policy', 1,
+                 Bitfield.Bit('policy', 3),
+                 Bitfield.ReservedBit(5, 0)),
+    )
+
+
+@register_message_class
+class SetPowerRestorePolicyRsp(Message):
+    __cmdid__ = constants.CMDID_SET_POWER_RESTORE_POLICY
+    __netfn__ = constants.NETFN_CHASSIS | 1
+    __fields__ = (
+        CompletionCode(),
+        Bitfield('power_restore_policy_support', 1,
+                 Bitfield.Bit('always_off', 1),
+                 Bitfield.Bit('restore_previous', 1),
+                 Bitfield.Bit('always_on', 1),
+                 Bitfield.ReservedBit(5, 0)),
+    )
+
+
+@register_message_class
+class GetSystemRestartCauseReq(Message):
+    __cmdid__ = constants.CMDID_GET_SYSTEM_RESTART_CAUSE
+    __netfn__ = constants.NETFN_CHASSIS
+
+
+@register_message_class
+class GetSystemRestartCauseRsp(Message):
+    __cmdid__ = constants.CMDID_GET_SYSTEM_RESTART_CAUSE
+    __netfn__ = constants.NETFN_CHASSIS | 1
+    __fields__ = (
+        CompletionCode(),
+        Bitfield('restart_cause', 1,
+                 Bitfield.Bit('cause', 4),
+                 Bitfield.ReservedBit(4, 0)),
+        # mandatory, but not returned by all BMCs
+        Optional(
+            UnsignedInt('channel_number', 1)
+        ),
+    )
+
+
+@register_message_class
 class GetPohCounterReq(Message):
     __cmdid__ = constants.CMDID_GET_POH_COUNTER
     __netfn__ = constants.NETFN_CHASSIS
@@ -182,6 +299,47 @@ class SetSystemBootOptionsReq(Message):
 @register_message_class
 class SetSystemBootOptionsRsp(Message):
     __cmdid__ = constants.CMDID_SET_SYSTEM_BOOT_OPTIONS
+    __netfn__ = constants.NETFN_CHASSIS | 1
+    __fields__ = (
+        CompletionCode(),
+    )
+
+
+@register_message_class
+class SetFrontPanelButtonEnablesReq(Message):
+    __cmdid__ = constants.CMDID_SET_FRONT_PANEL_BUTTON_ENABLES
+    __netfn__ = constants.NETFN_CHASSIS
+    __fields__ = (
+        Bitfield('disable', 1,
+                 Bitfield.Bit('power_off_button', 1),
+                 Bitfield.Bit('reset_button', 1),
+                 Bitfield.Bit('diagnostic_interrupt_button', 1),
+                 Bitfield.Bit('standby_button', 1),
+                 Bitfield.ReservedBit(4, 0)),
+    )
+
+
+@register_message_class
+class SetFrontPanelButtonEnablesRsp(Message):
+    __cmdid__ = constants.CMDID_SET_FRONT_PANEL_BUTTON_ENABLES
+    __netfn__ = constants.NETFN_CHASSIS | 1
+    __fields__ = (
+        CompletionCode(),
+    )
+
+
+@register_message_class
+class SetPowerCycleIntervalReq(Message):
+    __cmdid__ = constants.CMDID_SET_POWER_CYCLE_INTERVAL
+    __netfn__ = constants.NETFN_CHASSIS
+    __fields__ = (
+        UnsignedInt('interval', 1),
+    )
+
+
+@register_message_class
+class SetPowerCycleIntervalRsp(Message):
+    __cmdid__ = constants.CMDID_SET_POWER_CYCLE_INTERVAL
     __netfn__ = constants.NETFN_CHASSIS | 1
     __fields__ = (
         CompletionCode(),
