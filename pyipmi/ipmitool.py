@@ -792,6 +792,145 @@ def cmd_chassis_power(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     getattr(ipmi, CHASSIS_POWER_CONTROLS[args.action])()
 
 
+def cmd_chassis_reset(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.chassis_reset()
+
+
+def identify_interval(value: str) -> int | str:
+    """Argument type for the identify interval, 0 - 255 or 'force'."""
+    if value == 'force':
+        return value
+    try:
+        interval = int(value, 0)
+    except ValueError:
+        interval = -1
+    if not 0 <= interval <= 255:
+        raise argparse.ArgumentTypeError(f'invalid interval: {value}, use '
+                                         '0 - 255 or force')
+    return interval
+
+
+def cmd_chassis_identify(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    if args.interval == 'force':
+        ipmi.chassis_identify(force_on=True)
+        print('Chassis identify interval: indefinite')
+    elif args.interval is None:
+        ipmi.chassis_identify()
+        print('Chassis identify interval: default (15 seconds)')
+    elif args.interval == 0:
+        ipmi.chassis_identify(0)
+        print('Chassis identify interval: off')
+    else:
+        ipmi.chassis_identify(args.interval)
+        print(f'Chassis identify interval: {args.interval} seconds')
+
+
+CHASSIS_POWER_RESTORE_POLICIES = {
+    'always-off': pyipmi.chassis.POWER_RESTORE_POLICY_ALWAYS_OFF,
+    'previous': pyipmi.chassis.POWER_RESTORE_POLICY_RESTORE_PREVIOUS,
+    'always-on': pyipmi.chassis.POWER_RESTORE_POLICY_ALWAYS_ON,
+}
+
+
+def cmd_chassis_policy(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    if args.policy == 'list':
+        supported = ipmi.get_supported_power_restore_policies()
+    else:
+        supported = ipmi.set_power_restore_policy(
+            CHASSIS_POWER_RESTORE_POLICIES[args.policy])
+        print(f'Set chassis power restore policy to {args.policy}')
+    names = [name for name, policy in CHASSIS_POWER_RESTORE_POLICIES.items()
+             if policy in supported]
+    print(f"Supported chassis power restore policies: {' '.join(names)}")
+
+
+def cmd_chassis_restart_cause(ipmi: pyipmi.Ipmi,
+                              args: argparse.Namespace) -> None:
+    restart = ipmi.get_system_restart_cause()
+    print(f'System restart cause: {restart}')
+    if restart.channel_number is not None:
+        print(f'Channel:              {restart.channel_number:d}')
+
+
+def cmd_chassis_poh(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    poh = ipmi.get_poh_counter()
+    days, minutes = divmod(poh.minutes, 24 * 60)
+    print(f'POH Counter: {days:d} days, {minutes // 60:d} hours')
+
+
+def cmd_chassis_capabilities(ipmi: pyipmi.Ipmi,
+                             args: argparse.Namespace) -> None:
+    caps = ipmi.get_chassis_capabilities()
+    bridge = caps.bridge_device_address
+    print(f'''
+Intrusion Sensor:         {caps.intrusion_sensor}
+Front Panel Lockout:      {caps.frontpanel_lockout}
+Diagnostic Interrupt:     {caps.diagnostic_interrupt}
+Power Interlock:          {caps.power_interlock}
+FRU Info Device:          0x{caps.fru_info_device_address:02x}
+SDR Device:               0x{caps.sdr_device_address:02x}
+SEL Device:               0x{caps.sel_device_address:02x}
+System Management Device: 0x{caps.system_management_device_address:02x}
+Bridge Device:            {'na' if bridge is None else f'0x{bridge:02x}'}
+'''[1:-1])
+
+
+# the front panel buttons: the argument of 'chassis buttons', the name and
+# the bit of the button in the front panel button capabilities of the
+# chassis status, whose upper 4 bits tell if the button can be disabled
+CHASSIS_BUTTONS = (
+    ('power-off', 'Power Off', 0),
+    ('reset', 'Reset', 1),
+    ('diag', 'Diagnostic Interrupt', 2),
+    ('standby', 'Standby', 3),
+)
+
+
+def chassis_button(value: str) -> str:
+    """Argument type for a front panel button of 'chassis buttons'."""
+    # not argparse choices: with nargs='*', Python < 3.12 checks the empty
+    # list against the choices and fails
+    buttons = [button for button, _, _ in CHASSIS_BUTTONS]
+    if value not in buttons:
+        raise argparse.ArgumentTypeError(f"invalid button: {value}, use "
+                                         f"{', '.join(buttons)}")
+    return value
+
+
+def cmd_chassis_buttons(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    if args.state is not None and not args.buttons:
+        print(f'No button to {args.state} given', file=sys.stderr)
+        sys.exit(1)
+
+    capabilities = ipmi.get_chassis_status().front_panel_button_capabilities
+    if capabilities is None:
+        print('The BMC does not report the front panel buttons',
+              file=sys.stderr)
+        sys.exit(1)
+
+    if args.state is None:
+        for _, name, bit in CHASSIS_BUTTONS:
+            state = 'disabled' if capabilities & (1 << bit) else 'enabled'
+            if not capabilities & (1 << (bit + 4)):
+                state += ' (cannot be disabled)'
+            print(f'{name + " Button:":<29}{state}')
+        return
+
+    # all buttons are set at once, keep the state of the other buttons
+    enabled = {button: not capabilities & (1 << bit)
+               for button, _, bit in CHASSIS_BUTTONS}
+    for button in args.buttons:
+        enabled[button] = args.state == 'enable'
+    ipmi.set_front_panel_button_enables(
+        power_off=enabled['power-off'], reset=enabled['reset'],
+        diagnostic_interrupt=enabled['diag'], standby=enabled['standby'])
+
+
+def cmd_chassis_cycle_interval(ipmi: pyipmi.Ipmi,
+                               args: argparse.Namespace) -> None:
+    ipmi.set_power_cycle_interval(args.seconds)
+
+
 def cmd_picmg_get_power(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     pwr = ipmi.get_power_level(0, 0)
     print(pwr)
@@ -1442,11 +1581,43 @@ def build_parser() -> argparse.ArgumentParser:
     p = group.command('reset', cmd_bmc_reset, 'BMC reset control')
     p.add_argument('type', choices=('cold', 'warm'))
 
-    group = commands.group('chassis', 'Get chassis status and set power '
-                           'state')
+    group = commands.group('chassis', 'Get the chassis status, control the '
+                           'power and set the chassis settings')
     group.command('status', cmd_chassis_status, 'Get chassis status')
     p = group.command('power', cmd_chassis_power, 'Set power state')
     p.add_argument('action', choices=tuple(CHASSIS_POWER_CONTROLS))
+    group.command('reset', cmd_chassis_reset,
+                  'Reset the chassis with the Chassis Reset command')
+    p = group.command('identify', cmd_chassis_identify,
+                      'Turn on the chassis identification, e.g. an LED')
+    p.add_argument('interval', type=identify_interval, nargs='?',
+                   metavar='{<seconds>,force}',
+                   help='the time in seconds, 0 turns it off, force turns '
+                        'it on until it is turned off (default: 15 '
+                        'seconds)')
+    p = group.command('policy', cmd_chassis_policy,
+                      'Set the power restore policy after AC power returns')
+    p.add_argument('policy', choices=('list',)
+                   + tuple(CHASSIS_POWER_RESTORE_POLICIES),
+                   help='list prints the supported policies')
+    group.command('restart-cause', cmd_chassis_restart_cause,
+                  'Print the cause of the last system restart')
+    group.command('poh', cmd_chassis_poh,
+                  'Print the power-on hours counter')
+    group.command('capabilities', cmd_chassis_capabilities,
+                  'Print the chassis capabilities')
+    p = group.command('buttons', cmd_chassis_buttons,
+                      'Print, enable or disable the front panel buttons')
+    p.add_argument('state', choices=('enable', 'disable'), nargs='?',
+                   help='print the state of the buttons if not given')
+    p.add_argument('buttons', nargs='*', type=chassis_button,
+                   metavar='<button>',
+                   help='the buttons: '
+                        f"{', '.join(b for b, _, _ in CHASSIS_BUTTONS)}")
+    p = group.command('cycle-interval', cmd_chassis_cycle_interval,
+                      'Set the time the power stays off in a power cycle')
+    p.add_argument('seconds', type=auto_int, choices=range(256),
+                   metavar='<seconds>', help='0 - 255')
 
     group = commands.group('fru', 'Print and read built-in FRU')
     p = group.command('print', cmd_fru_print, 'Print FRU inventory')

@@ -154,6 +154,14 @@ class TestParser:
         ('bmc reset cold', 'cmd_bmc_reset'),
         ('chassis status', 'cmd_chassis_status'),
         ('chassis power cycle', 'cmd_chassis_power'),
+        ('chassis reset', 'cmd_chassis_reset'),
+        ('chassis identify', 'cmd_chassis_identify'),
+        ('chassis policy list', 'cmd_chassis_policy'),
+        ('chassis restart-cause', 'cmd_chassis_restart_cause'),
+        ('chassis poh', 'cmd_chassis_poh'),
+        ('chassis capabilities', 'cmd_chassis_capabilities'),
+        ('chassis buttons', 'cmd_chassis_buttons'),
+        ('chassis cycle-interval 10', 'cmd_chassis_cycle_interval'),
         ('fru print', 'cmd_fru_print'),
         ('fru read 0 fru.bin', 'cmd_fru_read'),
         ('fru print-file fru.bin', 'cmd_fru_print_file'),
@@ -393,6 +401,136 @@ class TestChassisPower:
         args = build_parser().parse_args(['chassis', 'power', action])
         ipmitool.cmd_chassis_power(ipmi, args)
         assert ipmi.requests == [('ChassisControlReq', bytes([control]))]
+
+
+class TestChassisCommands:
+    @staticmethod
+    def run(command, rsp_data):
+        ipmi = create_ipmi(rsp_data)
+        args = build_parser().parse_args(['chassis'] + command.split())
+        args.func(ipmi, args)
+        return ipmi
+
+    def test_reset(self):
+        ipmi = self.run('reset', b'\x00')
+        assert ipmi.requests == [('ChassisResetReq', b'')]
+
+    @pytest.mark.parametrize('command, data, output', [
+        ('identify', b'', 'default (15 seconds)'),
+        ('identify 30', b'\x1e', '30 seconds'),
+        ('identify 0', b'\x00', 'off'),
+        ('identify force', b'\x00\x01', 'indefinite'),
+    ])
+    def test_identify(self, capsys, command, data, output):
+        ipmi = self.run(command, b'\x00')
+        assert ipmi.requests == [('ChassisIdentifyReq', data)]
+        assert capsys.readouterr().out == \
+            f'Chassis identify interval: {output}\n'
+
+    @pytest.mark.parametrize('interval', ['256', '-1', 'on'])
+    def test_identify_invalid_interval(self, capsys, interval):
+        with pytest.raises(SystemExit):
+            build_parser().parse_args(['chassis', 'identify', interval])
+        assert 'invalid interval' in capsys.readouterr().err
+
+    def test_policy_list(self, capsys):
+        ipmi = self.run('policy list', b'\x00\x05')
+        # the policy is not changed
+        assert ipmi.requests == [('SetPowerRestorePolicyReq', b'\x03')]
+        assert capsys.readouterr().out == (
+            'Supported chassis power restore policies: always-off '
+            'always-on\n')
+
+    @pytest.mark.parametrize('policy, data', [
+        ('always-off', b'\x00'),
+        ('previous', b'\x01'),
+        ('always-on', b'\x02'),
+    ])
+    def test_policy_set(self, capsys, policy, data):
+        ipmi = self.run(f'policy {policy}', b'\x00\x07')
+        assert ipmi.requests == [('SetPowerRestorePolicyReq', data)]
+        out = capsys.readouterr().out
+        assert out.startswith(f'Set chassis power restore policy to '
+                              f'{policy}\n')
+
+    @pytest.mark.parametrize('rsp, output', [
+        (b'\x00\x04\x01', 'System restart cause: watchdog expiration\n'
+                           'Channel:              1\n'),
+        (b'\x00\x02', 'System restart cause: reset via pushbutton\n'),
+    ])
+    def test_restart_cause(self, capsys, rsp, output):
+        ipmi = self.run('restart-cause', rsp)
+        assert ipmi.requests == [('GetSystemRestartCauseReq', b'')]
+        assert capsys.readouterr().out == output
+
+    def test_poh(self, capsys):
+        # 60 minutes per count, 51 counts: 2 days and 3 hours
+        self.run('poh', b'\x00\x3c\x33\x00\x00\x00')
+        assert capsys.readouterr().out == 'POH Counter: 2 days, 3 hours\n'
+
+    @pytest.mark.parametrize('rsp, bridge', [
+        (b'\x00\x09\x20\x22\x24\x26\x28', '0x28'),
+        (b'\x00\x09\x20\x22\x24\x26', 'na'),
+    ])
+    def test_capabilities(self, capsys, rsp, bridge):
+        self.run('capabilities', rsp)
+        out = capsys.readouterr().out
+        assert 'Intrusion Sensor:         True\n' in out
+        assert 'Front Panel Lockout:      False\n' in out
+        assert 'Power Interlock:          True\n' in out
+        assert 'SEL Device:               0x24\n' in out
+        assert out.endswith(f'Bridge Device:            {bridge}\n')
+
+    # front panel buttons: all can be disabled except standby, reset is
+    # disabled
+    STATUS_RSP = b'\x00\x01\x00\x00\x72'
+
+    def test_buttons_print(self, capsys):
+        ipmi = self.run('buttons', self.STATUS_RSP)
+        assert ipmi.requests == [('GetChassisStatusReq', b'')]
+        assert capsys.readouterr().out == (
+            'Power Off Button:            enabled\n'
+            'Reset Button:                disabled\n'
+            'Diagnostic Interrupt Button: enabled\n'
+            'Standby Button:              enabled (cannot be disabled)\n')
+
+    @pytest.mark.parametrize('command, data', [
+        # the state of the other buttons is kept
+        ('buttons disable power-off', b'\x03'),
+        ('buttons enable reset', b'\x00'),
+        ('buttons disable diag standby', b'\x0e'),
+    ])
+    def test_buttons_set(self, command, data):
+        ipmi = self.run(command, {'GetChassisStatus': self.STATUS_RSP,
+                                  'SetFrontPanelButtonEnables': b'\x00'})
+        assert ipmi.requests[1] == ('SetFrontPanelButtonEnablesReq', data)
+
+    def test_buttons_without_button(self, capsys):
+        with pytest.raises(SystemExit) as e:
+            self.run('buttons enable', self.STATUS_RSP)
+        assert e.value.code == 1
+        assert 'No button to enable given' in capsys.readouterr().err
+
+    def test_buttons_not_reported(self, capsys):
+        with pytest.raises(SystemExit) as e:
+            self.run('buttons', b'\x00\x01\x00\x00')
+        assert e.value.code == 1
+        assert 'does not report the front panel buttons' in \
+            capsys.readouterr().err
+
+    def test_buttons_invalid(self, capsys):
+        with pytest.raises(SystemExit):
+            build_parser().parse_args(['chassis', 'buttons', 'enable',
+                                       'eject'])
+        assert 'invalid button: eject' in capsys.readouterr().err
+
+    def test_cycle_interval(self):
+        ipmi = self.run('cycle-interval 10', b'\x00')
+        assert ipmi.requests == [('SetPowerCycleIntervalReq', b'\x0a')]
+
+    def test_cycle_interval_invalid(self):
+        with pytest.raises(SystemExit):
+            build_parser().parse_args(['chassis', 'cycle-interval', '256'])
 
 
 class TestCreateIpmiConnection:

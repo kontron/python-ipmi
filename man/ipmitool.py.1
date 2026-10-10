@@ -1,4 +1,4 @@
-.TH IPMITOOL.PY "1" "2026\-10\-09" "python\-ipmi" "python\-ipmi manual"
+.TH IPMITOOL.PY "1" "2026\-10\-10" "python\-ipmi" "python\-ipmi manual"
 .SH NAME
 ipmitool.py \- pure python IPMI tool
 .SH SYNOPSIS
@@ -26,7 +26,7 @@ Send a RAW IPMI request and print response
 Management Controller status and global enables
 .TP
 \fBipmitool.py\fR \fI\,chassis\/\fR
-Get chassis status and set power state
+Get the chassis status, control the power and set the chassis settings
 .TP
 \fBipmitool.py\fR \fI\,fru\/\fR
 Print and read built\-in FRU
@@ -102,7 +102,7 @@ BMC reset control
 .SH COMMAND \fI\,'ipmitool.py chassis'\/\fR
 usage: ipmitool.py chassis [\-h] <command> ...
 
-Get chassis status and set power state
+Get the chassis status, control the power and set the chassis settings
 
 .SH
 POSITIONAL ARGUMENTS \fI\,'ipmitool.py chassis'\/\fR
@@ -112,6 +112,30 @@ Get chassis status
 .TP
 \fBipmitool.py chassis\fR \fI\,power\/\fR
 Set power state
+.TP
+\fBipmitool.py chassis\fR \fI\,reset\/\fR
+Reset the chassis with the Chassis Reset command
+.TP
+\fBipmitool.py chassis\fR \fI\,identify\/\fR
+Turn on the chassis identification, e.g. an LED
+.TP
+\fBipmitool.py chassis\fR \fI\,policy\/\fR
+Set the power restore policy after AC power returns
+.TP
+\fBipmitool.py chassis\fR \fI\,restart\-cause\/\fR
+Print the cause of the last system restart
+.TP
+\fBipmitool.py chassis\fR \fI\,poh\/\fR
+Print the power\-on hours counter
+.TP
+\fBipmitool.py chassis\fR \fI\,capabilities\/\fR
+Print the chassis capabilities
+.TP
+\fBipmitool.py chassis\fR \fI\,buttons\/\fR
+Print, enable or disable the front panel buttons
+.TP
+\fBipmitool.py chassis\fR \fI\,cycle\-interval\/\fR
+Set the time the power stays off in a power cycle
 
 .SH COMMAND \fI\,'ipmitool.py chassis status'\/\fR
 usage: ipmitool.py chassis status [\-h]
@@ -125,6 +149,66 @@ Set power state
 
 .TP
 \fB{off,on,cycle,reset,diag,soft}\fR
+
+.SH COMMAND \fI\,'ipmitool.py chassis reset'\/\fR
+usage: ipmitool.py chassis reset [\-h]
+
+Reset the chassis with the Chassis Reset command
+
+.SH COMMAND \fI\,'ipmitool.py chassis identify'\/\fR
+usage: ipmitool.py chassis identify [\-h] [{<seconds>,force}]
+
+Turn on the chassis identification, e.g. an LED
+
+.TP
+\fB{<seconds>,force}\fR
+the time in seconds, 0 turns it off, force turns it on until it is turned off (default: 15 seconds)
+
+.SH COMMAND \fI\,'ipmitool.py chassis policy'\/\fR
+usage: ipmitool.py chassis policy [\-h] {list,always\-off,previous,always\-on}
+
+Set the power restore policy after AC power returns
+
+.TP
+\fB{list,always\-off,previous,always\-on}\fR
+list prints the supported policies
+
+.SH COMMAND \fI\,'ipmitool.py chassis restart\-cause'\/\fR
+usage: ipmitool.py chassis restart\-cause [\-h]
+
+Print the cause of the last system restart
+
+.SH COMMAND \fI\,'ipmitool.py chassis poh'\/\fR
+usage: ipmitool.py chassis poh [\-h]
+
+Print the power\-on hours counter
+
+.SH COMMAND \fI\,'ipmitool.py chassis capabilities'\/\fR
+usage: ipmitool.py chassis capabilities [\-h]
+
+Print the chassis capabilities
+
+.SH COMMAND \fI\,'ipmitool.py chassis buttons'\/\fR
+usage: ipmitool.py chassis buttons [\-h] [{enable,disable}] [<button> ...]
+
+Print, enable or disable the front panel buttons
+
+.TP
+\fB{enable,disable}\fR
+print the state of the buttons if not given
+
+.TP
+\fB<button>\fR
+the buttons: power\-off, reset, diag, standby
+
+.SH COMMAND \fI\,'ipmitool.py chassis cycle\-interval'\/\fR
+usage: ipmitool.py chassis cycle\-interval [\-h] <seconds>
+
+Set the time the power stays off in a power cycle
+
+.TP
+\fB<seconds>\fR
+0 \- 255
 
 .SH COMMAND \fI\,'ipmitool.py fru'\/\fR
 usage: ipmitool.py fru [\-h] <command> ...
