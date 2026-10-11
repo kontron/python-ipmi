@@ -1005,6 +1005,8 @@ def test_lan_print_not_supported(capsys):
     ('lan set ipsrc static 1', b'\x01\x04\x01'),
     ('lan set vlan 394 1', b'\x01\x14\x8a\x81'),
     ('lan set vlan off 1', b'\x01\x14\x00\x00'),
+    ('lan set netmask 255.255.255.0 1', b'\x01\x06\xff\xff\xff\x00'),
+    ('lan set defgw 10.0.1.1 1', b'\x01\x0c\x0a\x00\x01\x01'),
 ])
 def test_lan_set(command, data):
     ipmi = create_ipmi(b'\x00')
@@ -1746,3 +1748,61 @@ class TestCompletionCodeOutput:
         assert capsys.readouterr().out == (
             'Command "GetDeviceId" (netfn=0x06, cmd=0x01) failed due to '
             '"Invalid Command" (CC=0xc1)\n')
+
+
+# Get User Access of a user: 10 user IDs, 2 enabled, 1 fixed name, the
+# access byte; Get User Name with the 16 bytes of the name
+def user_access_rsp(access, enabled=1):
+    return bytes((0, 10, 2 | enabled << 6, 1, access))
+
+
+def user_name_rsp(name):
+    return b'\x00' + name.ljust(16, b'\x00')
+
+
+def test_user_list(capsys):
+    ipmi = create_ipmi({
+        'GetUserAccess': [user_access_rsp(0x3f), user_access_rsp(0x0f, 2),
+                          user_access_rsp(0x34)]
+        + [user_access_rsp(0x0f, 2)] * 8,
+        'GetUserName': [user_name_rsp(b''), user_name_rsp(b'admin')]
+        + [user_name_rsp(b'')] * 8,
+    })
+    run_command(ipmi, 'user list 1')
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[0].startswith('ID  Name')
+    assert len(lines) == 11
+    assert lines[2].split() == ['2', 'admin', 'yes', 'true', 'true', 'true',
+                                'administrator']
+    # user 1 is read twice: the number of users, and its access
+    assert ipmi.requests[:2] == [('GetUserAccessReq', b'\x01\x01')] * 2
+
+
+@pytest.mark.parametrize('command, sent', [
+    ('user set name 3 bob', ('SetUserNameReq',
+                             b'\x03' + b'bob'.ljust(16, b'\x00'))),
+    ('user set password 3 secret', ('SetUserPasswordReq',
+                                    b'\x03\x02' + b'secret'.ljust(16, b'\x00'))),
+    ('user enable 3', ('SetUserPasswordReq', b'\x03\x01' + b'\x00' * 16)),
+    ('user disable 3', ('SetUserPasswordReq', b'\x03\x00' + b'\x00' * 16)),
+    ('user priv 3 operator 1', ('SetUserAccessReq', b'\xb1\x03\x03\x00')),
+    ('user priv 3 no-access 1', ('SetUserAccessReq', b'\x81\x03\x0f\x00')),
+])
+def test_user_set(command, sent):
+    ipmi = create_ipmi(b'\x00')
+    run_command(ipmi, command)
+    assert ipmi.requests == [sent]
+
+
+def test_channel_access(capsys):
+    ipmi = create_ipmi({'GetChannelAccess': b'\x00\x22\x03',
+                        'SetChannelAccess': b'\x00'})
+    run_command(ipmi, 'channel access get 1')
+    out = capsys.readouterr().out
+    assert 'Access mode: always available' in out
+    assert 'Alerting: False' in out
+    assert 'Privilege limit: operator' in out
+    assert ipmi.requests[-1] == ('GetChannelAccessReq', b'\x01\x80')
+    run_command(ipmi, 'channel access set 1 --mode always-available '
+                      '--privilege administrator --non-volatile')
+    assert ipmi.requests[-1] == ('SetChannelAccessReq', b'\x01\x42\x44')

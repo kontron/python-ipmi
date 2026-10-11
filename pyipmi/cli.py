@@ -1246,6 +1246,97 @@ def cmd_lan_set_vlan(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     ipmi.set_vlan_id(args.vlan, args.lan_channel)
 
 
+def cmd_lan_set_netmask(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.set_subnet_mask(args.address, args.lan_channel)
+
+
+def cmd_lan_set_defgw(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.set_default_gateway(args.address, args.lan_channel)
+
+
+# the privilege levels of the user and channel commands by their names,
+# e.g. no-access
+PRIVILEGE_LEVELS = {level.value.replace(' ', '-'): level
+                    for level in pyipmi.messaging.UserPrivilegeLevel
+                    if level != pyipmi.messaging.UserPrivilegeLevel.RESERVED}
+
+
+def user_channel(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> int:
+    """Return the channel of a user command, the LAN channel by default."""
+    return ipmi.get_lan_channel() if args.chan is None else args.chan
+
+
+def cmd_user_list(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    channel = user_channel(ipmi, args)
+    count = ipmi.get_user_access(1, channel).user_count
+    print(f'{"ID":<4}{"Name":<17}{"Enabled":<9}{"Call-in":<8}{"Link Auth":<11}'
+          f'{"IPMI Msg":<10}Channel Priv Limit')
+    for user_id in range(1, count + 1):
+        access = ipmi.get_user_access(user_id, channel)
+        name = bytes(ipmi.get_username(user_id)).rstrip(b'\x00').decode(
+            'ascii', 'replace')
+        enabled = {1: 'yes', 2: 'no'}.get(access.enabled_status, '-')
+        print(f'{user_id:<4}{name:<17}{enabled:<9}'
+              f'{str(not access.callback_only).lower():<8}'
+              f'{str(access.link_auth).lower():<11}'
+              f'{str(access.ipmi_messaging).lower():<10}'
+              f'{access.privilege_level.value}')
+
+
+def cmd_user_set_name(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.set_username(args.user_id, args.user_name)
+
+
+def cmd_user_set_password(ipmi: pyipmi.Ipmi,
+                          args: argparse.Namespace) -> None:
+    ipmi.set_user_password(args.user_id, args.new_password)
+
+
+def cmd_user_enable(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.enable_user(args.user_id)
+
+
+def cmd_user_disable(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.disable_user(args.user_id)
+
+
+def cmd_user_priv(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    channel = user_channel(ipmi, args)
+    # the access bits are kept, a user with access can use IPMI messaging
+    level = PRIVILEGE_LEVELS[args.privilege]
+    access = level != pyipmi.messaging.UserPrivilegeLevel.NO_ACCESS
+    ipmi.set_user_access(args.user_id, ipmi_msg=access, link_auth=access,
+                         callback_only=False, priv_level=level,
+                         channel=channel)
+
+
+def cmd_channel_info(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    info = ipmi.get_channel_info(args.chan)
+    print(f'Channel:          {info.channel}')
+    print(f'Medium type:      0x{info.medium_type:02x}')
+    print(f'Protocol type:    0x{info.protocol_type:02x}')
+    print(f'Session support:  {info.session_support}')
+    print(f'Active sessions:  {info.active_session_count}')
+    print(f'Vendor ID:        {info.vendor_id}')
+
+
+def cmd_channel_access_get(ipmi: pyipmi.Ipmi,
+                           args: argparse.Namespace) -> None:
+    print(ipmi.get_channel_access(args.chan, args.non_volatile))
+
+
+def cmd_channel_access_set(ipmi: pyipmi.Ipmi,
+                           args: argparse.Namespace) -> None:
+    mode = (None if args.mode is None else
+            pyipmi.messaging.ChannelAccessMode[args.mode.upper().replace(
+                '-', '_')])
+    privilege = (None if args.privilege is None
+                 else PRIVILEGE_LEVELS[args.privilege])
+    ipmi.set_channel_access(args.chan, access_mode=mode,
+                            privilege_limit=privilege,
+                            non_volatile=args.non_volatile)
+
+
 def cmd_chassis_power(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     getattr(ipmi, CHASSIS_POWER_CONTROLS[args.action])()
 
@@ -2193,6 +2284,66 @@ def build_parser() -> argparse.ArgumentParser:
                    help='the VLAN ID 1 - 4095, off to disable the VLAN')
     p.add_argument('lan_channel', metavar='channel', type=auto_int, nargs='?',
                    help=lan_channel_help)
+    for (name, func, help) in (
+            ('netmask', cmd_lan_set_netmask, 'Set the subnet mask'),
+            ('defgw', cmd_lan_set_defgw,
+             'Set the IP address of the default gateway')):
+        p = sub.command(name, func, help)
+        p.add_argument('address', type=ipv4_address,
+                       help='the address, xxx.xxx.xxx.xxx')
+        p.add_argument('lan_channel', metavar='channel', type=auto_int,
+                       nargs='?', help=lan_channel_help)
+
+    group = commands.group('user', 'Print and manage the users')
+    user_channel_help = 'the channel, the first LAN channel if not given'
+    p = group.command('list', cmd_user_list,
+                      'List the users and their access on a channel')
+    p.add_argument('chan', metavar='channel', type=auto_int, nargs='?',
+                   help=user_channel_help)
+    sub = group.group('set', 'Set the name or the password of a user')
+    p = sub.command('name', cmd_user_set_name, 'Set the name of a user')
+    p.add_argument('user_id', metavar='id', type=auto_int)
+    p.add_argument('user_name', metavar='name', help='at most 16 characters')
+    p = sub.command('password', cmd_user_set_password,
+                    'Set the password of a user')
+    p.add_argument('user_id', metavar='id', type=auto_int)
+    p.add_argument('new_password', metavar='password',
+                   help='at most 16 characters')
+    for (name, func, help) in (('enable', cmd_user_enable, 'Enable a user'),
+                               ('disable', cmd_user_disable,
+                                'Disable a user')):
+        p = group.command(name, func, help)
+        p.add_argument('user_id', metavar='id', type=auto_int)
+    p = group.command('priv', cmd_user_priv,
+                      'Set the privilege level of a user on a channel')
+    p.add_argument('user_id', metavar='id', type=auto_int)
+    p.add_argument('privilege', metavar='level', choices=PRIVILEGE_LEVELS,
+                   help=', '.join(PRIVILEGE_LEVELS))
+    p.add_argument('chan', metavar='channel', type=auto_int, nargs='?',
+                   help=user_channel_help)
+
+    group = commands.group('channel', 'Print and set the channel access')
+    p = group.command('info', cmd_channel_info,
+                      'Print the information about a channel')
+    p.add_argument('chan', metavar='channel', type=auto_int)
+    sub = group.group('access', 'Get and set the access of a channel')
+    p = sub.command('get', cmd_channel_access_get,
+                    'Print the access settings of a channel')
+    p.add_argument('chan', metavar='channel', type=auto_int)
+    p.add_argument('--non-volatile', action='store_true',
+                   help='the non-volatile settings, the active ones if not '
+                        'given')
+    p = sub.command('set', cmd_channel_access_set,
+                    'Set the access settings of a channel')
+    p.add_argument('chan', metavar='channel', type=auto_int)
+    p.add_argument('--mode', choices=('disabled', 'pre-boot-only',
+                                      'always-available', 'shared'),
+                   help='the access mode')
+    p.add_argument('--privilege', choices=PRIVILEGE_LEVELS,
+                   help='the privilege limit of the channel')
+    p.add_argument('--non-volatile', action='store_true',
+                   help='set the non-volatile settings, the active ones if '
+                        'not given')
 
     group = commands.group('sdr', 'Print and manage the Sensor Data '
                            'Repository (SDR) and the sensor readings')

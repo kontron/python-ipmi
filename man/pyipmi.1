@@ -38,6 +38,12 @@ Print and read built\-in FRU
 \fBpyipmi\fR \fI\,lan\/\fR
 Print and set the LAN configuration
 .TP
+\fBpyipmi\fR \fI\,user\/\fR
+Print and manage the users
+.TP
+\fBpyipmi\fR \fI\,channel\/\fR
+Print and set the channel access
+.TP
 \fBpyipmi\fR \fI\,sdr\/\fR
 Print and manage the Sensor Data Repository (SDR) and the sensor readings
 .TP
@@ -310,6 +316,12 @@ Set the IP address source
 .TP
 \fBpyipmi lan set\fR \fI\,vlan\/\fR
 Set the 802.1q VLAN ID
+.TP
+\fBpyipmi lan set\fR \fI\,netmask\/\fR
+Set the subnet mask
+.TP
+\fBpyipmi lan set\fR \fI\,defgw\/\fR
+Set the IP address of the default gateway
 
 .SH COMMAND \fI\,'pyipmi lan set ipaddr'\/\fR
 usage: pyipmi lan set ipaddr [\-h] address [channel]
@@ -348,6 +360,208 @@ the VLAN ID 1 \- 4095, off to disable the VLAN
 .TP
 \fBchannel\fR
 the LAN channel, the first LAN channel if not given
+
+.SH COMMAND \fI\,'pyipmi lan set netmask'\/\fR
+usage: pyipmi lan set netmask [\-h] address [channel]
+
+Set the subnet mask
+
+.TP
+\fBaddress\fR
+the address, xxx.xxx.xxx.xxx
+
+.TP
+\fBchannel\fR
+the LAN channel, the first LAN channel if not given
+
+.SH COMMAND \fI\,'pyipmi lan set defgw'\/\fR
+usage: pyipmi lan set defgw [\-h] address [channel]
+
+Set the IP address of the default gateway
+
+.TP
+\fBaddress\fR
+the address, xxx.xxx.xxx.xxx
+
+.TP
+\fBchannel\fR
+the LAN channel, the first LAN channel if not given
+
+.SH COMMAND \fI\,'pyipmi user'\/\fR
+usage: pyipmi user [\-h] <command> ...
+
+Print and manage the users
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi user'\/\fR
+.TP
+\fBpyipmi user\fR \fI\,list\/\fR
+List the users and their access on a channel
+.TP
+\fBpyipmi user\fR \fI\,set\/\fR
+Set the name or the password of a user
+.TP
+\fBpyipmi user\fR \fI\,enable\/\fR
+Enable a user
+.TP
+\fBpyipmi user\fR \fI\,disable\/\fR
+Disable a user
+.TP
+\fBpyipmi user\fR \fI\,priv\/\fR
+Set the privilege level of a user on a channel
+
+.SH COMMAND \fI\,'pyipmi user list'\/\fR
+usage: pyipmi user list [\-h] [channel]
+
+List the users and their access on a channel
+
+.TP
+\fBchannel\fR
+the channel, the first LAN channel if not given
+
+.SH COMMAND \fI\,'pyipmi user set'\/\fR
+usage: pyipmi user set [\-h] <command> ...
+
+Set the name or the password of a user
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi user set'\/\fR
+.TP
+\fBpyipmi user set\fR \fI\,name\/\fR
+Set the name of a user
+.TP
+\fBpyipmi user set\fR \fI\,password\/\fR
+Set the password of a user
+
+.SH COMMAND \fI\,'pyipmi user set name'\/\fR
+usage: pyipmi user set name [\-h] id name
+
+Set the name of a user
+
+.TP
+\fBid\fR
+
+.TP
+\fBname\fR
+at most 16 characters
+
+.SH COMMAND \fI\,'pyipmi user set password'\/\fR
+usage: pyipmi user set password [\-h] id password
+
+Set the password of a user
+
+.TP
+\fBid\fR
+
+.TP
+\fBpassword\fR
+at most 16 characters
+
+.SH COMMAND \fI\,'pyipmi user enable'\/\fR
+usage: pyipmi user enable [\-h] id
+
+Enable a user
+
+.TP
+\fBid\fR
+
+.SH COMMAND \fI\,'pyipmi user disable'\/\fR
+usage: pyipmi user disable [\-h] id
+
+Disable a user
+
+.TP
+\fBid\fR
+
+.SH COMMAND \fI\,'pyipmi user priv'\/\fR
+usage: pyipmi user priv [\-h] id level [channel]
+
+Set the privilege level of a user on a channel
+
+.TP
+\fBid\fR
+
+.TP
+\fBlevel\fR
+callback, user, operator, administrator, oem, no\-access
+
+.TP
+\fBchannel\fR
+the channel, the first LAN channel if not given
+
+.SH COMMAND \fI\,'pyipmi channel'\/\fR
+usage: pyipmi channel [\-h] <command> ...
+
+Print and set the channel access
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi channel'\/\fR
+.TP
+\fBpyipmi channel\fR \fI\,info\/\fR
+Print the information about a channel
+.TP
+\fBpyipmi channel\fR \fI\,access\/\fR
+Get and set the access of a channel
+
+.SH COMMAND \fI\,'pyipmi channel info'\/\fR
+usage: pyipmi channel info [\-h] channel
+
+Print the information about a channel
+
+.TP
+\fBchannel\fR
+
+.SH COMMAND \fI\,'pyipmi channel access'\/\fR
+usage: pyipmi channel access [\-h] <command> ...
+
+Get and set the access of a channel
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi channel access'\/\fR
+.TP
+\fBpyipmi channel access\fR \fI\,get\/\fR
+Print the access settings of a channel
+.TP
+\fBpyipmi channel access\fR \fI\,set\/\fR
+Set the access settings of a channel
+
+.SH COMMAND \fI\,'pyipmi channel access get'\/\fR
+usage: pyipmi channel access get [\-h] [\-\-non\-volatile] channel
+
+Print the access settings of a channel
+
+.TP
+\fBchannel\fR
+
+.SH OPTIONS \fI\,'pyipmi channel access get'\/\fR
+.TP
+\fB\-\-non\-volatile\fR
+the non\-volatile settings, the active ones if not given
+
+.SH COMMAND \fI\,'pyipmi channel access set'\/\fR
+usage: pyipmi channel access set [\-h]
+                                 [\-\-mode {disabled,pre\-boot\-only,always\-available,shared}]
+                                 [\-\-privilege {callback,user,operator,administrator,oem,no\-access}]
+                                 [\-\-non\-volatile]
+                                 channel
+
+Set the access settings of a channel
+
+.TP
+\fBchannel\fR
+
+.SH OPTIONS \fI\,'pyipmi channel access set'\/\fR
+.TP
+\fB\-\-mode\fR \fI\,{disabled,pre\-boot\-only,always\-available,shared}\/\fR
+the access mode
+
+.TP
+\fB\-\-privilege\fR \fI\,{callback,user,operator,administrator,oem,no\-access}\/\fR
+the privilege limit of the channel
+
+.TP
+\fB\-\-non\-volatile\fR
+set the non\-volatile settings, the active ones if not given
 
 .SH COMMAND \fI\,'pyipmi sdr'\/\fR
 usage: pyipmi sdr [\-h] <command> ...
