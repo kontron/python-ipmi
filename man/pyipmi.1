@@ -602,8 +602,7 @@ read the SDRs to print the sensor names and the converted values of threshold ev
 
 .SH COMMAND \fI\,'pyipmi sel add'\/\fR
 usage: pyipmi sel add [\-h] [\-p]
-                      <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte>
-                      <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte>
+                      <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte> <byte>
 
 Add an entry to the SEL
 
@@ -1268,6 +1267,9 @@ FRU state policy bits
 .TP
 \fBpyipmi vita\fR \fI\,led\/\fR
 FRU LED commands
+.TP
+\fBpyipmi vita\fR \fI\,psu\/\fR
+PSU module commands
 
 .SH COMMAND \fI\,'pyipmi vita properties'\/\fR
 usage: pyipmi vita properties [\-h]
@@ -1429,6 +1431,61 @@ lamp test or on duration
 .TP
 \fBcolor\fR
 1: blue, 2: red, 3: green, 4: amber, 5: orange, 6: white, 0xe: do not change, 0xf: default
+
+.SH COMMAND \fI\,'pyipmi vita psu'\/\fR
+usage: pyipmi vita psu [\-h] <command> ...
+
+PSU module commands
+
+.SH
+POSITIONAL ARGUMENTS \fI\,'pyipmi vita psu'\/\fR
+.TP
+\fBpyipmi vita psu\fR \fI\,cap\/\fR
+Get the supported power supply signals
+.TP
+\fBpyipmi vita psu\fR \fI\,status\/\fR
+Get the status of the power supply signals
+.TP
+\fBpyipmi vita psu\fR \fI\,set\/\fR
+Set the status of the power supply signals
+
+.SH COMMAND \fI\,'pyipmi vita psu cap'\/\fR
+usage: pyipmi vita psu cap [\-h]
+
+Get the supported power supply signals
+
+.SH COMMAND \fI\,'pyipmi vita psu status'\/\fR
+usage: pyipmi vita psu status [\-h]
+
+Get the status of the power supply signals
+
+.SH COMMAND \fI\,'pyipmi vita psu set'\/\fR
+usage: pyipmi vita psu set [\-h] [\-\-fail] [\-\-reset\-input\-voltage\-fault]
+                           [\-\-reset\-over\-temperature]
+                           {0,1} {0,1}
+
+Set the status of the power supply signals
+
+.TP
+\fB{0,1}\fR
+1: FAIL* and the fault flags latch until they are reset, 0: they clear with the fault
+
+.TP
+\fB{0,1}\fR
+1: activate, 0: deactivate the Self Protect Bypass mode
+
+.SH OPTIONS \fI\,'pyipmi vita psu set'\/\fR
+.TP
+\fB\-\-fail\fR
+assert FAIL*, de\-asserted without it (only while the fault flags latch)
+
+.TP
+\fB\-\-reset\-input\-voltage\-fault\fR
+reset the latched input voltage fault
+
+.TP
+\fB\-\-reset\-over\-temperature\fR
+reset the latched over temperature protection
 
 .SH OPTIONS
 .TP

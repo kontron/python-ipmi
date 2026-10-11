@@ -1628,6 +1628,45 @@ def cmd_vita_led_set(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     print('LED state has been updated')
 
 
+# the power supply signals of the PSU module commands, the most significant
+# first, with the text of a set bit in the capabilities and in the status
+PSU_SIGNALS = (
+    ('fault_flag_latch', 'Fault Flag Latch',
+     'setting can be changed', 'FAIL* and fault flags latch'),
+    ('input_voltage_fault', 'Input Voltage Fault',
+     'supported', 'input voltage exceeds its limits'),
+    ('over_temperature_protection', 'Over Temperature Protection',
+     'supported', 'active'),
+    ('self_protect_bypass', 'Self Protect Bypass', 'supported', 'active'),
+    ('fail', 'FAIL*', 'supported', 'asserted'),
+    ('inhibit', 'INHIBIT*', 'supported', 'asserted'),
+)
+
+
+def cmd_vita_psu_cap(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    signals = ipmi.get_vita_power_supply_capabilities().power_supply_signals
+    print(f'Power Supply Capabilities:\t{int(signals):x}h')
+    for (name, label, supported, _) in PSU_SIGNALS:
+        print(f'    {label + ":":30}'
+              f'{supported if getattr(signals, name) else "not supported"}')
+
+
+def cmd_vita_psu_status(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    signals = ipmi.get_vita_power_supply_status().power_supply_signals
+    print(f'Power Supply Status:\t{int(signals):x}h')
+    for (name, label, _, active) in PSU_SIGNALS:
+        print(f'    {label + ":":30}'
+              f'{active if getattr(signals, name) else "no"}')
+
+
+def cmd_vita_psu_set(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    ipmi.set_vita_power_supply_status(
+        args.latch, args.bypass, fail=args.fail,
+        reset_input_voltage_fault=args.reset_input_voltage_fault,
+        reset_over_temperature_protection=args.reset_over_temperature)
+    print('Power supply status has been updated')
+
+
 def parse_interface_options(interface_name: str,
                             options: str | None) -> dict[str, Any]:
     interface_options: dict[str, Any] = {}
@@ -2471,6 +2510,27 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('color', type=auto_int,
                    help='1: blue, 2: red, 3: green, 4: amber, 5: orange, '
                         '6: white, 0xe: do not change, 0xf: default')
+
+    sub = group.group('psu', 'PSU module commands')
+    sub.command('cap', cmd_vita_psu_cap,
+                'Get the supported power supply signals')
+    sub.command('status', cmd_vita_psu_status,
+                'Get the status of the power supply signals')
+    p = sub.command('set', cmd_vita_psu_set,
+                    'Set the status of the power supply signals')
+    p.add_argument('latch', type=auto_int, choices=(0, 1),
+                   help='1: FAIL* and the fault flags latch until they are '
+                        'reset, 0: they clear with the fault')
+    p.add_argument('bypass', type=auto_int, choices=(0, 1),
+                   help='1: activate, 0: deactivate the Self Protect Bypass '
+                        'mode')
+    p.add_argument('--fail', action='store_true',
+                   help='assert FAIL*, de-asserted without it (only while '
+                        'the fault flags latch)')
+    p.add_argument('--reset-input-voltage-fault', action='store_true',
+                   help='reset the latched input voltage fault')
+    p.add_argument('--reset-over-temperature', action='store_true',
+                   help='reset the latched over temperature protection')
 
     return parser
 

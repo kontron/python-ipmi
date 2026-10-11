@@ -675,3 +675,80 @@ class VitaGetFanLevelRsp(VitaMessage):
             UnsignedInt('local_control_enable_state', 1),
         ),
     )
+
+
+def power_supply_signals() -> Bitfield:
+    """Return the power supply signals of the PSU module commands.
+
+    The bits are the same in all three commands, their meaning differs: a
+    supported signal (Get Power Supply Capabilities), its state (Get Power
+    Supply Status), or what to set or reset (Set Power Supply Status).
+    """
+    return Bitfield('power_supply_signals', 1,
+                    Bitfield.Bit('inhibit', 1, default=0),
+                    Bitfield.Bit('fail', 1, default=0),
+                    Bitfield.Bit('self_protect_bypass', 1, default=0),
+                    Bitfield.Bit('over_temperature_protection', 1, default=0),
+                    Bitfield.Bit('input_voltage_fault', 1, default=0),
+                    Bitfield.Bit('fault_flag_latch', 1, default=0),
+                    Bitfield.ReservedBit(2, 0))
+
+
+@register_message_class
+class VitaGetPowerSupplyCapabilitiesReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_POWER_SUPPLY_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+    )
+
+
+@register_message_class
+class VitaGetPowerSupplyCapabilitiesRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_POWER_SUPPLY_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        power_supply_signals(),
+    )
+
+
+@register_message_class
+class VitaGetPowerSupplyStatusReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_POWER_SUPPLY_STATUS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+    )
+
+
+@register_message_class
+class VitaGetPowerSupplyStatusRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_POWER_SUPPLY_STATUS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        power_supply_signals(),
+    )
+
+
+@register_message_class
+class VitaSetPowerSupplyStatusReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_SET_POWER_SUPPLY_STATUS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        power_supply_signals(),
+    )
+
+
+@register_message_class
+class VitaSetPowerSupplyStatusRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_SET_POWER_SUPPLY_STATUS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+    )

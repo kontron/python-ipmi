@@ -30,6 +30,9 @@ RESPONSES = {
     # and payload mode sensors
     constants.CMDID_VITA_GET_MANDATORY_SENSOR_NUMBERS:
         b'\x00\x03\x00\x02\x03\x04\xff\xff\xff\xff',
+    # all signals supported; status: latching, input voltage fault, FAIL*
+    constants.CMDID_VITA_GET_POWER_SUPPLY_CAPABILITIES: b'\x00\x03\x3f',
+    constants.CMDID_VITA_GET_POWER_SUPPLY_STATUS: b'\x00\x03\x32',
 }
 
 
@@ -133,6 +136,29 @@ def test_led(ipmi):
     assert last_request(ipmi) == b'\x07\x03\x00\x01\xff\x00\x03'
 
 
+def test_power_supply(ipmi):
+    rsp = ipmi.get_vita_power_supply_capabilities()
+    assert last_request(ipmi) == b'\x4b\x03'
+    assert int(rsp.power_supply_signals) == 0x3f
+
+    signals = ipmi.get_vita_power_supply_status().power_supply_signals
+    assert last_request(ipmi) == b'\x4c\x03'
+    assert signals.fault_flag_latch == 1
+    assert signals.input_voltage_fault == 1
+    assert signals.over_temperature_protection == 0
+    assert signals.fail == 1
+    assert signals.inhibit == 0
+
+    # the fault flags are kept with 1
+    ipmi.set_vita_power_supply_status(fault_flag_latch=True,
+                                      self_protect_bypass=False)
+    assert last_request(ipmi) == b'\x4d\x03\x38'
+    # reset the input voltage fault, assert FAIL*, activate the bypass
+    ipmi.set_vita_power_supply_status(True, True, fail=True,
+                                      reset_input_voltage_fault=True)
+    assert last_request(ipmi) == b'\x4d\x03\x2e'
+
+
 def test_completion_code_error(ipmi):
     ipmi.interface.completion_code = constants.CC_INV_CMD
     with pytest.raises(CompletionCodeError):
@@ -207,6 +233,22 @@ def test_cli_led(ipmi, capsys):
     assert 'Local Control function:     ff\t[ON]' in out
     assert 'Override function:     0\t[OFF]' in out
     assert 'Override Color:        2\t[RED]' in out
+
+
+def test_cli_psu(ipmi, capsys):
+    out = run_cli(ipmi, 'vita psu cap', capsys)
+    assert 'Power Supply Capabilities:\t3fh' in out
+    assert 'Fault Flag Latch:             setting can be changed' in out
+
+    out = run_cli(ipmi, 'vita psu status', capsys)
+    assert 'Power Supply Status:\t32h' in out
+    assert 'Input Voltage Fault:          input voltage exceeds its limits' in out
+    assert 'FAIL*:                        asserted' in out
+    assert 'INHIBIT*:                     no' in out
+
+    out = run_cli(ipmi, 'vita psu set 1 0 --reset-over-temperature', capsys)
+    assert 'Power supply status has been updated' in out
+    assert last_request(ipmi) == b'\x4d\x03\x30'
 
 
 def test_cli_missing_argument(ipmi, capsys):

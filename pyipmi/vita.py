@@ -31,6 +31,8 @@ arguments:
   colors of :meth:`Vita.set_vita_led_state`
 - ``VITA_SITE_TYPES``: the names of the site types returned by
   :meth:`Vita.get_vita_fru_address_info`
+- ``VITA_PSU_*``: the power supply signals of the PSU module commands,
+  e.g. :meth:`Vita.get_vita_power_supply_status`
 
 Example:
     Let the first LED of FRU 0 blink green::
@@ -77,6 +79,15 @@ VITA_LED_COLOR_NO_CHANGE = 0x0e
 VITA_LED_COLOR_DEFAULT = 0x0f
 
 VITA_LED_ALL = 0xff
+
+# the power supply signals of the PSU module commands (VITA 46.11 section
+# 4.1.16), the bits of their power_supply_signals field
+VITA_PSU_INHIBIT = 0x01
+VITA_PSU_FAIL = 0x02
+VITA_PSU_SELF_PROTECT_BYPASS = 0x04
+VITA_PSU_OVER_TEMPERATURE_PROTECTION = 0x08
+VITA_PSU_INPUT_VOLTAGE_FAULT = 0x10
+VITA_PSU_FAULT_FLAG_LATCH = 0x20
 
 VITA_SITE_TYPES = {
     0x00: 'Front Loading VPX Plug-In Module',
@@ -298,3 +309,62 @@ class Vita(IpmiMixin):
         self.send_message_by_name('VitaSetFruLedState', fru_id=fru_id,
                                   led_id=led_id, function=function,
                                   on_duration=on_duration, color=color)
+
+    def get_vita_power_supply_capabilities(self) -> Message:
+        """Get the power supply signals a PSU module supports.
+
+        Returns:
+            The response with the field ``power_supply_signals`` and its
+            bits ``inhibit``, ``fail`` (the signals are reported),
+            ``self_protect_bypass`` (the mode is supported),
+            ``over_temperature_protection``, ``input_voltage_fault`` (they
+            are reported) and ``fault_flag_latch`` (the setting can be
+            changed).
+        """
+        return self.send_message_by_name('VitaGetPowerSupplyCapabilities')
+
+    def get_vita_power_supply_status(self) -> Message:
+        """Get the status of the power supply signals of a PSU module.
+
+        Returns:
+            The response with the field ``power_supply_signals`` and its
+            bits ``inhibit`` (INHIBIT* is asserted), ``fail`` (FAIL* is
+            asserted), ``self_protect_bypass`` (the mode is active),
+            ``over_temperature_protection`` (the protection is active),
+            ``input_voltage_fault`` (the input voltage exceeds its limits)
+            and ``fault_flag_latch`` (FAIL* and the fault flags latch until
+            they are reset).
+        """
+        return self.send_message_by_name('VitaGetPowerSupplyStatus')
+
+    def set_vita_power_supply_status(
+            self, fault_flag_latch: bool, self_protect_bypass: bool,
+            fail: bool = False, reset_input_voltage_fault: bool = False,
+            reset_over_temperature_protection: bool = False) -> None:
+        """Set the status of the power supply signals of a PSU module.
+
+        The fault flags and FAIL* can only be reset or set while the fault
+        flags latch, otherwise they follow the state of the PSU module.
+
+        Args:
+            fault_flag_latch: Let FAIL* and the fault flags latch until
+                they are reset, or clear when the fault is removed.
+            self_protect_bypass: Activate or deactivate the Self Protect
+                Bypass mode.
+            fail: Assert or de-assert FAIL*.
+            reset_input_voltage_fault: Reset the latched input voltage
+                fault flag.
+            reset_over_temperature_protection: Reset the latched over
+                temperature protection flag.
+        """
+        req = create_request_by_name('VitaSetPowerSupplyStatus')
+        signals = req.power_supply_signals
+        signals.fault_flag_latch = int(fault_flag_latch)
+        signals.self_protect_bypass = int(self_protect_bypass)
+        signals.fail = int(fail)
+        # a fault flag is reset with 0, 1 leaves it
+        signals.input_voltage_fault = int(not reset_input_voltage_fault)
+        signals.over_temperature_protection = int(
+            not reset_over_temperature_protection)
+        rsp = self.send_message(req)
+        check_rsp_completion_code(rsp)
