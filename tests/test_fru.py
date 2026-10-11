@@ -13,8 +13,9 @@ from pyipmi.fru import (Fru, FruData, FruDataMultiRecord, FruDataUnknown,
                         FruFmcI2cDeviceDefinition, FruFmcMainDefinition,
                         FruFmcPlusMainDefinition, FruFmcRecord, FruInventory,
                         FruPicmgPowerModuleCapabilityRecord, FruPicmgRecord,
+                        FruVitaChassisAddressTableRecord, FruVitaRecord,
                         InventoryCommonHeader, InventoryBoardInfoArea,
-                        get_fru_inventory_from_file)
+                        InventoryMultiRecordArea, get_fru_inventory_from_file)
 
 
 this_file_path = os.path.dirname(os.path.abspath(__file__))
@@ -779,6 +780,94 @@ def test_dc_record_too_short(record_type):
     with pytest.raises(DecodingError, match='too short'):
         FruDataMultiRecord.create_from_record_id(
             _oem_record(record_type, bytes(12)))
+
+
+def _vita_record(record_id, data):
+    """Return a VITA 46.11 record: manufacturer ID, record ID, version 0."""
+    return _oem_record(0xc0, b'\xac\x81\x00' + bytes((record_id, 0x00))
+                       + bytes(data))
+
+
+def _chassis_address_table(identifier, entries):
+    field = identifier.ljust(20, b'\x00')
+    return _vita_record(0x10, bytes((0xc0 | len(identifier),)) + field
+                        + bytes((len(entries),))
+                        + b''.join(bytes(entry) for entry in entries))
+
+
+def test_vita_chassis_address_table():
+    # the chassis manager, two slots, a power supply and a fan tray
+    entries = [(0x10, 1, 0x03), (0x41, 0, 0x00), (0x42, 0, 0x00),
+               (0x20, 1, 0x0c), (0x30, 1, 0x04)]
+    record = FruDataMultiRecord.create_from_record_id(
+        _chassis_address_table(b'VPX-CHASSIS-1', entries))
+    assert isinstance(record, FruVitaChassisAddressTableRecord)
+    assert (record.manufacturer_id, record.vita_record_type_id,
+            record.format_version) == (0x0081ac, 0x10, 0)
+    assert str(record.chassis_identifier) == 'VPX-CHASSIS-1'
+    assert [(e.hardware_address, e.site_number, e.site_type)
+            for e in record.entries] == entries
+    assert [e.ipmb_address for e in record.entries] == \
+        [0x20, 0x82, 0x84, 0x40, 0x60]
+    assert record.entries[4].site_type_name == 'Fan Tray'
+    assert str(record) == (
+        "c0 (OEM, manufacturer ID 33196 = VITA) Chassis Address Table: "
+        "chassis 'VPX-CHASSIS-1', 5 entries: "
+        "0x10 (IPMB 0x20) Dedicated Chassis Manager 1, "
+        "0x41 (IPMB 0x82) Front Loading VPX Plug-In Module 0, "
+        "0x42 (IPMB 0x84) Front Loading VPX Plug-In Module 0, "
+        "0x20 (IPMB 0x40) Power Supply 1, 0x30 (IPMB 0x60) Fan Tray 1")
+
+
+def test_vita_chassis_address_table_not_configured():
+    record = FruDataMultiRecord.create_from_record_id(
+        _chassis_address_table(b'', []))
+    assert record.chassis_identifier is None
+    assert record.entries == []
+    assert str(record).endswith('Chassis Address Table: chassis not '
+                                'configured, 0 entries')
+
+
+@pytest.mark.parametrize('site_type, name', [
+    (0x08, 'reserved (0x08)'), (0xc3, 'OEM (0xc3)'), (0xff, 'Unknown')])
+def test_vita_chassis_address_table_site_type_names(site_type, name):
+    record = FruDataMultiRecord.create_from_record_id(
+        _chassis_address_table(b'', [(0x50, 2, site_type)]))
+    assert record.entries[0].site_type_name == name
+
+
+def test_vita_chassis_address_table_in_multirecord_area():
+    # the table and a Chassis Manager IP Connection record, the last one
+    table = bytearray(_chassis_address_table(b'C1', [(0x41, 0, 0x00)]))
+    # clear the end of list flag and correct the header checksum
+    table[1] = 0x02
+    table[4] = -sum(table[:4]) & 0xff
+    ip = _vita_record(0x13, bytes((192, 168, 0, 2)) + bytes(8))
+    records = InventoryMultiRecordArea(bytes(table) + ip).records
+    assert isinstance(records[0], FruVitaChassisAddressTableRecord)
+    assert type(records[1]) is FruVitaRecord
+    assert records[1].vita_record_type_id == \
+        FruVitaRecord.VITA_RECORD_ID_CHASSIS_MANAGER_IP_CONNECTION
+
+
+@pytest.mark.parametrize('data, match', [
+    # without entries count
+    (b'\xc0' + bytes(20), 'too short'),
+    # an identifier longer than its field
+    (b'\xd5' + bytes(21), 'longer than 20 bytes'),
+    # 2 entries announced, 1 present
+    (b'\xc0' + bytes(20) + b'\x02\x41\x00\x00', 'has 2 entries'),
+])
+def test_vita_chassis_address_table_invalid(data, match):
+    with pytest.raises(DecodingError, match=match):
+        FruDataMultiRecord.create_from_record_id(_vita_record(0x10, data))
+
+
+def test_vita_record_of_other_manufacturer():
+    # an OEM record 0xc0 of another manufacturer is not a VITA record
+    record = FruDataMultiRecord.create_from_record_id(
+        _oem_record(0xc0, b'\x98\x3a\x00\x10\x00'))
+    assert type(record) is FruDataUnknown
 
 
 def test_fmc_unknown_subtype():

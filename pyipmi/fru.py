@@ -47,6 +47,7 @@ from .helper import ReadLength
 from .msgs import constants
 from .utils import bcd_search, chunks, py3_array_tobytes
 from .fields import FruTypeLengthString, _unpack6bitascii
+from .vita import VITA_SITE_TYPES
 from .mixin import IpmiMixin
 
 codecs.register(bcd_search)
@@ -821,6 +822,7 @@ class FruDataMultiRecord(FruData):
     TYPE_EXTENDED_COMPATIBILITY_RECORD = 5
     TYPE_OEM = list(range(0xc0, 0x100))
     TYPE_OEM_PICMG = 0xc0
+    TYPE_OEM_VITA = 0xc0
     TYPE_OEM_FMC = 0xfa
 
     def __str__(self) -> str:
@@ -873,7 +875,8 @@ class FruDataMultiRecord(FruData):
         DC Output and DC Load records are decoded by
         :class:`FruDcOutputRecord` and :class:`FruDcLoadRecord`, PICMG
         records by :class:`FruPicmgRecord`, the FMC records of VITA by
-        :class:`FruFmcRecord` and the other records by
+        :class:`FruFmcRecord`, the ANSI/VITA 46.11 records by
+        :class:`FruVitaRecord` and the other records by
         :class:`FruDataUnknown`.
 
         Args:
@@ -904,6 +907,14 @@ class FruDataMultiRecord(FruData):
                 and data[5] | data[6] << 8 | data[7] << 16
                 == VITA_MANUFACTURER_ID):
             return FruFmcRecord.create_from_record_id(
+                data, ignore_checksum=ignore_checksum)
+        # a VITA 46.11 record has the manufacturer ID of VITA 46.11, the
+        # VITA record ID and the format version, like a PICMG record
+        if (record_type == FruDataMultiRecord.TYPE_OEM_VITA
+                and len(data) >= 10 and data[2] >= 5
+                and data[5] | data[6] << 8 | data[7] << 16
+                == VITA_46_11_MANUFACTURER_ID):
+            return FruVitaRecord.create_from_record_id(
                 data, ignore_checksum=ignore_checksum)
         return FruDataUnknown(data, ignore_checksum=ignore_checksum)
 
@@ -1126,6 +1137,177 @@ class FruDcLoadRecord(FruDataMultiRecord):
 
 # the manufacturer ID of the FMC records of ANSI/VITA 57
 VITA_MANUFACTURER_ID = 0x0012a2
+
+
+# the manufacturer ID of the FRU records of ANSI/VITA 46.11
+VITA_46_11_MANUFACTURER_ID = 0x0081ac
+
+
+class FruVitaRecord(FruDataMultiRecord):
+    """An ANSI/VITA 46.11 record, an OEM record (type 0xC0) of VITA.
+
+    The record starts with the VITA 46.11 manufacturer ID 0x0081AC, the
+    VITA record ID and the record format version. The records are decoded
+    by :meth:`create_from_record_id` with the class for their VITA record
+    ID, the others by this class. The ``VITA_RECORD_ID_*`` constants are
+    the VITA record IDs of ANSI/VITA 46.11-2022, Table 10.3-1.
+
+    Attributes:
+        manufacturer_id (int): The manufacturer ID, 0x0081AC.
+        vita_record_type_id (int): The VITA record ID, one of the
+            ``VITA_RECORD_ID_*`` constants.
+        format_version (int): The record format version of the VITA
+            record.
+    """
+
+    VITA_RECORD_ID_CHASSIS_ADDRESS_TABLE = 0x10
+    VITA_RECORD_ID_CHASSIS_MANAGER_IP_CONNECTION = 0x13
+    VITA_RECORD_ID_RADIAL_SYSTEM_IPMB_LINK_MAPPING = 0x15
+    VITA_RECORD_ID_CHASSIS_FAN_GEOGRAPHY = 0x1b
+    VITA_RECORD_ID_LED_DESCRIPTION = 0x2f
+    VITA_RECORD_ID_CHASSIS_IPMB_DESCRIPTION = 0x30
+    VITA_RECORD_ID_FRU_INFORMATION_PARTITION = 0x31
+    VITA_RECORD_ID_MODULE_PROFILE = 0x32
+    VITA_RECORD_ID_PSU_MODULE_PROFILE = 0x33
+    VITA_RECORD_ID_ALTERNATE_MANUFACTURING_DATE_TIME = 0x34
+
+    @staticmethod
+    def create_from_record_id(data: Sequence[int],
+                              ignore_checksum: bool = False) -> FruVitaRecord:
+        """Decode a VITA 46.11 record with the class for its VITA record ID.
+
+        The Chassis Address Table is decoded by
+        :class:`FruVitaChassisAddressTableRecord`, the other records by
+        :class:`FruVitaRecord`.
+
+        Args:
+            data: The data of the multirecord area, starting with the
+                record.
+            ignore_checksum: Don't raise a DecodingError on a wrong
+                checksum.
+
+        Returns:
+            The decoded record.
+
+        Raises:
+            DecodingError: The record is too short or a checksum is wrong.
+        """
+        record = FruVitaRecord(data, ignore_checksum=ignore_checksum)
+        if (record.vita_record_type_id
+                == FruVitaRecord.VITA_RECORD_ID_CHASSIS_ADDRESS_TABLE):
+            return FruVitaChassisAddressTableRecord(
+                data, ignore_checksum=ignore_checksum)
+        return record
+
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
+        FruDataMultiRecord._from_data(self, data,
+                                      ignore_checksum=ignore_checksum)
+        if len(self.raw) < 5:
+            raise DecodingError(f'VITA record too short ({len(self.raw):d} '
+                                'bytes)')
+        self.vita_record_type_id = self.raw[3]
+        self.format_version = self.raw[4]
+
+
+class VitaChassisAddressTableEntry:
+    """An entry of the Chassis Address Table of ANSI/VITA 46.11.
+
+    Attributes:
+        hardware_address (int): The hardware address of the device.
+        site_number (int): The site number; 0 for a front loading VPX
+            module or an RTM, whose site number is given by the hardware
+            address.
+        site_type (int): The site type, see
+            :data:`pyipmi.vita.VITA_SITE_TYPES`.
+    """
+
+    def __init__(self, hardware_address: int, site_number: int,
+                 site_type: int) -> None:
+        """Create the entry from its fields."""
+        self.hardware_address = hardware_address
+        self.site_number = site_number
+        self.site_type = site_type
+
+    @property
+    def ipmb_address(self) -> int:
+        """The IPMB address of the device, twice the hardware address."""
+        return self.hardware_address << 1
+
+    @property
+    def site_type_name(self) -> str:
+        """The name of the site type, e.g. 'Fan Tray'."""
+        if 0xc0 <= self.site_type <= 0xcf:
+            return f'OEM (0x{self.site_type:02x})'
+        if self.site_type == 0xff:
+            return 'Unknown'
+        return VITA_SITE_TYPES.get(self.site_type,
+                                   f'reserved (0x{self.site_type:02x})')
+
+    def __str__(self) -> str:
+        """Return the entry, e.g. '0x41 (IPMB 0x82) Fan Tray 1'."""
+        return (f'0x{self.hardware_address:02x} (IPMB '
+                f'0x{self.ipmb_address:02x}) {self.site_type_name} '
+                f'{self.site_number:d}')
+
+    def __repr__(self) -> str:
+        """Return the fields of the entry."""
+        return (f'VitaChassisAddressTableEntry(0x{self.hardware_address:02x}, '
+                f'{self.site_number:d}, 0x{self.site_type:02x})')
+
+
+class FruVitaChassisAddressTableRecord(FruVitaRecord):
+    """The Chassis Address Table record of ANSI/VITA 46.11.
+
+    The record of the Chassis FRU Information lists the hardware addresses
+    of the (potentially present) intelligent FRUs of the chassis and their
+    sites (ANSI/VITA 46.11-2022, Tables 10.3.1-1 and 10.3.1-2).
+
+    Attributes:
+        chassis_identifier (FruTypeLengthString | None): The chassis
+            identifier, None if it is not configured (length 0).
+        entries (list[VitaChassisAddressTableEntry]): The entries.
+    """
+
+    # the chassis identifier is a fixed size field after its type/length
+    # byte, then the count and the entries of 3 bytes follow
+    CHASSIS_IDENTIFIER_SIZE = 20
+    ENTRY_SIZE = 3
+
+    def _from_data(self, data: Sequence[int], ignore_checksum: bool = False) -> None:
+        FruVitaRecord._from_data(self, data, ignore_checksum=ignore_checksum)
+        raw = list(self.raw)
+        # after the manufacturer ID, record ID and version: the type/length
+        # byte, the identifier field and the count
+        entries_offset = 5 + 1 + self.CHASSIS_IDENTIFIER_SIZE + 1
+        if len(raw) < entries_offset:
+            raise DecodingError('Chassis Address Table record too short '
+                                f'({len(raw):d} bytes)')
+        type_length = raw[5]
+        if type_length & 0x3f > self.CHASSIS_IDENTIFIER_SIZE:
+            raise DecodingError('the chassis identifier is longer than '
+                                f'{self.CHASSIS_IDENTIFIER_SIZE:d} bytes')
+        self.chassis_identifier: FruTypeLengthString | None = None
+        if type_length & 0x3f:
+            self.chassis_identifier = FruTypeLengthString(
+                raw, 5, force_lang_eng=True)
+        count = raw[entries_offset - 1]
+        end = entries_offset + count * self.ENTRY_SIZE
+        if len(raw) < end:
+            raise DecodingError(f'the Chassis Address Table has {count:d} '
+                                f'entries, the record only '
+                                f'{(len(raw) - entries_offset) // 3:d}')
+        self.entries = [
+            VitaChassisAddressTableEntry(*raw[offset:offset + 3])
+            for offset in range(entries_offset, end, self.ENTRY_SIZE)]
+
+    def __str__(self) -> str:
+        """Return the chassis identifier and the entries."""
+        identifier = ('not configured' if self.chassis_identifier is None
+                      else f"'{self.chassis_identifier}'")
+        entries = ', '.join(str(entry) for entry in self.entries)
+        return (f'{self._type_string()} Chassis Address Table: chassis '
+                f'{identifier}, {len(self.entries):d} entries'
+                + (f': {entries}' if entries else ''))
 
 
 class FruFmcRecord(FruDataMultiRecord):

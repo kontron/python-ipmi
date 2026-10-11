@@ -54,6 +54,8 @@ MANUFACTURER_NAMES = {
     12634: 'PICMG',
     15000: 'Kontron',
     19046: 'Lenovo',
+    # the ID of the FRU records of ANSI/VITA 46.11
+    33196: 'VITA',
 }
 
 
