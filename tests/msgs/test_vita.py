@@ -591,3 +591,55 @@ def test_decode_rsp_vita_get_chassis_address_table_info():
     decode_message(m, b'\x00\x03\x01\x02\x03')
     assert m.completion_code == 0x00
     assert bytes(m.data) == b'\x01\x02\x03'
+
+
+def test_VitaGetFanSpeedPropertiesReq_encode():
+    m = pyipmi.msgs.vita.VitaGetFanSpeedPropertiesReq()
+    m.fru_id = 1
+    assert encode_message(m) == b'\x03\x01'
+
+
+def test_VitaGetFanSpeedPropertiesRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetFanSpeedPropertiesRsp()
+    decode_message(m, b'\x00\x03\x01\x0f\x08\x80')
+    assert m.completion_code == 0
+    assert m.minimum_speed_level == 1
+    assert m.maximum_speed_level == 15
+    assert m.normal_operation_level == 8
+    assert m.properties.local_control_supported == 1
+
+
+def test_VitaSetFanLevelReq_encode():
+    m = pyipmi.msgs.vita.VitaSetFanLevelReq()
+    m.fru_id = 0
+    m.fan_level = 10
+    assert encode_message(m) == b'\x03\x00\x0a'
+    m.local_control_enable_state = 1
+    assert encode_message(m) == b'\x03\x00\x0a\x01'
+
+
+def test_VitaSetFanLevelReq_decode():
+    m = pyipmi.msgs.vita.VitaSetFanLevelReq()
+    decode_message(m, b'\x03\x00\xff')
+    assert m.fan_level == 0xff
+    assert m.local_control_enable_state is None
+
+
+def test_VitaGetFanLevelRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetFanLevelRsp()
+    decode_message(m, b'\x00\x03\x0a')
+    assert m.override_fan_level == 10
+    assert m.local_control_fan_level is None
+    decode_message(m, b'\x00\x03\xff\x08\x01')
+    assert m.override_fan_level == 0xff
+    assert m.local_control_fan_level == 8
+    assert m.local_control_enable_state == 1
+
+
+def test_VitaGetFanLevelRsp_encode():
+    m = pyipmi.msgs.vita.VitaGetFanLevelRsp()
+    m.override_fan_level = 5
+    assert encode_message(m) == b'\x00\x03\x05'
+    m.local_control_fan_level = 8
+    m.local_control_enable_state = 0
+    assert encode_message(m) == b'\x00\x03\x05\x08\x00'

@@ -589,3 +589,89 @@ class VitaSetPayloadModeRsp(VitaMessage):
             UnsignedInt('oem_response_10', 1),
         ),
     )
+
+
+# the fan commands of a cooling unit (fan tray), like in PICMG 3.0: the fan
+# level 0xfe is the emergency shut down, 0xff the local control
+
+VITA_FAN_LEVEL_EMERGENCY_SHUT_DOWN = 0xfe
+VITA_FAN_LEVEL_LOCAL_CONTROL = 0xff
+
+
+@register_message_class
+class VitaGetFanSpeedPropertiesReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_FAN_SPEED_PROPERTIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_id', 1),
+    )
+
+
+@register_message_class
+class VitaGetFanSpeedPropertiesRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_FAN_SPEED_PROPERTIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('minimum_speed_level', 1),
+        UnsignedInt('maximum_speed_level', 1),
+        UnsignedInt('normal_operation_level', 1),
+        Bitfield('properties', 1,
+                 Bitfield.ReservedBit(7, 0),
+                 Bitfield.Bit('local_control_supported', 1, default=0),),
+    )
+
+
+@register_message_class
+class VitaSetFanLevelReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_SET_FAN_LEVEL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_id', 1),
+        UnsignedInt('fan_level', 1),
+        # 0 disables, 1 enables the local control
+        Optional(
+            UnsignedInt('local_control_enable_state', 1),
+        ),
+    )
+
+
+@register_message_class
+class VitaSetFanLevelRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_SET_FAN_LEVEL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+    )
+
+
+@register_message_class
+class VitaGetFanLevelReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_FAN_LEVEL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_id', 1),
+    )
+
+
+@register_message_class
+class VitaGetFanLevelRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_FAN_LEVEL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('override_fan_level', 1),
+        # only if the fan tray supports the local control
+        Optional(
+            UnsignedInt('local_control_fan_level', 1),
+        ),
+        Optional(
+            UnsignedInt('local_control_enable_state', 1),
+        ),
+    )
