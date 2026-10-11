@@ -17,8 +17,8 @@
 """Messaging commands: channels and users.
 
 The commands read the channel information and authentication
-capabilities, and manage the users of the BMC: their names, passwords and
-access rights per channel.
+capabilities, get and set the access of a channel, and manage the users of
+the BMC: their names, passwords and access rights per channel.
 
 The commands are the methods of :class:`Messaging`, which are available on
 :class:`pyipmi.Ipmi`.
@@ -55,6 +55,21 @@ class PasswordOperation(int, Enum):
     ENABLE = 0b01
     SET_PASSWORD = 0b10
     TEST_PASSWORD = 0b11
+
+
+class ChannelAccessMode(int, Enum):
+    """The access modes of a channel (Set Channel Access)."""
+
+    DISABLED = 0
+    PRE_BOOT_ONLY = 1
+    ALWAYS_AVAILABLE = 2
+    SHARED = 3
+
+
+# the settings of Set and Get Channel Access: the non-volatile settings
+# (applied at the start of the BMC) or the volatile, active ones
+CHANNEL_ACCESS_NON_VOLATILE = 1
+CHANNEL_ACCESS_VOLATILE = 2
 
 
 class UserPrivilegeLevel(str, Enum):
@@ -132,6 +147,64 @@ class Messaging(IpmiMixin):
         rsp = self.send_message(req)
         check_rsp_completion_code(rsp)
         return ChannelInfo(rsp)
+
+    def get_channel_access(self, channel: int,
+                           non_volatile: bool = False) -> ChannelAccess:
+        """Get the access settings of a channel.
+
+        Args:
+            channel: The channel number.
+            non_volatile: Get the non-volatile settings instead of the
+                volatile (active) ones.
+
+        Returns:
+            The channel access.
+        """
+        req = create_request_by_name('GetChannelAccess')
+        req.channel.number = channel
+        req.access.get = (CHANNEL_ACCESS_NON_VOLATILE if non_volatile
+                          else CHANNEL_ACCESS_VOLATILE)
+        rsp = self.send_message(req)
+        check_rsp_completion_code(rsp)
+        return ChannelAccess(rsp)
+
+    def set_channel_access(self, channel: int,
+                           access_mode: ChannelAccessMode | None = None,
+                           privilege_limit: UserPrivilegeLevel | None = None,
+                           alerting: bool = True,
+                           per_message_auth: bool = True,
+                           user_level_auth: bool = True,
+                           non_volatile: bool = False) -> None:
+        """Set the access settings of a channel.
+
+        Args:
+            channel: The channel number.
+            access_mode: The access mode with the alerting and
+                authentication settings, None to keep them.
+            privilege_limit: The maximum privilege level of the channel,
+                None to keep it.
+            alerting: Enable the PEF alerting on the channel.
+            per_message_auth: Enable the per-message authentication.
+            user_level_auth: Enable the user level authentication.
+            non_volatile: Set the non-volatile settings instead of the
+                volatile (active) ones.
+        """
+        which = (CHANNEL_ACCESS_NON_VOLATILE if non_volatile
+                 else CHANNEL_ACCESS_VOLATILE)
+        req = create_request_by_name('SetChannelAccess')
+        req.channel.number = channel
+        if access_mode is not None:
+            req.access.set = which
+            req.access.mode = int(access_mode)
+            req.access.alerting_disable = int(not alerting)
+            req.access.per_message_auth_disable = int(not per_message_auth)
+            req.access.user_level_auth_disable = int(not user_level_auth)
+        if privilege_limit is not None:
+            req.privilege.set = which
+            req.privilege.limit = CONVERT_USER_PRIVILEGE_TO_RAW[
+                privilege_limit]
+        rsp = self.send_message(req)
+        check_rsp_completion_code(rsp)
 
     def set_username(self, userid: int = 0, username: str = '') -> None:
         """Set the name of a user.
@@ -344,6 +417,37 @@ class ChannelInfo(State):
         """Return the channel number, medium type and protocol type."""
         return (f'Channel {self.channel:d}: medium 0x{self.medium_type:02x} '
                 f'protocol 0x{self.protocol_type:02x}')
+
+
+class ChannelAccess(State):
+    """The access settings of a channel.
+
+    Attributes:
+        access_mode (ChannelAccessMode): The access mode.
+        alerting (bool): The PEF alerting is enabled.
+        per_message_auth (bool): The per-message authentication is enabled.
+        user_level_auth (bool): The user level authentication is enabled.
+        privilege_limit (UserPrivilegeLevel): The maximum privilege level
+            of the channel.
+    """
+
+    def _from_response(self, rsp: Message) -> None:
+        self.access_mode = ChannelAccessMode(rsp.access.mode & 0x3)
+        self.alerting = not rsp.access.alerting_disable
+        self.per_message_auth = not rsp.access.per_message_auth_disable
+        self.user_level_auth = not rsp.access.user_level_auth_disable
+        self.privilege_limit = CONVERT_RAW_TO_USER_PRIVILEGE.get(
+            rsp.privilege.limit, UserPrivilegeLevel.RESERVED)
+
+    def __str__(self) -> str:
+        """Return the channel access as multi-line string."""
+        mode = self.access_mode.name.lower().replace('_', ' ')
+        return ('Channel Access:\n'
+                f'  Access mode: {mode}\n'
+                f'  Alerting: {self.alerting}\n'
+                f'  Per-message auth.: {self.per_message_auth}\n'
+                f'  User level auth.: {self.user_level_auth}\n'
+                f'  Privilege limit: {self.privilege_limit.value}')
 
 
 class UserAccess(State):

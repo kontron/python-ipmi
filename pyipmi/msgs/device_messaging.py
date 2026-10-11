@@ -285,6 +285,70 @@ class GetChannelAuthenticationCapabilitiesRsp(Message):
 
 
 @register_message_class
+class SetChannelAccessReq(Message):
+    __cmdid__ = constants.CMDID_SET_CHANNEL_ACCESS
+    __netfn__ = constants.NETFN_APP
+    __fields__ = (
+        Bitfield('channel', 1,
+                 Bitfield.Bit('number', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
+        # set: 0 do not set, 1 non-volatile, 2 volatile (active) settings
+        Bitfield('access', 1,
+                 Bitfield.Bit('mode', 3, 0),
+                 Bitfield.Bit('user_level_auth_disable', 1, 0),
+                 Bitfield.Bit('per_message_auth_disable', 1, 0),
+                 Bitfield.Bit('alerting_disable', 1, 0),
+                 Bitfield.Bit('set', 2, 0),),
+        Bitfield('privilege', 1,
+                 Bitfield.Bit('limit', 4, 0),
+                 Bitfield.ReservedBit(2, 0),
+                 Bitfield.Bit('set', 2, 0),),
+    )
+
+
+@register_message_class
+class SetChannelAccessRsp(Message):
+    __cmdid__ = constants.CMDID_SET_CHANNEL_ACCESS
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
+    )
+
+
+@register_message_class
+class GetChannelAccessReq(Message):
+    __cmdid__ = constants.CMDID_GET_CHANNEL_ACCESS
+    __netfn__ = constants.NETFN_APP
+    __fields__ = (
+        Bitfield('channel', 1,
+                 Bitfield.Bit('number', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
+        # 1 non-volatile, 2 volatile (active) settings
+        Bitfield('access', 1,
+                 Bitfield.ReservedBit(6, 0),
+                 Bitfield.Bit('get', 2, 2),),
+    )
+
+
+@register_message_class
+class GetChannelAccessRsp(Message):
+    __cmdid__ = constants.CMDID_GET_CHANNEL_ACCESS
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
+        Bitfield('access', 1,
+                 Bitfield.Bit('mode', 3, 0),
+                 Bitfield.Bit('user_level_auth_disable', 1, 0),
+                 Bitfield.Bit('per_message_auth_disable', 1, 0),
+                 Bitfield.Bit('alerting_disable', 1, 0),
+                 Bitfield.ReservedBit(2, 0),),
+        Bitfield('privilege', 1,
+                 Bitfield.Bit('limit', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
+    )
+
+
+@register_message_class
 class GetChannelInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_CHANNEL_INFO
     __netfn__ = constants.NETFN_APP

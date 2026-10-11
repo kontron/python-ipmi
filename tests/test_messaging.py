@@ -97,3 +97,29 @@ def test_completion_code_error():
     with pytest.raises(CompletionCodeError) as e:
         ipmi.enable_user(5)
     assert e.value.cc == 0xcc
+
+
+def test_get_channel_access():
+    from pyipmi.messaging import ChannelAccessMode
+    # always available, alerting disabled, privilege limit administrator
+    ipmi = create_ipmi(b'\x00\x22\x04')
+    access = ipmi.get_channel_access(1)
+    assert ipmi.requests == [('GetChannelAccessReq', b'\x01\x80')]
+    assert access.access_mode == ChannelAccessMode.ALWAYS_AVAILABLE
+    assert access.alerting is False
+    assert access.per_message_auth is True
+    assert access.privilege_limit == UserPrivilegeLevel.ADMINISTRATOR
+    ipmi.get_channel_access(1, non_volatile=True)
+    assert ipmi.requests[-1] == ('GetChannelAccessReq', b'\x01\x40')
+
+
+def test_set_channel_access():
+    from pyipmi.messaging import ChannelAccessMode
+    ipmi = create_ipmi(b'\x00')
+    ipmi.set_channel_access(1, ChannelAccessMode.ALWAYS_AVAILABLE,
+                            UserPrivilegeLevel.OPERATOR, alerting=False)
+    assert ipmi.requests == [('SetChannelAccessReq', b'\x01\xa2\x83')]
+    # only the privilege limit, non-volatile
+    ipmi.set_channel_access(1, privilege_limit=UserPrivilegeLevel.USER,
+                            non_volatile=True)
+    assert ipmi.requests[-1] == ('SetChannelAccessReq', b'\x01\x00\x42')
