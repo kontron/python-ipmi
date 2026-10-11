@@ -353,13 +353,17 @@ class IpmbSim(IpmbInterface):
     The interface registers its slave address at the broker and receives
     the messages to that address in a receive thread, which passes them to
     the router, so the interface can also answer incoming requests (see
-    `MessageRouter`).
+    `MessageRouter`). If the broker closes the connection, e.g. when it is
+    restarted, the interface connects again and registers its address;
+    with ``wait_for_broker`` also if the broker is not running yet when the
+    interface is opened.
     """
 
     NAME = 'ipmbsim'
 
     def __init__(self, slave_address: int = 0x20, path: str = DEFAULT_PATH,
-                 router: MessageRouter | None = None) -> None:
+                 router: MessageRouter | None = None,
+                 wait_for_broker: bool = False) -> None:
         """Initialize the interface.
 
         Args:
@@ -367,11 +371,16 @@ class IpmbSim(IpmbInterface):
             path: The path of the Unix domain socket of the broker.
             router: The router of the received messages, see
                 :class:`~pyipmi.interfaces.ipmb.IpmbInterface`.
+            wait_for_broker: If the broker is not running, open() does not
+                fail: the interface connects when the broker is started.
         """
         super().__init__(slave_address, router)
         self.path = path
+        self.wait_for_broker = wait_for_broker
         # the time to wait for an answer of the broker
         self.broker_timeout = 1.0
+        # the seconds between the attempts to connect again to the broker
+        self.reconnect_interval = 1.0
         self._sock: socket.socket | None = None
         self._buffer = bytearray()
         self._answers: queue.Queue[tuple[int, bytes]] = queue.Queue()
@@ -379,6 +388,44 @@ class IpmbSim(IpmbInterface):
 
     def open(self) -> None:
         """Connect to the broker, register the address and start receiving.
+
+        Raises:
+            IpmiConnectionError: The broker is not running (without
+                ``wait_for_broker``), or it refused the address.
+        """
+        try:
+            (self._sock, self._buffer) = self._connect()
+        except IpmiConnectionError as e:
+            # no socket, or no broker accepts on it
+            if not (self.wait_for_broker and isinstance(
+                    e.__cause__, (FileNotFoundError, ConnectionRefusedError))):
+                raise
+            logger.warning('IPMB 0x%02x: %s, waiting for the broker',
+                           self.slave_address, e)
+            self._sock = None
+            self._buffer = bytearray()
+        self._start_receiver()
+
+    def close(self) -> None:
+        """Stop the receive thread and close the connection."""
+        # the receive thread ends when the connection is shut down
+        self._stop_receiver_event.set()
+        if self._sock is not None:
+            try:
+                self._sock.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+        self._stop_receiver()
+        if self._sock is not None:
+            self._sock.close()
+            self._sock = None
+        super().close()
+
+    def _connect(self) -> tuple[socket.socket, bytearray]:
+        """Connect to the broker and register the address.
+
+        Returns:
+            The connection and the messages received after the answer.
 
         Raises:
             IpmiConnectionError: The broker is not running, or it refused
@@ -391,41 +438,70 @@ class IpmbSim(IpmbInterface):
             sock.close()
             raise IpmiConnectionError(
                 f'no IPMB broker on {self.path}: {e}') from e
-        self._sock = sock
-        self._buffer.clear()
-        self._start_receiver()
+        buffer = bytearray()
         try:
-            status = self._call(MSG_REGISTER, MSG_REGISTERED,
-                                bytes((PROTOCOL_VERSION, self.slave_address)))
+            sock.settimeout(self.broker_timeout)
+            sock.sendall(encode_msg(
+                MSG_REGISTER, bytes((PROTOCOL_VERSION, self.slave_address))))
+            while (msg := take_msg(buffer)) is None:
+                data = sock.recv(4096)
+                if not data:
+                    raise OSError('the IPMB broker closed the connection')
+                buffer += data
+        except TimeoutError:
+            sock.close()
+            raise IpmiConnectionError('no answer of the IPMB broker') from None
         except OSError as e:
-            self.close()
+            sock.close()
             raise IpmiConnectionError(str(e)) from e
-        if status != STATUS_OK:
-            self.close()
-            reason = REGISTER_ERRORS.get(status, f'status {status}')
+        (msg_type, answer) = msg
+        if msg_type != MSG_REGISTERED or len(answer) != 1:
+            sock.close()
+            raise IpmiConnectionError('invalid answer of the IPMB broker')
+        if answer[0] != STATUS_OK:
+            sock.close()
+            reason = REGISTER_ERRORS.get(answer[0], f'status {answer[0]}')
             raise IpmiConnectionError(
                 f'the IPMB broker refused 0x{self.slave_address:02x}: '
                 f'{reason}')
+        return (sock, buffer)
 
-    def close(self) -> None:
-        """Stop the receive thread and close the connection."""
-        if self._sock is not None:
-            # the receive thread ends when the connection is shut down
-            self._stop_receiver_event.set()
+    def _reconnect(self) -> None:
+        """Connect after the broker closed the connection, or was not running.
+
+        Tries until the interface is closed.
+        """
+        with self._send_lock:
+            lost = self._sock is not None
+            if self._sock is not None:
+                self._sock.close()
+                self._sock = None
+        if lost:
+            logger.warning('IPMB 0x%02x: the IPMB broker closed the '
+                           'connection, reconnecting', self.slave_address)
+        error = None
+        while not self._stop_receiver_event.wait(self.reconnect_interval):
             try:
-                self._sock.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
-            self._stop_receiver()
-            self._sock.close()
-            self._sock = None
-        super().close()
+                (sock, buffer) = self._connect()
+            except IpmiConnectionError as e:
+                if str(e) != error:
+                    logger.debug('IPMB 0x%02x: %s', self.slave_address, e)
+                    error = str(e)
+                continue
+            with self._send_lock:
+                if self._stop_receiver_event.is_set():
+                    sock.close()
+                    return
+                (self._sock, self._buffer) = (sock, buffer)
+            logger.info('IPMB 0x%02x: %sconnected to the IPMB broker',
+                        self.slave_address, 're' if lost else '')
+            return
 
     def _call(self, msg_type: int, answer_type: int, payload: bytes) -> int:
         """Send a message to the broker and return the status it answers."""
-        if self._sock is None:
-            raise OSError('the interface is not open')
         with self._send_lock:
+            if self._sock is None:
+                raise OSError('not connected to the IPMB broker')
             # a late answer to a call that timed out
             while not self._answers.empty():
                 self._answers.get_nowait()
@@ -456,8 +532,12 @@ class IpmbSim(IpmbInterface):
     def _read_frame(self, timeout: float) -> bytes | None:
         # the answers of the broker are passed to _call(), the frames are
         # returned
-        assert self._sock is not None
         while True:
+            if self._sock is None:
+                if self._stop_receiver_event.is_set():
+                    return None
+                self._reconnect()
+                continue
             while (msg := take_msg(self._buffer)) is not None:
                 if msg[0] == MSG_FRAME:
                     # the next messages stay in the buffer for the next call
@@ -468,8 +548,12 @@ class IpmbSim(IpmbInterface):
                 data = self._sock.recv(4096)
             except TimeoutError:
                 return None
+            except OSError:
+                # e.g. reset by the broker
+                data = b''
             if not data:
                 if self._stop_receiver_event.is_set():
                     return None
-                raise OSError('the IPMB broker closed the connection')
+                self._reconnect()
+                continue
             self._buffer += data

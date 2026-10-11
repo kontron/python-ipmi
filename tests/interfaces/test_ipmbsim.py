@@ -224,3 +224,81 @@ def test_serve_forever_cleans_up(path):
     with pytest.raises(KeyboardInterrupt):
         broker.serve_forever()
     assert not os.path.exists(path)
+
+
+def test_reconnect_after_broker_restart(path):
+    broker = IpmbSimBroker(path)
+    broker.start()
+    router = MessageRouter()
+    router.register_raw_handler(6, 1, lambda intf, hdr, data: b'\x00\x42')
+    bmc = IpmbSim(slave_address=0x20, path=path, router=router)
+    bmc.reconnect_interval = 0.01
+    bmc.open()
+    try:
+        broker.close()
+        broker = IpmbSimBroker(path)
+        broker.start()
+        wait_for(lambda: broker.addresses == [0x20])
+        intf = IpmbSim(slave_address=0x81, path=path)
+        intf.open()
+        try:
+            rsp = intf.send_and_receive_raw(pyipmi.Target(0x20), 0, 6, b'\x01')
+        finally:
+            intf.close()
+        assert rsp == b'\x00\x42'
+    finally:
+        bmc.close()
+        router.close()
+        broker.close()
+
+
+def test_close_while_reconnecting(path):
+    broker = IpmbSimBroker(path)
+    broker.start()
+    intf = IpmbSim(slave_address=0x20, path=path)
+    intf.open()
+    broker.close()
+    wait_for(lambda: intf._sock is None)
+    with pytest.raises(IpmiTimeoutError):
+        intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
+    start = time.monotonic()
+    intf.close()
+    assert time.monotonic() - start < 0.5
+
+
+def test_wait_for_broker(path):
+    router = MessageRouter()
+    router.register_raw_handler(6, 1, lambda intf, hdr, data: b'\x00\x42')
+    bmc = IpmbSim(slave_address=0x20, path=path, router=router,
+                  wait_for_broker=True)
+    bmc.reconnect_interval = 0.01
+    bmc.open()
+    broker = IpmbSimBroker(path)
+    broker.start()
+    try:
+        wait_for(lambda: broker.addresses == [0x20])
+        intf = IpmbSim(slave_address=0x81, path=path)
+        intf.open()
+        try:
+            rsp = intf.send_and_receive_raw(pyipmi.Target(0x20), 0, 6, b'\x01')
+        finally:
+            intf.close()
+        assert rsp == b'\x00\x42'
+    finally:
+        bmc.close()
+        router.close()
+        broker.close()
+
+
+def test_wait_for_broker_closed_before(path):
+    intf = IpmbSim(slave_address=0x20, path=path, wait_for_broker=True)
+    intf.open()
+    start = time.monotonic()
+    intf.close()
+    assert time.monotonic() - start < 0.5
+
+
+def test_wait_for_broker_refused_address(bmc, path):
+    intf = IpmbSim(slave_address=0x20, path=path, wait_for_broker=True)
+    with pytest.raises(IpmiConnectionError, match='used by another interface'):
+        intf.open()
