@@ -388,6 +388,53 @@ class Lan(IpmiMixin):
         data = ip_source_to_data(ip_source)
         self.set_lan_config_param(channel, LAN_PARAMETER_IP_ADDRESS_SOURCE, data)
 
+    def get_subnet_mask(self, channel: int | None = None) -> str:
+        """Return the subnet mask of the BMC.
+
+        Args:
+            channel: The channel number, the LAN channel if None.
+
+        Returns:
+            The subnet mask in the format xxx.xxx.xxx.xxx.
+        """
+        return data_to_ip_address(
+            self.get_lan_config_param(channel, LAN_PARAMETER_SUBNET_MASK))
+
+    def set_subnet_mask(self, subnet_mask: str,
+                        channel: int | None = None) -> None:
+        """Set the subnet mask of the BMC.
+
+        Args:
+            subnet_mask: The subnet mask in the format xxx.xxx.xxx.xxx.
+            channel: The channel number, the LAN channel if None.
+        """
+        self.set_lan_config_param(channel, LAN_PARAMETER_SUBNET_MASK,
+                                  ip_address_to_data(subnet_mask))
+
+    def get_default_gateway(self, channel: int | None = None) -> str:
+        """Return the IP address of the default gateway of the BMC.
+
+        Args:
+            channel: The channel number, the LAN channel if None.
+
+        Returns:
+            The IP address in the format xxx.xxx.xxx.xxx.
+        """
+        return data_to_ip_address(self.get_lan_config_param(
+            channel, LAN_PARAMETER_DEFAULT_GATEWAY_ADDRESS))
+
+    def set_default_gateway(self, ip_address: str,
+                            channel: int | None = None) -> None:
+        """Set the IP address of the default gateway of the BMC.
+
+        Args:
+            ip_address: The IP address in the format xxx.xxx.xxx.xxx.
+            channel: The channel number, the LAN channel if None.
+        """
+        self.set_lan_config_param(channel,
+                                  LAN_PARAMETER_DEFAULT_GATEWAY_ADDRESS,
+                                  ip_address_to_data(ip_address))
+
     def get_mac_address(self, channel: int | None = None) -> str:
         """Return the MAC address of the BMC.
 

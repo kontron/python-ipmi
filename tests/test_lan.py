@@ -135,6 +135,21 @@ def test_set_vlan_id():
          b'\x01\x14' + bytes(vlan_to_data(100)))]
 
 
+def test_subnet_mask_and_default_gateway():
+    ipmi = create_ipmi(lan_rsp([255, 255, 255, 0]))
+    assert ipmi.get_subnet_mask(channel=1) == '255.255.255.0'
+    assert ipmi.requests[-1] == ('GetLanConfigurationParametersReq',
+                                 b'\x01\x06\x00\x00')
+    ipmi = create_ipmi(lan_rsp([10, 0, 0, 1]))
+    assert ipmi.get_default_gateway(channel=1) == '10.0.0.1'
+    ipmi = create_ipmi(b'\x00')
+    ipmi.set_subnet_mask('255.255.0.0', channel=1)
+    ipmi.set_default_gateway('10.0.0.1', channel=1)
+    assert ipmi.requests == [
+        ('SetLanConfigurationParametersReq', b'\x01\x06\xff\xff\x00\x00'),
+        ('SetLanConfigurationParametersReq', b'\x01\x0c\x0a\x00\x00\x01')]
+
+
 def channel_info_rsp(channel, medium):
     # completion code, channel, medium, protocol, session, vendor, aux info
     return bytes([0, channel, medium, 0x01, 0x82, 0xf2, 0x1b, 0x00, 0, 0])
