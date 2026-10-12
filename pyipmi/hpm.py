@@ -44,7 +44,8 @@ import time
 from array import array
 from collections.abc import Sequence
 
-from .errors import CompletionCodeError, HpmError, IpmiTimeoutError
+from .errors import (CompletionCodeError, HpmError, IpmiTimeoutError,
+                     RetryError)
 from .msgs import create_request_by_name, Message
 from .msgs import constants
 from .utils import check_rsp_completion_code, bcd_search
@@ -425,9 +426,8 @@ class Hpm(IpmiMixin):
                                    f'CC=0x{status.last_completion_code:02x}')
                 else:
                     return
-            except IpmiTimeoutError:
-                time.sleep(interval)
-            except OSError:
+            except (IpmiTimeoutError, RetryError, OSError):
+                # no answer, e.g. the controller restarts
                 time.sleep(interval)
 
     def activate_firmware(self, rollback_override: int | None = None) -> None:
@@ -473,7 +473,7 @@ class Hpm(IpmiMixin):
                             timeout, interval)
             else:
                 raise HpmError(f'activate_firmware CC=0x{e.cc:02x}') from e
-        except IpmiTimeoutError:
+        except (IpmiTimeoutError, RetryError):
             # controller is in reset and flashed new firmware
             pass
 
@@ -532,7 +532,7 @@ class Hpm(IpmiMixin):
             else:
                 raise HpmError('initiate_manual_rollback '
                                f'CC=0x{e.cc:02x}') from e
-        except IpmiTimeoutError:
+        except (IpmiTimeoutError, RetryError):
             # controller is in reset and flashed new firmware
             pass
 
@@ -696,7 +696,7 @@ class Hpm(IpmiMixin):
             try:
                 self.get_upgrade_status()
                 self.get_device_id()
-            except (IpmiTimeoutError, OSError):
+            except (IpmiTimeoutError, RetryError, OSError):
                 was_inaccessible = True
                 time.sleep(interval)
                 continue

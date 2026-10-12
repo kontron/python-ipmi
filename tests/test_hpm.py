@@ -8,7 +8,7 @@ from unittest import mock
 import pytest
 
 import pyipmi
-from pyipmi.errors import HpmError, IpmiTimeoutError
+from pyipmi.errors import HpmError, IpmiTimeoutError, RetryError
 from pyipmi.hpm import (Hpm, ComponentProperty,
                         ComponentPropertyDescriptionString,
                         ComponentPropertyOem,
@@ -405,11 +405,13 @@ def test_and_wait_long_duration(fake_time, method, args, command):
     assert ipmi.requests[-1][0] == 'GetUpgradeStatusReq'
 
 
+# an interface without answer raises IpmiTimeoutError, RMCP RetryError
+@pytest.mark.parametrize('error', [IpmiTimeoutError(), RetryError()])
 @pytest.mark.parametrize('method', ['activate_firmware_and_wait',
                                     'initiate_manual_rollback_and_wait'])
-def test_and_wait_controller_in_reset(method):
+def test_and_wait_controller_in_reset(method, error):
     ipmi = create_ipmi(b'\x00\x00')
-    ipmi.interface.send_and_receive.side_effect = IpmiTimeoutError()
+    ipmi.interface.send_and_receive.side_effect = error
     getattr(ipmi, method)()
 
 
@@ -458,7 +460,8 @@ def test_and_wait_long_duration_error(fake_time, method, args, command):
         getattr(ipmi, method)(*args)
 
 
-@pytest.mark.parametrize('error', [IpmiTimeoutError(), OSError()])
+@pytest.mark.parametrize('error', [IpmiTimeoutError(), RetryError(),
+                                   OSError()])
 def test_wait_for_long_duration_command_not_reachable(fake_time, error):
     ipmi = create_ipmi(b'\x00\x00\x31\x00')
     respond = ipmi.interface.send_and_receive.side_effect
@@ -751,7 +754,8 @@ def test_wait_until_new_firmware_comes_up(fake_time):
     ipmi = create_ipmi({'GetUpgradeStatus': b'\x00\x00\x00\x00',
                         'GetDeviceId': DEVICE_ID_RSP})
     respond = ipmi.interface.send_and_receive.side_effect
-    errors = [IpmiTimeoutError(), OSError()]
+    # RMCP raises RetryError without answer
+    errors = [IpmiTimeoutError(), RetryError(), OSError()]
 
     def send_and_receive(req):
         # the controller is in reset for the first requests
@@ -762,7 +766,7 @@ def test_wait_until_new_firmware_comes_up(fake_time):
     ipmi.interface.send_and_receive.side_effect = send_and_receive
     ipmi.wait_until_new_firmware_comes_up(timeout=50, interval=1)
     # returns when the controller answers again
-    assert fake_time.sleeps == [1, 1, 5]
+    assert fake_time.sleeps == [1, 1, 1, 5]
 
 
 def test_wait_until_new_firmware_comes_up_without_reset(fake_time):
