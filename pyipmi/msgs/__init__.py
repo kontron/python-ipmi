@@ -50,4 +50,5 @@ from . import sel  # noqa:F401
 from . import sensor  # noqa:F401
 from . import event  # noqa:F401
 from . import lan  # noqa:F401
+from . import pef  # noqa:F401
 from . import vita  # noqa:F401
