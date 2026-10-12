@@ -308,6 +308,20 @@ def encode_bridged_message(routing: list[Routing], header: IpmbHeaderReq,
     return tx_data
 
 
+def is_send_message_response(rx_data: bytes) -> bool:
+    """Return whether an IPMB message is a Send Message response.
+
+    The command ID alone is not enough, other commands have the ID of Send
+    Message (0x34) too, e.g. Get Upgrade Status of HPM.1 (group extension).
+
+    Args:
+        rx_data: The received IPMB message.
+    """
+    data = array('B', rx_data)
+    return (len(data) > 5 and data[1] >> 2 == constants.NETFN_APP + 1
+            and data[5] == constants.CMDID_SEND_MESSAGE)
+
+
 def decode_bridged_message(rx_data: bytes) -> bytes:
     """Decode a (multi-)bridged response.
 
@@ -323,7 +337,7 @@ def decode_bridged_message(rx_data: bytes) -> bytes:
     Raises:
         CompletionCodeError: A Send Message response failed.
     """
-    while array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE:
+    while is_send_message_response(rx_data):
         rsp = create_message(constants.NETFN_APP + 1,
                              constants.CMDID_SEND_MESSAGE, None)
         decode_message(rsp, rx_data[6:])

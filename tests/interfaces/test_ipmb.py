@@ -6,7 +6,7 @@ from pyipmi import Target
 from pyipmi.interfaces.ipmb import (checksum, IpmbHeaderReq, IpmbHeaderRsp,
                                     encode_send_message, encode_bridged_message,
                                     encode_ipmb_msg, decode_bridged_message,
-                                    rx_filter)
+                                    is_send_message_response, rx_filter)
 
 
 def test_checksum():
@@ -113,6 +113,26 @@ def test_decode_bridged_message():
     data = decode_bridged_message(data)
     assert len(data) == 9
     assert data == b'\x20\x14\xcc\x74\x14\x22\x00\xed\xff'
+
+
+# a Get Upgrade Status response (HPM.1, group extension), its command ID is
+# the one of Send Message
+GET_UPGRADE_STATUS_RSP = b'\x81\xb4\xcb\x20\x14\x34\x00\x00\x33\x00\x65'
+
+
+def test_is_send_message_response():
+    assert is_send_message_response(b'\x81\x1c\x63\x20\x14\x34\x00\x20')
+    assert not is_send_message_response(GET_UPGRADE_STATUS_RSP)
+    assert not is_send_message_response(b'\x81\x1c\x63\x20\x14')
+
+
+def test_decode_bridged_message_group_extension_0x34():
+    # not a Send Message response, it is not changed
+    assert decode_bridged_message(GET_UPGRADE_STATUS_RSP) \
+        == GET_UPGRADE_STATUS_RSP
+    # the bridged one is unwrapped once
+    data = b'\x81\x1c\x63\x20\x14\x34\x00' + GET_UPGRADE_STATUS_RSP + b'\x00'
+    assert decode_bridged_message(data) == GET_UPGRADE_STATUS_RSP
 
 
 def test_rx_filter():

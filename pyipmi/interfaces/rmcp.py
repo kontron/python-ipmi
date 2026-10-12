@@ -55,14 +55,15 @@ from collections.abc import Callable
 
 from .. import Target
 from ..session import Session
-from ..msgs import create_request_by_name, constants, Message
+from ..msgs import create_request_by_name, Message
 from ..messaging import ChannelAuthenticationCapabilities
 from ..errors import (DecodingError, IpmiConnectionError, NotSupportedError,
                       RetryError)
 from .base import Interface
 from ..interfaces.ipmb import (IpmbHeaderReq, encode_ipmb_msg,
                                encode_bridged_message, decode_bridged_message,
-                               rx_filter, target_ipmb_address)
+                               is_send_message_response, rx_filter,
+                               target_ipmb_address)
 from ..utils import check_rsp_completion_code, py3_array_tobytes
 
 logger = logging.getLogger(__name__)
@@ -916,8 +917,7 @@ class Rmcp(Interface):
 
             rx_data = self._receive_ipmi_msg(self.ignore_sdu_length)
 
-            if (len(rx_data) > 5 and
-                    array('B', rx_data)[5] == constants.CMDID_SEND_MESSAGE):
+            if is_send_message_response(rx_data):
                 rx_data = decode_bridged_message(rx_data)
                 if not rx_data:
                     # the forwarded reply is expected in the next packet

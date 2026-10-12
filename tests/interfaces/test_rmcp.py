@@ -295,6 +295,18 @@ class TestRmcp:
         rmcp.send_and_receive_raw(rmcp.host_target, 0, 6, b'\x00')
         assert rmcp._last_request_time >= before
 
+    def test_send_and_receive_group_extension_0x34(self):
+        # Get Upgrade Status (HPM.1) has the command ID of Send Message, its
+        # response is no bridged response
+        rmcp = Rmcp()
+        rmcp._sock = MagicMock(spec=socket.socket)
+        rmcp._sock.recv.return_value = (
+            b'\x06\x00\xff\x07\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0b'
+            b'\x81\xb4\xcb\x20\x04\x34\x00\x00\x33\x00\x75')
+        result = rmcp.send_and_receive_raw(rmcp.host_target, 0, 0x2c,
+                                           b'\x34\x00')
+        assert result == b'\x00\x00\x33\x00'
+
     def test_send_and_receive_uses_own_sequence_number(self):
         # another request, e.g. of the keep-alive thread, increments the
         # sequence number before this request is sent
