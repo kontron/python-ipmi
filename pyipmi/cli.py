@@ -33,6 +33,8 @@ from collections.abc import Callable, Iterator
 from typing import Any
 
 import pyipmi
+import pyipmi.fields
+import pyipmi.hpm
 import pyipmi.interfaces
 import pyipmi.logger
 import pyipmi.msgs
@@ -82,6 +84,44 @@ def format_failed_command(e: pyipmi.errors.CompletionCodeError) -> str:
 def auto_int(value: str) -> int:
     """Argument type for numbers, decimal or with 0x prefix."""
     return int(value, 0)
+
+
+def firmware_version(value: str) -> pyipmi.fields.VersionField:
+    """Argument type for firmware versions, major.minor, e.g. 1.02."""
+    (major, dot, minor) = value.partition('.')
+    if not dot or not major.isdigit() or not minor.isdigit() \
+            or len(minor) > 2:
+        raise argparse.ArgumentTypeError(
+            f'invalid version: {value} (use major.minor, e.g. 1.02)')
+    try:
+        return pyipmi.fields.VersionField.create(int(major), int(minor))
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(str(e)) from None
+
+
+def hex_data(length: int) -> Callable[[str], bytes]:
+    """Argument type for a number of bytes in hex, e.g. 00000001."""
+    def parse(value: str) -> bytes:
+        try:
+            data = bytes.fromhex(value)
+        except ValueError:
+            data = b''
+        if len(data) != length:
+            raise argparse.ArgumentTypeError(
+                f'invalid value: {value} ({length} bytes in hex)')
+        return data
+    return parse
+
+
+def hpm_firmware(value: str) -> tuple[int, str]:
+    """Argument type for the firmware of a component, <component>=<file>."""
+    (component, equal, filename) = value.partition('=')
+    if not equal or not component.isdigit() or not 0 <= int(component) <= 7 \
+            or not filename:
+        raise argparse.ArgumentTypeError(
+            f'invalid firmware: {value} (use <component>=<file>, the '
+            'component 0 to 7)')
+    return (int(component), filename)
 
 
 def ipv4_address(value: str) -> str:
@@ -1158,6 +1198,82 @@ def cmd_hpm_check_file(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
 
 def cmd_hpm_install(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
     ipmi.install_component_from_file(args.file, args.component_id)
+
+
+# the image capabilities of hpm create by name
+HPM_IMAGE_CAPABILITIES = {
+    'self-test': pyipmi.hpm.IMAGE_CAPABILITY_SELF_TEST,
+    'automatic-rollback': pyipmi.hpm.IMAGE_CAPABILITY_AUTOMATIC_ROLLBACK,
+    'manual-rollback': pyipmi.hpm.IMAGE_CAPABILITY_MANUAL_ROLLBACK,
+    'services-affected': pyipmi.hpm.IMAGE_CAPABILITY_SERVICES_AFFECTED,
+}
+
+
+def hpm_image_capabilities(value: str) -> list[str]:
+    """Argument type for image capabilities, e.g. self-test,manual-rollback."""
+    names = value.split(',')
+    unknown = [name for name in names if name not in HPM_IMAGE_CAPABILITIES]
+    if unknown:
+        raise argparse.ArgumentTypeError(
+            f"unknown capabilities: {', '.join(unknown)} (use "
+            f"{', '.join(HPM_IMAGE_CAPABILITIES)})")
+    return names
+
+
+def cmd_hpm_create(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    """Write an upgrade image with the firmware files of the components."""
+    hpm = pyipmi.hpm
+    firmware = {}
+    for (component, filename) in args.firmware:
+        if component in firmware:
+            raise pyipmi.errors.HpmError(
+                f'component {component} is given twice')
+        try:
+            with open(filename, 'rb') as f:
+                firmware[component] = f.read()
+        except OSError as e:
+            raise pyipmi.errors.HpmError(
+                f'cannot read {filename}: {e.strerror}') from None
+    capabilities = 0
+    for name in args.capabilities:
+        capabilities |= HPM_IMAGE_CAPABILITIES[name]
+    version = args.version
+    version.auxiliary = array('B', args.aux)
+    mask = 0
+    for component in firmware:
+        mask |= 1 << component
+
+    def units(seconds: int) -> int:
+        # the timeouts are in 5 second units
+        return -(-seconds // 5)
+    try:
+        header = hpm.UpgradeImageHeaderRecord.create(
+            args.device_id, args.manufacturer_id, args.product_id,
+            sorted(firmware), version,
+            earliest_compatible_revision=args.earliest,
+            capabilities=capabilities,
+            selftest_timeout=units(args.selftest_timeout),
+            rollback_timeout=units(args.rollback_timeout),
+            inaccessibility_timeout=units(args.inaccessibility_timeout),
+            timestamp=args.time)
+        actions: list[pyipmi.hpm.UpgradeActionRecord] = []
+        if args.backup:
+            actions.append(hpm.UpgradeActionRecordBackup.create(mask))
+        if args.prepare:
+            actions.append(hpm.UpgradeActionRecordPrepare.create(mask))
+        for (component, data) in sorted(firmware.items()):
+            actions.append(hpm.UpgradeActionRecordUploadForUpgrade.create(
+                1 << component, version, args.description, data))
+        image = hpm.UpgradeImage.create(header, actions)
+    except ValueError as e:
+        raise pyipmi.errors.HpmError(str(e)) from None
+    try:
+        image.write(args.output)
+    except OSError as e:
+        raise pyipmi.errors.HpmError(
+            f'cannot write {args.output}: {e.strerror}') from None
+    print(f'{args.output}: components {sorted(firmware)}, version '
+          f'{version.major}.{version.minor:02d}')
 
 
 def cmd_chassis_status(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -2494,6 +2610,50 @@ def build_parser() -> argparse.ArgumentParser:
                       'Install the specified HPM.1 file to the controller')
     p.add_argument('file')
     p.add_argument('component_id', type=int)
+    p = group.command('create', cmd_hpm_create,
+                      'Write an HPM.1 upgrade image with the firmware of '
+                      'components',
+                      needs_connection=False)
+    p.add_argument('output', help='the upgrade image file')
+    p.add_argument('--firmware', type=hpm_firmware, action='append',
+                   required=True, metavar='<component>=<file>',
+                   help='the firmware file of a component (0 to 7), e.g. '
+                        '1=ipmc.bin; several times for several components')
+    p.add_argument('--device-id', type=auto_int, required=True,
+                   help='the device ID of the controller (Get Device ID)')
+    p.add_argument('--manufacturer-id', type=auto_int, required=True,
+                   help='the manufacturer ID of the controller')
+    p.add_argument('--product-id', type=auto_int, required=True,
+                   help='the product ID of the controller')
+    p.add_argument('--version', type=firmware_version, required=True,
+                   metavar='<major>.<minor>',
+                   help='the firmware version, e.g. 1.02')
+    p.add_argument('--aux', type=hex_data(4), default=bytes(4),
+                   metavar='<hex>',
+                   help='the auxiliary revision, 4 bytes in hex, e.g. '
+                        '00000001')
+    p.add_argument('--earliest', type=firmware_version,
+                   metavar='<major>.<minor>',
+                   help='the earliest compatible revision, 0.00 by default')
+    p.add_argument('--description', default='',
+                   help='the description of the firmware, up to 21 '
+                        'characters')
+    p.add_argument('--backup', action='store_true',
+                   help='back up the components before the upload')
+    p.add_argument('--prepare', action='store_true',
+                   help='prepare the components before the upload')
+    p.add_argument('--capabilities', type=hpm_image_capabilities,
+                   default=[], metavar='<capability>[,...]',
+                   help='the image capabilities: '
+                        f"{', '.join(HPM_IMAGE_CAPABILITIES)}")
+    for name in ('selftest', 'rollback', 'inaccessibility'):
+        p.add_argument(f'--{name}-timeout', type=int, default=0,
+                       metavar='<seconds>',
+                       help=f'the {name} timeout in seconds, stored in 5 '
+                            'second units')
+    p.add_argument('--time', type=int, metavar='<seconds>',
+                   help='the creation time in seconds since the epoch, '
+                        'now by default')
 
     group = commands.group('picmg', 'PICMG commands')
     sub = group.group('frucontrol', 'FRU control')

@@ -9,6 +9,7 @@ import pytest
 
 from unittest.mock import MagicMock
 
+import pyipmi.hpm
 from pyipmi import cli
 from pyipmi.errors import CompletionCodeError, NotSupportedError
 from pyipmi.msgs import create_response_by_name, decode_message
@@ -364,6 +365,82 @@ class TestParser:
         assert 'HPM Upgrade Image header' in out
         assert 'Upload Firmware Image' in out
         assert 'Manufacturer:     15000 = Kontron' in out
+
+    def test_hpm_create_needs_no_connection(self):
+        args = self.parse('hpm create out.hpm --firmware 1=fw.bin '
+                          '--device-id 4 --manufacturer-id 15000 '
+                          '--product-id 1701 --version 1.02')
+        assert not args.needs_connection
+        assert args.firmware == [(1, 'fw.bin')]
+
+    def test_hpm_create(self, tmp_path, capsys):
+        (tmp_path / 'ipmc.bin').write_bytes(b'ipmc firmware')
+        (tmp_path / 'boot.bin').write_bytes(b'boot')
+        output = str(tmp_path / 'out.hpm')
+        cli.main(['hpm', 'create', output,
+                  '--firmware', f"1={tmp_path / 'ipmc.bin'}",
+                  '--firmware', f"0={tmp_path / 'boot.bin'}",
+                  '--device-id', '4', '--manufacturer-id', '15000',
+                  '--product-id', '0x6a5', '--version', '4.51',
+                  '--aux', '01020304', '--earliest', '4.00',
+                  '--description', 'IPM Controller', '--prepare',
+                  '--capabilities', 'self-test,manual-rollback',
+                  '--inaccessibility-timeout', '12', '--time', '1700000000'])
+        assert 'components [0, 1], version 4.51' in capsys.readouterr().out
+        image = pyipmi.hpm.UpgradeImage(output)
+        header = image.header
+        assert (header.device_id, header.manufacturer_id,
+                header.product_id) == (4, 15000, 1701)
+        assert header.components == [0, 1]
+        assert header.capabilities == 0x05
+        # 12 seconds are 3 units of 5 seconds
+        assert header.inaccessibility_timeout == 3
+        assert header.time == 1700000000
+        assert header.firmware_revision.to_data() == \
+            b'\x04\x51\x01\x02\x03\x04'
+        assert header.earliest_compatible_revision.to_data() == b'\x04\x00'
+        assert [(type(a).__name__, a.components) for a in image.actions] == [
+            ('UpgradeActionRecordPrepare', 0x03),
+            ('UpgradeActionRecordUploadForUpgrade', 0x01),
+            ('UpgradeActionRecordUploadForUpgrade', 0x02)]
+        assert [a.firmware_image_data for a in image.actions[1:]] == [
+            b'boot', b'ipmc firmware']
+        assert image.actions[1].firmware_description_string == \
+            'IPM Controller'
+
+    @pytest.mark.parametrize('arguments', [
+        '--firmware 8=fw.bin',
+        '--firmware fw.bin',
+        '--firmware 1=fw.bin --version 1',
+        '--firmware 1=fw.bin --version 1.100',
+        '--firmware 1=fw.bin --aux 0102',
+        '--firmware 1=fw.bin --capabilities flash',
+    ])
+    def test_hpm_create_invalid_arguments(self, arguments, capsys):
+        with pytest.raises(SystemExit):
+            self.parse('hpm create out.hpm --device-id 4 '
+                       '--manufacturer-id 15000 --product-id 1701 '
+                       '--version 1.02 ' + arguments)
+        err = capsys.readouterr().err
+        assert 'invalid' in err or 'unknown' in err
+
+    @pytest.mark.parametrize('arguments, error', [
+        (['--firmware', '1=missing.bin'], 'cannot read'),
+        (['--firmware', '1={fw}', '--firmware', '1={fw}'], 'given twice'),
+        (['--firmware', '1={fw}', '--description', 'x' * 22], 'longer'),
+        (['--firmware', '1={fw}', '--device-id', '256'], 'invalid'),
+    ])
+    def test_hpm_create_error(self, tmp_path, capsys, arguments, error):
+        firmware = tmp_path / 'fw.bin'
+        firmware.write_bytes(b'fw')
+        args = ['hpm', 'create', str(tmp_path / 'out.hpm'),
+                '--device-id', '4', '--manufacturer-id', '15000',
+                '--product-id', '1701', '--version', '1.02']
+        args += [a.replace('{fw}', str(firmware)) for a in arguments]
+        with pytest.raises(SystemExit):
+            cli.main(args)
+        assert error in capsys.readouterr().out
+        assert not (tmp_path / 'out.hpm').exists()
 
     def test_invalid_choice(self, capsys):
         with pytest.raises(SystemExit):

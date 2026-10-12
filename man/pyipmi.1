@@ -1,4 +1,4 @@
-.TH PYIPMI "1" "2026\-10\-11" "python\-ipmi" "python\-ipmi manual"
+.TH PYIPMI "1" "2026\-10\-12" "python\-ipmi" "python\-ipmi manual"
 .SH NAME
 pyipmi \- pure python IPMI tool
 .SH SYNOPSIS
@@ -1027,6 +1027,9 @@ Check the specified HPM.1 file
 .TP
 \fBpyipmi hpm\fR \fI\,install\/\fR
 Install the specified HPM.1 file to the controller
+.TP
+\fBpyipmi hpm\fR \fI\,create\/\fR
+Write an HPM.1 upgrade image with the firmware of components
 
 .SH COMMAND \fI\,'pyipmi hpm capabilities'\/\fR
 usage: pyipmi hpm capabilities [\-h]
@@ -1051,6 +1054,87 @@ Install the specified HPM.1 file to the controller
 
 .TP
 \fBcomponent_id\fR
+
+.SH COMMAND \fI\,'pyipmi hpm create'\/\fR
+usage: pyipmi hpm create [\-h] \-\-firmware <component>=<file>
+                         \-\-device\-id DEVICE_ID
+                         \-\-manufacturer\-id MANUFACTURER_ID
+                         \-\-product\-id PRODUCT_ID \-\-version <major>.<minor>
+                         [\-\-aux <hex>] [\-\-earliest <major>.<minor>]
+                         [\-\-description DESCRIPTION] [\-\-backup] [\-\-prepare]
+                         [\-\-capabilities <capability>[,...]]
+                         [\-\-selftest\-timeout <seconds>]
+                         [\-\-rollback\-timeout <seconds>]
+                         [\-\-inaccessibility\-timeout <seconds>]
+                         [\-\-time <seconds>]
+                         output
+
+Write an HPM.1 upgrade image with the firmware of components
+
+.TP
+\fBoutput\fR
+the upgrade image file
+
+.SH OPTIONS \fI\,'pyipmi hpm create'\/\fR
+.TP
+\fB\-\-firmware\fR \fI\,<component>=<file>\/\fR
+the firmware file of a component (0 to 7), e.g. 1=ipmc.bin; several times for several components
+
+.TP
+\fB\-\-device\-id\fR \fI\,DEVICE_ID\/\fR
+the device ID of the controller (Get Device ID)
+
+.TP
+\fB\-\-manufacturer\-id\fR \fI\,MANUFACTURER_ID\/\fR
+the manufacturer ID of the controller
+
+.TP
+\fB\-\-product\-id\fR \fI\,PRODUCT_ID\/\fR
+the product ID of the controller
+
+.TP
+\fB\-\-version\fR \fI\,<major>.<minor>\/\fR
+the firmware version, e.g. 1.02
+
+.TP
+\fB\-\-aux\fR \fI\,<hex>\/\fR
+the auxiliary revision, 4 bytes in hex, e.g. 00000001
+
+.TP
+\fB\-\-earliest\fR \fI\,<major>.<minor>\/\fR
+the earliest compatible revision, 0.00 by default
+
+.TP
+\fB\-\-description\fR \fI\,DESCRIPTION\/\fR
+the description of the firmware, up to 21 characters
+
+.TP
+\fB\-\-backup\fR
+back up the components before the upload
+
+.TP
+\fB\-\-prepare\fR
+prepare the components before the upload
+
+.TP
+\fB\-\-capabilities\fR \fI\,<capability>[,...]\/\fR
+the image capabilities: self\-test, automatic\-rollback, manual\-rollback, services\-affected
+
+.TP
+\fB\-\-selftest\-timeout\fR \fI\,<seconds>\/\fR
+the selftest timeout in seconds, stored in 5 second units
+
+.TP
+\fB\-\-rollback\-timeout\fR \fI\,<seconds>\/\fR
+the rollback timeout in seconds, stored in 5 second units
+
+.TP
+\fB\-\-inaccessibility\-timeout\fR \fI\,<seconds>\/\fR
+the inaccessibility timeout in seconds, stored in 5 second units
+
+.TP
+\fB\-\-time\fR \fI\,<seconds>\/\fR
+the creation time in seconds since the epoch, now by default
 
 .SH COMMAND \fI\,'pyipmi picmg'\/\fR
 usage: pyipmi picmg [\-h] <command> ...
