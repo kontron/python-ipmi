@@ -22,6 +22,8 @@ from . import Bitfield
 from . import String
 from . import CompletionCode
 from . import RemainingBytes
+from . import Conditional
+from . import Optional
 
 
 @register_message_class
@@ -476,6 +478,60 @@ class CloseSessionRsp(Message):
     __netfn__ = constants.NETFN_APP | 1
     __fields__ = (
         CompletionCode(),
+    )
+
+
+@register_message_class
+class GetSessionInfoReq(Message):
+    """Get Session Info: a session by index, handle or ID.
+
+    The session index is 0 for the session of the request, 1 to 63 for
+    the active sessions, ``SESSION_HANDLE`` with the session handle or
+    ``SESSION_ID`` with the session ID.
+    """
+
+    CURRENT_SESSION = 0x00
+    SESSION_HANDLE = 0xfe
+    SESSION_ID = 0xff
+
+    __cmdid__ = constants.CMDID_GET_SESSION_INFO
+    __netfn__ = constants.NETFN_APP
+    __fields__ = (
+        UnsignedInt('session_index', 1, 0),
+        Conditional(lambda m: m.session_index == GetSessionInfoReq.SESSION_HANDLE,
+                    UnsignedInt('session_handle', 1, 0)),
+        Conditional(lambda m: m.session_index == GetSessionInfoReq.SESSION_ID,
+                    UnsignedInt('session_id', 4, 0)),
+    )
+
+
+@register_message_class
+class GetSessionInfoRsp(Message):
+    """The session and the numbers of possible and active sessions.
+
+    An unused session index has only the handle 0 and the numbers. The
+    channel data of a LAN channel (IPMI v1.5) is the IP address, the MAC
+    address and the port of the remote console.
+    """
+
+    __cmdid__ = constants.CMDID_GET_SESSION_INFO
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
+        UnsignedInt('session_handle', 1),
+        Bitfield('possible_sessions', 1,
+                 Bitfield.Bit('count', 6, 0),
+                 Bitfield.ReservedBit(2, 0),),
+        Bitfield('active_sessions', 1,
+                 Bitfield.Bit('count', 6, 0),
+                 Bitfield.ReservedBit(2, 0),),
+        # without them for an unused session index: the user ID in bits
+        # 5:0, the operating privilege level in bits 3:0, the channel
+        # number in bits 3:0 (the protocol auxiliary data in bits 7:4)
+        Optional(UnsignedInt('user_id', 1)),
+        Optional(UnsignedInt('privilege_level', 1)),
+        Optional(UnsignedInt('channel', 1)),
+        RemainingBytes('channel_data'),
     )
 
 

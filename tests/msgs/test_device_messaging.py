@@ -444,3 +444,34 @@ def test_user_access_rsp():
     assert m.cmdid == 0x43
     assert m.netfn == 7
     assert m.completion_code == 0x00
+
+
+def test_getsessioninfo_encode_req():
+    m = pyipmi.msgs.device_messaging.GetSessionInfoReq()
+    assert encode_message(m) == b'\x00'
+    m.session_index = m.SESSION_HANDLE
+    m.session_handle = 5
+    assert encode_message(m) == b'\xfe\x05'
+    m.session_index = m.SESSION_ID
+    m.session_id = 0x11223344
+    assert encode_message(m) == b'\xff\x44\x33\x22\x11'
+
+
+def test_getsessioninfo_decode_rsp():
+    m = pyipmi.msgs.device_messaging.GetSessionInfoRsp()
+    decode_message(m, b'\x00\x01\x04\x01\x02\x04\x01'
+                      b'\x7f\x00\x00\x01\x00\x00\x00\x00\x00\x00\x02\x6f')
+    assert m.session_handle == 1
+    assert m.possible_sessions.count == 4
+    assert m.active_sessions.count == 1
+    assert m.user_id == 2
+    assert m.privilege_level == 4
+    assert m.channel == 1
+    assert bytes(m.channel_data[:4]) == b'\x7f\x00\x00\x01'
+
+
+def test_getsessioninfo_decode_rsp_unused_index():
+    m = pyipmi.msgs.device_messaging.GetSessionInfoRsp()
+    decode_message(m, b'\x00\x00\x04\x01')
+    assert m.session_handle == 0
+    assert m.user_id is None
