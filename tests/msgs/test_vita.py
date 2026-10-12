@@ -51,17 +51,64 @@ def test_VitaGetChassisAddressTableInfoReq_encode():
     assert data == b'\x03'
 
 
+def test_VitaGetChassisAddressTableInfoReq_encode_address_key():
+    m = pyipmi.msgs.vita.VitaGetChassisAddressTableInfoReq()
+    m.fru_id = 0
+    m.address_key_type = m.ADDRESS_KEY_IPMB_ADDRESS
+    m.address_key = 0x82
+    assert encode_message(m) == b'\x03\x00\x01\x82'
+    decode_message(m, b'\x03\x01')
+    assert m.fru_id == 1
+    assert m.address_key_type is None
+
+
 def test_VitaGetChassisAddressTableInfoRsp_decode():
     m = pyipmi.msgs.vita.VitaGetChassisAddressTableInfoRsp()
-    decode_message(m, b'\x00\x03')
+    decode_message(m, b'\x00\x03\x41\x82\xff\x00\x01\x00')
     assert m.completion_code == 0
     assert m.vita_identifier == 3
+    assert m.hardware_address == 0x41
+    assert m.ipmb_0_address == 0x82
+    assert m.fru_id == 0
+    assert m.site_id == 1
+    assert m.site_type == 0
 
 
 def test_VitaGetChassisAddressTableInfoRsp_encode():
-    m = pyipmi.msgs.vita.VitaGetChassisAddressTableInfoReq()
-    data = encode_message(m)
-    assert data == b'\x03'
+    m = pyipmi.msgs.vita.VitaGetChassisAddressTableInfoRsp()
+    m.hardware_address = 0x10
+    m.ipmb_0_address = 0x20
+    m.fru_id = 1
+    m.site_id = 1
+    m.site_type = 3
+    assert encode_message(m) == b'\x00\x03\x10\x20\xff\x01\x01\x03'
+
+
+def test_VitaGetChassisManagerIpmbAddressRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetChassisManagerIpmbAddressRsp()
+    decode_message(m, b'\x00\x03\x20\x00')
+    assert m.active_address == 0x20
+    assert m.backup_address == 0
+
+
+def test_VitaGetChassisManagerIpAddressesReq_encode():
+    m = pyipmi.msgs.vita.VitaGetChassisManagerIpAddressesReq()
+    m.address_number = 0
+    assert encode_message(m) == b'\x03\x00'
+
+
+def test_VitaGetChassisManagerIpAddressesRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetChassisManagerIpAddressesRsp()
+    decode_message(m, b'\x00\x03\x10\x00\x00\x00\x01\x03\x01\x05'
+                      b'\x80\x7f\x00\x00\x01\x02\x6f')
+    assert m.last_change == 0x10
+    assert m.address_count == 1
+    assert m.site_type == 3
+    assert m.site_number == 1
+    assert m.max_unavailable_time == 5
+    assert m.address_type == m.ADDRESS_TYPE_CHASSIS_MANAGER | \
+        m.ADDRESS_TYPE_IPV4
+    assert bytes(m.address) == b'\x7f\x00\x00\x01\x02\x6f'
 
 
 def test_VitaGetFruAddressInfoReq_decode():
@@ -584,13 +631,6 @@ def test_encode_req_vita_set_chassis_identifier():
     m = pyipmi.msgs.vita.VitaSetChassisIdentifierReq()
     m.chassis_identifier = b'\xc3ABC'
     assert encode_message(m) == b'\x03\xc3ABC'
-
-
-def test_decode_rsp_vita_get_chassis_address_table_info():
-    m = pyipmi.msgs.vita.VitaGetChassisAddressTableInfoRsp()
-    decode_message(m, b'\x00\x03\x01\x02\x03')
-    assert m.completion_code == 0x00
-    assert bytes(m.data) == b'\x01\x02\x03'
 
 
 def test_VitaGetFanSpeedPropertiesReq_encode():

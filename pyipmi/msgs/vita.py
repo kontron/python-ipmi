@@ -22,6 +22,7 @@ from . import Bitfield
 from . import CompletionCode
 from . import Optional
 from . import RemainingBytes
+from . import Timestamp
 from . import GroupExtensionIdentifier
 
 
@@ -75,10 +76,25 @@ class VitaGetVsoCapabilitiesRsp(VitaMessage):
 
 @register_message_class
 class VitaGetChassisAddressTableInfoReq(VitaMessage):
+    """Get Chassis Address Table Info (VITA 46.11 table 10.1.3.2-1).
+
+    All fields after the VSO identifier are optional: the FRU device ID
+    (needed with an address key), the address key type (``ADDRESS_KEY_*``),
+    the address key and, for a physical address, the site type.
+    """
+
+    ADDRESS_KEY_HARDWARE_ADDRESS = 0x00
+    ADDRESS_KEY_IPMB_ADDRESS = 0x01
+    ADDRESS_KEY_PHYSICAL_ADDRESS = 0x03
+
     __cmdid__ = constants.CMDID_VITA_GET_CHASSIS_ADDRESS_TABLE_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        Optional(UnsignedInt('fru_id', 1)),
+        Optional(UnsignedInt('address_key_type', 1)),
+        Optional(UnsignedInt('address_key', 1)),
+        Optional(UnsignedInt('site_type', 1)),
     )
 
 
@@ -89,8 +105,12 @@ class VitaGetChassisAddressTableInfoRsp(VitaMessage):
     __fields__ = (
         CompletionCode(),
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
-        # the address table info, not decoded
-        RemainingBytes('data'),
+        UnsignedInt('hardware_address', 1),
+        UnsignedInt('ipmb_0_address', 1),
+        UnsignedInt('reserved', 1, 0xff),
+        UnsignedInt('fru_id', 1),
+        UnsignedInt('site_id', 1),
+        UnsignedInt('site_type', 1),
     )
 
 
@@ -596,6 +616,70 @@ class VitaSetPayloadModeRsp(VitaMessage):
 
 VITA_FAN_LEVEL_EMERGENCY_SHUT_DOWN = 0xfe
 VITA_FAN_LEVEL_LOCAL_CONTROL = 0xff
+
+
+@register_message_class
+class VitaGetChassisManagerIpmbAddressReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_CHASSIS_MANAGER_IPMB_ADDRESS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+    )
+
+
+@register_message_class
+class VitaGetChassisManagerIpmbAddressRsp(VitaMessage):
+    """The IPMB addresses of the active and the backup chassis manager.
+
+    The backup address is 0 if no backup chassis manager is known.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_GET_CHASSIS_MANAGER_IPMB_ADDRESS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('active_address', 1),
+        UnsignedInt('backup_address', 1),
+    )
+
+
+@register_message_class
+class VitaGetChassisManagerIpAddressesReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_CHASSIS_MANAGER_IP_ADDRESSES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        # 0 is the chassis manager IP address
+        UnsignedInt('address_number', 1),
+    )
+
+
+@register_message_class
+class VitaGetChassisManagerIpAddressesRsp(VitaMessage):
+    """An IP address of the chassis (VITA 46.11 table 10.1.3.22-1).
+
+    The address type has the address in bits 6:0 (``ADDRESS_TYPE_IPV4``)
+    and bit 7 set for the chassis manager IP address; the address of an
+    IPv4 address is the address and the RMCP port, in network order.
+    """
+
+    ADDRESS_TYPE_IPV4 = 0x00
+    ADDRESS_TYPE_CHASSIS_MANAGER = 0x80
+
+    __cmdid__ = constants.CMDID_VITA_GET_CHASSIS_MANAGER_IP_ADDRESSES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        Timestamp('last_change'),
+        UnsignedInt('address_count', 1),
+        UnsignedInt('site_type', 1),
+        UnsignedInt('site_number', 1),
+        UnsignedInt('max_unavailable_time', 1),
+        UnsignedInt('address_type', 1),
+        RemainingBytes('address'),
+    )
 
 
 @register_message_class
