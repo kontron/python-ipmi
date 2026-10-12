@@ -309,6 +309,10 @@ Netfn CMD  Group Extension Group Extension Name Name
 ----- ---- --------------- -------------------- ------------------------------------ 
 0x2c  0x1b 0x3             VITA                 VitaGetChassisManagerIpmbAddress     
 ----- ---- --------------- -------------------- ------------------------------------ 
+0x2c  0x1c 0x3             VITA                 VitaSetFanPolicy                     
+----- ---- --------------- -------------------- ------------------------------------ 
+0x2c  0x1d 0x3             VITA                 VitaGetFanPolicy                     
+----- ---- --------------- -------------------- ------------------------------------ 
 0x2c  0x1e 0x3             VITA                 VitaFruControlCapabilities           
 ----- ---- --------------- -------------------- ------------------------------------ 
 0x2c  0x21 0x3             VITA                 VitaGetChassisManagerIpAddresses     

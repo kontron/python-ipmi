@@ -683,3 +683,34 @@ def test_VitaGetFanLevelRsp_encode():
     m.local_control_fan_level = 8
     m.local_control_enable_state = 0
     assert encode_message(m) == b'\x00\x03\x05\x08\x00'
+
+
+def test_VitaSetFanPolicyReq_encode():
+    m = pyipmi.msgs.vita.VitaSetFanPolicyReq()
+    m.fan_tray_site = 1
+    m.enable = m.DISABLE
+    m.timeout = 12
+    assert encode_message(m) == b'\x03\x01\x00\x0c'
+    m.site_number = 2
+    m.site_type = 0
+    assert encode_message(m) == b'\x03\x01\x00\x0c\x02\x00'
+
+
+def test_VitaSetFanPolicyReq_decode_without_timeout():
+    m = pyipmi.msgs.vita.VitaSetFanPolicyReq()
+    decode_message(m, b'\x03\x01\x01')
+    assert (m.fan_tray_site, m.enable, m.timeout) == (1, 1, None)
+
+
+def test_VitaGetFanPolicyRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetFanPolicyRsp()
+    decode_message(m, b'\x00\x03\x01\x01')
+    assert (m.policy, m.coverage) == (m.POLICY_ENABLED, 1)
+    decode_message(m, b'\x00\x03\xff')
+    assert (m.policy, m.coverage) == (m.POLICY_INDETERMINATE, None)
+
+
+def test_VitaGetFanPolicyReq_encode():
+    m = pyipmi.msgs.vita.VitaGetFanPolicyReq()
+    m.fan_tray_site = 1
+    assert encode_message(m) == b'\x03\x01'

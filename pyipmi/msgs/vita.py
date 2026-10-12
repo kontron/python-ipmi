@@ -761,6 +761,82 @@ class VitaGetFanLevelRsp(VitaMessage):
     )
 
 
+@register_message_class
+class VitaSetFanPolicyReq(VitaMessage):
+    """Set Fan Policy (VITA 46.11 table 10.1.3.15-1), to a chassis manager.
+
+    It enables (1) or disables (0) the autonomous control of a fan tray
+    site by the chassis manager, for the temperature events of a site
+    (site number and type) or of all sites. The timeout of a disable is in
+    units of 5 seconds, ``TIMEOUT_INFINITE`` or no timeout for none.
+    """
+
+    DISABLE = 0
+    ENABLE = 1
+    TIMEOUT_INFINITE = 0xff
+
+    __cmdid__ = constants.CMDID_VITA_SET_FAN_POLICY
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fan_tray_site', 1),
+        UnsignedInt('enable', 1),
+        Optional(UnsignedInt('timeout', 1)),
+        Optional(UnsignedInt('site_number', 1)),
+        Optional(UnsignedInt('site_type', 1)),
+    )
+
+
+@register_message_class
+class VitaSetFanPolicyRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_SET_FAN_POLICY
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+    )
+
+
+@register_message_class
+class VitaGetFanPolicyReq(VitaMessage):
+    """Get Fan Policy (VITA 46.11 table 10.1.3.16-1), to a chassis manager.
+
+    The policy of a fan tray site, for a site (site number and type) or
+    for all sites.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_GET_FAN_POLICY
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fan_tray_site', 1),
+        Optional(UnsignedInt('site_number', 1)),
+        Optional(UnsignedInt('site_type', 1)),
+    )
+
+
+@register_message_class
+class VitaGetFanPolicyRsp(VitaMessage):
+    """The policy: disabled (0), enabled (1) or ``POLICY_INDETERMINATE``.
+
+    The coverage, whether the fan tray cools the site (1) or not (0), is
+    only in the response to a request with a site.
+    """
+
+    POLICY_DISABLED = 0
+    POLICY_ENABLED = 1
+    POLICY_INDETERMINATE = 0xff
+
+    __cmdid__ = constants.CMDID_VITA_GET_FAN_POLICY
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('policy', 1),
+        Optional(UnsignedInt('coverage', 1)),
+    )
+
+
 def power_supply_signals() -> Bitfield:
     """Return the power supply signals of the PSU module commands.
 
