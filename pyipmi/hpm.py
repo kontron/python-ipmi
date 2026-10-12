@@ -23,7 +23,8 @@ for example a boot loader and the operational firmware. An upgrade image
 actions to perform for them.
 
 The commands are the methods of :class:`Hpm`, which are available on
-:class:`pyipmi.Ipmi`. An upgrade image is read with :class:`UpgradeImage`.
+:class:`pyipmi.Ipmi`. An upgrade image is read and written with
+:class:`UpgradeImage`.
 
 Example:
     Install component 1 of an upgrade image and show its version::
@@ -31,6 +32,23 @@ Example:
         ipmi.install_component_from_file('firmware.hpm', 1)
         print(ipmi.get_component_property(
             1, pyipmi.hpm.PROPERTY_CURRENT_VERSION))
+
+    Write an upgrade image with the firmware of component 1::
+
+        from pyipmi.fields import VersionField
+        from pyipmi.hpm import (UpgradeActionRecordPrepare,
+                                UpgradeActionRecordUploadForUpgrade,
+                                UpgradeImage, UpgradeImageHeaderRecord)
+
+        version = VersionField.create(1, 2)
+        header = UpgradeImageHeaderRecord.create(
+            device_id=4, manufacturer_id=15000, product_id=1701,
+            components=[1], firmware_revision=version)
+        image = UpgradeImage.create(header, [
+            UpgradeActionRecordPrepare.create(0x02),
+            UpgradeActionRecordUploadForUpgrade.create(
+                0x02, version, 'IPM Controller', firmware)])
+        image.write('firmware.hpm')
 """
 
 from __future__ import annotations
@@ -73,6 +91,16 @@ ACTION_UPLOAD_FOR_COMPARE = 0x03
 IMAGE_ACTION_BACKUP_COMPONENTS = 0x00
 IMAGE_ACTION_PREPARE_COMPONENTS = 0x01
 IMAGE_ACTION_UPLOAD_FIRMWARE_IMAGE = 0x02
+
+# the image capabilities of the upgrade image header, in the order of the
+# global capabilities of Get Target Upgrade Capabilities
+IMAGE_CAPABILITY_SELF_TEST = 0x01
+IMAGE_CAPABILITY_AUTOMATIC_ROLLBACK = 0x02
+IMAGE_CAPABILITY_MANUAL_ROLLBACK = 0x04
+IMAGE_CAPABILITY_SERVICES_AFFECTED = 0x08
+
+# the length of the description of an upload action record
+IMAGE_DESCRIPTION_LENGTH = 21
 
 CC_LONG_DURATION_CMD_IN_PROGRESS = 0x80
 
@@ -1123,6 +1151,9 @@ class UpgradeImageHeaderRecord:
         oem_data (bytes): The OEM data, only set if present.
         checksum (int): The header checksum, it is not verified.
         length (int): The length of the header in bytes.
+
+    A header is decoded from the image data, or created with :meth:`create`
+    and encoded with :meth:`to_data`.
     """
 
     FORMAT = [
@@ -1205,6 +1236,94 @@ class UpgradeImageHeaderRecord:
         self.checksum = data[34 + self.oem_data_length]
         self.length = 34 + self.oem_data_length+1
 
+    @classmethod
+    def create(cls, device_id: int, manufacturer_id: int, product_id: int,
+               components: Sequence[int], firmware_revision: VersionField,
+               earliest_compatible_revision: VersionField | None = None,
+               capabilities: int = 0, selftest_timeout: int = 0,
+               rollback_timeout: int = 0, inaccessibility_timeout: int = 0,
+               oem_data: bytes = b'', timestamp: int | None = None,
+               format_version: int = 0) -> UpgradeImageHeaderRecord:
+        """Create the header of an upgrade image.
+
+        Args:
+            device_id: The device ID of the controller (Get Device ID).
+            manufacturer_id: The manufacturer ID of the controller.
+            product_id: The product ID of the controller.
+            components: The numbers of the components (0-7) in the image.
+            firmware_revision: The firmware revision of the image, with
+                the auxiliary revision.
+            earliest_compatible_revision: The earliest firmware revision the
+                image is compatible with, 0.0 by default.
+            capabilities: The image capabilities, ``IMAGE_CAPABILITY_*``.
+            selftest_timeout: The self test timeout, in 5 second units.
+            rollback_timeout: The rollback timeout, in 5 second units.
+            inaccessibility_timeout: The time the controller is not
+                accessible during the activation, in 5 second units.
+            oem_data: The OEM data.
+            timestamp: The creation time in seconds since the epoch, now by
+                default.
+            format_version: The format version of the header.
+
+        Returns:
+            The header, decoded from its data.
+
+        Raises:
+            ValueError: A value is out of range.
+        """
+        header = cls()
+        header.format_version = format_version
+        header.device_id = device_id
+        header.manufacturer_id = manufacturer_id
+        header.product_id = product_id
+        header.time = int(time.time()) if timestamp is None else timestamp
+        header.capabilities = capabilities
+        header.components = list(components)
+        header.selftest_timeout = selftest_timeout
+        header.rollback_timeout = rollback_timeout
+        header.inaccessibility_timeout = inaccessibility_timeout
+        header.earliest_compatible_revision = (
+            earliest_compatible_revision or VersionField.create(0, 0))
+        header.firmware_revision = firmware_revision
+        header.oem_data = oem_data
+        return cls(header.to_data())
+
+    def to_data(self) -> bytes:
+        """Encode the header with its checksum.
+
+        Raises:
+            ValueError: A value is out of range.
+        """
+        if any(not 0 <= n <= 7 for n in self.components):
+            raise ValueError(f'invalid components {self.components}, not 0 '
+                             'to 7')
+        mask = 0
+        for number in self.components:
+            mask |= 1 << number
+        earliest = self.earliest_compatible_revision.to_data()
+        if len(earliest) != VersionField.VERSION_FIELD_LEN:
+            raise ValueError('the earliest compatible revision has no '
+                             'auxiliary revision')
+        revision = self.firmware_revision.to_data()
+        if len(revision) == VersionField.VERSION_FIELD_LEN:
+            revision += bytes(4)
+        oem_data = bytes(getattr(self, 'oem_data', b''))
+        if not 0 <= self.manufacturer_id <= 0xffffff:
+            raise ValueError(f'invalid manufacturer ID {self.manufacturer_id}')
+        try:
+            data = (self.SIGNATURE
+                    + struct.pack('<BB', self.format_version, self.device_id)
+                    + self.manufacturer_id.to_bytes(3, 'little')
+                    + struct.pack('<HLBBBBB', self.product_id, self.time,
+                                  self.capabilities, mask,
+                                  self.selftest_timeout, self.rollback_timeout,
+                                  self.inaccessibility_timeout)
+                    + earliest + revision
+                    + struct.pack('<H', len(oem_data)) + oem_data)
+        except struct.error as e:
+            raise ValueError(f'invalid upgrade image header: {e}') from e
+        return data + bytes((_zero_checksum(data),))
+
     def __str__(self) -> str:
         """Return the header fields as multi-line string."""
         string = []
@@ -1246,7 +1365,13 @@ class UpgradeActionRecord:
         checksum (int | None): The record header checksum, it is not
             verified.
         length (int): The length of the record in bytes.
+
+    The records of the action types are created with the ``create()``
+    method of their classes and encoded with :meth:`to_data`.
     """
+
+    #: The action type of the record class.
+    ACTION_TYPE: int | None = None
 
     ACTIONS = (
         "Backup Components",
@@ -1298,6 +1423,37 @@ class UpgradeActionRecord:
             raise HpmError('unsupported ActionRecord type '
                            f'0x{action_type:02x}')
 
+    @classmethod
+    def create(cls, components: int) -> UpgradeActionRecord:
+        """Create an action record for the components.
+
+        Args:
+            components: Bit mask of the components, bit n selects component
+                n.
+
+        Raises:
+            ValueError: The class has no action type or the mask is
+                invalid.
+        """
+        if cls.ACTION_TYPE is None:
+            raise ValueError(f'{cls.__name__} has no action type')
+        record = cls()
+        record.action = cls.ACTION_TYPE
+        record.components = components
+        return cls(record.to_data())
+
+    def _header_data(self) -> bytes:
+        if self.action is None or self.components is None:
+            raise ValueError('the action record has no action')
+        if not 0 < self.components <= 0xff:
+            raise ValueError(f'invalid components 0x{self.components:x}')
+        data = bytes((self.action, self.components))
+        return data + bytes((_zero_checksum(data),))
+
+    def to_data(self) -> bytes:
+        """Encode the action record with its checksum."""
+        return self._header_data()
+
     def __str__(self) -> str:
         """Return the action type and the components."""
         assert self.action is not None and self.components is not None
@@ -1311,9 +1467,13 @@ class UpgradeActionRecord:
 class UpgradeActionRecordBackup(UpgradeActionRecord):
     """The Backup Components action record."""
 
+    ACTION_TYPE = IMAGE_ACTION_BACKUP_COMPONENTS
+
 
 class UpgradeActionRecordPrepare(UpgradeActionRecord):
     """The Prepare Components action record."""
+
+    ACTION_TYPE = IMAGE_ACTION_PREPARE_COMPONENTS
 
 
 class UpgradeActionRecordUploadForUpgrade(UpgradeActionRecord):
@@ -1331,6 +1491,8 @@ class UpgradeActionRecordUploadForUpgrade(UpgradeActionRecord):
             bytes.
         firmware_image_data (bytes | None): The firmware image.
     """
+
+    ACTION_TYPE = IMAGE_ACTION_UPLOAD_FIRMWARE_IMAGE
 
     def __init__(self, data: bytes | None = None) -> None:
         """Decode the action record.
@@ -1361,6 +1523,57 @@ class UpgradeActionRecordUploadForUpgrade(UpgradeActionRecord):
                                f'truncated ({len(self.firmware_image_data):d} '
                                f'of {self.firmware_length:d} bytes)')
             self.length += 31 + self.firmware_length
+
+    @classmethod
+    def create(cls, components: int,
+               firmware_version: VersionField | None = None,
+               description: str = '',
+               firmware_image_data: bytes = b'') -> UpgradeActionRecord:
+        """Create an Upload Firmware Image action record.
+
+        Args:
+            components: Bit mask of the component, bit n selects component
+                n; the image is uploaded for each selected component.
+            firmware_version: The version of the firmware, with the
+                auxiliary revision.
+            description: The description of the firmware, up to 21
+                characters.
+            firmware_image_data: The firmware image.
+
+        Raises:
+            ValueError: A value is invalid.
+        """
+        if firmware_version is None:
+            raise ValueError('the upload action record needs a firmware '
+                             'version')
+        record = cls()
+        record.action = cls.ACTION_TYPE
+        record.components = components
+        record.firmware_version = firmware_version
+        record.firmware_description_string = description
+        record.firmware_image_data = bytes(firmware_image_data)
+        return cls(record.to_data())
+
+    def to_data(self) -> bytes:
+        """Encode the action record with the firmware image."""
+        if self.firmware_version is None or self.firmware_image_data is None:
+            raise ValueError('the upload action record has no firmware')
+        version = self.firmware_version.to_data()
+        if len(version) == VersionField.VERSION_FIELD_LEN:
+            version += bytes(4)
+        try:
+            description = (self.firmware_description_string
+                           or '').encode('latin-1')
+        except UnicodeEncodeError as e:
+            raise ValueError(f'invalid description: {e}') from e
+        if len(description) > IMAGE_DESCRIPTION_LENGTH:
+            raise ValueError(
+                f'the description {self.firmware_description_string!r} is '
+                f'longer than {IMAGE_DESCRIPTION_LENGTH} characters')
+        image = bytes(self.firmware_image_data)
+        return (self._header_data() + version
+                + description.ljust(IMAGE_DESCRIPTION_LENGTH, b'\0')
+                + struct.pack('<L', len(image)) + image)
 
     def __str__(self) -> str:
         """Return the action record fields as multi-line string."""
@@ -1395,8 +1608,16 @@ class ImageChecksumRecord:
 HPM_IMAGE_CHECKSUM_SIZE = 16
 
 
+def _zero_checksum(data: bytes) -> int:
+    """Return the checksum that makes the sum of the data zero."""
+    return -sum(data) & 0xff
+
+
 class UpgradeImage:
     """An HPM.1 upgrade image.
+
+    An image is read from a file, decoded with :meth:`from_data` or created
+    with :meth:`create`, and written with :meth:`write`.
 
     Attributes:
         header (UpgradeImageHeaderRecord): The image header.
@@ -1433,10 +1654,69 @@ class UpgradeImage:
         if self.checksum_actual != self.checksum_expected:
             raise HpmError('image MD5 checksum mismatch')
 
-    def _from_file(self, filename: str) -> None:
+    @classmethod
+    def from_data(cls, data: bytes) -> UpgradeImage:
+        """Decode an upgrade image.
 
+        Raises:
+            HpmError: The data is no HPM.1 upgrade image, an action record is
+                invalid or the MD5 checksum is wrong.
+        """
+        image = cls()
+        image._from_data(bytes(data))
+        return image
+
+    @classmethod
+    def create(cls, header: UpgradeImageHeaderRecord,
+               actions: Sequence[UpgradeActionRecord]) -> UpgradeImage:
+        """Create an upgrade image from the header and the action records.
+
+        The actions are performed in their order, e.g. a prepare action
+        before the upload actions. The MD5 checksum is calculated.
+
+        Args:
+            header: The header, see :meth:`UpgradeImageHeaderRecord.create`.
+            actions: The action records, see the ``create()`` methods of
+                the action record classes.
+
+        Raises:
+            ValueError: An action is for a component that is not in the
+                header, or a record is invalid.
+        """
+        mask = 0
+        for number in header.components:
+            mask |= 1 << number
+        for action in actions:
+            if action.components is not None and action.components & ~mask:
+                raise ValueError(
+                    f'the action for the components 0x{action.components:02x}'
+                    f' has components that are not in the header '
+                    f'{header.components}')
+        data = header.to_data() + b''.join(a.to_data() for a in actions)
+        return cls.from_data(data + hashlib.md5(data).digest())
+
+    def to_data(self) -> bytes:
+        """Encode the image with its MD5 checksum."""
+        data = self.header.to_data() + b''.join(
+            a.to_data() for a in self.actions)
+        return data + hashlib.md5(data).digest()
+
+    def write(self, filename: str) -> None:
+        """Write the image to a file.
+
+        Raises:
+            OSError: The file cannot be written.
+        """
+        data = self.to_data()
+        with open(filename, 'wb') as file:
+            file.write(data)
+
+    def _from_file(self, filename: str) -> None:
         with open(filename, "rb") as file:
             file_data = file.read()
+        self._from_data(file_data)
+
+    def _from_data(self, file_data: bytes) -> None:
         file_size = len(file_data)
 
         ################################

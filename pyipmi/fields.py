@@ -34,6 +34,56 @@ class VersionField:
         if len(buf) == self.VERSION_WITH_AUX_FIELD_LEN:
             self.auxiliary = buf[2:6]
 
+    @classmethod
+    def create(cls, major: int, minor: int,
+               auxiliary: Sequence[int] | None = None) -> VersionField:
+        """Create a version field, e.g. ``create(4, 50)`` for 4.50.
+
+        Args:
+            major: The major version (0 to 127).
+            minor: The minor version (0 to 99), encoded as two BCD digits,
+                or 0xff.
+            auxiliary: The auxiliary revision (4 bytes), only in the HPM.1
+                version fields with auxiliary bytes.
+
+        Raises:
+            ValueError: A value is out of range.
+        """
+        if not 0 <= major <= 127:
+            raise ValueError(f'invalid major version {major}, not 0 to 127')
+        if not 0 <= minor <= 99 and minor != 0xff:
+            raise ValueError(f'invalid minor version {minor}, not 0 to 99')
+        field = cls()
+        field.major = major
+        field.minor = minor
+        if auxiliary is not None:
+            if len(auxiliary) != 4:
+                raise ValueError('the auxiliary revision has 4 bytes, not '
+                                 f'{len(auxiliary)}')
+            field.auxiliary = array.array('B', auxiliary)
+        return field
+
+    def to_data(self) -> bytes:
+        """Encode the version field.
+
+        Returns:
+            The major version and the minor version as BCD digits, followed by
+            the auxiliary revision if the field has one.
+
+        Raises:
+            ValueError: The field has no version.
+        """
+        if self.major is None or self.minor is None:
+            raise ValueError('the version field has no version')
+        minor = self.minor
+        if minor != 0xff:
+            minor = (minor // 10) << 4 | minor % 10
+        data = bytes((self.major, minor))
+        auxiliary = getattr(self, 'auxiliary', None)
+        if auxiliary is not None:
+            data += bytes(auxiliary)
+        return data
+
     def __str__(self) -> str:
         return self.version_to_string()
 

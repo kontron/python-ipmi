@@ -3,13 +3,17 @@
 import hashlib
 import os
 import struct
+import time
 from unittest import mock
 
 import pytest
 
 import pyipmi
 from pyipmi.errors import HpmError, IpmiTimeoutError, RetryError
-from pyipmi.hpm import (Hpm, ComponentProperty,
+from pyipmi.fields import VersionField
+from pyipmi.hpm import (IMAGE_CAPABILITY_MANUAL_ROLLBACK,
+                        IMAGE_CAPABILITY_SELF_TEST,
+                        Hpm, ComponentProperty,
                         ComponentPropertyDescriptionString,
                         ComponentPropertyOem,
                         ComponentPropertyGeneral,
@@ -780,3 +784,137 @@ def test_wait_until_new_firmware_comes_up_without_reset(fake_time):
 def test_upgradeimageheaderrecord_invalid_signature():
     with pytest.raises(HpmError):
         UpgradeImageHeaderRecord(b'\x1f\x8b\x08\x00' + bytes(31))
+
+
+def test_upgrade_image_write_unchanged(tmp_path):
+    """A read image is written byte for byte as it was."""
+    with open(HPM_FILE, 'rb') as f:
+        data = f.read()
+    image = UpgradeImage(HPM_FILE)
+    assert image.to_data() == data
+    assert UpgradeImage.from_data(data).to_data() == data
+    path = tmp_path / 'copy.hpm'
+    image.write(str(path))
+    assert path.read_bytes() == data
+
+
+def test_upgrade_image_create(tmp_path):
+    firmware = bytes(range(256)) * 3
+    header = UpgradeImageHeaderRecord.create(
+        device_id=4, manufacturer_id=15000, product_id=1701,
+        components=[1],
+        firmware_revision=VersionField.create(4, 51, [1, 2, 3, 4]),
+        earliest_compatible_revision=VersionField.create(4, 0),
+        capabilities=IMAGE_CAPABILITY_SELF_TEST
+        | IMAGE_CAPABILITY_MANUAL_ROLLBACK,
+        selftest_timeout=12, rollback_timeout=6, inaccessibility_timeout=3,
+        oem_data=b'\xaa\xbb', timestamp=1700000000)
+    image = UpgradeImage.create(header, [
+        UpgradeActionRecordBackup.create(0x02),
+        UpgradeActionRecordPrepare.create(0x02),
+        UpgradeActionRecordUploadForUpgrade.create(
+            0x02, VersionField.create(4, 51, [1, 2, 3, 4]), 'IPM Controller',
+            firmware),
+    ])
+    path = tmp_path / 'image.hpm'
+    image.write(str(path))
+
+    read = UpgradeImage(str(path))
+    header = read.header
+    assert (header.device_id, header.manufacturer_id, header.product_id) \
+        == (4, 15000, 1701)
+    assert header.manufacturer_name == 'Kontron'
+    assert header.components == [1]
+    assert header.time == 1700000000
+    assert header.capabilities == 0x05
+    assert (header.selftest_timeout, header.rollback_timeout,
+            header.inaccessibility_timeout) == (12, 6, 3)
+    assert str(header.earliest_compatible_revision) == '4.0'
+    assert header.firmware_revision.to_data() == b'\x04\x51\x01\x02\x03\x04'
+    assert bytes(header.oem_data) == b'\xaa\xbb'
+    # the header checksum
+    data = path.read_bytes()
+    assert sum(data[:header.length]) & 0xff == 0
+    assert [type(a) for a in read.actions] == [
+        UpgradeActionRecordBackup, UpgradeActionRecordPrepare,
+        UpgradeActionRecordUploadForUpgrade]
+    assert [a.components for a in read.actions] == [0x02] * 3
+    assert all(sum(data[off:off + 3]) & 0xff == 0 for off in (
+        header.length, header.length + 3, header.length + 6))
+    upload = read.actions[2]
+    assert upload.firmware_description_string == 'IPM Controller'
+    assert upload.firmware_image_data == firmware
+    assert upload.firmware_version.to_data() == b'\x04\x51\x01\x02\x03\x04'
+    assert read.to_data() == data
+
+
+def test_upgrade_image_create_defaults():
+    header = UpgradeImageHeaderRecord.create(
+        4, 15000, 1701, [0, 1], VersionField.create(1, 2))
+    assert header.earliest_compatible_revision.to_data() == b'\x00\x00'
+    # without auxiliary revision it is 0
+    assert header.firmware_revision.to_data() == b'\x01\x02\x00\x00\x00\x00'
+    assert header.oem_data_length == 0
+    assert abs(header.time - time.time()) < 10
+    image = UpgradeImage.create(header, [
+        UpgradeActionRecordUploadForUpgrade.create(
+            0x01, VersionField.create(1, 2), firmware_image_data=b'a'),
+        UpgradeActionRecordUploadForUpgrade.create(
+            0x02, VersionField.create(1, 2), firmware_image_data=b'bc')])
+    assert [a.firmware_image_data for a in image.actions] == [b'a', b'bc']
+    assert image.actions[0].firmware_description_string == ''
+
+
+@pytest.mark.parametrize('kwargs', [
+    {'components': [8]},
+    {'device_id': 256},
+    {'manufacturer_id': 0x1000000},
+    {'product_id': 0x10000},
+    {'selftest_timeout': 256},
+    {'earliest_compatible_revision': VersionField.create(1, 0, [0] * 4)},
+])
+def test_upgrade_image_header_create_invalid(kwargs):
+    args = {'device_id': 4, 'manufacturer_id': 15000, 'product_id': 1701,
+            'components': [1], 'firmware_revision': VersionField.create(1, 0),
+            **kwargs}
+    with pytest.raises(ValueError):
+        UpgradeImageHeaderRecord.create(**args)
+
+
+def test_upgrade_image_create_invalid():
+    header = UpgradeImageHeaderRecord.create(
+        4, 15000, 1701, [1], VersionField.create(1, 0))
+    # component 0 is not in the image
+    with pytest.raises(ValueError, match='not in the header'):
+        UpgradeImage.create(header, [UpgradeActionRecordPrepare.create(0x03)])
+    with pytest.raises(ValueError):
+        UpgradeActionRecordPrepare.create(0)
+    with pytest.raises(ValueError):
+        UpgradeActionRecord.create(0x02)
+    with pytest.raises(ValueError, match='longer than 21'):
+        UpgradeActionRecordUploadForUpgrade.create(
+            0x02, VersionField.create(1, 0), 'x' * 22, b'fw')
+    with pytest.raises(ValueError, match='firmware version'):
+        UpgradeActionRecordUploadForUpgrade.create(0x02)
+
+
+@pytest.mark.parametrize('major, minor, aux, data', [
+    (4, 50, None, b'\x04\x50'),
+    (1, 5, None, b'\x01\x05'),
+    (127, 99, [1, 2, 3, 4], b'\x7f\x99\x01\x02\x03\x04'),
+    (0, 0xff, None, b'\x00\xff'),
+])
+def test_version_field_create(major, minor, aux, data):
+    field = VersionField.create(major, minor, aux)
+    assert field.to_data() == data
+    decoded = VersionField(data)
+    assert (decoded.major, decoded.minor) == (major, minor)
+    assert decoded.to_data() == data
+
+
+@pytest.mark.parametrize('major, minor, aux', [
+    (128, 0, None), (1, 100, None), (1, -1, None), (1, 0, [1, 2, 3]),
+])
+def test_version_field_create_invalid(major, minor, aux):
+    with pytest.raises(ValueError):
+        VersionField.create(major, minor, aux)
