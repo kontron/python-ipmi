@@ -714,3 +714,32 @@ def test_VitaGetFanPolicyReq_encode():
     m = pyipmi.msgs.vita.VitaGetFanPolicyReq()
     m.fan_tray_site = 1
     assert encode_message(m) == b'\x03\x01'
+
+
+def test_VitaFruInventoryDeviceLockControlReq_encode():
+    m = pyipmi.msgs.vita.VitaFruInventoryDeviceLockControlReq()
+    m.fru_id = 254
+    m.operation = m.OPERATION_UNLOCK_COMMIT
+    m.lock_id = 0x1234
+    assert encode_message(m) == b'\x03\xfe\x03\x34\x12'
+
+
+def test_VitaFruInventoryDeviceLockControlRsp_decode():
+    m = pyipmi.msgs.vita.VitaFruInventoryDeviceLockControlRsp()
+    decode_message(m, b'\x00\x03\x34\x12\x78\x56\x34\x12')
+    assert (m.lock_id, m.last_commit) == (0x1234, 0x12345678)
+
+
+def test_VitaFruInventoryDeviceWriteReq_encode():
+    m = pyipmi.msgs.vita.VitaFruInventoryDeviceWriteReq()
+    m.fru_id = 254
+    m.lock_id = 0x1234
+    m.offset = 8
+    m.data = b'\x01\x02'
+    assert encode_message(m) == b'\x03\xfe\x34\x12\x08\x00\x01\x02'
+
+
+def test_VitaFruInventoryDeviceWriteRsp_decode():
+    m = pyipmi.msgs.vita.VitaFruInventoryDeviceWriteRsp()
+    decode_message(m, b'\x00\x03\x02')
+    assert m.count_written == 2

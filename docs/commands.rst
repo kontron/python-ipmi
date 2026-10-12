@@ -315,6 +315,10 @@ Netfn CMD  Group Extension Group Extension Name Name
 ----- ---- --------------- -------------------- ------------------------------------ 
 0x2c  0x1e 0x3             VITA                 VitaFruControlCapabilities           
 ----- ---- --------------- -------------------- ------------------------------------ 
+0x2c  0x1f 0x3             VITA                 VitaFruInventoryDeviceLockControl    
+----- ---- --------------- -------------------- ------------------------------------ 
+0x2c  0x20 0x3             VITA                 VitaFruInventoryDeviceWrite          
+----- ---- --------------- -------------------- ------------------------------------ 
 0x2c  0x21 0x3             VITA                 VitaGetChassisManagerIpAddresses     
 ----- ---- --------------- -------------------- ------------------------------------ 
 0x2c  0x40 0x3             VITA                 VitaGetFruAddressInfo                

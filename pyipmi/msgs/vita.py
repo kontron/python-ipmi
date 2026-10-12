@@ -115,6 +115,80 @@ class VitaGetChassisAddressTableInfoRsp(VitaMessage):
 
 
 @register_message_class
+class VitaFruInventoryDeviceLockControlReq(VitaMessage):
+    """FRU Inventory Device Lock Control (VITA 46.11 table 10.1.3.19-1).
+
+    The lock of the Chassis FRU Information of a chassis manager (FRU
+    254): get the last commit timestamp, lock, unlock and discard the
+    writes, or unlock and commit them (``OPERATION_*``); the lock ID is
+    the one of the lock to unlock, 0 for the other operations.
+    """
+
+    OPERATION_GET_TIMESTAMP = 0
+    OPERATION_LOCK = 1
+    OPERATION_UNLOCK_DISCARD = 2
+    OPERATION_UNLOCK_COMMIT = 3
+
+    __cmdid__ = constants.CMDID_VITA_FRU_INVENTORY_DEVICE_LOCK_CONTROL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_id', 1),
+        UnsignedInt('operation', 1),
+        UnsignedInt('lock_id', 2, 0),
+    )
+
+
+@register_message_class
+class VitaFruInventoryDeviceLockControlRsp(VitaMessage):
+    """The lock ID of a lock, 0 otherwise, and the last commit timestamp.
+
+    The completion code 80h is invalid FRU information at the commit, 81h
+    a failed lock or an invalid lock ID.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_FRU_INVENTORY_DEVICE_LOCK_CONTROL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('lock_id', 2),
+        Timestamp('last_commit'),
+    )
+
+
+@register_message_class
+class VitaFruInventoryDeviceWriteReq(VitaMessage):
+    """FRU Inventory Device Write (VITA 46.11 table 10.1.3.20-1).
+
+    A write to a locked FRU Inventory Device, held until its commit.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_FRU_INVENTORY_DEVICE_WRITE
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_id', 1),
+        UnsignedInt('lock_id', 2),
+        UnsignedInt('offset', 2),
+        RemainingBytes('data'),
+    )
+
+
+@register_message_class
+class VitaFruInventoryDeviceWriteRsp(VitaMessage):
+    """The bytes written; the completion code 80h is an invalid lock ID."""
+
+    __cmdid__ = constants.CMDID_VITA_FRU_INVENTORY_DEVICE_WRITE
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('count_written', 1),
+    )
+
+
+@register_message_class
 class VitaGetFruAddressInfoReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_FRU_ADDRESS_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
