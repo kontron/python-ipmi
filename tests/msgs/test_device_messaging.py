@@ -326,6 +326,24 @@ def test_get_channel_authentication_capabilities_rsp():
     assert m.status.kg == 0
 
 
+def test_get_channel_cipher_suites_req():
+    m = pyipmi.msgs.device_messaging.GetChannelCipherSuitesReq()
+    m.channel.number = 0xe
+    m.payload.type = 0
+    m.list.index = 1
+    m.list.by_cipher_suite = 1
+    data = encode_message(m)
+    assert (m.cmdid, m.netfn) == (0x54, 6)
+    assert data == b'\x0e\x00\x81'
+
+
+def test_get_channel_cipher_suites_rsp():
+    m = pyipmi.msgs.device_messaging.GetChannelCipherSuitesRsp()
+    decode_message(m, b'\x00\x01\xc0\x03\x01\x41\x81')
+    assert m.channel_number == 1
+    assert m.data == array('B', [0xc0, 0x03, 0x01, 0x41, 0x81])
+
+
 def test_get_session_challenge_rsp():
     m = pyipmi.msgs.device_messaging.GetSessionChallengeRsp()
     data = encode_message(m)

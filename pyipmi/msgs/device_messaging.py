@@ -298,6 +298,38 @@ class GetChannelAuthenticationCapabilitiesRsp(Message):
 
 
 @register_message_class
+class GetChannelCipherSuitesReq(Message):
+    __cmdid__ = constants.CMDID_GET_CHANNEL_CIPHER_SUITES
+    __netfn__ = constants.NETFN_APP
+    __privilege__ = NONE
+    __fields__ = (
+        Bitfield('channel', 1,
+                 Bitfield.Bit('number', 4, 0),
+                 Bitfield.ReservedBit(4, 0),),
+        Bitfield('payload', 1,
+                 Bitfield.Bit('type', 6, 0),
+                 Bitfield.ReservedBit(2, 0),),
+        Bitfield('list', 1,
+                 Bitfield.Bit('index', 6, 0),
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('by_cipher_suite', 1, 0),),
+    )
+
+
+@register_message_class
+class GetChannelCipherSuitesRsp(Message):
+    __cmdid__ = constants.CMDID_GET_CHANNEL_CIPHER_SUITES
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
+        UnsignedInt('channel_number', 1),
+        # up to 16 bytes of the cipher suite records (IPMI v2.0, table
+        # 22-19) of the list index
+        RemainingBytes('data'),
+    )
+
+
+@register_message_class
 class SetChannelAccessReq(Message):
     __cmdid__ = constants.CMDID_SET_CHANNEL_ACCESS
     __netfn__ = constants.NETFN_APP

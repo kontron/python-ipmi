@@ -86,7 +86,6 @@ WITHOUT_MESSAGES: dict[tuple[int, int, int | None], int] = {
     (constants.NETFN_APP, 0x4e, None): USER,
     (constants.NETFN_APP, 0x4f, None): USER,
     (constants.NETFN_APP, 0x50, None): USER,
-    (constants.NETFN_APP, 0x54, None): NONE,
     (constants.NETFN_APP, 0x56, None): ADMINISTRATOR,
     (constants.NETFN_APP, 0x57, None): USER,
     # Alert Immediate, PET Acknowledge (at any level)
