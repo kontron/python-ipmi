@@ -50,7 +50,7 @@ def test_group_extensions():
     assert required_privilege(GROUP, 0x03, 0x03) == OPERATOR
     # the same command of another group extension, unknown ones
     assert required_privilege(GROUP, 0x0a, 0x00) == OPERATOR
-    assert required_privilege(GROUP, 0x01, 0xdc) is None
+    assert required_privilege(GROUP, 0x7f, 0xdc) is None
 
 
 def test_response_and_unknown():
@@ -62,17 +62,10 @@ def test_response_and_unknown():
     assert required_privilege(0x30, 0x01) is None
 
 
-# the requests without a level: their specifications (DCMI, PICMG 3.0 and
+# the requests without a level: their specifications (PICMG 3.0 and
 # MicroTCA, HPM.2) were not at hand when the levels were added; give one
 # when it is checked
 UNCHECKED = {
-    # DCMI
-    'ActivateDeactivatePowerLimit', 'GetAssetTag', 'GetDcmiCapabilities',
-    'GetDcmiConfigurationParameters', 'GetDcmiSensorInfo',
-    'GetManagementControllerIdString', 'GetPowerLimit', 'GetPowerReading',
-    'GetTemperatureReadings', 'GetThermalLimit', 'SetAssetTag',
-    'SetDcmiConfigurationParameters', 'SetManagementControllerIdString',
-    'SetPowerLimit', 'SetThermalLimit',
     # PICMG 3.0, MicroTCA
     'GetPowerChannelStatus', 'GetTelcoAlarmCapability', 'SendPmHeartbeat',
     'SendPowerChannelControl', 'SetSignalingClass',
@@ -106,3 +99,13 @@ def test_without_messages():
     assert not set(privileges.WITHOUT_MESSAGES) & registered
     assert all(level in privileges.NAMES
                for level in privileges.WITHOUT_MESSAGES.values())
+
+
+def test_dcmi():
+    # DCMI v1.5 Table 6-1
+    dcmi = 0xdc
+    assert required_privilege(GROUP, 0x01, dcmi) == NONE    # capabilities
+    assert required_privilege(GROUP, 0x02, dcmi) == USER    # power reading
+    assert required_privilege(GROUP, 0x04, dcmi) == OPERATOR  # power limit
+    assert required_privilege(GROUP, 0x08, dcmi) == OPERATOR  # asset tag
+    assert required_privilege(GROUP, 0x12, dcmi) == ADMINISTRATOR

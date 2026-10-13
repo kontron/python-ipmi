@@ -27,6 +27,7 @@ from . import Message
 from . import RemainingBytes
 from . import Timestamp
 from . import UnsignedInt
+from .privileges import ADMINISTRATOR, NONE, OPERATOR, USER
 
 DCMI_GROUP_CODE = constants.GROUP_EXTENSION_DCMI
 
@@ -39,6 +40,7 @@ class DcmiMessage(Message):
 class GetDcmiCapabilitiesReq(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_DCMI_CAPABILITIES_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = NONE
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('parameter_selector', 1),
@@ -72,6 +74,7 @@ class GetDcmiCapabilitiesRsp(DcmiMessage):
 class GetPowerReadingReq(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_POWER_READING
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('mode', 1),
@@ -101,6 +104,7 @@ class GetPowerReadingRsp(DcmiMessage):
 class GetPowerLimitReq(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_POWER_LIMIT
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('reserved', 2, 0),
@@ -127,6 +131,7 @@ class GetPowerLimitRsp(DcmiMessage):
 class SetPowerLimitReq(DcmiMessage):
     __cmdid__ = constants.CMDID_SET_POWER_LIMIT
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('reserved_1', 3, 0),
@@ -152,6 +157,7 @@ class SetPowerLimitRsp(DcmiMessage):
 class ActivateDeactivatePowerLimitReq(DcmiMessage):
     __cmdid__ = constants.CMDID_ACTIVATE_DEACTIVATE_POWER_LIMIT
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('activation', 1),
@@ -173,6 +179,7 @@ class ActivateDeactivatePowerLimitRsp(DcmiMessage):
 class GetAssetTagReq(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_ASSET_TAG
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('offset', 1),
@@ -196,6 +203,7 @@ class GetAssetTagRsp(DcmiMessage):
 class GetDcmiSensorInfoReq(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_DCMI_SENSOR_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('sensor_type', 1),
@@ -222,6 +230,7 @@ class GetDcmiSensorInfoRsp(DcmiMessage):
 class SetAssetTagReq(DcmiMessage):
     __cmdid__ = constants.CMDID_SET_ASSET_TAG
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('offset', 1),
@@ -245,6 +254,7 @@ class SetAssetTagRsp(DcmiMessage):
 class GetManagementControllerIdStringReq(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_MANAGEMENT_CONTROLLER_ID_STRING
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('offset', 1),
@@ -268,6 +278,7 @@ class GetManagementControllerIdStringRsp(DcmiMessage):
 class SetManagementControllerIdStringReq(DcmiMessage):
     __cmdid__ = constants.CMDID_SET_MANAGEMENT_CONTROLLER_ID_STRING
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('offset', 1),
@@ -299,6 +310,7 @@ def _thermal_exception_actions() -> Bitfield:
 class SetThermalLimitReq(DcmiMessage):
     __cmdid__ = constants.CMDID_SET_THERMAL_LIMIT
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('entity_id', 1),
@@ -323,6 +335,7 @@ class SetThermalLimitRsp(DcmiMessage):
 class GetThermalLimitReq(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_THERMAL_LIMIT
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('entity_id', 1),
@@ -347,6 +360,7 @@ class GetThermalLimitRsp(DcmiMessage):
 class GetTemperatureReadingsReq(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_TEMPERATURE_READINGS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('sensor_type', 1, 1),
@@ -374,6 +388,7 @@ class GetTemperatureReadingsRsp(DcmiMessage):
 class SetDcmiConfigurationParametersReq(DcmiMessage):
     __cmdid__ = constants.CMDID_SET_DCMI_CONFIGURATION_PARAMETERS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('parameter_selector', 1),
@@ -396,6 +411,7 @@ class SetDcmiConfigurationParametersRsp(DcmiMessage):
 class GetDcmiConfigurationParametersReq(DcmiMessage):
     __cmdid__ = constants.CMDID_GET_DCMI_CONFIGURATION_PARAMETERS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('group_extension_id', DCMI_GROUP_CODE),
         UnsignedInt('parameter_selector', 1),
