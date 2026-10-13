@@ -27,7 +27,7 @@ from . import Conditional
 from . import RemainingBytes
 from . import Optional
 from . import GroupExtensionIdentifier
-from .privileges import ADMINISTRATOR, OPERATOR, USER
+from .privileges import OPERATOR, USER
 
 PICMG_IDENTIFIER = 0x00
 
@@ -575,7 +575,7 @@ class GetFruLedStateRsp(PicmgMessage):
 class SetPortStateReq(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_PORT_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __privilege__ = ADMINISTRATOR
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('link_info', 4,
@@ -656,7 +656,6 @@ class SetSignalingClassRsp(PicmgMessage):
 class GetSignalingClassReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_CHANNEL_SIGNALING_CLASS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
-    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('channel_info', 1,
@@ -720,6 +719,7 @@ class GetLocationInformationRsp(PicmgMessage):
 class SendPowerChannelControlReq(PicmgMessage):
     __cmdid__ = constants.CMDID_POWER_CHANNEL_CONTROL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('channel', 1),
@@ -744,6 +744,7 @@ class SendPowerChannelControlRsp(PicmgMessage):
 class GetPowerChannelStatusReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_POWER_CHANNEL_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('starting_power_channel_number', 1),
@@ -773,6 +774,7 @@ class GetPowerChannelStatusRsp(PicmgMessage):
 class SendPmHeartbeatReq(PicmgMessage):
     __cmdid__ = constants.CMDID_PM_HEARTBEAT
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('timeout', 1),
@@ -797,6 +799,7 @@ class SendPmHeartbeatRsp(PicmgMessage):
 class GetTelcoAlarmCapabilityReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_TELCO_ALARM_CAPABILITY
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),

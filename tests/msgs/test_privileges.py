@@ -62,13 +62,12 @@ def test_response_and_unknown():
     assert required_privilege(0x30, 0x01) is None
 
 
-# the requests without a level: their specifications (PICMG 3.0 and
-# MicroTCA, HPM.2) were not at hand when the levels were added; give one
-# when it is checked
+# the requests without a level: their specifications define none (the
+# HPM.2 draft) or were not at hand (PICMG 3.1, the channel signaling
+# class); give one when it is checked
 UNCHECKED = {
-    # PICMG 3.0, MicroTCA
-    'GetPowerChannelStatus', 'GetTelcoAlarmCapability', 'SendPmHeartbeat',
-    'SendPowerChannelControl', 'SetSignalingClass',
+    # PICMG 3.1
+    'GetSignalingClass', 'SetSignalingClass',
     # PICMG HPM.2
     'GetLanAttachCapabilities',
 }
@@ -109,3 +108,14 @@ def test_dcmi():
     assert required_privilege(GROUP, 0x04, dcmi) == OPERATOR  # power limit
     assert required_privilege(GROUP, 0x08, dcmi) == OPERATOR  # asset tag
     assert required_privilege(GROUP, 0x12, dcmi) == ADMINISTRATOR
+
+
+def test_picmg():
+    # PICMG 3.0 R3.0 Table 3-101 and MTCA.0 R1.0 Table 3-47
+    picmg = 0x00
+    assert required_privilege(GROUP, 0x0e, picmg) == OPERATOR  # Set Port State
+    assert required_privilege(GROUP, 0x0f, picmg) == USER      # Get Port State
+    assert required_privilege(GROUP, 0x24, picmg) == OPERATOR  # Power Channel
+    assert required_privilege(GROUP, 0x25, picmg) == USER
+    assert required_privilege(GROUP, 0x28, picmg) == OPERATOR  # PM Heartbeat
+    assert required_privilege(GROUP, 0x29, picmg) == USER      # Telco Alarm
