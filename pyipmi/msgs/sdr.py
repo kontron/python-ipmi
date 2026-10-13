@@ -23,12 +23,14 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import RemainingBytes
+from .privileges import OPERATOR, USER
 
 
 @register_message_class
 class GetSdrRepositoryInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_SDR_REPOSITORY_INFO
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = USER
 
 
 @register_message_class
@@ -57,6 +59,7 @@ class GetSdrRepositoryInfoRsp(Message):
 class GetSdrRepositoryAllocationInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_SDR_REPOSITORY_ALLOCATION_INFO
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = USER
 
 
 @register_message_class
@@ -77,6 +80,7 @@ class GetSdrRepositoryAllocationInfoRsp(Message):
 class ReserveSdrRepositoryReq(Message):
     __cmdid__ = constants.CMDID_RESERVE_SDR_REPOSITORY
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = USER
 
 
 @register_message_class
@@ -93,6 +97,7 @@ class ReserveSdrRepositoryRsp(Message):
 class GetSdrReq(Message):
     __cmdid__ = constants.CMDID_GET_SDR
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = USER
     __fields__ = (
             UnsignedInt('reservation_id', 2),
             UnsignedInt('record_id', 2),
@@ -117,6 +122,7 @@ class GetSdrRsp(Message):
 class AddSdrReq(Message):
     __cmdid__ = constants.CMDID_ADD_SDR
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
     __fields__ = (
             RemainingBytes('record_data'),
     )
@@ -136,6 +142,7 @@ class AddSdrRsp(Message):
 class PartialAddSdrReq(Message):
     __cmdid__ = constants.CMDID_PARTIAL_ADD_SDR
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
     __fields__ = (
             UnsignedInt('reservation_id', 2),
             UnsignedInt('record_id', 2),
@@ -161,6 +168,7 @@ class PartialAddSdrRsp(Message):
 class DeleteSdrReq(Message):
     __cmdid__ = constants.CMDID_DELETE_SDR
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
     __fields__ = (
             UnsignedInt('reservation_id', 2),
             UnsignedInt('record_id', 2),
@@ -181,6 +189,7 @@ class DeleteSdrRsp(Message):
 class ClearSdrRepositoryReq(Message):
     __cmdid__ = constants.CMDID_CLEAR_SDR_REPOSITORY
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
     __fields__ = (
             UnsignedInt('reservation_id', 2),
             ByteArray('key', 3, default=b'CLR'),
@@ -204,6 +213,7 @@ class ClearSdrRepositoryRsp(Message):
 class RunInitializationAgentReq(Message):
     __cmdid__ = constants.CMDID_RUN_INITIALIZATION_AGENT
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
     __fields__ = (
             UnsignedInt('cmd', 1),
     )
@@ -225,6 +235,7 @@ class RunInitializationAgentRsp(Message):
 class GetSdrRepositoryTimeReq(Message):
     __cmdid__ = constants.CMDID_GET_SDR_REPOSITORY_TIME
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = USER
 
 
 @register_message_class
@@ -241,6 +252,7 @@ class GetSdrRepositoryTimeRsp(Message):
 class SetSdrRepositoryTimeReq(Message):
     __cmdid__ = constants.CMDID_SET_SDR_REPOSITORY_TIME
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
     __fields__ = (
             Timestamp('timestamp'),
     )
@@ -259,6 +271,7 @@ class SetSdrRepositoryTimeRsp(Message):
 class EnterSdrRepositoryUpdateModeReq(Message):
     __cmdid__ = constants.CMDID_ENTER_SDR_REPOSITORY_UPDATE_MODE
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
 
 
 @register_message_class
@@ -274,6 +287,7 @@ class EnterSdrRepositoryUpdateModeRsp(Message):
 class ExitSdrRepositoryUpdateModeReq(Message):
     __cmdid__ = constants.CMDID_EXIT_SDR_REPOSITORY_UPDATE_MODE
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
 
 
 @register_message_class

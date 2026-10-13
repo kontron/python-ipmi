@@ -24,12 +24,14 @@ from . import Bitfield
 from . import CompletionCode
 from . import RemainingBytes
 from . import Timestamp
+from .privileges import ADMINISTRATOR, OPERATOR, USER
 
 
 @register_message_class
 class GetPefCapabilitiesReq(Message):
     __cmdid__ = constants.CMDID_GET_PEF_CAPABILITIES
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = USER
 
 
 @register_message_class
@@ -69,6 +71,7 @@ class ArmPefPostponeTimerReq(Message):
 
     __cmdid__ = constants.CMDID_ARM_PEF_POSTPONE_TIMER
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         UnsignedInt('timeout', 1),
     )
@@ -88,6 +91,7 @@ class ArmPefPostponeTimerRsp(Message):
 class SetPefConfigurationParametersReq(Message):
     __cmdid__ = constants.CMDID_SET_PEFCONFIGURATION_PARAMETERS
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         Bitfield('parameter', 1,
                  Bitfield.Bit('selector', 7, 0),
@@ -115,6 +119,7 @@ class SetPefConfigurationParametersRsp(Message):
 class GetPefConfigurationParametersReq(Message):
     __cmdid__ = constants.CMDID_GET_PEFCONFIGURATION_PARAMETERS
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = OPERATOR
     __fields__ = (
         Bitfield('parameter', 1,
                  Bitfield.Bit('selector', 7, 0),
@@ -148,6 +153,7 @@ class SetLastProcessedEventIdReq(Message):
 
     __cmdid__ = constants.CMDID_SET_LAST_PROCESSED_EVENT_ID
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         Bitfield('processor', 1,
                  Bitfield.Bit('bmc', 1, 0),
@@ -171,6 +177,7 @@ class SetLastProcessedEventIdRsp(Message):
 class GetLastProcessedEventIdReq(Message):
     __cmdid__ = constants.CMDID_GET_LAST_PROCESSED_EVENT_ID
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = ADMINISTRATOR
 
 
 @register_message_class

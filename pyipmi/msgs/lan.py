@@ -23,12 +23,14 @@ from . import Bitfield
 from . import CompletionCode
 from . import Optional
 from . import RemainingBytes
+from .privileges import ADMINISTRATOR, OPERATOR
 
 
 @register_message_class
 class SetLanConfigurationParametersReq(Message):
     __cmdid__ = constants.CMDID_SET_LAN_CONFIGURATION_PARAMETERS
     __netfn__ = constants.NETFN_TRANSPORT
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         Bitfield('command', 1,
                  Bitfield.Bit('channel_number', 4, 0),
@@ -52,6 +54,7 @@ class SetLanConfigurationParametersRsp(Message):
 class GetLanConfigurationParametersReq(Message):
     __cmdid__ = constants.CMDID_GET_LAN_CONFIGURATION_PARAMETERS
     __netfn__ = constants.NETFN_TRANSPORT
+    __privilege__ = OPERATOR
     __fields__ = (
         Bitfield('command', 1,
                  Bitfield.Bit('channel_number', 4),

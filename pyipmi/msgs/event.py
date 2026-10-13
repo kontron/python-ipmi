@@ -19,12 +19,14 @@ from . import register_message_class
 from . import Message
 from . import Bitfield
 from . import CompletionCode
+from .privileges import ADMINISTRATOR, USER
 
 
 @register_message_class
 class SetEventReceiverReq(Message):
     __cmdid__ = constants.CMDID_SET_EVENT_RECEIVER
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         Bitfield('event_receiver', 2,
                  Bitfield.ReservedBit(1, 0),
@@ -47,6 +49,7 @@ class SetEventReceiverRsp(Message):
 class GetEventReceiverReq(Message):
     __cmdid__ = constants.CMDID_GET_EVENT_RECEIVER
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = USER
 
 
 @register_message_class

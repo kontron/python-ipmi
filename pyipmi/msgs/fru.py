@@ -25,12 +25,14 @@ from . import Bitfield
 from . import CompletionCode
 from . import RemainingBytes
 from . import VariableByteArray
+from .privileges import OPERATOR, USER
 
 
 @register_message_class
 class GetFruInventoryAreaInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_FRU_INVENTORY_AREA_INFO
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = USER
     __fields__ = (
         UnsignedInt('fru_id', 1, 0),
     )
@@ -53,6 +55,7 @@ class GetFruInventoryAreaInfoRsp(Message):
 class ReadFruDataReq(Message):
     __cmdid__ = constants.CMDID_READ_FRU_DATA
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = USER
     __fields__ = (
         UnsignedInt('fru_id', 1),
         UnsignedInt('offset', 2),
@@ -79,6 +82,7 @@ class ReadFruDataRsp(Message):
 class WriteFruDataReq(Message):
     __cmdid__ = constants.CMDID_WRITE_FRU_DATA
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
     __fields__ = (
         UnsignedInt('fru_id', 1),
         UnsignedInt('offset', 2),

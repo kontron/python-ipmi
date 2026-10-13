@@ -24,9 +24,9 @@ session-less local interfaces only (``LOCAL_INTERFACE``, e.g. the device
 SDR commands) or the system interface only (``SYSTEM_INTERFACE``); both
 are above all session levels.
 
-The levels are the ones of the messages of the library, and by ID the
-IPMI commands it has no messages for. A command that is not listed, e.g.
-an OEM command, has no level here: the OEM defines it.
+A request message has its level as ``__privilege__``; the IPMI commands
+the library has no messages for have it by ID. A command without a level,
+e.g. an OEM command, has none here: the OEM defines it.
 
 Example:
     >>> from pyipmi.msgs import constants, privileges
@@ -38,7 +38,7 @@ Example:
 from __future__ import annotations
 
 from . import constants
-from .registry import create_request_by_name
+from .registry import DEFAULT_REGISTRY
 
 NONE = 0x00         # before a session, e.g. Get Session Challenge
 CALLBACK = 0x01
@@ -54,103 +54,10 @@ NAMES = {NONE: 'none', CALLBACK: 'callback', USER: 'user',
          LOCAL_INTERFACE: 'local interfaces only',
          SYSTEM_INTERFACE: 'system interface only'}
 
-_BY_NAME: dict[int, tuple[str, ...]] = {
-    # the session commands, before and in a session
-    NONE: ('GetChannelAuthenticationCapabilities', 'GetSessionChallenge',
-           'ActivateSession'),
-    CALLBACK: ('CloseSession',),
-    USER: (
-        # IPM device, BMC device and messaging
-        'GetDeviceId', 'GetSelftestResults', 'GetAcpiPowerState',
-        'GetDeviceGuid', 'GetWatchdogTimer', 'GetBmcGlobalEnables',
-        'SetSessionPrivilegeLevel', 'GetSessionInfo', 'GetChannelAccess',
-        'GetChannelInfo', 'SendMessage',
-        # chassis
-        'GetChassisCapabilities', 'GetChassisStatus', 'GetSystemRestartCause',
-        'GetPohCounter',
-        # event, sensors
-        'GetEventReceiver', 'GetPefCapabilities', 'GetSensorReadingFactors',
-        'GetSensorHysteresis', 'GetSensorThresholds', 'GetSensorEventEnable',
-        'GetSensorEventStatus', 'GetSensorReading', 'GetSensorType',
-        # FRU, SDR repository, SEL
-        'GetFruInventoryAreaInfo', 'ReadFruData', 'GetSdrRepositoryInfo',
-        'GetSdrRepositoryAllocationInfo', 'ReserveSdrRepository', 'GetSdr',
-        'GetSdrRepositoryTime', 'GetSelInfo', 'GetSelAllocationInfo',
-        'ReserveSel', 'GetSelEntry', 'GetSelTime', 'GetSelTimeUtcOffset',
-        'GetAuxiliaryLogStatus',
-        # PICMG 3.0
-        'GetPicmgProperties', 'GetAddressInfo', 'GetShelfAddressInfo',
-        'GetFruLedProperties', 'GetFruLedColorCapabilities',
-        'GetFruLedState', 'GetFruActivationPolicy',
-        'GetDeviceLocatorRecordId', 'GetPortState', 'GetPowerLevel',
-        'GetFanSpeedProperties', 'GetFanLevel', 'GetFruControlCapabilities',
-        'GetLocationInformation', 'GetSignalingClass',
-        # PICMG HPM.1
-        'GetTargetUpgradeCapabilities', 'GetComponentProperties',
-        'QuerySelftestResults', 'QueryRollbackStatus',
-        # VITA 46.11
-        'VitaGetVsoCapabilities', 'VitaGetChassisAddressTableInfo',
-        'VitaGetChassisIdentifier', 'VitaGetFruLedProperties',
-        'VitaGetFruLedCapabilities', 'VitaGetFruLedState',
-        'VitaGetFruStatePolicy', 'VitaGetDeviceLocatorRecord',
-        'VitaGetFanSpeedProperties', 'VitaGetFanLevel', 'VitaGetFanPolicy',
-        'VitaGetChassisManagerIpmbAddress', 'VitaFruControlCapabilities',
-        'VitaGetChassisManagerIpAddresses', 'VitaGetFruAddressInfo',
-        'VitaGetMandatorySensorNumbers', 'VitaGetFruHash',
-        'VitaGetPayloadModeCapabilities', 'VitaGetPowerSupplyCapabilities',
-        'VitaGetPowerSupplyStatus',
-    ),
-    OPERATOR: (
-        'ResetWatchdogTimer', 'SetWatchdogTimer', 'GetUserAccess',
-        'GetUserName',
-        'ChassisControl', 'ChassisReset', 'ChassisIdentify',
-        'SetPowerRestorePolicy', 'SetSystemBootOptions',
-        'GetSystemBootOptions', 'MasterWriteRead',
-        'PlatformEvent', 'SetSensorHysteresis', 'SetSensorThresholds',
-        'SetSensorEventEnable', 'RearmSensorEvents', 'SetSensorType',
-        'SetSensorReadingAndEventStatus',
-        'WriteFruData', 'AddSdr', 'PartialAddSdr', 'DeleteSdr',
-        'ClearSdrRepository', 'SetSdrRepositoryTime',
-        'EnterSdrRepositoryUpdateMode', 'ExitSdrRepositoryUpdateMode',
-        'RunInitializationAgent', 'AddSelEntry', 'PartialAddSelEntry',
-        'DeleteSelEntry', 'ClearSel', 'SetSelTime', 'SetSelTimeUtcOffset',
-        'GetLanConfigurationParameters', 'GetPefConfigurationParameters',
-        # PICMG 3.0
-        'FruControl', 'SetFruLedState', 'SetFruActivationPolicy',
-        'SetFruActivation', 'SetFanLevel',
-        # PICMG HPM.1
-        'AbortFirmwareUpgrade', 'InitiateUpgradeAction', 'UploadFirmwareBlock',
-        'FinishFirmwareUpload', 'GetUpgradeStatus', 'ActivateFirmware',
-        'InitiateManualRollback',
-        # VITA 46.11
-        'VitaSetChassisIdentifier', 'VitaFruControl', 'VitaSetFruLedState',
-        'VitaSetIpmbState', 'VitaSetFruActivation', 'VitaSetFanLevel',
-        'VitaSetFanPolicy', 'VitaFruInventoryDeviceLockControl',
-        'VitaFruInventoryDeviceWrite',
-        'VitaSetPayloadMode', 'VitaSetPowerSupplyStatus',
-    ),
-    LOCAL_INTERFACE: (
-        'GetDeviceSdrInfo', 'GetDeviceSdr', 'ReserveDeviceSdrRepository',
-    ),
-    SYSTEM_INTERFACE: (
-        'SetBmcGlobalEnables', 'ClearMessageFlags', 'GetMessageFlags',
-        'EnableMessageChannelReceive', 'GetMessage', 'ReadEventMessageBuffer',
-    ),
-    ADMINISTRATOR: (
-        'ColdReset', 'WarmReset', 'ManufacturingTestOn', 'SetAcpiPowerState',
-        'SetChannelAccess', 'SetUserAccess', 'SetUserName', 'SetUserPassword',
-        'SetChassisCapabilities', 'SetFrontPanelButtonEnables',
-        'SetPowerCycleInterval', 'SetEventReceiver', 'SetAuxiliaryLogStatus',
-        'ArmPefPostponeTimer', 'SetPefConfigurationParameters',
-        'SetLastProcessedEventId', 'GetLastProcessedEventId',
-        'SetLanConfigurationParameters', 'SetPortState',
-        'VitaSetFruStatePolicy',
-    ),
-}
-
-# the commands without messages, as (network function, command, group
-# extension)
-_BY_ID: dict[tuple[int, int, int | None], int] = {
+# the IPMI commands the library has no messages for, as (network function,
+# command, group extension); the messages have their level as
+# __privilege__
+WITHOUT_MESSAGES: dict[tuple[int, int, int | None], int] = {
     # the IPMI commands without messages (Table G-1):
     # Get NetFn Support, Get Command Support, Get Command Sub-function
     # Support, Get Configurable Commands and Sub-functions, Set/Get Command
@@ -191,21 +98,6 @@ _BY_ID: dict[tuple[int, int, int | None], int] = {
 }
 
 
-def _build() -> dict[tuple[int, int, int | None], int]:
-    table = dict(_BY_ID)
-    for (level, names) in _BY_NAME.items():
-        for name in names:
-            msg = create_request_by_name(name)
-            group = (msg.__group_extension__
-                     if msg.__netfn__ == constants.NETFN_GROUP_EXTENSION
-                     else None)
-            table[(msg.__netfn__, msg.__cmdid__, group)] = level
-    return table
-
-
-PRIVILEGES = _build()
-
-
 def required_privilege(netfn: int, cmd: int,
                        group: int | None = None) -> int | None:
     """Return the minimum privilege level of a command.
@@ -220,6 +112,10 @@ def required_privilege(netfn: int, cmd: int,
         The level, ``LOCAL_INTERFACE`` or ``SYSTEM_INTERFACE``; None for a
         command that is not listed.
     """
-    if netfn & ~1 != constants.NETFN_GROUP_EXTENSION:
+    netfn &= ~1
+    if netfn != constants.NETFN_GROUP_EXTENSION:
         group = None
-    return PRIVILEGES.get((netfn & ~1, cmd, group))
+    request = DEFAULT_REGISTRY.registry.get((netfn, cmd, group))
+    if request is not None:
+        return request.__privilege__
+    return WITHOUT_MESSAGES.get((netfn, cmd, group))

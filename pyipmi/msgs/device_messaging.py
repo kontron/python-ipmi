@@ -24,12 +24,14 @@ from . import CompletionCode
 from . import RemainingBytes
 from . import Conditional
 from . import Optional
+from .privileges import ADMINISTRATOR, CALLBACK, NONE, OPERATOR, SYSTEM_INTERFACE, USER
 
 
 @register_message_class
 class SetBmcGlobalEnablesReq(Message):
     __cmdid__ = constants.CMDID_SET_BMC_GLOBAL_ENABLES
     __netfn__ = constants.NETFN_APP
+    __privilege__ = SYSTEM_INTERFACE
     __fields__ = (
         Bitfield('enables', 1,
                  Bitfield.Bit('receive_message_queue_interrupt', 1, 0),
@@ -56,6 +58,7 @@ class SetBmcGlobalEnablesRsp(Message):
 class GetBmcGlobalEnablesReq(Message):
     __cmdid__ = constants.CMDID_GET_BMC_GLOBAL_ENABLES
     __netfn__ = constants.NETFN_APP
+    __privilege__ = USER
 
 
 @register_message_class
@@ -80,6 +83,7 @@ class GetBmcGlobalEnablesRsp(Message):
 class ClearMessageFlagsReq(Message):
     __cmdid__ = constants.CMDID_CLEAR_MESSAGE_FLAGS
     __netfn__ = constants.NETFN_APP
+    __privilege__ = SYSTEM_INTERFACE
     __fields__ = (
         Bitfield('clear', 1,
                  Bitfield.Bit('receive_message_queue', 1, 0),
@@ -106,6 +110,7 @@ class ClearMessageFlagsRsp(Message):
 class GetMessageFlagsReq(Message):
     __cmdid__ = constants.CMDID_GET_MESSAGE_FLAGS
     __netfn__ = constants.NETFN_APP
+    __privilege__ = SYSTEM_INTERFACE
 
 
 @register_message_class
@@ -130,6 +135,7 @@ class GetMessageFlagsRsp(Message):
 class EnableMessageChannelReceiveReq(Message):
     __cmdid__ = constants.CMDID_ENABLE_MESSAGE_CHANNEL_RECEIVE
     __netfn__ = constants.NETFN_APP
+    __privilege__ = SYSTEM_INTERFACE
     __fields__ = (
         Bitfield('channel', 2,
                  Bitfield.Bit('number', 4, 0),
@@ -157,6 +163,7 @@ class EnableMessageChannelReceiveRsp(Message):
 class GetMessageReq(Message):
     __cmdid__ = constants.CMDID_GET_MESSAGE
     __netfn__ = constants.NETFN_APP
+    __privilege__ = SYSTEM_INTERFACE
 
 
 @register_message_class
@@ -176,6 +183,7 @@ class GetMessageRsp(Message):
 class SendMessageReq(Message):
     __cmdid__ = constants.CMDID_SEND_MESSAGE
     __netfn__ = constants.NETFN_APP
+    __privilege__ = USER
     __fields__ = (
         Bitfield('channel', 1,
                  Bitfield.Bit('number', 4, 0),
@@ -200,6 +208,7 @@ class SendMessageRsp(Message):
 class ReadEventMessageBufferReq(Message):
     __cmdid__ = constants.CMDID_READ_EVENT_MESSAGE_BUFFER
     __netfn__ = constants.NETFN_APP
+    __privilege__ = SYSTEM_INTERFACE
 
 
 @register_message_class
@@ -216,6 +225,7 @@ class ReadEventMessageBufferRsp(Message):
 class MasterWriteReadReq(Message):
     __cmdid__ = constants.CMDID_MASTER_WRITE_READ
     __netfn__ = constants.NETFN_APP
+    __privilege__ = OPERATOR
     __fields__ = (
         Bitfield('bus_id', 2,
                  Bitfield.Bit('type', 1, 0),
@@ -242,6 +252,7 @@ class MasterWriteReadRsp(Message):
 class GetChannelAuthenticationCapabilitiesReq(Message):
     __cmdid__ = constants.CMDID_GET_CHANNEL_AUTHENTICATION_CAPABILITIES
     __netfn__ = constants.NETFN_APP
+    __privilege__ = NONE
     __fields__ = (
         Bitfield('channel', 1,
                  Bitfield.Bit('number', 4, 0),
@@ -290,6 +301,7 @@ class GetChannelAuthenticationCapabilitiesRsp(Message):
 class SetChannelAccessReq(Message):
     __cmdid__ = constants.CMDID_SET_CHANNEL_ACCESS
     __netfn__ = constants.NETFN_APP
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         Bitfield('channel', 1,
                  Bitfield.Bit('number', 4, 0),
@@ -321,6 +333,7 @@ class SetChannelAccessRsp(Message):
 class GetChannelAccessReq(Message):
     __cmdid__ = constants.CMDID_GET_CHANNEL_ACCESS
     __netfn__ = constants.NETFN_APP
+    __privilege__ = USER
     __fields__ = (
         Bitfield('channel', 1,
                  Bitfield.Bit('number', 4, 0),
@@ -354,6 +367,7 @@ class GetChannelAccessRsp(Message):
 class GetChannelInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_CHANNEL_INFO
     __netfn__ = constants.NETFN_APP
+    __privilege__ = USER
     __fields__ = (
         Bitfield('channel', 1,
                  Bitfield.Bit('number', 4, 0),
@@ -388,6 +402,7 @@ class GetChannelInfoRsp(Message):
 class GetSessionChallengeReq(Message):
     __cmdid__ = constants.CMDID_GET_SESSION_CHALLENGE
     __netfn__ = constants.NETFN_APP
+    __privilege__ = NONE
     __fields__ = (
         Bitfield('authentication', 1,
                  Bitfield.Bit('type', 4, 0),
@@ -411,6 +426,7 @@ class GetSessionChallengeRsp(Message):
 class ActivateSessionReq(Message):
     __cmdid__ = constants.CMDID_ACTIVATE_SESSION
     __netfn__ = constants.NETFN_APP
+    __privilege__ = NONE
     __fields__ = (
         Bitfield('authentication', 1,
                  Bitfield.Bit('type', 4, 0),
@@ -444,6 +460,7 @@ class ActivateSessionRsp(Message):
 class SetSessionPrivilegeLevelReq(Message):
     __cmdid__ = constants.CMDID_SET_SESSION_PRIVILEGE_LEVEL
     __netfn__ = constants.NETFN_APP
+    __privilege__ = USER
     __fields__ = (
         Bitfield('privilege_level', 1,
                  Bitfield.Bit('requested', 4, 0),
@@ -467,6 +484,7 @@ class SetSessionPrivilegeLevelRsp(Message):
 class CloseSessionReq(Message):
     __cmdid__ = constants.CMDID_CLOSE_SESSION
     __netfn__ = constants.NETFN_APP
+    __privilege__ = CALLBACK
     __fields__ = (
         UnsignedInt('session_id', 4),
     )
@@ -496,6 +514,7 @@ class GetSessionInfoReq(Message):
 
     __cmdid__ = constants.CMDID_GET_SESSION_INFO
     __netfn__ = constants.NETFN_APP
+    __privilege__ = USER
     __fields__ = (
         UnsignedInt('session_index', 1, 0),
         Conditional(lambda m: m.session_index == GetSessionInfoReq.SESSION_HANDLE,
@@ -539,6 +558,7 @@ class GetSessionInfoRsp(Message):
 class SetUserNameReq(Message):
     __cmdid__ = constants.CMDID_SET_USER_NAME
     __netfn__ = constants.NETFN_APP
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         Bitfield('userid', 1,
                  Bitfield.Bit('userid', 6, 0),
@@ -560,6 +580,7 @@ class SetUserNameRsp(Message):
 class GetUserNameReq(Message):
     __cmdid__ = constants.CMDID_GET_USER_NAME
     __netfn__ = constants.NETFN_APP
+    __privilege__ = OPERATOR
     __fields__ = (
         Bitfield('userid', 1,
                  Bitfield.Bit('userid', 6, 0),
@@ -581,6 +602,7 @@ class GetUserNameRsp(Message):
 class SetUserPasswordReq(Message):
     __cmdid__ = constants.CMDID_SET_USER_PASSWORD
     __netfn__ = constants.NETFN_APP
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         Bitfield('userid', 1,
                  Bitfield.Bit('userid', 6, 0),
@@ -606,6 +628,7 @@ class SetUserPasswordRsp(Message):
 class GetUserAccessReq(Message):
     __cmdid__ = constants.CMDID_GET_USER_ACCESS
     __netfn__ = constants.NETFN_APP
+    __privilege__ = OPERATOR
     __fields__ = (
         Bitfield('channel', 1,
                  Bitfield.Bit('channel_number', 4, 0),
@@ -644,6 +667,7 @@ class GetUserAccessRsp(Message):
 class SetUserAccessReq(Message):
     __cmdid__ = constants.CMDID_SET_USER_ACCESS
     __netfn__ = constants.NETFN_APP
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         Bitfield('channel_access', 1,
                  Bitfield.Bit('channel_number', 4, 0),

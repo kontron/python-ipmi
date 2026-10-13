@@ -2,6 +2,7 @@
 
 from pyipmi.msgs import constants
 from pyipmi.msgs import privileges
+from pyipmi.msgs.registry import DEFAULT_REGISTRY
 from pyipmi.msgs.privileges import (ADMINISTRATOR, LOCAL_INTERFACE, NONE,
                                     OPERATOR, SYSTEM_INTERFACE, USER,
                                     required_privilege)
@@ -61,6 +62,47 @@ def test_response_and_unknown():
     assert required_privilege(0x30, 0x01) is None
 
 
-def test_names():
+# the requests without a level: their specifications (DCMI, PICMG 3.0 and
+# MicroTCA, HPM.2) were not at hand when the levels were added; give one
+# when it is checked
+UNCHECKED = {
+    # DCMI
+    'ActivateDeactivatePowerLimit', 'GetAssetTag', 'GetDcmiCapabilities',
+    'GetDcmiConfigurationParameters', 'GetDcmiSensorInfo',
+    'GetManagementControllerIdString', 'GetPowerLimit', 'GetPowerReading',
+    'GetTemperatureReadings', 'GetThermalLimit', 'SetAssetTag',
+    'SetDcmiConfigurationParameters', 'SetManagementControllerIdString',
+    'SetPowerLimit', 'SetThermalLimit',
+    # PICMG 3.0, MicroTCA
+    'GetPowerChannelStatus', 'GetTelcoAlarmCapability', 'SendPmHeartbeat',
+    'SendPowerChannelControl', 'SetSignalingClass',
+    # PICMG HPM.2
+    'GetLanAttachCapabilities',
+}
+
+
+def requests():
+    return {name[:-3]: cls for (name, cls) in DEFAULT_REGISTRY.registry.items()
+            if isinstance(name, str) and name.endswith('Req')}
+
+
+def test_every_request_has_a_level():
+    # a new request message gets its level with its definition
+    missing = sorted(name for (name, cls) in requests().items()
+                     if cls.__privilege__ is None and name not in UNCHECKED)
+    assert missing == []
+    assert all(cls.__privilege__ in privileges.NAMES
+               for cls in requests().values()
+               if cls.__privilege__ is not None)
+    # the list of exceptions shrinks
+    assert UNCHECKED <= set(requests())
+    assert all(requests()[name].__privilege__ is None for name in UNCHECKED)
+
+
+def test_without_messages():
+    # a command gets its level from its message once there is one
+    registered = {key for key in DEFAULT_REGISTRY.registry
+                  if isinstance(key, tuple)}
+    assert not set(privileges.WITHOUT_MESSAGES) & registered
     assert all(level in privileges.NAMES
-               for level in privileges.PRIVILEGES.values())
+               for level in privileges.WITHOUT_MESSAGES.values())

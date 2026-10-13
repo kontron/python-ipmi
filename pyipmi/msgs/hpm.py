@@ -23,12 +23,14 @@ from . import Optional
 from . import RemainingBytes
 from . import GroupExtensionIdentifier
 from .picmg import PicmgMessage, PICMG_IDENTIFIER
+from .privileges import OPERATOR, USER
 
 
 @register_message_class
 class GetTargetUpgradeCapabilitiesReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_GET_TARGET_UPGRADE_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
@@ -64,6 +66,7 @@ class GetTargetUpgradeCapabilitiesRsp(PicmgMessage):
 class GetComponentPropertiesReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_GET_COMPONENT_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('id', 1),
@@ -86,6 +89,7 @@ class GetComponentPropertiesRsp(PicmgMessage):
 class AbortFirmwareUpgradeReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_ABORT_FIRMWARE_UPGRADE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
@@ -105,6 +109,7 @@ class AbortFirmwareUpgradeRsp(PicmgMessage):
 class InitiateUpgradeActionReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_INITIATE_UPGRADE_ACTION
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('components', 1),
@@ -126,6 +131,7 @@ class InitiateUpgradeActionRsp(PicmgMessage):
 class UploadFirmwareBlockReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_UPLOAD_FIRMWARE_BLOCK
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('number', 1),
@@ -149,6 +155,7 @@ class UploadFirmwareBlockRsp(PicmgMessage):
 class FinishFirmwareUploadReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_FINISH_FIRMWARE_UPLOAD
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('component_id', 1),
@@ -170,6 +177,7 @@ class FinishFirmwareUploadRsp(PicmgMessage):
 class GetUpgradeStatusReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_GET_UPGRADE_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
@@ -192,6 +200,7 @@ class GetUpgradeStatusRsp(PicmgMessage):
 class ActivateFirmwareReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_ACTIVATE_FIRMWARE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Optional(UnsignedInt('rollback_override_policy', 1)),
@@ -212,6 +221,7 @@ class ActivateFirmwareRsp(PicmgMessage):
 class QuerySelftestResultsReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_QUERY_SELFTEST_RESULTS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
@@ -233,6 +243,7 @@ class QuerySelftestResultsRsp(PicmgMessage):
 class QueryRollbackStatusReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_QUERY_ROLLBACK_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
@@ -254,6 +265,7 @@ class QueryRollbackStatusRsp(PicmgMessage):
 class InitiateManualRollbackReq(PicmgMessage):
     __cmdid__ = constants.CMDID_HPM_INITIATE_MANUAL_ROLLBACK
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )

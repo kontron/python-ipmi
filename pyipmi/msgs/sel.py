@@ -23,12 +23,14 @@ from . import Timestamp
 from . import Bitfield
 from . import CompletionCode
 from . import RemainingBytes
+from .privileges import ADMINISTRATOR, OPERATOR, USER
 
 
 @register_message_class
 class GetSelInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_SEL_INFO
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = USER
 
 
 @register_message_class
@@ -56,6 +58,7 @@ class GetSelInfoRsp(Message):
 class GetSelAllocationInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_SEL_ALLOCATION_INFO
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = USER
 
 
 @register_message_class
@@ -76,6 +79,7 @@ class GetSelAllocationInfoRsp(Message):
 class ReserveSelReq(Message):
     __cmdid__ = constants.CMDID_RESERVE_SEL
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = USER
 
 
 @register_message_class
@@ -92,6 +96,7 @@ class ReserveSelRsp(Message):
 class GetSelEntryReq(Message):
     __cmdid__ = constants.CMDID_GET_SEL_ENTRY
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = USER
     __fields__ = (
             UnsignedInt('reservation_id', 2),
             UnsignedInt('record_id', 2),
@@ -115,6 +120,7 @@ class GetSelEntryRsp(Message):
 class AddSelEntryReq(Message):
     __cmdid__ = constants.CMDID_ADD_SEL_ENTRY
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
     __fields__ = (
             ByteArray('record_data', 16),
     )
@@ -134,6 +140,7 @@ class AddSelEntryRsp(Message):
 class PartialAddSelEntryReq(Message):
     __cmdid__ = constants.CMDID_PARTIAL_ADD_SEL_ENTRY
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
     __fields__ = (
             UnsignedInt('reservation_id', 2),
             # 0 for the first part of a record
@@ -161,6 +168,7 @@ class PartialAddSelEntryRsp(Message):
 class DeleteSelEntryReq(Message):
     __cmdid__ = constants.CMDID_DELETE_SEL_ENTRY
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
     __fields__ = (
             UnsignedInt('reservation_id', 2),
             UnsignedInt('record_id', 2)
@@ -181,6 +189,7 @@ class DeleteSelEntryRsp(Message):
 class ClearSelReq(Message):
     __cmdid__ = constants.CMDID_CLEAR_SEL
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
     __fields__ = (
             UnsignedInt('reservation_id', 2),
             ByteArray('key', 3, default=b'CLR'),
@@ -204,6 +213,7 @@ class ClearSelRsp(Message):
 class GetSelTimeReq(Message):
     __cmdid__ = constants.CMDID_GET_SEL_TIME
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = USER
 
 
 @register_message_class
@@ -220,6 +230,7 @@ class GetSelTimeRsp(Message):
 class SetSelTimeReq(Message):
     __cmdid__ = constants.CMDID_SET_SEL_TIME
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
     __fields__ = (
             Timestamp('timestamp'),
     )
@@ -238,6 +249,7 @@ class SetSelTimeRsp(Message):
 class GetAuxiliaryLogStatusReq(Message):
     __cmdid__ = constants.CMDID_GET_AUXILIARY_LOG_STATUS
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = USER
     __fields__ = (
             Bitfield('log', 1,
                      # 0 MCA log, 1 OEM 1, 2 OEM 2
@@ -261,6 +273,7 @@ class GetAuxiliaryLogStatusRsp(Message):
 class SetAuxiliaryLogStatusReq(Message):
     __cmdid__ = constants.CMDID_SET_AUXILIARY_LOG_STATUS
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
             Bitfield('log', 1,
                      Bitfield.Bit('type', 4),
@@ -282,6 +295,7 @@ class SetAuxiliaryLogStatusRsp(Message):
 class GetSelTimeUtcOffsetReq(Message):
     __cmdid__ = constants.CMDID_GET_SEL_TIME_UTC_OFFSET
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = USER
 
 
 @register_message_class
@@ -299,6 +313,7 @@ class GetSelTimeUtcOffsetRsp(Message):
 class SetSelTimeUtcOffsetReq(Message):
     __cmdid__ = constants.CMDID_SET_SEL_TIME_UTC_OFFSET
     __netfn__ = constants.NETFN_STORAGE
+    __privilege__ = OPERATOR
     __fields__ = (
             UnsignedInt('offset', 2),
     )

@@ -27,6 +27,7 @@ from . import Conditional
 from . import RemainingBytes
 from . import Optional
 from . import GroupExtensionIdentifier
+from .privileges import ADMINISTRATOR, OPERATOR, USER
 
 PICMG_IDENTIFIER = 0x00
 
@@ -108,6 +109,7 @@ class PicmgMessage(Message):
 class GetPicmgPropertiesReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_PICMG_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
@@ -130,6 +132,7 @@ class GetPicmgPropertiesRsp(PicmgMessage):
 class GetAddressInfoReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_ADDRESS_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         # optional, FRU 0 if it is not given
@@ -166,6 +169,7 @@ class GetAddressInfoRsp(PicmgMessage):
 class GetShelfAddressInfoReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_SHELF_ADDRESS_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
     )
@@ -186,6 +190,7 @@ class GetShelfAddressInfoRsp(PicmgMessage):
 class FruControlReq(PicmgMessage):
     __cmdid__ = constants.CMDID_FRU_CONTROL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
@@ -208,6 +213,7 @@ class FruControlRsp(PicmgMessage):
 class GetFruControlCapabilitiesReq(PicmgMessage):
     __cmdid__ = constants.CMDID_FRU_CONTROL_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
@@ -234,6 +240,7 @@ class GetFruControlCapabilitiesRsp(PicmgMessage):
 class SetFruActivationPolicyReq(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION_POLICY
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
@@ -262,6 +269,7 @@ class SetFruActivationPolicyRsp(PicmgMessage):
 class GetFruActivationPolicyReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FRU_ACTIVATION_POLICY
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
@@ -286,6 +294,7 @@ class GetFruActivationPolicyRsp(PicmgMessage):
 class SetFruActivationReq(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_FRU_ACTIVATION
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
@@ -307,6 +316,7 @@ class SetFruActivationRsp(PicmgMessage):
 class GetDeviceLocatorRecordIdReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_DEVLOC_RECORD_ID
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
@@ -328,6 +338,7 @@ class GetDeviceLocatorRecordIdRsp(PicmgMessage):
 class GetFruLedPropertiesReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FRU_LED_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
@@ -355,6 +366,7 @@ class GetFruLedPropertiesRsp(PicmgMessage):
 class GetFruLedColorCapabilitiesReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FRU_LED_COLOR_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
@@ -387,6 +399,7 @@ class GetFruLedColorCapabilitiesRsp(PicmgMessage):
 class GetPowerLevelReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_POWER_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
@@ -415,6 +428,7 @@ class GetPowerLevelRsp(PicmgMessage):
 class GetFanSpeedPropertiesReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FAN_SPEED_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
@@ -441,6 +455,7 @@ class GetFanSpeedPropertiesRsp(PicmgMessage):
 class SetFanLevelReq(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_FAN_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
@@ -463,6 +478,7 @@ class SetFanLevelRsp(PicmgMessage):
 class GetFanLevelReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FAN_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
@@ -487,6 +503,7 @@ class GetFanLevelRsp(PicmgMessage):
 class SetFruLedStateReq(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_FRU_LED_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         UnsignedInt('fru_id', 1),
@@ -511,6 +528,7 @@ class SetFruLedStateRsp(PicmgMessage):
 class GetFruLedStateReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_FRU_LED_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
 
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
@@ -557,6 +575,7 @@ class GetFruLedStateRsp(PicmgMessage):
 class SetPortStateReq(PicmgMessage):
     __cmdid__ = constants.CMDID_SET_PORT_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('link_info', 4,
@@ -588,6 +607,7 @@ class SetPortStateRsp(PicmgMessage):
 class GetPortStateReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_PORT_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('channel', 1,
@@ -636,6 +656,7 @@ class SetSignalingClassRsp(PicmgMessage):
 class GetSignalingClassReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_CHANNEL_SIGNALING_CLASS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('channel_info', 1,
@@ -664,6 +685,7 @@ class GetSignalingClassRsp(PicmgMessage):
 class GetLocationInformationReq(PicmgMessage):
     __cmdid__ = constants.CMDID_GET_LOCATION_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('picmg_identifier', PICMG_IDENTIFIER),
         Bitfield('info', 1,

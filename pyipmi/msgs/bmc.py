@@ -23,6 +23,7 @@ from . import Bitfield
 from . import CompletionCode
 from . import Optional
 from . import RemainingBytes
+from .privileges import ADMINISTRATOR, OPERATOR, USER
 
 SELFTEST_RESULT_NO_ERROR = 0x55
 SELFTEST_RESULT_NOT_IMPLEMENTED = 0x56
@@ -34,6 +35,7 @@ SELFTEST_RESULT_FATAL_HARDWARE_ERROR = 0x58
 class GetDeviceIdReq(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_ID
     __netfn__ = constants.NETFN_APP
+    __privilege__ = USER
 
 
 @register_message_class
@@ -71,6 +73,7 @@ class GetDeviceIdRsp(Message):
 class ColdResetReq(Message):
     __cmdid__ = constants.CMDID_COLD_RESET
     __netfn__ = constants.NETFN_APP
+    __privilege__ = ADMINISTRATOR
 
 
 @register_message_class
@@ -86,6 +89,7 @@ class ColdResetRsp(Message):
 class WarmResetReq(Message):
     __cmdid__ = constants.CMDID_WARM_RESET
     __netfn__ = constants.NETFN_APP
+    __privilege__ = ADMINISTRATOR
 
 
 @register_message_class
@@ -101,6 +105,7 @@ class WarmResetRsp(Message):
 class ManufacturingTestOnReq(Message):
     __cmdid__ = constants.CMDID_MANUFACTURING_TEST_ON
     __netfn__ = constants.NETFN_APP
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         RemainingBytes('data'),
     )
@@ -120,6 +125,7 @@ class ManufacturingTestOnRsp(Message):
 class GetSelftestResultsReq(Message):
     __cmdid__ = constants.CMDID_GET_SELF_TEST_RESULTS
     __netfn__ = constants.NETFN_APP
+    __privilege__ = USER
 
 
 @register_message_class
@@ -146,6 +152,7 @@ class GetSelftestResultsRsp(Message):
 class SetAcpiPowerStateReq(Message):
     __cmdid__ = constants.CMDID_SET_ACPI_POWER_STATE
     __netfn__ = constants.NETFN_APP
+    __privilege__ = ADMINISTRATOR
     __not_implemented__ = True
 
 
@@ -160,6 +167,7 @@ class SetAcpiPowerStateRsp(Message):
 class GetAcpiPowerStateReq(Message):
     __cmdid__ = constants.CMDID_GET_ACPI_POWER_STATE
     __netfn__ = constants.NETFN_APP
+    __privilege__ = USER
     __not_implemented__ = True
 
 
@@ -174,6 +182,7 @@ class GetAcpiPowerStateRsp(Message):
 class GetDeviceGuidReq(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_GUID
     __netfn__ = constants.NETFN_APP
+    __privilege__ = USER
 
 
 @register_message_class
@@ -190,6 +199,7 @@ class GetDeviceGuidRsp(Message):
 class ResetWatchdogTimerReq(Message):
     __cmdid__ = constants.CMDID_RESET_WATCHDOG_TIMER
     __netfn__ = constants.NETFN_APP
+    __privilege__ = OPERATOR
 
 
 @register_message_class
@@ -205,6 +215,7 @@ class ResetWatchdogTimerRsp(Message):
 class SetWatchdogTimerReq(Message):
     __cmdid__ = constants.CMDID_SET_WATCHDOG_TIMER
     __netfn__ = constants.NETFN_APP
+    __privilege__ = OPERATOR
     __fields__ = (
         Bitfield('timer_use', 1,
                  Bitfield.Bit('timer_use', 3),
@@ -235,6 +246,7 @@ class SetWatchdogTimerRsp(Message):
 class GetWatchdogTimerReq(Message):
     __cmdid__ = constants.CMDID_GET_WATCHDOG_TIMER
     __netfn__ = constants.NETFN_APP
+    __privilege__ = USER
 
 
 @register_message_class

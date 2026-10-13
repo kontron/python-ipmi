@@ -23,6 +23,7 @@ from . import Bitfield
 from . import CompletionCode
 from . import Optional
 from . import RemainingBytes
+from .privileges import ADMINISTRATOR, OPERATOR, USER
 
 CONTROL_POWER_DOWN = 0
 CONTROL_POWER_UP = 1
@@ -36,6 +37,7 @@ CONTROL_SOFT_SHUTDOWN = 5
 class GetChassisCapabilitiesReq(Message):
     __cmdid__ = constants.CMDID_GET_CHASSIS_CAPABILITIES
     __netfn__ = constants.NETFN_CHASSIS
+    __privilege__ = USER
 
 
 @register_message_class
@@ -64,6 +66,7 @@ class GetChassisCapabilitiesRsp(Message):
 class GetChassisStatusReq(Message):
     __cmdid__ = constants.CMDID_GET_CHASSIS_STATUS
     __netfn__ = constants.NETFN_CHASSIS
+    __privilege__ = USER
 
 
 @register_message_class
@@ -105,6 +108,7 @@ class GetChassisStatusRsp(Message):
 class ChassisControlReq(Message):
     __cmdid__ = constants.CMDID_CHASSIS_CONTROL
     __netfn__ = constants.NETFN_CHASSIS
+    __privilege__ = OPERATOR
     __fields__ = (
         Bitfield('control', 1,
                  Bitfield.Bit('option', 4),
@@ -125,6 +129,7 @@ class ChassisControlRsp(Message):
 class ChassisResetReq(Message):
     __cmdid__ = constants.CMDID_CHASSIS_RESET
     __netfn__ = constants.NETFN_CHASSIS
+    __privilege__ = OPERATOR
 
 
 @register_message_class
@@ -140,6 +145,7 @@ class ChassisResetRsp(Message):
 class ChassisIdentifyReq(Message):
     __cmdid__ = constants.CMDID_CHASSIS_IDENTIFY
     __netfn__ = constants.NETFN_CHASSIS
+    __privilege__ = OPERATOR
     __fields__ = (
         # identify interval in seconds, 0 turns off the identify, the BMC
         # uses its default (15 seconds) without it
@@ -167,6 +173,7 @@ class ChassisIdentifyRsp(Message):
 class SetChassisCapabilitiesReq(Message):
     __cmdid__ = constants.CMDID_SET_CHASSIS_CAPABILITIES
     __netfn__ = constants.NETFN_CHASSIS
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         Bitfield('capabilities_flags', 1,
                  Bitfield.Bit('intrusion_sensor', 1),
@@ -195,6 +202,7 @@ class SetChassisCapabilitiesRsp(Message):
 class SetPowerRestorePolicyReq(Message):
     __cmdid__ = constants.CMDID_SET_POWER_RESTORE_POLICY
     __netfn__ = constants.NETFN_CHASSIS
+    __privilege__ = OPERATOR
     __fields__ = (
         Bitfield('power_restore_policy', 1,
                  Bitfield.Bit('policy', 3),
@@ -220,6 +228,7 @@ class SetPowerRestorePolicyRsp(Message):
 class GetSystemRestartCauseReq(Message):
     __cmdid__ = constants.CMDID_GET_SYSTEM_RESTART_CAUSE
     __netfn__ = constants.NETFN_CHASSIS
+    __privilege__ = USER
 
 
 @register_message_class
@@ -242,6 +251,7 @@ class GetSystemRestartCauseRsp(Message):
 class GetPohCounterReq(Message):
     __cmdid__ = constants.CMDID_GET_POH_COUNTER
     __netfn__ = constants.NETFN_CHASSIS
+    __privilege__ = USER
 
 
 @register_message_class
@@ -259,6 +269,7 @@ class GetPohCounterRsp(Message):
 class GetSystemBootOptionsReq(Message):
     __cmdid__ = constants.CMDID_GET_SYSTEM_BOOT_OPTIONS
     __netfn__ = constants.NETFN_CHASSIS
+    __privilege__ = OPERATOR
     __fields__ = (
         Bitfield('parameter_selector', 1,
                  Bitfield.Bit('boot_option_parameter_selector', 7),
@@ -288,6 +299,7 @@ class GetSystemBootOptionsRsp(Message):
 class SetSystemBootOptionsReq(Message):
     __cmdid__ = constants.CMDID_SET_SYSTEM_BOOT_OPTIONS
     __netfn__ = constants.NETFN_CHASSIS
+    __privilege__ = OPERATOR
     __fields__ = (
         Bitfield('parameter_selector', 1,
                  Bitfield.Bit('boot_option_parameter_selector', 7),
@@ -309,6 +321,7 @@ class SetSystemBootOptionsRsp(Message):
 class SetFrontPanelButtonEnablesReq(Message):
     __cmdid__ = constants.CMDID_SET_FRONT_PANEL_BUTTON_ENABLES
     __netfn__ = constants.NETFN_CHASSIS
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         Bitfield('disable', 1,
                  Bitfield.Bit('power_off_button', 1),
@@ -332,6 +345,7 @@ class SetFrontPanelButtonEnablesRsp(Message):
 class SetPowerCycleIntervalReq(Message):
     __cmdid__ = constants.CMDID_SET_POWER_CYCLE_INTERVAL
     __netfn__ = constants.NETFN_CHASSIS
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         UnsignedInt('interval', 1),
     )

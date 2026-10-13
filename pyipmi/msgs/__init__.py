@@ -52,5 +52,4 @@ from . import event  # noqa:F401
 from . import lan  # noqa:F401
 from . import pef  # noqa:F401
 from . import vita  # noqa:F401
-# the privileges of the messages, after all of them are registered
-from . import privileges  # noqa:F401,E402
+from . import privileges  # noqa:F401

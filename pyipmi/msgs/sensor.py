@@ -26,12 +26,14 @@ from . import Optional
 from . import Conditional
 from . import RemainingBytes
 from . import EventMessageRevision
+from .privileges import LOCAL_INTERFACE, OPERATOR, USER
 
 
 @register_message_class
 class GetDeviceSdrInfoReq(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_SDR_INFO
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = LOCAL_INTERFACE
     __fields__ = (
             # bit 0: 1 returns the number of SDRs, 0 the number of sensors
             # (default)
@@ -65,6 +67,7 @@ class GetDeviceSdrInfoRsp(Message):
 class GetDeviceSdrReq(Message):
     __cmdid__ = constants.CMDID_GET_DEVICE_SDR
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = LOCAL_INTERFACE
     __fields__ = (
             UnsignedInt('reservation_id', 2, 0x0000),
             UnsignedInt('record_id', 2),
@@ -88,6 +91,7 @@ class GetDeviceSdrRsp(Message):
 class ReserveDeviceSdrRepositoryReq(Message):
     __cmdid__ = constants.CMDID_RESERVE_DEVICE_SDR_REPOSITORY
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = LOCAL_INTERFACE
 
 
 @register_message_class
@@ -104,6 +108,7 @@ class ReserveDeviceSdrRepositoryRsp(Message):
 class GetSensorReadingFactorsReq(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_READING_FACTOR
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = USER
     __fields__ = (
         UnsignedInt('sensor_number', 1),
         # the raw reading the factors are requested for
@@ -129,6 +134,7 @@ class GetSensorReadingFactorsRsp(Message):
 class GetSensorThresholdsReq(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_THRESHOLD
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = USER
     __fields__ = (
         UnsignedInt('sensor_number', 1),
     )
@@ -162,6 +168,7 @@ class GetSensorThresholdsRsp(Message):
 class SetSensorHysteresisReq(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_HYSTERESIS
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = OPERATOR
     __fields__ = (
             UnsignedInt('sensor_number', 1),
             UnsignedInt('reserved', 1, 0xff),
@@ -183,6 +190,7 @@ class SetSensorHysteresisRsp(Message):
 class GetSensorHysteresisReq(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_HYSTERESIS
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = USER
     __fields__ = (
             UnsignedInt('sensor_number', 1),
             UnsignedInt('reserved', 1, 0xff),
@@ -204,6 +212,7 @@ class GetSensorHysteresisRsp(Message):
 class SetSensorThresholdsReq(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_THRESHOLD
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = OPERATOR
     __fields__ = (
         UnsignedInt('sensor_number', 1),
         Bitfield('set_mask', 1,
@@ -237,6 +246,7 @@ class SetSensorThresholdsRsp(Message):
 class SetSensorEventEnableReq(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_EVENT_ENABLE
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = OPERATOR
     __fields__ = (
             UnsignedInt('sensor_number', 1),
             Bitfield('enable', 1,
@@ -264,6 +274,7 @@ class SetSensorEventEnableRsp(Message):
 class GetSensorEventEnableReq(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_EVENT_ENABLE
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = USER
     __fields__ = (
         UnsignedInt('sensor_number', 1),
     )
@@ -290,6 +301,7 @@ class GetSensorEventEnableRsp(Message):
 class RearmSensorEventsReq(Message):
     __cmdid__ = constants.CMDID_RE_ARM_SENSOR
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = OPERATOR
     __fields__ = (
         UnsignedInt('sensor_number', 1),
         Bitfield('re_arm', 1,
@@ -313,6 +325,7 @@ class RearmSensorEventsRsp(Message):
 class GetSensorEventStatusReq(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_EVENT_STATUS
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = USER
     __fields__ = (
         UnsignedInt('sensor_number', 1),
     )
@@ -341,6 +354,7 @@ class GetSensorEventStatusRsp(Message):
 class GetSensorReadingReq(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_READING
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = USER
     __fields__ = (
         UnsignedInt('sensor_number', 1),
     )
@@ -384,6 +398,7 @@ class _GeneratorId(Conditional):
 class PlatformEventReq(Message):
     __cmdid__ = constants.CMDID_PLATFORM_EVENT
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = OPERATOR
     __fields__ = (
         _GeneratorId(),
         EventMessageRevision(4),
@@ -409,6 +424,7 @@ class PlatformEventRsp(Message):
 class SetSensorTypeReq(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_TYPE
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = OPERATOR
     __fields__ = (
         UnsignedInt('sensor_number', 1),
         UnsignedInt('sensor_type', 1),
@@ -431,6 +447,7 @@ class SetSensorTypeRsp(Message):
 class GetSensorTypeReq(Message):
     __cmdid__ = constants.CMDID_GET_SENSOR_TYPE
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = USER
     __fields__ = (
         UnsignedInt('sensor_number', 1),
     )
@@ -453,6 +470,7 @@ class GetSensorTypeRsp(Message):
 class SetSensorReadingAndEventStatusReq(Message):
     __cmdid__ = constants.CMDID_SET_SENSOR_READING_AND_EVENT_STATUS
     __netfn__ = constants.NETFN_SENSOR_EVENT
+    __privilege__ = OPERATOR
     __fields__ = (
         UnsignedInt('sensor_number', 1),
         Bitfield('operation', 1,

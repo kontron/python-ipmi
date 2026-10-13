@@ -379,6 +379,9 @@ class Message:
     __default_lun__ = 0
     __group_extension__: int | None = None
     __not_implemented__ = False
+    # the minimum privilege level of a request, see pyipmi.msgs.privileges;
+    # None if it is not known
+    __privilege__: int | None = None
 
     if TYPE_CHECKING:
         # the message fields are created as attributes at runtime

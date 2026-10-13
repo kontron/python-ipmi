@@ -24,6 +24,7 @@ from . import Optional
 from . import RemainingBytes
 from . import Timestamp
 from . import GroupExtensionIdentifier
+from .privileges import ADMINISTRATOR, OPERATOR, USER
 
 
 GROUP_EXTENSION_VSO = 0x03
@@ -43,6 +44,7 @@ class VitaMessage(Message):
 class VitaGetVsoCapabilitiesReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_VSO_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
     )
@@ -89,6 +91,7 @@ class VitaGetChassisAddressTableInfoReq(VitaMessage):
 
     __cmdid__ = constants.CMDID_VITA_GET_CHASSIS_ADDRESS_TABLE_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         Optional(UnsignedInt('fru_id', 1)),
@@ -131,6 +134,7 @@ class VitaFruInventoryDeviceLockControlReq(VitaMessage):
 
     __cmdid__ = constants.CMDID_VITA_FRU_INVENTORY_DEVICE_LOCK_CONTROL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -166,6 +170,7 @@ class VitaFruInventoryDeviceWriteReq(VitaMessage):
 
     __cmdid__ = constants.CMDID_VITA_FRU_INVENTORY_DEVICE_WRITE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -192,6 +197,7 @@ class VitaFruInventoryDeviceWriteRsp(VitaMessage):
 class VitaGetFruAddressInfoReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_FRU_ADDRESS_INFO
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         # optional, FRU 0 if it is not given
@@ -225,6 +231,7 @@ class VitaGetFruAddressInfoRsp(VitaMessage):
 class VitaGetChassisIdentifierReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_CHASSIS_IDENTIFIER
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
     )
@@ -246,6 +253,7 @@ class VitaGetChassisIdentifierRsp(VitaMessage):
 class VitaSetChassisIdentifierReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_SET_CHASSIS_IDENTIFIER
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         # the type/length byte and the data of the chassis identifier
@@ -267,6 +275,7 @@ class VitaSetChassisIdentifierRsp(VitaMessage):
 class VitaFruControlReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_FRU_CONTROL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -288,6 +297,7 @@ class VitaFruControlRsp(VitaMessage):
 class VitaGetFruLedPropertiesReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_FRU_LED_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -310,6 +320,7 @@ class VitaGetFruLedPropertiesRsp(VitaMessage):
 class VitaGetFruLedCapabilitiesReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_LED_COLOR_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -349,6 +360,7 @@ class VitaGetFruLedCapabilitiesRsp(VitaMessage):
 class VitaSetFruLedStateReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_SET_FRU_LED_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -373,6 +385,7 @@ class VitaSetFruLedStateRsp(VitaMessage):
 class VitaGetFruLedStateReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_FRU_LED_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -415,6 +428,7 @@ class VitaGetFruLedStateRsp(VitaMessage):
 class VitaSetIpmbStateReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_SET_IPMB_STATE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         Bitfield('ipmb_a', 1,
@@ -444,6 +458,7 @@ class VitaSetIpmbStateRsp(VitaMessage):
 class VitaSetFruStatePolicyReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_SET_FRU_STATE_POLICY_BITS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = ADMINISTRATOR
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -476,6 +491,7 @@ class VitaSetFruStatePolicyRsp(VitaMessage):
 class VitaGetFruStatePolicyReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_FRU_STATE_POLICY_BITS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -502,6 +518,7 @@ class VitaGetFruStatePolicyRsp(VitaMessage):
 class VitaSetFruActivationReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_SET_FRU_ACTIVATION
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -523,6 +540,7 @@ class VitaSetFruActivationRsp(VitaMessage):
 class VitaGetDeviceLocatorRecordReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_DEVICE_LOCATOR_RECORD_ID
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -544,6 +562,7 @@ class VitaGetDeviceLocatorRecordRsp(VitaMessage):
 class VitaFruControlCapabilitiesReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_FRU_CONTROL_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -571,6 +590,7 @@ class VitaFruControlCapabilitiesRsp(VitaMessage):
 class VitaGetMandatorySensorNumbersReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_MANDATORY_SENSOR_NUMBERS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -599,6 +619,7 @@ class VitaGetMandatorySensorNumbersRsp(VitaMessage):
 class VitaGetFruHashReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_FRU_HASH
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -620,6 +641,7 @@ class VitaGetFruHashRsp(VitaMessage):
 class VitaGetPayloadModeCapabilitiesReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_PAYLOAD_MODE_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -644,6 +666,7 @@ class VitaGetPayloadModeCapabilitiesRsp(VitaMessage):
 class VitaSetPayloadModeReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_SET_PAYLOAD_MODE
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -696,6 +719,7 @@ VITA_FAN_LEVEL_LOCAL_CONTROL = 0xff
 class VitaGetChassisManagerIpmbAddressReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_CHASSIS_MANAGER_IPMB_ADDRESS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
     )
@@ -722,6 +746,7 @@ class VitaGetChassisManagerIpmbAddressRsp(VitaMessage):
 class VitaGetChassisManagerIpAddressesReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_CHASSIS_MANAGER_IP_ADDRESSES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         # 0 is the chassis manager IP address
@@ -760,6 +785,7 @@ class VitaGetChassisManagerIpAddressesRsp(VitaMessage):
 class VitaGetFanSpeedPropertiesReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_FAN_SPEED_PROPERTIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -786,6 +812,7 @@ class VitaGetFanSpeedPropertiesRsp(VitaMessage):
 class VitaSetFanLevelReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_SET_FAN_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -811,6 +838,7 @@ class VitaSetFanLevelRsp(VitaMessage):
 class VitaGetFanLevelReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_FAN_LEVEL
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fru_id', 1),
@@ -851,6 +879,7 @@ class VitaSetFanPolicyReq(VitaMessage):
 
     __cmdid__ = constants.CMDID_VITA_SET_FAN_POLICY
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fan_tray_site', 1),
@@ -881,6 +910,7 @@ class VitaGetFanPolicyReq(VitaMessage):
 
     __cmdid__ = constants.CMDID_VITA_GET_FAN_POLICY
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         UnsignedInt('fan_tray_site', 1),
@@ -932,6 +962,7 @@ def power_supply_signals() -> Bitfield:
 class VitaGetPowerSupplyCapabilitiesReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_POWER_SUPPLY_CAPABILITIES
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
     )
@@ -952,6 +983,7 @@ class VitaGetPowerSupplyCapabilitiesRsp(VitaMessage):
 class VitaGetPowerSupplyStatusReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_GET_POWER_SUPPLY_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
     )
@@ -972,6 +1004,7 @@ class VitaGetPowerSupplyStatusRsp(VitaMessage):
 class VitaSetPowerSupplyStatusReq(VitaMessage):
     __cmdid__ = constants.CMDID_VITA_SET_POWER_SUPPLY_STATUS
     __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
     __fields__ = (
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
         power_supply_signals(),
