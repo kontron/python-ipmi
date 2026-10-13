@@ -4,6 +4,7 @@ from collections import OrderedDict, namedtuple
 
 from pyipmi.msgs.dcmi import DCMI_GROUP_CODE
 from pyipmi.msgs.picmg import PICMG_IDENTIFIER
+from pyipmi.msgs.privileges import NAMES as PRIVILEGE_NAMES
 from pyipmi.msgs.registry import DEFAULT_REGISTRY
 from pyipmi.msgs.vita import GROUP_EXTENSION_VSO
 
@@ -54,7 +55,8 @@ def normalize_row(row, max_cols):
 def get_command_list():
     data = list()
     Command = namedtuple('Command',
-                         ['netfn', 'cmdid', 'grpext', 'grpext_name', 'name'])
+                         ['netfn', 'cmdid', 'grpext', 'grpext_name', 'name',
+                          'privilege'])
 
     # the registry holds both name and (netfn, cmdid, grpext) keys; only
     # the tuple keys are of interest here. grpext can be None.
@@ -72,8 +74,10 @@ def get_command_list():
         netfn, cmdid, grpext = key
         grpext_str = '' if grpext is None else hex(grpext)
         grpext_name = GROUP_EXTENSION_NAMES.get(grpext, 'Unknown')
+        # the minimum privilege level of the request, - if it is not known
+        privilege = PRIVILEGE_NAMES.get(val.__privilege__, '-')
         data.append(Command(hex(netfn), hex(cmdid), grpext_str, grpext_name,
-                            val.__name__[:-3]))
+                            val.__name__[:-3], privilege))
 
     return data
 
@@ -81,7 +85,7 @@ def get_command_list():
 def main():
     data = get_command_list()
     data.insert(0, ('Netfn', 'CMD', 'Group Extension', 'Group Extension Name',
-                    'Name'))
+                    'Name', 'Privilege'))
 
     if len(sys.argv) > 1 and sys.argv[1].lower() == 'rst':
         rst = make_table(data)
