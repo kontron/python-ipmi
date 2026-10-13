@@ -85,9 +85,11 @@ class TestFraming:
                                               (17, hashlib.sha256)])
     def test_key_derivation(self, suite, digest):
         keys = SessionKeys(CIPHER_SUITES[suite], SIK)
-        n = digest().digest_size
-        assert keys.k1 == hmac.new(SIK, b'\x01' * n, digest).digest()
-        assert keys.k2 == hmac.new(SIK, b'\x02' * n, digest).digest()
+        # the constants are 20 bytes with SHA256 too, the length of the
+        # key is the one of the hash
+        assert keys.k1 == hmac.new(SIK, b'\x01' * 20, digest).digest()
+        assert keys.k2 == hmac.new(SIK, b'\x02' * 20, digest).digest()
+        assert len(keys.k1) == digest().digest_size
 
 
 def ipmb_response(req, data):

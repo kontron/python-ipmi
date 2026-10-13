@@ -105,6 +105,9 @@ MAX_PASSWORD_LENGTH = 20
 
 AES_BLOCK_SIZE = 16
 
+# the length of the constants of the keys K1 and K2 (IPMI v2.0, 13.32)
+KEY_CONSTANT_LENGTH = 20
+
 # authentication algorithm -> (hash used for RAKP HMACs and K1/K2,
 #                              length of the RAKP4 integrity check value)
 AUTH_ALGORITHMS: dict[int, tuple[Callable, int]] = {
@@ -216,9 +219,12 @@ class SessionKeys:
         """
         self.suite = suite
         digest = AUTH_ALGORITHMS[suite.authentication][0]
-        n = digest().digest_size
-        self.k1 = hmac.new(sik, b'\x01' * n, digest).digest()
-        self.k2 = hmac.new(sik, b'\x02' * n, digest).digest()
+        # the constants are 20 bytes, also for SHA256 (section 13.32), like
+        # ipmitool and the BMCs use them
+        self.k1 = hmac.new(sik, b'\x01' * KEY_CONSTANT_LENGTH,
+                           digest).digest()
+        self.k2 = hmac.new(sik, b'\x02' * KEY_CONSTANT_LENGTH,
+                           digest).digest()
 
     @property
     def authenticated(self) -> bool:
