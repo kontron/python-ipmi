@@ -78,6 +78,19 @@ def test_open_close(device):
     assert device.closed
 
 
+def test_close_after_failed_open():
+    def open_device(port, serial_number):
+        raise OSError(-7, 'unable to open device')
+
+    module = types.SimpleNamespace(open=open_device,
+                                   POLL_I2C_READ=POLL_I2C_READ)
+    with patch('pyipmi.interfaces.aardvark.pyaardvark', module):
+        intf = Aardvark(slave_address=0x24)
+        with pytest.raises(OSError):
+            intf.open()
+        intf.close()
+
+
 def test_requester(device):
     device.responder = lambda frame: [
         encode_ipmb_response(IpmbHeaderReq(data=frame), b'\x00\x11')]

@@ -121,6 +121,7 @@ class Aardvark(IpmbInterface):
         self.target_power = enable_target_power
         self.fastmode = enable_fastmode
         self._calls: queue.Queue = queue.Queue()
+        self._dev: Any = None
 
     def open(self) -> None:
         """Open the adapter, configure it and start the receive thread."""
@@ -140,10 +141,12 @@ class Aardvark(IpmbInterface):
         self._start_receiver()
 
     def close(self) -> None:
-        """Stop the receive thread and close the adapter."""
+        """Stop the receive thread and close the adapter, if it is open."""
         self._stop_receiver()
-        self._run_calls()
-        self._dev.close()
+        if self._dev is not None:
+            self._run_calls()
+            self._dev.close()
+            self._dev = None
         super().close()
 
     def _wakeup_receiver(self) -> None:
