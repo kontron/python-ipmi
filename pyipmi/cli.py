@@ -124,6 +124,18 @@ def hpm_firmware(value: str) -> tuple[int, str]:
     return (int(component), filename)
 
 
+def ipmb_address(value: str) -> int:
+    """Argument type for an 8-bit IPMB address, decimal or with 0x prefix."""
+    try:
+        address = int(value, 0)
+    except ValueError:
+        address = -1
+    if not 0 <= address <= 0xfe or address & 1:
+        raise argparse.ArgumentTypeError(
+            f'invalid IPMB address: {value} (8-bit, even)')
+    return address
+
+
 def ipv4_address(value: str) -> str:
     """Argument type for IPv4 addresses, xxx.xxx.xxx.xxx."""
     try:
@@ -208,6 +220,21 @@ def cmd_bmc_reset(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
         ipmi.cold_reset()
     else:
         ipmi.warm_reset()
+
+
+def cmd_bmc_event_receiver(ipmi: pyipmi.Ipmi,
+                           args: argparse.Namespace) -> None:
+    if args.disable:
+        ipmi.disable_event_message_generation()
+    elif args.address is not None:
+        ipmi.set_event_receiver(args.address >> 1, args.lun)
+    (address, lun) = ipmi.get_event_receiver()
+    # the address 0xff disables the event messages
+    if address == 0x7f:
+        print('Event Receiver:     disabled')
+    else:
+        print(f'Event Receiver:     0x{address << 1:02x}\n'
+              f'Event Receiver LUN: {lun:d}')
 
 
 def sel_sensor_records(ipmi: pyipmi.Ipmi) -> dict[tuple[int, int, int],
@@ -2324,6 +2351,17 @@ def build_parser() -> argparse.ArgumentParser:
     group.command('info', cmd_bmc_info, 'BMC Device ID information')
     p = group.command('reset', cmd_bmc_reset, 'BMC reset control')
     p.add_argument('type', choices=('cold', 'warm'))
+    p = group.command('event-receiver', cmd_bmc_event_receiver,
+                      'Print or set the event receiver')
+    action = p.add_mutually_exclusive_group()
+    action.add_argument('-s', '--set', dest='address', type=ipmb_address,
+                        metavar='<address>',
+                        help='set the 8-bit IPMB address of the event '
+                             'receiver, e.g. 0x20')
+    action.add_argument('-d', '--disable', action='store_true',
+                        help='disable the event message generation')
+    p.add_argument('-l', '--lun', type=int, choices=range(4), default=0,
+                   help='LUN of the event receiver (default 0)')
 
     group = commands.group('chassis', 'Get the chassis status, control the '
                            'power and set the chassis settings')

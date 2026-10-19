@@ -1,4 +1,4 @@
-.TH PYIPMI "1" "2026\-10\-12" "python\-ipmi" "python\-ipmi manual"
+.TH PYIPMI "1" "2026\-10\-19" "python\-ipmi" "python\-ipmi manual"
 .SH NAME
 pyipmi \- pure python IPMI tool
 .SH SYNOPSIS
@@ -98,6 +98,9 @@ BMC Device ID information
 .TP
 \fBpyipmi bmc\fR \fI\,reset\/\fR
 BMC reset control
+.TP
+\fBpyipmi bmc\fR \fI\,event\-receiver\/\fR
+Print or set the event receiver
 
 .SH COMMAND \fI\,'pyipmi bmc info'\/\fR
 usage: pyipmi bmc info [\-h]
@@ -111,6 +114,24 @@ BMC reset control
 
 .TP
 \fB{cold,warm}\fR
+
+.SH COMMAND \fI\,'pyipmi bmc event\-receiver'\/\fR
+usage: pyipmi bmc event\-receiver [\-h] [\-s <address> | \-d] [\-l {0,1,2,3}]
+
+Print or set the event receiver
+
+.SH OPTIONS \fI\,'pyipmi bmc event\-receiver'\/\fR
+.TP
+\fB\-s\fR \fI\,<address>\/\fR, \fB\-\-set\fR \fI\,<address>\/\fR
+set the 8\-bit IPMB address of the event receiver, e.g. 0x20
+
+.TP
+\fB\-d\fR, \fB\-\-disable\fR
+disable the event message generation
+
+.TP
+\fB\-l\fR \fI\,{0,1,2,3}\/\fR, \fB\-\-lun\fR \fI\,{0,1,2,3}\/\fR
+LUN of the event receiver (default 0)
 
 .SH COMMAND \fI\,'pyipmi chassis'\/\fR
 usage: pyipmi chassis [\-h] <command> ...

@@ -155,6 +155,7 @@ class TestParser:
     @pytest.mark.parametrize('command, func', [
         ('bmc info', 'cmd_bmc_info'),
         ('bmc reset cold', 'cmd_bmc_reset'),
+        ('bmc event-receiver', 'cmd_bmc_event_receiver'),
         ('chassis status', 'cmd_chassis_status'),
         ('chassis power cycle', 'cmd_chassis_power'),
         ('chassis reset', 'cmd_chassis_reset'),
@@ -1009,6 +1010,48 @@ def test_bmc_info_manufacturer_name(capsys, manufacturer, name):
     # the IDs are shown in decimal and hex
     assert 'Device ID:          4 (0x04)\n' in out
     assert 'Product ID:         1701 (0x06a5)\n' in out
+
+
+class TestBmcEventReceiver:
+    @staticmethod
+    def run(command, rsp_data):
+        ipmi = create_ipmi(rsp_data)
+        args = build_parser().parse_args(['bmc', 'event-receiver']
+                                         + command.split())
+        args.func(ipmi, args)
+        return ipmi
+
+    def test_get(self, capsys):
+        ipmi = self.run('', b'\x00\x20\x01')
+        assert ipmi.requests == [('GetEventReceiverReq', b'')]
+        assert capsys.readouterr().out == ('Event Receiver:     0x20\n'
+                                           'Event Receiver LUN: 1\n')
+
+    def test_get_disabled(self, capsys):
+        self.run('', b'\x00\xfe\x00')
+        assert capsys.readouterr().out == 'Event Receiver:     disabled\n'
+
+    @pytest.mark.parametrize('options, data', [
+        ('-s 0x20', b'\x20\x00'),
+        ('--set 0x82 -l 2', b'\x82\x02'),
+        ('--disable', b'\xff\x00'),
+    ])
+    def test_set(self, options, data):
+        ipmi = self.run(options, {'SetEventReceiver': b'\x00',
+                                  'GetEventReceiver': b'\x00\x20\x00'})
+        assert ipmi.requests == [('SetEventReceiverReq', data),
+                                 ('GetEventReceiverReq', b'')]
+
+    @pytest.mark.parametrize('options', [
+        '-s 0x21',
+        '-s 0x100',
+        '-s 0x20 -d',
+        '-s 0x20 -l 4',
+    ])
+    def test_invalid(self, options):
+        with pytest.raises(SystemExit):
+            build_parser().parse_args(['bmc', 'event-receiver']
+                                      + options.split())
 
 
 def lan_rsp(data):
