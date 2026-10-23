@@ -313,6 +313,9 @@ CMDID_GET_LAN_CONFIGURATION_PARAMETERS = 0x02
 CMDID_SUSPEND_BMC_ARPS = 0x03
 CMDID_GET_IP_UDP_RMCP_STATISTICS = 0x04
 # Serial/Modem device .. NetFn Transport
+CMDID_SET_SERIAL_MODEM_CONFIGURATION = 0x10
+CMDID_GET_SERIAL_MODEM_CONFIGURATION = 0x11
+CMDID_SERIAL_MODEM_CONNECTION_ACTIVE = 0x18
 # Command Forwarding .. NetFn Transport
 # bridge management (ICMB) .. NetFn Bridge
 # discovery (ICMB) .. NetFn Bridge
@@ -493,6 +496,18 @@ CC_ERR_CMD_SPECIFIC_DESC = {
         0x83: "attempt to read write-only parameter"
     },
     (NETFN_TRANSPORT, CMDID_GET_LAN_CONFIGURATION_PARAMETERS, None): {
+        0x80: "parameter not supported."
+    },
+    (NETFN_TRANSPORT, CMDID_SET_SERIAL_MODEM_CONFIGURATION, None): {
+        0x80: "parameter not supported.",
+        0x81: "attempt to set the 'set in progress' value (in parameter #0)"
+              "when not in the 'set complete' state. (This completion code"
+              "provides a way to recognize that another party has already"
+              "'claimed' the parameters)",
+        0x82: "attempt to write read-only parameter",
+        0x83: "attempt to read write-only parameter"
+    },
+    (NETFN_TRANSPORT, CMDID_GET_SERIAL_MODEM_CONFIGURATION, None): {
         0x80: "parameter not supported."
     },
     (NETFN_CHASSIS, CMDID_SET_SYSTEM_BOOT_OPTIONS, None): {
