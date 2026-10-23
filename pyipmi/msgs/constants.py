@@ -499,6 +499,13 @@ CC_ERR_CMD_SPECIFIC_DESC = {
               "password data does not match stored value.",
         0x81: "password test failed. Wrong password size was used."
     },
+    (NETFN_APP, CMDID_SET_COMMAND_ENABLES, None): {
+        0x80: "attempt to enable an unsupported or un-configurable command"
+    },
+    (NETFN_APP, CMDID_SET_COMMAND_SUBFUNCTION_ENABLES, None): {
+        0x80: "attempt to enable an unsupported or un-configurable "
+              "sub-function"
+    },
     (NETFN_TRANSPORT, CMDID_SET_LAN_CONFIGURATION_PARAMETERS, None): {
         0x80: "parameter not supported.",
         0x81: "attempt to set the 'set in progress' value (in parameter #0)"

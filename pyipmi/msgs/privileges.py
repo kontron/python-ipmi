@@ -59,14 +59,6 @@ NAMES = {NONE: 'none', CALLBACK: 'callback', USER: 'user',
 # __privilege__
 WITHOUT_MESSAGES: dict[tuple[int, int, int | None], int] = {
     # the IPMI commands without messages (Table G-1):
-    # Get NetFn Support, Get Command Support, Get Command Sub-function
-    # Support, Get Configurable Commands and Sub-functions, Set/Get Command
-    # Enables, Set/Get Command Sub-function Enables, Get OEM NetFn IANA
-    # Support
-    **{(constants.NETFN_APP, cmd, None): USER
-       for cmd in (0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x61, 0x63, 0x64)},
-    (constants.NETFN_APP, 0x60, None): ADMINISTRATOR,
-    (constants.NETFN_APP, 0x62, None): ADMINISTRATOR,
     # Set/Get System Info Parameters, Get AuthCode
     (constants.NETFN_APP, 0x58, None): ADMINISTRATOR,
     (constants.NETFN_APP, 0x59, None): USER,

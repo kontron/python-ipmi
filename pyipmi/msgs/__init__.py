@@ -42,6 +42,7 @@ from . import bmc  # noqa:F401
 from . import chassis  # noqa:F401
 from . import dcmi  # noqa:F401
 from . import device_messaging  # noqa:F401
+from . import firmware_firewall  # noqa:F401
 from . import fru  # noqa:F401
 from . import hpm  # noqa:F401
 from . import picmg  # noqa:F401
