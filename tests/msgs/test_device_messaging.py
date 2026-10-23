@@ -509,3 +509,15 @@ def test_getbtinterfacecapabilities_decode_rsp():
     assert m.output_buffer_size == 0x41
     assert m.request_to_response_time == 5
     assert m.recommended_retries == 2
+
+
+def test_getsystemguid_encode_req():
+    m = pyipmi.msgs.device_messaging.GetSystemGuidReq()
+    assert encode_message(m) == b''
+
+
+def test_getsystemguid_decode_rsp():
+    m = pyipmi.msgs.device_messaging.GetSystemGuidRsp()
+    decode_message(m, b'\x00' + bytes(range(16)))
+    assert m.completion_code == 0
+    assert m.system_guid == array('B', range(16))

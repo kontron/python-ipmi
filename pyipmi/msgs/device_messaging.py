@@ -17,6 +17,7 @@
 from . import constants
 from . import register_message_class
 from . import Message
+from . import ByteArray
 from . import UnsignedInt
 from . import Bitfield
 from . import String
@@ -241,6 +242,27 @@ class GetBtInterfaceCapabilitiesRsp(Message):
         UnsignedInt('output_buffer_size', 1),
         UnsignedInt('request_to_response_time', 1),
         UnsignedInt('recommended_retries', 1),
+    )
+
+
+@register_message_class
+class GetSystemGuidReq(Message):
+    """Get System GUID, also before a session is established."""
+
+    __cmdid__ = constants.CMDID_GET_SYSTEM_GUID
+    __netfn__ = constants.NETFN_APP
+    __privilege__ = NONE
+
+
+@register_message_class
+class GetSystemGuidRsp(Message):
+    """The GUID in the format of IPMI v2.0 Table 20-10, like Get Device GUID."""
+
+    __cmdid__ = constants.CMDID_GET_SYSTEM_GUID
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
+        ByteArray('system_guid', 16),
     )
 
 
