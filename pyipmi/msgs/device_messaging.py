@@ -222,6 +222,29 @@ class ReadEventMessageBufferRsp(Message):
 
 
 @register_message_class
+class GetBtInterfaceCapabilitiesReq(Message):
+    __cmdid__ = constants.CMDID_GET_BT_INTERFACE_CAPABILITIES
+    __netfn__ = constants.NETFN_APP
+    __privilege__ = USER
+
+
+@register_message_class
+class GetBtInterfaceCapabilitiesRsp(Message):
+    """The buffer sizes are those of the length byte, the time in seconds."""
+
+    __cmdid__ = constants.CMDID_GET_BT_INTERFACE_CAPABILITIES
+    __netfn__ = constants.NETFN_APP | 1
+    __fields__ = (
+        CompletionCode(),
+        UnsignedInt('outstanding_requests', 1),
+        UnsignedInt('input_buffer_size', 1),
+        UnsignedInt('output_buffer_size', 1),
+        UnsignedInt('request_to_response_time', 1),
+        UnsignedInt('recommended_retries', 1),
+    )
+
+
+@register_message_class
 class MasterWriteReadReq(Message):
     __cmdid__ = constants.CMDID_MASTER_WRITE_READ
     __netfn__ = constants.NETFN_APP

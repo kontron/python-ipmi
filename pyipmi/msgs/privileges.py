@@ -67,9 +67,8 @@ WITHOUT_MESSAGES: dict[tuple[int, int, int | None], int] = {
        for cmd in (0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x61, 0x63, 0x64)},
     (constants.NETFN_APP, 0x60, None): ADMINISTRATOR,
     (constants.NETFN_APP, 0x62, None): ADMINISTRATOR,
-    # Get BT Interface Capabilities, Get System GUID (before a session),
-    # Set/Get System Info Parameters, Get AuthCode
-    (constants.NETFN_APP, 0x36, None): USER,
+    # Get System GUID (before a session), Set/Get System Info Parameters,
+    # Get AuthCode
     (constants.NETFN_APP, 0x37, None): NONE,
     (constants.NETFN_APP, 0x58, None): ADMINISTRATOR,
     (constants.NETFN_APP, 0x59, None): USER,

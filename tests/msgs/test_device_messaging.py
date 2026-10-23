@@ -493,3 +493,19 @@ def test_getsessioninfo_decode_rsp_unused_index():
     decode_message(m, b'\x00\x00\x04\x01')
     assert m.session_handle == 0
     assert m.user_id is None
+
+
+def test_getbtinterfacecapabilities_encode_req():
+    m = pyipmi.msgs.device_messaging.GetBtInterfaceCapabilitiesReq()
+    assert encode_message(m) == b''
+
+
+def test_getbtinterfacecapabilities_decode_rsp():
+    m = pyipmi.msgs.device_messaging.GetBtInterfaceCapabilitiesRsp()
+    decode_message(m, b'\x00\x01\x40\x41\x05\x02')
+    assert m.completion_code == 0
+    assert m.outstanding_requests == 1
+    assert m.input_buffer_size == 0x40
+    assert m.output_buffer_size == 0x41
+    assert m.request_to_response_time == 5
+    assert m.recommended_retries == 2
