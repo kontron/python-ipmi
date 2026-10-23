@@ -743,3 +743,208 @@ def test_VitaFruInventoryDeviceWriteRsp_decode():
     m = pyipmi.msgs.vita.VitaFruInventoryDeviceWriteRsp()
     decode_message(m, b'\x00\x03\x02')
     assert m.count_written == 2
+
+
+def test_VitaGetIpmbLinkInfoReq_encode():
+    m = pyipmi.msgs.vita.VitaGetIpmbLinkInfoReq()
+    assert encode_message(m) == b'\x03\x00\x00'
+    m.key_type = m.KEY_SENSOR_NUMBER
+    m.key = 0x21
+    assert encode_message(m) == b'\x03\x01\x21'
+
+
+def test_VitaGetIpmbLinkInfoRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetIpmbLinkInfoRsp()
+    decode_message(m, b'\x00\x03\x05\x21')
+    assert m.link_number == 5
+    assert m.sensor_number == 0x21
+
+
+def test_VitaGetFruPersistentControlRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetFruPersistentControlRsp()
+    decode_message(m, b'\x00\x03\x02')
+    assert m.state.cold_reset == 0
+    assert m.state.warm_reset == 1
+
+
+def test_VitaSetFruPersistentControlReq_encode():
+    m = pyipmi.msgs.vita.VitaSetFruPersistentControlReq()
+    m.fru_id = 1
+    m.mask.cold_reset = 1
+    m.state.cold_reset = 1
+    assert encode_message(m) == b'\x03\x01\x01\x01'
+    # with an empty mask the request changes nothing
+    m.mask.cold_reset = 0
+    assert encode_message(m) == b'\x03\x01\x00\x01'
+
+
+def test_VitaFruPersistentControlCapabilitiesRsp_decode():
+    m = pyipmi.msgs.vita.VitaFruPersistentControlCapabilitiesRsp()
+    decode_message(m, b'\x00\x03\x03')
+    assert m.capabilities.cold_reset == 1
+    assert m.capabilities.warm_reset == 1
+
+
+def test_VitaGetWriteProtectCapabilitiesRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetWriteProtectCapabilitiesRsp()
+    decode_message(m, b'\x00\x03\x43\x84')
+    assert m.destinations.embedded_nvm == 1
+    assert m.destinations.local_nvm == 1
+    assert m.destinations.remote_nvm == 0
+    assert m.destinations.oem1 == 1
+    assert m.categories.logs == 1
+    assert m.categories.oem2 == 1
+    assert m.categories.identification == 0
+
+
+def test_VitaGetWriteProtectEnablesReq_encode():
+    m = pyipmi.msgs.vita.VitaGetWriteProtectEnablesReq()
+    m.operation.by_destination = m.BY_DESTINATION
+    m.operation.selector = m.DESTINATION_REMOTE_NVM
+    assert encode_message(m) == b'\x03\x82'
+    m.operation.by_destination = m.BY_CATEGORY
+    m.operation.selector = m.OEM2
+    assert encode_message(m) == b'\x03\x07'
+
+
+def test_VitaGetWriteProtectEnablesRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetWriteProtectEnablesRsp()
+    decode_message(m, b'\x00\x03\x05')
+    assert m.enables == 0x05
+
+
+def test_VitaSetWriteProtectEnablesReq_encode():
+    m = pyipmi.msgs.vita.VitaSetWriteProtectEnablesReq()
+    assert encode_message(m) == b'\x03\x00\x00\x00'
+    m.operation.selector = m.CATEGORY_CONFIGURATION
+    m.mask = 0x03
+    m.enables = 0x01
+    assert encode_message(m) == b'\x03\x01\x03\x01'
+
+
+def test_VitaGetControlBitsCapabilitiesReq_encode():
+    m = pyipmi.msgs.vita.VitaGetControlBitsCapabilitiesReq()
+    assert encode_message(m) == b'\x03\x00'
+    m.first_bank = 2
+    m.number_of_banks = 3
+    assert encode_message(m) == b'\x03\x02\x03'
+
+
+def test_VitaGetControlBitsCapabilitiesRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetControlBitsCapabilitiesRsp()
+    decode_message(m, b'\x00\x03\x02\x0f\xf0\xff\x01\x02\x03')
+    assert m.number_of_banks_supported == 2
+    assert bytes(m.banks) == b'\x0f\xf0\xff\x01\x02\x03'
+
+
+def test_VitaGetControlBitsReq_encode():
+    m = pyipmi.msgs.vita.VitaGetControlBitsReq()
+    m.first_bank = 1
+    assert encode_message(m) == b'\x03\x01'
+
+
+def test_VitaGetControlBitsRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetControlBitsRsp()
+    decode_message(m, b'\x00\x03\x01\x02\x03')
+    assert bytes(m.banks) == b'\x01\x02\x03'
+
+
+def test_VitaSetControlBitsReq_encode():
+    m = pyipmi.msgs.vita.VitaSetControlBitsReq()
+    m.first_bank = 0
+    m.banks = b'\x01\x01\x00'
+    assert encode_message(m) == b'\x03\x00\x01\x01\x00'
+
+
+def test_VitaSetControlBitsRsp_decode():
+    m = pyipmi.msgs.vita.VitaSetControlBitsRsp()
+    decode_message(m, b'\x00\x03')
+    assert m.completion_code == 0
+
+
+def test_VitaGetBridgedNetFnSupportReq_encode():
+    m = pyipmi.msgs.vita.VitaGetBridgedNetFnSupportReq()
+    m.net_function.code = 0x2c >> 1
+    m.index = 1
+    assert encode_message(m) == b'\x03\x2c\x01'
+
+
+def test_VitaGetBridgedNetFnSupportRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetBridgedNetFnSupportRsp()
+    decode_message(m, b'\x00\x03\x02\x00\x03')
+    assert m.total_elements == 2
+    assert bytes(m.elements) == b'\x00\x03'
+
+
+def test_VitaGetBridgedCommandEnablesReq_encode():
+    m = pyipmi.msgs.vita.VitaGetBridgedCommandEnablesReq()
+    m.channel.number = 0xe
+    m.operation.net_function = 0x2c >> 1
+    m.operation.operation = m.COMMANDS_80_FF
+    m.group = b'\x03'
+    assert encode_message(m) == b'\x03\x0e\x6c\x03'
+    m.operation.operation = m.PASS_THROUGH
+    m.operation.net_function = 0x06 >> 1
+    m.group = b''
+    assert encode_message(m) == b'\x03\x0e\x86'
+
+
+def test_VitaGetBridgedCommandEnablesRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetBridgedCommandEnablesRsp()
+    decode_message(m, b'\x00\x03\x01\x80')
+    assert bytes(m.enables) == b'\x01\x80'
+
+
+def test_VitaSetBridgedCommandEnablesReq_encode():
+    m = pyipmi.msgs.vita.VitaSetBridgedCommandEnablesReq()
+    m.channel.all_channels = 1
+    m.operation.operation = m.PASS_THROUGH
+    m.operation.net_function = 0x06 >> 1
+    m.data = b'\xff\xff'
+    assert encode_message(m) == b'\x03\x80\x86\xff\xff'
+
+
+def test_VitaGetBridgedCommandSubFunctionEnablesReq_encode():
+    m = pyipmi.msgs.vita.VitaGetBridgedCommandSubFunctionEnablesReq()
+    m.channel.number = 1
+    m.net_function.code = 0x2c >> 1
+    m.command = 0x09
+    m.group = b'\x03'
+    assert encode_message(m) == b'\x03\x01\x2c\x09\x03'
+
+
+def test_VitaGetBridgedCommandSubFunctionEnablesRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetBridgedCommandSubFunctionEnablesRsp()
+    decode_message(m, b'\x00\x03\x01\x00\x00\x80')
+    assert m.enables == 0x80000001
+    assert m.additional_enables is None
+    decode_message(m, b'\x00\x03\x01\x00\x00\x00\x02\x00\x00\x00')
+    assert m.additional_enables == 2
+
+
+def test_VitaSetBridgedCommandSubFunctionEnablesReq_encode():
+    m = pyipmi.msgs.vita.VitaSetBridgedCommandSubFunctionEnablesReq()
+    m.net_function.code = 0x06 >> 1
+    m.command = 0x24
+    m.data = b'\x0f\x00\x00\x00'
+    assert encode_message(m) == b'\x03\x00\x06\x24\x0f\x00\x00\x00'
+
+
+def test_VitaSetBridgedNetFnPolicyReq_encode():
+    m = pyipmi.msgs.vita.VitaSetBridgedNetFnPolicyReq()
+    m.channel.number = 2
+    m.policy.raw_messages = 1
+    m.policy.oem_unknown_requests = 1
+    assert encode_message(m) == b'\x03\x02\x05'
+
+
+def test_VitaGetBridgedNetFnPolicyReq_encode():
+    m = pyipmi.msgs.vita.VitaGetBridgedNetFnPolicyReq()
+    m.channel.all_channels = 1
+    assert encode_message(m) == b'\x03\x80'
+
+
+def test_VitaGetBridgedNetFnPolicyRsp_decode():
+    m = pyipmi.msgs.vita.VitaGetBridgedNetFnPolicyRsp()
+    decode_message(m, b'\x00\x03\x01\x02')
+    assert bytes(m.policies) == b'\x01\x02'

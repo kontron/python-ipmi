@@ -1019,3 +1019,584 @@ class VitaSetPowerSupplyStatusRsp(VitaMessage):
         CompletionCode(),
         GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
     )
+
+
+@register_message_class
+class VitaGetIpmbLinkInfoReq(VitaMessage):
+    """Get IPMB Link Info (VITA 46.11 table 10.1.3.17-1).
+
+    The key selects a System IPMB link by its number (0 for a bused, 1-95
+    for a radial link) or by the number of its sensor.
+    """
+
+    KEY_LINK_NUMBER = 0
+    KEY_SENSOR_NUMBER = 1
+
+    __cmdid__ = constants.CMDID_VITA_GET_IPMB_LINK_INFO
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('key_type', 1, KEY_LINK_NUMBER),
+        UnsignedInt('key', 1, 0),
+    )
+
+
+@register_message_class
+class VitaGetIpmbLinkInfoRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_IPMB_LINK_INFO
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('link_number', 1),
+        UnsignedInt('sensor_number', 1),
+    )
+
+
+def persistent_controls(name: str) -> Bitfield:
+    """Return the persistent cold and warm reset bits of a FRU.
+
+    The bits are the same in the three persistent control commands, their
+    meaning differs: the current state, a capability, a selection mask or
+    the requested state.
+    """
+    return Bitfield(name, 1,
+                    Bitfield.Bit('cold_reset', 1, default=0),
+                    Bitfield.Bit('warm_reset', 1, default=0),
+                    Bitfield.ReservedBit(6, 0))
+
+
+@register_message_class
+class VitaGetFruPersistentControlReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_FRU_PERSISTENT_CONTROL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_id', 1),
+    )
+
+
+@register_message_class
+class VitaGetFruPersistentControlRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_FRU_PERSISTENT_CONTROL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        persistent_controls('state'),
+    )
+
+
+@register_message_class
+class VitaSetFruPersistentControlReq(VitaMessage):
+    """Set FRU Persistent Control (VITA 46.11 table 10.1.3.24-1).
+
+    Only the controls selected in ``mask`` are set to ``state``.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_SET_FRU_PERSISTENT_CONTROL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_id', 1),
+        persistent_controls('mask'),
+        persistent_controls('state'),
+    )
+
+
+@register_message_class
+class VitaSetFruPersistentControlRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_SET_FRU_PERSISTENT_CONTROL
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+    )
+
+
+@register_message_class
+class VitaFruPersistentControlCapabilitiesReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_FRU_PERSISTENT_CONTROL_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('fru_id', 1),
+    )
+
+
+@register_message_class
+class VitaFruPersistentControlCapabilitiesRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_FRU_PERSISTENT_CONTROL_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        persistent_controls('capabilities'),
+    )
+
+
+@register_message_class
+class VitaGetWriteProtectCapabilitiesReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_WRITE_PROTECT_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+    )
+
+
+@register_message_class
+class VitaGetWriteProtectCapabilitiesRsp(VitaMessage):
+    """The supported write protect destinations (NVMs) and categories."""
+
+    __cmdid__ = constants.CMDID_VITA_GET_WRITE_PROTECT_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        Bitfield('destinations', 1,
+                 Bitfield.Bit('embedded_nvm', 1, default=0),
+                 Bitfield.Bit('local_nvm', 1, default=0),
+                 Bitfield.Bit('remote_nvm', 1, default=0),
+                 Bitfield.ReservedBit(3, 0),
+                 Bitfield.Bit('oem1', 1, default=0),
+                 Bitfield.Bit('oem2', 1, default=0)),
+        Bitfield('categories', 1,
+                 Bitfield.Bit('identification', 1, default=0),
+                 Bitfield.Bit('configuration', 1, default=0),
+                 Bitfield.Bit('logs', 1, default=0),
+                 Bitfield.ReservedBit(3, 0),
+                 Bitfield.Bit('oem1', 1, default=0),
+                 Bitfield.Bit('oem2', 1, default=0)),
+    )
+
+
+class VitaWriteProtectOperation:
+    """The selectors of the write protect enables commands.
+
+    ``by_destination`` 0 selects a category, the enables are then one bit
+    per destination; 1 selects a destination, the enables are one bit per
+    category. A set bit in the enables protects against writes.
+    """
+
+    BY_CATEGORY = 0
+    BY_DESTINATION = 1
+
+    CATEGORY_IDENTIFICATION = 0
+    CATEGORY_CONFIGURATION = 1
+    CATEGORY_LOGS = 2
+    DESTINATION_EMBEDDED_NVM = 0
+    DESTINATION_LOCAL_NVM = 1
+    DESTINATION_REMOTE_NVM = 2
+    OEM1 = 6
+    OEM2 = 7
+
+
+def write_protect_operation() -> Bitfield:
+    return Bitfield('operation', 1,
+                    Bitfield.Bit('selector', 3, default=0),
+                    Bitfield.ReservedBit(4, 0),
+                    Bitfield.Bit('by_destination', 1, default=0))
+
+
+@register_message_class
+class VitaGetWriteProtectEnablesReq(VitaMessage, VitaWriteProtectOperation):
+    __cmdid__ = constants.CMDID_VITA_GET_WRITE_PROTECT_ENABLES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        write_protect_operation(),
+    )
+
+
+@register_message_class
+class VitaGetWriteProtectEnablesRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_WRITE_PROTECT_ENABLES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('enables', 1),
+    )
+
+
+@register_message_class
+class VitaSetWriteProtectEnablesReq(VitaMessage, VitaWriteProtectOperation):
+    """Set Write Protect Enables (VITA 46.11 table 10.1.3.36-1).
+
+    Only the bits set in ``mask`` are changed to those of ``enables``.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_SET_WRITE_PROTECT_ENABLES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        write_protect_operation(),
+        UnsignedInt('mask', 1, 0),
+        UnsignedInt('enables', 1, 0),
+    )
+
+
+@register_message_class
+class VitaSetWriteProtectEnablesRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_SET_WRITE_PROTECT_ENABLES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+    )
+
+
+@register_message_class
+class VitaGetControlBitsCapabilitiesReq(VitaMessage):
+    """Get Control Bits Capabilities (VITA 46.11 table 10.1.3.40-1).
+
+    A bank holds 8 control points; without ``number_of_banks`` one bank is
+    returned. On IPMB-0 a response has room for up to 7 banks.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_GET_CONTROL_BITS_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('first_bank', 1, 0),
+        Optional(UnsignedInt('number_of_banks', 1)),
+    )
+
+
+@register_message_class
+class VitaGetControlBitsCapabilitiesRsp(VitaMessage):
+    """Three bytes per requested bank in ``banks``.
+
+    The input support, the output support and the enable support (settable)
+    of the 8 control points of the bank, one bit each.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_GET_CONTROL_BITS_CAPABILITIES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('number_of_banks_supported', 1),
+        RemainingBytes('banks'),
+    )
+
+
+@register_message_class
+class VitaGetControlBitsReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_CONTROL_BITS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('first_bank', 1, 0),
+        Optional(UnsignedInt('number_of_banks', 1)),
+    )
+
+
+@register_message_class
+class VitaGetControlBitsRsp(VitaMessage):
+    """Three bytes per requested bank in ``banks``.
+
+    The output enables, the output states and the input states of the 8
+    control points of the bank, one bit each.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_GET_CONTROL_BITS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        RemainingBytes('banks'),
+    )
+
+
+@register_message_class
+class VitaSetControlBitsReq(VitaMessage):
+    """Set Control Bits (VITA 46.11 table 10.1.3.42-1).
+
+    Three bytes per bank from ``first_bank`` on in ``banks``: the mask of
+    the control points to change, their output enables and their output
+    states.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_SET_CONTROL_BITS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = OPERATOR
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('first_bank', 1, 0),
+        RemainingBytes('banks'),
+    )
+
+
+@register_message_class
+class VitaSetControlBitsRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_SET_CONTROL_BITS
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+    )
+
+
+# the bridged firewall commands; a group extension (2Ch) is selected by its
+# body code (one byte), an OEM network function (2Eh-3Eh) by its IANA
+# enterprise number (three bytes, LSB first)
+
+def bridged_channel(all_channels: bool = False) -> Bitfield:
+    """Return the destination channel byte, Eh is the request's channel."""
+    if all_channels:
+        return Bitfield('channel', 1,
+                        Bitfield.Bit('number', 4, default=0),
+                        Bitfield.ReservedBit(3, 0),
+                        Bitfield.Bit('all_channels', 1, default=0))
+    return Bitfield('channel', 1,
+                    Bitfield.Bit('number', 4, default=0),
+                    Bitfield.ReservedBit(4, 0))
+
+
+@register_message_class
+class VitaGetBridgedNetFnSupportReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_BRIDGED_NETFN_SUPPORT
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        Bitfield('net_function', 1,
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('code', 5, default=0),
+                 Bitfield.ReservedBit(2, 0)),
+        UnsignedInt('index', 1, 0),
+    )
+
+
+@register_message_class
+class VitaGetBridgedNetFnSupportRsp(VitaMessage):
+    """The group IDs (2Ch) or IANA numbers (2Eh-3Eh) from the index on."""
+
+    __cmdid__ = constants.CMDID_VITA_GET_BRIDGED_NETFN_SUPPORT
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('total_elements', 1),
+        RemainingBytes('elements'),
+    )
+
+
+class VitaBridgedCommandEnablesOperation:
+    COMMANDS_00_7F = 0
+    COMMANDS_80_FF = 1
+    PASS_THROUGH = 2
+
+
+@register_message_class
+class VitaGetBridgedCommandEnablesReq(VitaMessage,
+                                      VitaBridgedCommandEnablesOperation):
+    """Get Bridged Command Enables (VITA 46.11 table 10.1.3.43-1).
+
+    ``group`` is the body code or IANA number of a group extension or OEM
+    network function, empty for the others.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_GET_BRIDGED_COMMAND_ENABLES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        bridged_channel(),
+        Bitfield('operation', 1,
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('net_function', 5, default=0),
+                 Bitfield.Bit('operation', 2, default=0)),
+        RemainingBytes('group'),
+    )
+
+
+@register_message_class
+class VitaGetBridgedCommandEnablesRsp(VitaMessage):
+    """The 16 byte command enable mask or the 2 byte pass-through register.
+
+    Both are LSB first; a set bit allows the command, or the pass-through
+    of the messages from the channel.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_GET_BRIDGED_COMMAND_ENABLES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        RemainingBytes('enables'),
+    )
+
+
+@register_message_class
+class VitaSetBridgedCommandEnablesReq(VitaMessage,
+                                      VitaBridgedCommandEnablesOperation):
+    """Set Bridged Command Enables (VITA 46.11 table 10.1.3.44-1).
+
+    ``data`` is the command enable mask (16 bytes) or the pass-through
+    register (2 bytes), followed by the body code or IANA number of a group
+    extension or OEM network function. The settings are non-volatile.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_SET_BRIDGED_COMMAND_ENABLES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = ADMINISTRATOR
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        bridged_channel(all_channels=True),
+        Bitfield('operation', 1,
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('net_function', 5, default=0),
+                 Bitfield.Bit('operation', 2, default=0)),
+        RemainingBytes('data'),
+    )
+
+
+@register_message_class
+class VitaSetBridgedCommandEnablesRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_SET_BRIDGED_COMMAND_ENABLES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+    )
+
+
+@register_message_class
+class VitaGetBridgedCommandSubFunctionEnablesReq(VitaMessage):
+    """Get Bridged Command Sub-function Enables (VITA 46.11 10.1.3.45-1).
+
+    ``group`` is the body code or IANA number of a group extension or OEM
+    network function, empty for the others.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_GET_BRIDGED_COMMAND_SUB_FUNCTION_ENABLES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        bridged_channel(),
+        Bitfield('net_function', 1,
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('code', 5, default=0),
+                 Bitfield.ReservedBit(2, 0)),
+        UnsignedInt('command', 1, 0),
+        RemainingBytes('group'),
+    )
+
+
+@register_message_class
+class VitaGetBridgedCommandSubFunctionEnablesRsp(VitaMessage):
+    """One bit per sub-function, 0-31 and optionally 32-63."""
+
+    __cmdid__ = constants.CMDID_VITA_GET_BRIDGED_COMMAND_SUB_FUNCTION_ENABLES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        UnsignedInt('enables', 4),
+        Optional(UnsignedInt('additional_enables', 4)),
+    )
+
+
+@register_message_class
+class VitaSetBridgedCommandSubFunctionEnablesReq(VitaMessage):
+    """Set Bridged Command Sub-function Enables (VITA 46.11 10.1.3.46-1).
+
+    ``data`` is the body code or IANA number of a group extension or OEM
+    network function, followed by the sub-function enables, 4 or 8 bytes
+    LSB first. The settings are non-volatile.
+    """
+
+    __cmdid__ = constants.CMDID_VITA_SET_BRIDGED_COMMAND_SUB_FUNCTION_ENABLES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = ADMINISTRATOR
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        bridged_channel(all_channels=True),
+        Bitfield('net_function', 1,
+                 Bitfield.ReservedBit(1, 0),
+                 Bitfield.Bit('code', 5, default=0),
+                 Bitfield.ReservedBit(2, 0)),
+        UnsignedInt('command', 1, 0),
+        RemainingBytes('data'),
+    )
+
+
+@register_message_class
+class VitaSetBridgedCommandSubFunctionEnablesRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_SET_BRIDGED_COMMAND_SUB_FUNCTION_ENABLES
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+    )
+
+
+def bridged_netfn_policy() -> Bitfield:
+    """Return the policy byte, a set bit allows the requests."""
+    return Bitfield('policy', 1,
+                    Bitfield.Bit('raw_messages', 1, default=0),
+                    Bitfield.Bit('bmc_routing', 1, default=0),
+                    Bitfield.Bit('oem_unknown_requests', 1, default=0),
+                    Bitfield.ReservedBit(5, 0))
+
+
+@register_message_class
+class VitaSetBridgedNetFnPolicyReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_SET_BRIDGED_NETFN_POLICY
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = ADMINISTRATOR
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        bridged_channel(all_channels=True),
+        bridged_netfn_policy(),
+    )
+
+
+@register_message_class
+class VitaSetBridgedNetFnPolicyRsp(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_SET_BRIDGED_NETFN_POLICY
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+    )
+
+
+@register_message_class
+class VitaGetBridgedNetFnPolicyReq(VitaMessage):
+    __cmdid__ = constants.CMDID_VITA_GET_BRIDGED_NETFN_POLICY
+    __netfn__ = constants.NETFN_GROUP_EXTENSION
+    __privilege__ = USER
+    __fields__ = (
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        bridged_channel(all_channels=True),
+    )
+
+
+@register_message_class
+class VitaGetBridgedNetFnPolicyRsp(VitaMessage):
+    """The policy byte of the channel, or with ``all_channels`` one per channel.
+
+    The channels are 0h-Bh and Fh; a missing byte is a policy of 0h (none
+    allowed).
+    """
+
+    __cmdid__ = constants.CMDID_VITA_GET_BRIDGED_NETFN_POLICY
+    __netfn__ = constants.NETFN_GROUP_EXTENSION | 1
+    __fields__ = (
+        CompletionCode(),
+        GroupExtensionIdentifier('vita_identifier', GROUP_EXTENSION_VSO),
+        RemainingBytes('policies'),
+    )
