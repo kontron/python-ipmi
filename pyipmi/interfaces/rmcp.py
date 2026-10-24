@@ -55,7 +55,7 @@ from collections.abc import Callable
 
 from .. import Target
 from ..session import Session
-from ..msgs import create_request_by_name, Message
+from ..msgs import constants, create_request_by_name, Message
 from ..messaging import ChannelAuthenticationCapabilities
 from ..errors import (DecodingError, IpmiConnectionError, NotSupportedError,
                       RetryError)
@@ -904,6 +904,10 @@ class Rmcp(Interface):
         does not match is the late response of an earlier request (e.g. one
         that timed out) and is discarded.
 
+        The Send Message responses of a bridged request are removed. A Send
+        Message request of the caller is no bridged request: its response
+        is the answer, also with an error completion code.
+
         Raises:
             TimeoutError: The response is not received within the timeout.
         """
@@ -911,13 +915,17 @@ class Rmcp(Interface):
         if self._timeout is not None:
             deadline = time.monotonic() + self._timeout
 
+        # with a routing, the header is the one of the bridged request
+        own_send_message = (header.netfn == constants.NETFN_APP
+                            and header.cmdid == constants.CMDID_SEND_MESSAGE)
+
         while True:
             if deadline is not None and time.monotonic() >= deadline:
                 raise TimeoutError()
 
             rx_data = self._receive_ipmi_msg(self.ignore_sdu_length)
 
-            if is_send_message_response(rx_data):
+            if not own_send_message and is_send_message_response(rx_data):
                 rx_data = decode_bridged_message(rx_data)
                 if not rx_data:
                     # the forwarded reply is expected in the next packet
