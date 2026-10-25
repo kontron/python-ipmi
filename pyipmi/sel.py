@@ -506,12 +506,15 @@ class SelAllocationInfo(State):
 class SelEntry(State):
     """An entry of the SEL.
 
-    The record type is ``TYPE_SYSTEM_EVENT`` or in one of the OEM ranges
-    ``TYPE_OEM_TIMESTAMPED_RANGE`` and ``TYPE_OEM_NON_TIMESTAMPED_RANGE``.
+    The record type is ``TYPE_SYSTEM_EVENT``, in one of the OEM ranges
+    ``TYPE_OEM_TIMESTAMPED_RANGE`` and ``TYPE_OEM_NON_TIMESTAMPED_RANGE``,
+    or in ``TYPE_RESERVED_RANGE``, the standard record types that IPMI 2.0
+    does not define (yet).
 
     Note:
         All entries are decoded with the layout of a system event record.
-        The fields after the record type of an OEM entry are OEM data.
+        The fields after the record type of an OEM or reserved entry are
+        OEM data or undefined.
 
     Attributes:
         data (ByteSequence): The record data.
@@ -534,6 +537,7 @@ class SelEntry(State):
     """
 
     TYPE_SYSTEM_EVENT = 0x02
+    TYPE_RESERVED_RANGE = list(range(0x02)) + list(range(0x03, 0xc0))
     TYPE_OEM_TIMESTAMPED_RANGE = list(range(0xc0, 0xe0))
     TYPE_OEM_NON_TIMESTAMPED_RANGE = list(range(0xe0, 0x100))
 
@@ -545,8 +549,7 @@ class SelEntry(State):
                 None or empty.
 
         Raises:
-            DecodingError: The record is not 16 bytes long or its type is
-                unknown.
+            DecodingError: The record is not 16 bytes long.
         """
         # a SEL entry is decoded from the record data, not from a response
         super().__init__()
@@ -578,11 +581,14 @@ class SelEntry(State):
             entry_type: The record type.
 
         Returns:
-            The name of the record type, None for an unknown type.
+            The name of the record type, None for a value that is no record
+            type.
         """
         string = None
         if entry_type == SelEntry.TYPE_SYSTEM_EVENT:
             string = 'System Event'
+        elif entry_type in SelEntry.TYPE_RESERVED_RANGE:
+            string = f'Reserved (0x{entry_type:02x})'
         elif entry_type in SelEntry.TYPE_OEM_TIMESTAMPED_RANGE:
             string = f'OEM timestamped (0x{entry_type:02x})'
         elif entry_type in SelEntry.TYPE_OEM_NON_TIMESTAMPED_RANGE:
@@ -686,11 +692,9 @@ class SelEntry(State):
         buffer = ByteBuffer(data)
 
         self.record_id = buffer.pop_unsigned_int(2)
+        # a reserved type is decoded too: a BMC may hold such a record, e.g.
+        # one added with Add SEL Entry, and the SEL has to stay readable
         self.type = buffer.pop_unsigned_int(1)
-        if (self.type != self.TYPE_SYSTEM_EVENT
-                and self.type not in self.TYPE_OEM_TIMESTAMPED_RANGE
-                and self.type not in self.TYPE_OEM_NON_TIMESTAMPED_RANGE):
-            raise DecodingError(f'Unknown SEL type (0x{self.type:02x})')
         self.timestamp = buffer.pop_unsigned_int(4)
         self.generator_id = buffer.pop_unsigned_int(2)
         self.evm_rev = buffer.pop_unsigned_int(1)

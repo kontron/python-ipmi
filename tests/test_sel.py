@@ -156,7 +156,7 @@ class TestSelEnty:
         assert entry.event_data[2] == 0x33
 
     def test_type_to_string(self):
-        assert SelEntry.type_to_string(0) is None
+        assert SelEntry.type_to_string(0) == 'Reserved (0x00)'
         assert SelEntry.type_to_string(0x02) == 'System Event'
         assert SelEntry.type_to_string(0xc0) == 'OEM timestamped (0xc0)'
         assert SelEntry.type_to_string(0xe0) == 'OEM non-timestamped (0xe0)'
@@ -182,17 +182,24 @@ def test_sel_entry_str():
     (0x02, 'System Event'),
     (0xc0, 'OEM timestamped (0xc0)'),
     (0xe0, 'OEM non-timestamped (0xe0)'),
-    (0x10, None),
+    (0x00, 'Reserved (0x00)'),
+    (0xbf, 'Reserved (0xbf)'),
 ])
 def test_sel_entry_type_to_string(entry_type, string):
     assert SelEntry.type_to_string(entry_type) == string
 
 
-@pytest.mark.parametrize('data', [SEL_RECORD[:15],
-                                  SEL_RECORD[:2] + b'\x10' + SEL_RECORD[3:]])
-def test_sel_entry_invalid(data):
+def test_sel_entry_invalid():
     with pytest.raises(DecodingError):
-        SelEntry(ByteBuffer(data))
+        SelEntry(ByteBuffer(SEL_RECORD[:15]))
+
+
+def test_sel_entry_reserved_type():
+    # e.g. an empty record added with Add SEL Entry
+    entry = SelEntry(ByteBuffer(b'\x05\x00' + bytes(14)))
+    assert entry.record_id == 5
+    assert entry.type == 0x00
+    assert entry.is_timestamped()
 
 
 def test_get_sel_entry():
