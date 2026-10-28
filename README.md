@@ -26,7 +26,8 @@
   * using the [Total Phase] Aardvark
   * using ipmb-dev driver on Linux
   * using the openipmblink USB bridge
-  * using the [Kontron Chassis Monitor (KCM)][KCM], on IPMB-A and IPMB-B
+  * using the adapter of the [Kontron Chassis Monitor (KCM)][KCM], on IPMB-A
+    and IPMB-B
   * answering incoming requests, e.g. to act as a BMC or MMC
     ([IPMB message routing][doc-routing])
 * bridged requests to controllers behind the BMC
