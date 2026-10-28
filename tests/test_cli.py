@@ -70,6 +70,17 @@ class TestParseInterfaceOptions:
         assert options['bus'] == 1
         assert options['slave_address'] == 0x24
 
+    def test_options_kcm(self):
+        options = parse_interface_options(
+            'kcm',
+            'port=/dev/ttyUSB1,channel=1,address=0x24,baudrate=921600,'
+            'speed=400000')
+        assert options['port'] == '/dev/ttyUSB1'
+        assert options['channel'] == 1
+        assert options['slave_address'] == 0x24
+        assert options['baudrate'] == 921600
+        assert options['i2c_speed'] == 400000
+
 
 class TestLogLevel:
     @pytest.mark.parametrize('value, expected', [

@@ -47,6 +47,7 @@ Features
   * using the `Total Phase`_ Aardvark |I2C| adapter
   * using the ipmb-dev driver on Linux
   * using the openipmblink USB bridge
+  * using the KCM, on IPMB-A and IPMB-B
   * answering incoming requests, e.g. to act as a BMC or MMC, see
     :doc:`message_routing`
 
@@ -104,6 +105,8 @@ packages, drivers or programs:
        slave mode
    * - IPMB with openipmblink
      - an openipmblink bridge and the ``pyserial`` package
+   * - IPMB with the KCM
+     - a KCM with firmware 1.6 or later and the ``pyserial`` package
    * - simulated IPMB (``ipmbsim``)
      - Unix domain sockets, no hardware
 

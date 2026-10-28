@@ -31,6 +31,7 @@ Name              Class
 ``ipmbdev``       :class:`IpmbDev`, the Linux IPMB device driver
 ``aardvark``      :class:`Aardvark`, the Total Phase Aardvark I2C adapter
 ``openipmblink``  :class:`OpenIpmbLink`, the openipmblink IPMB bridge
+``kcm``           :class:`Kcm`, the KCM
 ``ipmbsim``       :class:`IpmbSim`, a simulated IPMB (Unix domain socket)
 ``mock``          :class:`Mock`, a dummy interface for tests
 ================  ==========================================================
@@ -49,6 +50,7 @@ from typing import Any
 from .ipmitool import Ipmitool
 from .aardvark import Aardvark
 from .base import Interface
+from .kcm import Kcm
 from .ipmbdev import IpmbDev
 from .ipmbsim import IpmbSim
 from .ipmidev import IpmiDev
@@ -66,6 +68,7 @@ INTERFACES: list[type[Interface]] = [
     Rmcp,
     RmcpPlus,
     OpenIpmbLink,
+    Kcm,
     IpmbSim,
 ]
 
@@ -85,6 +88,7 @@ def create_interface(interface: str, *args: Any, **kwargs: Any) -> Any:
       adapter
     * ``'openipmblink'`` (:class:`OpenIpmbLink`): the openipmblink IPMB
       bridge
+    * ``'kcm'`` (:class:`Kcm`): the KCM
     * ``'ipmbsim'`` (:class:`IpmbSim`): a simulated IPMB, the broker of
       :mod:`pyipmi.interfaces.ipmbsim` on a Unix domain socket
     * ``'mock'`` (:class:`Mock`): a dummy interface for tests

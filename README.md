@@ -26,6 +26,7 @@
   * using the [Total Phase] Aardvark
   * using ipmb-dev driver on Linux
   * using the openipmblink USB bridge
+  * using the [Kontron Chassis Monitor (KCM)][KCM], on IPMB-A and IPMB-B
   * answering incoming requests, e.g. to act as a BMC or MMC
     ([IPMB message routing][doc-routing])
 * bridged requests to controllers behind the BMC
@@ -374,6 +375,7 @@ along with this library; if not, write to the Free Software Foundation,
 Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 [Total Phase]: http://www.totalphase.com
+[KCM]: https://www.kontron.com/en/products/kontron-chassis-monitor-kcm/p301023
 [ipmitool]: https://codeberg.org/IPMITool/ipmitool
 [cryptography]: https://pypi.org/project/cryptography/
 [ruff]: https://docs.astral.sh/ruff/

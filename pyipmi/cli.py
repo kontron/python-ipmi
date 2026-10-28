@@ -1954,6 +1954,19 @@ def parse_interface_options(interface_name: str,
                 interface_options['slave_address'] = int(value, 0)
             else:
                 print(f'Warning: unknown option {name}')
+        elif interface_name == 'kcm':
+            if name == 'port':
+                interface_options['port'] = value
+            elif name == 'channel':
+                interface_options['channel'] = int(value)
+            elif name == 'address':
+                interface_options['slave_address'] = int(value, 0)
+            elif name == 'baudrate':
+                interface_options['baudrate'] = int(value)
+            elif name == 'speed':
+                interface_options['i2c_speed'] = int(value)
+            else:
+                print(f'Warning: unknown option {name}')
         elif interface_name == 'ipmbsim':
             if name == 'path':
                 interface_options['path'] = value
@@ -2035,6 +2048,13 @@ interface options (-o name=value,...):
                        (e.g. socket://localhost:5555)
     bus=<n>            IPMB bus of the bridge (default 0)
     address=<addr>     own IPMB address (default 0x20)
+  kcm:
+    port=<path>        serial port of the KCM (default /dev/ttyUSB0)
+    channel=<n>        IPMB channel of the KCM, 0 = IPMB-A, 1 = IPMB-B
+                       (default 0)
+    address=<addr>     own IPMB address (default 0x20)
+    baudrate=<n>       baud rate of the serial port (default 115200)
+    speed=<hz>         I2C bit rate of the channel (default 100000)
   ipmbsim:
     path=<path>        Unix domain socket of the broker of the simulated
                        IPMB (default /tmp/pyipmi-ipmb.sock)
@@ -2313,7 +2333,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help='print the output as JSON (if supported)')
     parser.add_argument('-I', dest='interface', metavar='<interface>',
                         help='interface (rmcp, rmcpplus, aardvark, ipmitool, '
-                             'ipmbdev, ipmidev, openipmblink, ipmbsim)')
+                             'ipmbdev, ipmidev, openipmblink, kcm, ipmbsim)')
     parser.add_argument('-o', dest='options', metavar='<options>',
                         default='',
                         help='interface specific options (name=value, '

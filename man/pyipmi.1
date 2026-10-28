@@ -1825,7 +1825,7 @@ print the output as JSON (if supported)
 
 .TP
 \fB\-I\fR \fI\,<interface>\/\fR
-interface (rmcp, rmcpplus, aardvark, ipmitool, ipmbdev, ipmidev, openipmblink, ipmbsim)
+interface (rmcp, rmcpplus, aardvark, ipmitool, ipmbdev, ipmidev, openipmblink, kcm, ipmbsim)
 
 .TP
 \fB\-o\fR \fI\,<options>\/\fR
@@ -1886,6 +1886,13 @@ interface options (\-o name=value,...):
                        (e.g. socket://localhost:5555)
     bus=<n>            IPMB bus of the bridge (default 0)
     address=<addr>     own IPMB address (default 0x20)
+  kcm:
+    port=<path>        serial port of the KCM (default /dev/ttyUSB0)
+    channel=<n>        IPMB channel of the KCM, 0 = IPMB\-A, 1 = IPMB\-B
+                       (default 0)
+    address=<addr>     own IPMB address (default 0x20)
+    baudrate=<n>       baud rate of the serial port (default 115200)
+    speed=<hz>         I2C bit rate of the channel (default 100000)
   ipmbsim:
     path=<path>        Unix domain socket of the broker of the simulated
                        IPMB (default /tmp/pyipmi\-ipmb.sock)
@@ -1898,8 +1905,8 @@ interface options (\-o name=value,...):
 loggers (\-\-log\-level <logger>=<level>):
   interfaces.aardvark, interfaces.base, interfaces.ipmb, interfaces.ipmbdev,
   interfaces.ipmbsim, interfaces.ipmidev, interfaces.ipmitool,
-  interfaces.openipmblink, interfaces.rmcp, interfaces.rmcpplus,
-  interfaces.router
+  interfaces.kcm, interfaces.openipmblink, interfaces.rmcp,
+  interfaces.rmcpplus, interfaces.router
   A parent name sets all its children, e.g. 'interfaces', and without a
   name the level applies to all loggers.
 .SH EXAMPLES

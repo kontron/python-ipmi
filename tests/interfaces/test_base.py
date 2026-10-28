@@ -14,6 +14,7 @@ from pyipmi.interfaces.router import MessageRouter, encode_ipmb_response
 from pyipmi.interfaces.aardvark import Aardvark
 from pyipmi.interfaces.ipmbdev import IpmbDev
 from pyipmi.interfaces.openipmblink import OpenIpmbLink
+from pyipmi.interfaces.kcm import Kcm
 
 
 @pytest.mark.parametrize('intf', INTERFACES)
@@ -22,7 +23,7 @@ def test_interfaces_use_base_class(intf):
     assert intf.NAME is not None
 
 
-@pytest.mark.parametrize('intf', [Aardvark, IpmbDev, OpenIpmbLink])
+@pytest.mark.parametrize('intf', [Aardvark, IpmbDev, OpenIpmbLink, Kcm])
 def test_ipmb_interfaces_use_ipmb_base_class(intf):
     assert issubclass(intf, IpmbInterface)
 

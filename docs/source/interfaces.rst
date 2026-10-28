@@ -22,7 +22,7 @@ Layers
        messaging [label="Messaging API of pyipmi.Ipmi\nsend_message_by_name(), send_message(), send_raw()"];
        msgs [label="Messages (pyipmi.msgs)\nGetSelInfoReq / GetSelInfoRsp, __fields__", shape=note];
        interface [label="Interface (pyipmi.interfaces.base.Interface)\nsend_and_receive(), send_and_receive_raw()"];
-       transport [label="Transport\nRMCP/RMCP+ (UDP), ipmitool, /dev/ipmi0,\nIPMB (Aardvark, ipmb-dev, openipmblink)"];
+       transport [label="Transport\nRMCP/RMCP+ (UDP), ipmitool, /dev/ipmi0,\nIPMB (Aardvark, ipmb-dev, openipmblink, KCM)"];
        session [label="Session\n(pyipmi.session.Session)", shape=note];
 
        commands -> messaging [label=" request by name, fields"];
@@ -215,7 +215,7 @@ each interface decides how to reach it:
      - The BMC (``0x20``, not bridged) is addressed through the system
        interface, other targets by an IPMB address on a channel, with at
        most one bridge.
-   * - ``ipmbdev``, ``aardvark``, ``openipmblink``, ``ipmbsim``
+   * - ``ipmbdev``, ``aardvark``, ``openipmblink``, ``kcm``, ``ipmbsim``
      - The interface is a node on the IPMB itself: the request is sent
        directly to the IPMB address of the target, the routing is not
        used. A ``MessageRouter`` (:mod:`pyipmi.interfaces.router`) matches

@@ -397,6 +397,28 @@ The ``port`` can also be a pyserial URL, e.g. ``socket://localhost:5555`` for a 
 
   pyipmi -I openipmblink -o port=socket://localhost:5555,bus=0,address=0x24 -t 0x20 bmc info
 
+IPMB with the KCM
+*****************
+
+The KCM is connected to both :abbr:`IPMB (Intelligent Platform Management Bus)` buses of a chassis, IPMB-A on channel 0 and IPMB-B on channel 1. Pass the serial port of the KCM and the channel. When the interface is opened, the own IPMB address of the channel is set to ``slave_address`` and its I2C bit rate to ``i2c_speed``.
+
+.. code:: python
+
+  interface = pyipmi.interfaces.create_interface('kcm',
+                                               slave_address=0x20,
+                                               port='/dev/ttyUSB0',
+                                               channel=1)
+  ipmi = pyipmi.create_connection(interface)
+  ipmi.target = pyipmi.Target(ipmb_address=0x82)
+  ipmi.open()
+  device_id = ipmi.get_device_id()
+
+Both channels can be used at the same time; the interfaces share the serial port. Incoming requests, e.g. the Platform Event Messages of the IPMCs, are handled with a ``router`` like on the other IPMB interfaces.
+
+.. code:: shell
+
+  pyipmi -I kcm -o port=/dev/ttyUSB0,channel=1 -t 0x82 bmc info
+
 IPMB with Aardvark
 ******************
 
