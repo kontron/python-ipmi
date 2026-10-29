@@ -609,7 +609,8 @@ class IpmbInterface(Interface):
                 pass
 
             retries += 1
-            time.sleep(retries * 0.2)
+            if retries < self.max_retries:
+                time.sleep(retries * 0.2)
 
         else:
             raise IpmiTimeoutError()
