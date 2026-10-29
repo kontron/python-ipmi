@@ -46,6 +46,7 @@ from __future__ import annotations
 import time
 import ast
 import warnings
+from collections.abc import Iterable, Iterator
 from typing import Any, Literal
 
 from . import bmc
@@ -93,6 +94,27 @@ def create_connection(interface: Any) -> Ipmi:
     session = Session()
     session.interface = interface
     return Ipmi(interface=interface, session=session)
+
+
+#: The IPMB addresses of the controllers defined by the specifications,
+#: the address ranges :meth:`Ipmi.scan_ipmb` probes. The IPMB address of a
+#: controller in a slot is twice its hardware address.
+IPMB_ADDRESS_RANGES: dict[str, tuple[str, range]] = {
+    'all': ('all IPMB addresses (7-bit I2C addresses 0x08 - 0x77)',
+            range(0x10, 0xf0, 2)),
+    'picmg': ('PICMG 3.0 (AdvancedTCA) boards, hardware addresses '
+              '0x41 - 0x5f', range(0x82, 0xc0, 2)),
+    'vita': ('VITA 46.11 IPMCs, hardware addresses 0x41 - 0x5f',
+             range(0x82, 0xc0, 2)),
+    'cpci': ('PICMG 2.9 (CompactPCI) peripheral boards, 0xb0 + 2 * '
+             'geographic address', range(0xb0, 0xf0, 2)),
+}
+
+
+#: The completion codes of a bridged request whose target does not answer:
+#: the lost arbitration, bus error and NAK on write of Send Message, and
+#: the timeout the Linux IPMI driver answers with.
+_NOT_REACHABLE_COMPLETION_CODES = (0x81, 0x82, 0x83, msgs.constants.CC_TIMEOUT)
 
 
 class Requester:
@@ -335,6 +357,71 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
                       'wait_until_target_is_accessible', DeprecationWarning,
                       stacklevel=2)
         self.wait_until_target_is_accessible(timeout, interval)
+
+    def scan_ipmb(self, addresses: Iterable[int], timeout: float | None = None,
+                  tries: int = 1
+                  ) -> Iterator[tuple[int, bmc.DeviceId | int | None]]:
+        """Probe the addresses of controllers on the IPMB.
+
+        A Get Device ID request is sent to each address, over the routing
+        of the target: with a routing, the address replaces the responder
+        address of the last hop, otherwise the IPMB address of the target.
+        An address without an answer, a timeout or a failed bridged
+        request, is not reachable. The timeout and the tries apply to the
+        IPMB interfaces and ``ipmidev``, they and the target are restored
+        afterwards.
+
+        Args:
+            addresses: The 8-bit IPMB addresses, e.g. the range of
+                :data:`IPMB_ADDRESS_RANGES`.
+            timeout: The time to wait for each response in seconds, the
+                one of the interface if not given.
+            tries: The number of tries of the IPMB interfaces per address.
+
+        Yields:
+            Each address with the device ID of the controller, its
+            completion code if it answers with an error, or None if it is
+            not reachable.
+        """
+        # imported here, the interfaces import this module
+        from .interfaces.ipmb import IpmbInterface
+        from .interfaces.ipmidev import IpmiDev
+
+        interface = self.interface
+        target = self.target
+        settings: dict[str, Any] = {}
+        if isinstance(interface, IpmbInterface):
+            settings['max_retries'] = tries
+        if timeout is not None and isinstance(interface,
+                                              (IpmbInterface, IpmiDev)):
+            settings['timeout'] = timeout
+        saved = {name: getattr(interface, name) for name in settings}
+        for (name, value) in settings.items():
+            setattr(interface, name, value)
+        try:
+            for address in addresses:
+                self.target = Target(address)
+                if target is not None and target.routing:
+                    routing = [(r.rq_sa, r.rs_sa, r.channel)
+                               for r in target.routing]
+                    routing[-1] = (routing[-1][0], address, None)
+                    self.target.set_routing(routing)
+                try:
+                    rsp = self.send_message(
+                        create_request_by_name('GetDeviceId'))
+                except (IpmiTimeoutError, CompletionCodeError, RetryError):
+                    yield (address, None)
+                    continue
+                if rsp.completion_code in _NOT_REACHABLE_COMPLETION_CODES:
+                    yield (address, None)
+                elif rsp.completion_code != msgs.constants.CC_OK:
+                    yield (address, rsp.completion_code)
+                else:
+                    yield (address, bmc.DeviceId(rsp))
+        finally:
+            self.target = target
+            for (name, value) in saved.items():
+                setattr(interface, name, value)
 
     def send_message(self, req: Message, retry: int = 3) -> Message:
         """Send a request to the target and return the response.

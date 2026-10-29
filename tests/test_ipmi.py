@@ -285,3 +285,91 @@ def test_ipmi_raw_command_deprecated():
         assert ipmi.raw_command(0, 6, b'\x01') == b'\x00'
     ipmi.interface.send_and_receive_raw.assert_called_once_with(
         ipmi.target, 0, 6, b'\x01')
+
+
+def scan_connection(responses):
+    """Answer Get Device ID requests by the target address."""
+    ipmi = create_connection(interfaces.create_interface('mock'))
+    ipmi.targets = []
+
+    def send_and_receive(req):
+        ipmi.targets.append(req.target)
+        response = responses.get(req.target.ipmb_address)
+        if isinstance(response, Exception):
+            raise response
+        rsp = GetDeviceIdRsp()
+        rsp.completion_code = response
+        rsp.device_id = req.target.ipmb_address
+        return rsp
+
+    ipmi.interface.send_and_receive = send_and_receive
+    return ipmi
+
+
+def test_scan_ipmb():
+    ipmi = scan_connection({0x82: 0, 0x84: IpmiTimeoutError(),
+                            0x86: CompletionCodeError(0x83), 0x88: 0xc1,
+                            0x8a: 0, 0x8c: 0xc3, 0x8e: 0x83})
+    ipmi.target = Target(0x20)
+    found = list(ipmi.scan_ipmb(range(0x82, 0x90, 2)))
+    # the driver's timeout and NAK are not reachable
+    assert [(address, getattr(device_id, 'device_id', device_id))
+            for (address, device_id) in found] == [
+        (0x82, 0x82), (0x84, None), (0x86, None), (0x88, 0xc1),
+        (0x8a, 0x8a), (0x8c, None), (0x8e, None)]
+    assert [t.ipmb_address for t in ipmi.targets] == list(range(0x82, 0x90,
+                                                                2))
+    assert all(t.routing is None for t in ipmi.targets)
+    # the target is restored
+    assert ipmi.target.ipmb_address == 0x20
+
+
+def test_scan_ipmb_routing():
+    ipmi = scan_connection({0x72: 0})
+    ipmi.target = Target(0x82, routing=[(0x81, 0x20, 0), (0x20, 0x82, 7),
+                                        (0x20, 0x82, None)])
+    found = list(ipmi.scan_ipmb([0x72]))
+    assert [address for (address, _) in found] == [0x72]
+    # the address replaces the responder of the last hop
+    assert [(r.rq_sa, r.rs_sa, r.channel)
+            for r in ipmi.targets[0].routing] == [
+        (0x81, 0x20, 0), (0x20, 0x82, 7), (0x20, 0x72, None)]
+    assert ipmi.target.ipmb_address == 0x82
+
+
+def test_scan_ipmb_timeout_and_tries():
+    interface = interfaces.ipmb.IpmbInterface()
+    tries = []
+
+    def request(header, payload):
+        tries.append((header.rs_sa, interface.timeout, interface.max_retries))
+        raise IpmiTimeoutError()
+
+    interface._request = request
+    ipmi = create_connection(interface)
+    ipmi.target = Target(0x20)
+    assert list(ipmi.scan_ipmb([0x82], timeout=0.1, tries=2)) == [
+        (0x82, None)]
+    assert tries == [(0x82, 0.1, 2), (0x82, 0.1, 2)]
+    # the settings of the interface are restored
+    assert (interface.timeout, interface.max_retries) == (0.25, 3)
+
+    tries.clear()
+    list(ipmi.scan_ipmb([0x84]))
+    assert tries == [(0x84, 0.25, 1)]
+
+
+def test_scan_ipmb_timeout_ipmidev():
+    interface = interfaces.ipmidev.IpmiDev()
+    timeouts = []
+
+    def send_and_receive(req):
+        timeouts.append(interface.timeout)
+        raise IpmiTimeoutError()
+
+    interface.send_and_receive = send_and_receive
+    ipmi = create_connection(interface)
+    ipmi.target = Target(0x20)
+    list(ipmi.scan_ipmb([0x82], timeout=1))
+    assert timeouts == [1]
+    assert interface.timeout == 10.0
