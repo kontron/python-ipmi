@@ -1,4 +1,4 @@
-.TH PYIPMI "1" "2026\-10\-19" "python\-ipmi" "python\-ipmi manual"
+.TH PYIPMI "1" "2026\-10\-29" "python\-ipmi" "python\-ipmi manual"
 .SH NAME
 pyipmi \- pure python IPMI tool
 .SH SYNOPSIS
@@ -25,6 +25,9 @@ POSITIONAL ARGUMENTS
 .TP
 \fBpyipmi\fR \fI\,raw\/\fR
 Send a RAW IPMI request and print response
+.TP
+\fBpyipmi\fR \fI\,scan\/\fR
+Find the controllers on the IPMB with Get Device ID requests, bridged by the BMC with \-b or \-r
 .TP
 \fBpyipmi\fR \fI\,bmc\/\fR
 Management Controller status and global enables
@@ -84,6 +87,30 @@ command id and data bytes
 .TP
 \fB\-l\fR \fI\,LUN\/\fR, \fB\-\-lun\fR \fI\,LUN\/\fR
 LUN
+
+.SH COMMAND \fI\,'pyipmi scan'\/\fR
+usage: pyipmi scan [\-h] [\-\-range <first>\-<last>] [\-\-timeout <seconds>]
+                   [\-\-tries <n>]
+                   [{all,picmg,vita,cpci}]
+
+Find the controllers on the IPMB with Get Device ID requests, bridged by the BMC with \-b or \-r
+
+.TP
+\fB{all,picmg,vita,cpci}\fR
+the addresses of a specification: all: all IPMB addresses (7\-bit I2C addresses 0x08 \- 0x77); picmg: PICMG 3.0 (AdvancedTCA) boards, hardware addresses 0x41 \- 0x5f; vita: VITA 46.11 IPMCs, hardware addresses 0x41 \- 0x5f; cpci: PICMG 2.9 (CompactPCI) peripheral boards, 0xb0 + 2 * geographic address (default: all)
+
+.SH OPTIONS \fI\,'pyipmi scan'\/\fR
+.TP
+\fB\-\-range\fR \fI\,<first>\-<last>\/\fR
+scan these 8\-bit IPMB addresses instead, e.g. 0x82\-0xa0
+
+.TP
+\fB\-\-timeout\fR \fI\,<seconds>\/\fR
+time to wait for each response (default: the one of the interface, 0.25 s for the IPMB interfaces, 10 s for ipmidev)
+
+.TP
+\fB\-\-tries\fR \fI\,<n>\/\fR
+tries per address with the IPMB interfaces (default 1)
 
 .SH COMMAND \fI\,'pyipmi bmc'\/\fR
 usage: pyipmi bmc [\-h] <command> ...

@@ -251,6 +251,19 @@ class TestParser:
         args = self.parse('raw -l 1 6 0x01 0x02')
         assert (args.lun, args.netfn, args.data) == (1, 6, [1, 2])
 
+    def test_scan(self):
+        args = self.parse('scan')
+        assert args.func is cli.cmd_scan
+        assert (args.spec, args.range) == ('all', None)
+        args = self.parse('scan vita --range 0x82-0x86')
+        assert (args.spec, args.range) == ('vita', range(0x82, 0x88, 2))
+        assert self.parse('scan --range 0x72').range == range(0x72, 0x74, 2)
+
+    @pytest.mark.parametrize('value', ['0x83', '0x86-0x82', '0x82-', 'x'])
+    def test_scan_invalid_range(self, value):
+        with pytest.raises(SystemExit):
+            self.parse(f'scan --range {value}')
+
     def test_fru_print(self):
         args = self.parse('fru print')
         assert (args.fru_id, args.all) == (0, None)
@@ -1006,6 +1019,61 @@ def test_cmd_fru_read(tmp_path, capsys):
     assert filename.read_bytes() == bytes(range(256))
     assert capsys.readouterr().out == (
         f'Read 256 bytes from FRU 1 to {filename}\n')
+
+
+class TestScan:
+    @staticmethod
+    def run(command, found):
+        ipmi = MagicMock()
+        ipmi.scan_ipmb.return_value = found
+        args = build_parser().parse_args(['scan'] + command.split())
+        args.func(ipmi, args)
+        return ipmi
+
+    @staticmethod
+    def device_id():
+        rsp = create_response_by_name('GetDeviceId')
+        decode_message(rsp, b'\x00\x04\x00\x01\x02\x02\x00\x98\x3a\x00'
+                            b'\xa5\x06')
+        return pyipmi.bmc.DeviceId(rsp)
+
+    @pytest.mark.parametrize('command, addresses', [
+        ('', range(0x10, 0xf0, 2)),
+        ('picmg', range(0x82, 0xc0, 2)),
+        ('vita', range(0x82, 0xc0, 2)),
+        ('cpci', range(0xb0, 0xf0, 2)),
+        ('picmg --range 0x72-0x76', range(0x72, 0x78, 2)),
+    ])
+    def test_addresses(self, capsys, command, addresses):
+        ipmi = self.run(command, [])
+        ipmi.scan_ipmb.assert_called_once_with(addresses, None, 1)
+        assert capsys.readouterr().out == '0 of 0 addresses reachable\n'
+
+    def test_timeout_and_tries(self):
+        ipmi = self.run('--timeout 0.1 --tries 2', [])
+        ipmi.scan_ipmb.assert_called_once_with(range(0x10, 0xf0, 2), 0.1, 2)
+
+    def test_found(self, capsys):
+        self.run('', [(0x82, self.device_id()), (0x84, None), (0x86, 0xc1)])
+        assert capsys.readouterr().out == (
+            '0x82: Device ID 0x04, FW 1.2, IPMI 2.0, Kontron, '
+            'Product ID 0x06a5\n'
+            '0x84: not reachable\n'
+            '0x86: answers with completion code 0xc1\n'
+            '2 of 3 addresses reachable\n')
+
+    def test_json(self, capsys):
+        ipmi = MagicMock()
+        ipmi.scan_ipmb.return_value = [(0x82, self.device_id()),
+                                       (0x84, None), (0x86, 0xc1)]
+        args = build_parser().parse_args(['-J', 'scan'])
+        args.func(ipmi, args)
+        assert json.loads(capsys.readouterr().out) == [
+            {'address': 0x82, 'reachable': True, 'device_id': 4,
+             'firmware_revision': '1.2', 'ipmi_version': '2.0',
+             'manufacturer_id': 15000, 'product_id': 0x6a5},
+            {'address': 0x84, 'reachable': False},
+            {'address': 0x86, 'reachable': True, 'completion_code': 0xc1}]
 
 
 @pytest.mark.parametrize('manufacturer, name', [

@@ -136,6 +136,20 @@ def ipmb_address(value: str) -> int:
     return address
 
 
+def ipmb_address_range(value: str) -> range:
+    """Argument type for a range of IPMB addresses, <first>-<last>."""
+    (first, dash, last) = value.partition('-')
+    try:
+        addresses = range(ipmb_address(first),
+                          ipmb_address(last if dash else first) + 2, 2)
+    except argparse.ArgumentTypeError:
+        addresses = range(0)
+    if not addresses:
+        raise argparse.ArgumentTypeError(
+            f'invalid IPMB address range: {value} (e.g. 0x82-0xa0)')
+    return addresses
+
+
 def ipv4_address(value: str) -> str:
     """Argument type for IPv4 addresses, xxx.xxx.xxx.xxx."""
     try:
@@ -178,6 +192,40 @@ def log_level(value: str) -> tuple[str, int]:
     if not isinstance(number, int):
         raise argparse.ArgumentTypeError(f'invalid log level: {level}')
     return (name, number)
+
+
+def cmd_scan(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
+    addresses = args.range or pyipmi.IPMB_ADDRESS_RANGES[args.spec][1]
+    found: list[dict[str, Any]] = []
+    for (address, device_id) in ipmi.scan_ipmb(addresses, args.timeout,
+                                               args.tries):
+        entry: dict[str, Any] = {'address': address,
+                                 'reachable': device_id is not None}
+        if device_id is None:
+            line = 'not reachable'
+        elif isinstance(device_id, int):
+            entry['completion_code'] = device_id
+            line = f'answers with completion code 0x{device_id:02x}'
+        else:
+            manufacturer = (device_id.manufacturer_name
+                            or f'0x{device_id.manufacturer_id:04x}')
+            entry.update(device_id=device_id.device_id,
+                         firmware_revision=str(device_id.fw_revision),
+                         ipmi_version=str(device_id.ipmi_version),
+                         manufacturer_id=device_id.manufacturer_id,
+                         product_id=device_id.product_id)
+            line = (f'Device ID 0x{device_id.device_id:02x}, '
+                    f'FW {device_id.fw_revision}, '
+                    f'IPMI {device_id.ipmi_version}, {manufacturer}, '
+                    f'Product ID 0x{device_id.product_id:04x}')
+        found.append(entry)
+        if not args.json:
+            print(f'0x{address:02x}: {line}')
+    if args.json:
+        print(json.dumps(found))
+    else:
+        reachable = sum(entry['reachable'] for entry in found)
+        print(f'{reachable:d} of {len(found):d} addresses reachable')
 
 
 def cmd_bmc_info(ipmi: pyipmi.Ipmi, args: argparse.Namespace) -> None:
@@ -2365,6 +2413,27 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('netfn', type=auto_int)
     p.add_argument('data', type=auto_int, nargs='+',
                    help='command id and data bytes')
+
+    p = commands.command('scan', cmd_scan,
+                         'Find the controllers on the IPMB with Get Device '
+                         'ID requests, bridged by the BMC with -b or -r')
+    p.add_argument('spec', nargs='?', default='all',
+                   choices=tuple(pyipmi.IPMB_ADDRESS_RANGES),
+                   help='the addresses of a specification: '
+                        + '; '.join(f'{name}: {desc}' for name, (desc, _)
+                                    in pyipmi.IPMB_ADDRESS_RANGES.items())
+                        + ' (default: all)')
+    p.add_argument('--range', type=ipmb_address_range,
+                   metavar='<first>-<last>',
+                   help='scan these 8-bit IPMB addresses instead, e.g. '
+                        '0x82-0xa0')
+    p.add_argument('--timeout', type=float, metavar='<seconds>',
+                   help='time to wait for each response (default: the one '
+                        'of the interface, 0.25 s for the IPMB interfaces, '
+                        '10 s for ipmidev)')
+    p.add_argument('--tries', type=int, default=1, metavar='<n>',
+                   help='tries per address with the IPMB interfaces '
+                        '(default 1)')
 
     group = commands.group('bmc', 'Management Controller status and '
                            'global enables')
