@@ -206,14 +206,25 @@ class MessageRouter:
         return (id(interface), rs_sa, netfn & ~1, cmdid, seq, rs_lun)
 
     def request(self, interface: IpmbInterface, header: IpmbHeaderReq,
-                payload: bytes | None, timeout: float) -> bytes:
+                payload: bytes | None, timeout: float, tries: int = 1,
+                retry_delay: float = 0.2) -> bytes:
         """Send a request on the interface and wait for its response.
+
+        The request is sent up to ``tries`` times with the same sequence
+        number. Before the n-th repetition, the router waits n times
+        ``retry_delay`` seconds. The response is accepted the whole time,
+        also a late response to an earlier try, e.g. of a controller that
+        waits for the answer of its own request before it responds.
 
         Args:
             interface: The interface the request is sent on.
             header: The IPMB header of the request.
             payload: The request data, None for no data.
-            timeout: The time to wait for the response in seconds.
+            timeout: The time to wait for the response of each try in
+                seconds.
+            tries: The number of times the request is sent.
+            retry_delay: The additional wait before a repetition in
+                seconds.
 
         Returns:
             The complete IPMB response message, starting with the rqSA.
@@ -224,11 +235,22 @@ class MessageRouter:
         key = self._pending_key(interface, header.rs_sa, header.netfn,
                                 header.cmdid, header.rq_seq, header.rs_lun)
         pending = _PendingRequest()
+        frame = encode_ipmb_msg(header, payload)
         with self._lock:
             self._pending[key] = pending
         try:
-            interface.send_frame(encode_ipmb_msg(header, payload))
-            if not pending.event.wait(timeout):
+            for i in range(tries):
+                if i and pending.event.wait(i * retry_delay):
+                    break
+                try:
+                    interface.send_frame(frame)
+                except OSError:
+                    if i == tries - 1:
+                        raise IpmiTimeoutError() from None
+                    continue
+                if pending.event.wait(timeout):
+                    break
+            else:
                 raise IpmiTimeoutError()
             assert pending.frame is not None
             return pending.frame

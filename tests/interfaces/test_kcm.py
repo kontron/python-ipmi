@@ -244,6 +244,7 @@ def test_receive_split_and_garbage(kcm):
 def test_send_and_receive_raw(kcm, interfaces):
     kcm.responder = lambda chan, req: [(chan, build_rsp(req, b'\x00\x11'))]
     intf = interfaces()
+    intf.retry_delay = 0
     rsp = intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
     assert rsp == b'\x00\x11'
 
@@ -274,6 +275,7 @@ def test_send_and_receive_ignores_unrelated(kcm, interfaces):
 
     kcm.responder = responder
     intf = interfaces()
+    intf.retry_delay = 0
     rsp = intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
     assert rsp == b'\x00\xcc'
 
@@ -300,8 +302,8 @@ def test_send_retries_on_nack(kcm, interfaces):
 
     kcm.responder = responder
     intf = interfaces()
-    with patch('pyipmi.interfaces.ipmb.time.sleep'):
-        rsp = intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
+    intf.retry_delay = 0
+    rsp = intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
     assert rsp == b'\x00'
     assert len(calls) == 2
 
@@ -309,9 +311,9 @@ def test_send_retries_on_nack(kcm, interfaces):
 def test_timeout(kcm, interfaces):
     intf = interfaces()
     intf.timeout = 0.01
-    with patch('pyipmi.interfaces.ipmb.time.sleep'):
-        with pytest.raises(IpmiTimeoutError):
-            intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
+    intf.retry_delay = 0
+    with pytest.raises(IpmiTimeoutError):
+        intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
 
 
 def test_responder_message_handler(kcm, interfaces):

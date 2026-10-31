@@ -185,6 +185,7 @@ def test_open_set_addr_fails(bridge, interfaces):
 def test_send_and_receive_raw(bridge, interfaces):
     bridge.responder = lambda bus, req: [(bus, build_rsp(req, b'\x00\x11'))]
     intf = interfaces()
+    intf.retry_delay = 0
     rsp = intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
     assert rsp == b'\x00\x11'
 
@@ -215,6 +216,7 @@ def test_send_and_receive_ignores_unrelated(bridge, interfaces):
 
     bridge.responder = responder
     intf = interfaces()
+    intf.retry_delay = 0
     rsp = intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
     assert rsp == b'\x00\xcc'
 
@@ -241,8 +243,8 @@ def test_send_retries_on_bus_error(bridge, interfaces):
 
     bridge.responder = responder
     intf = interfaces()
-    with patch('pyipmi.interfaces.ipmb.time.sleep'):
-        rsp = intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
+    intf.retry_delay = 0
+    rsp = intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
     assert rsp == b'\x00'
     assert len(calls) == 2
 
@@ -250,19 +252,19 @@ def test_send_retries_on_bus_error(bridge, interfaces):
 def test_timeout(bridge, interfaces):
     intf = interfaces()
     intf.timeout = 0.01
-    with patch('pyipmi.interfaces.ipmb.time.sleep'):
-        with pytest.raises(IpmiTimeoutError):
-            intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
+    intf.retry_delay = 0
+    with pytest.raises(IpmiTimeoutError):
+        intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
 
 
 def test_incoming_request_ignored_by_default(bridge, interfaces):
     interfaces(slave_address=0x20, bus=0)
     requester = interfaces(slave_address=0x24, bus=1)
     requester.timeout = 0.05
-    with patch('pyipmi.interfaces.ipmb.time.sleep'):
-        with pytest.raises(IpmiTimeoutError):
-            requester.send_and_receive_raw(pyipmi.Target(0x20), 0, 6,
-                                           b'\x01')
+    requester.retry_delay = 0
+    with pytest.raises(IpmiTimeoutError):
+        requester.send_and_receive_raw(pyipmi.Target(0x20), 0, 6,
+                                       b'\x01')
 
 
 def test_responder_raw_handler(bridge, interfaces):

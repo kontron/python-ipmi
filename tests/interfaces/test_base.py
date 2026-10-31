@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import logging
+import threading
 
 import pytest
 
@@ -133,6 +134,42 @@ def test_ipmb_inc_sequence_number():
     intf.next_sequence_number = 63
     intf._inc_sequence_number()
     assert intf.next_sequence_number == 0
+
+
+class LateResponder:
+    """Answers a request only after the first try timed out."""
+
+    def __init__(self, router, delay):
+        self.router = router
+        self.delay = delay
+        self.sent = []
+
+    def send_frame(self, frame):
+        self.sent.append(frame)
+        if len(self.sent) == 1:
+            header = IpmbHeaderReq(data=frame)
+            rsp = encode_ipmb_response(header, b'\x00\x01')
+            threading.Timer(self.delay, self.router.handle_frame,
+                            (self, rsp)).start()
+
+
+def test_router_request_accepts_late_response():
+    router = MessageRouter()
+    intf = LateResponder(router, delay=0.1)
+    header = IpmbHeaderReq()
+    header.rs_sa = 0x8c
+    header.rs_lun = 0
+    header.rq_sa = 0x20
+    header.rq_lun = 0
+    header.rq_seq = 6
+    header.netfn = 0x0a
+    header.cmdid = 0x47
+
+    # the response arrives in the wait before the second try
+    rsp = router.request(intf, header, b'', timeout=0.05, tries=3,
+                         retry_delay=1.0)
+    assert rsp[6:-1] == b'\x00\x01'
+    assert len(intf.sent) == 1
 
 
 def request_frame(netfn, cmdid, data=b''):

@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import logging
 import threading
-import time
 from array import array
 from typing import TYPE_CHECKING
 from collections.abc import Iterable, Sequence
@@ -442,7 +441,8 @@ class IpmbInterface(Interface):
 
     A request is sent directly to the IPMB address of the target, the
     routing of the target is not used. It is tried up to ``max_retries``
-    times, each try waits ``timeout`` seconds for the response.
+    times, each try waits ``timeout`` seconds for the response. Before the
+    n-th repetition, it waits n times ``retry_delay`` seconds more.
     """
 
     def __init__(self, slave_address: int = 0x20,
@@ -461,6 +461,7 @@ class IpmbInterface(Interface):
         self.slave_address = slave_address
         self.timeout = 0.25
         self.max_retries = 3
+        self.retry_delay = 0.2
         self.next_sequence_number = 0
         self._sequence_lock = threading.Lock()
         self._default_router = MessageRouter(unhandled_cc=None)
@@ -538,10 +539,11 @@ class IpmbInterface(Interface):
         """Stop the worker thread of the default router."""
         self._default_router.close()
 
-    def _request(self, header: IpmbHeaderReq,
-                 payload: bytes | None) -> bytes:
+    def _request(self, header: IpmbHeaderReq, payload: bytes | None,
+                 tries: int = 1) -> bytes:
         """Send a request and return the complete response message."""
-        return self._router.request(self, header, payload, self.timeout)
+        return self._router.request(self, header, payload, self.timeout,
+                                    tries, self.retry_delay)
 
     def is_target_accessible(self, target: Target) -> bool:
         """Check if the target answers a Get Device ID request.
@@ -598,23 +600,7 @@ class IpmbInterface(Interface):
         header.rq_sa = self.slave_address
         header.cmdid = cmdid
 
-        retries = 0
-        while retries < self.max_retries:
-            try:
-                rx_data = self._request(header, payload)
-                break
-            except IpmiTimeoutError:
-                pass
-            except OSError:
-                pass
-
-            retries += 1
-            if retries < self.max_retries:
-                time.sleep(retries * 0.2)
-
-        else:
-            raise IpmiTimeoutError()
-
+        rx_data = self._request(header, payload, self.max_retries)
         return bytes(rx_data[6:-1])
 
     def send_and_receive_raw(self, target: Target, lun: int, netfn: int,

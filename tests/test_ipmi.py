@@ -339,10 +339,10 @@ def test_scan_ipmb_routing():
 
 def test_scan_ipmb_timeout_and_tries():
     interface = interfaces.ipmb.IpmbInterface()
-    tries = []
+    calls = []
 
-    def request(header, payload):
-        tries.append((header.rs_sa, interface.timeout, interface.max_retries))
+    def request(header, payload, tries=1):
+        calls.append((header.rs_sa, interface.timeout, tries))
         raise IpmiTimeoutError()
 
     interface._request = request
@@ -350,13 +350,13 @@ def test_scan_ipmb_timeout_and_tries():
     ipmi.target = Target(0x20)
     assert list(ipmi.scan_ipmb([0x82], timeout=0.1, tries=2)) == [
         (0x82, None)]
-    assert tries == [(0x82, 0.1, 2), (0x82, 0.1, 2)]
+    assert calls == [(0x82, 0.1, 2)]
     # the settings of the interface are restored
     assert (interface.timeout, interface.max_retries) == (0.25, 3)
 
-    tries.clear()
+    calls.clear()
     list(ipmi.scan_ipmb([0x84]))
-    assert tries == [(0x84, 0.25, 1)]
+    assert calls == [(0x84, 0.25, 1)]
 
 
 def test_scan_ipmb_timeout_ipmidev():
