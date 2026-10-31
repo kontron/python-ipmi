@@ -27,7 +27,9 @@ import logging
 import warnings
 
 from .. import Target
+from ..errors import CompletionCodeError
 from ..msgs import create_message, encode_message, decode_message, Message
+from ..msgs.constants import CC_OK
 from ..session import Session
 
 logger = logging.getLogger(__name__)
@@ -174,6 +176,15 @@ class Interface:
         rsp = create_message(req.netfn + 1, req.cmdid, req.group_extension)
         decode_message(rsp, rx_data)
 
-        logger.debug('IPMI Response [%s]', rsp)
+        cc = getattr(rsp, 'completion_code', None)
+        if cc is None:
+            logger.debug('IPMI Response [%s]', rsp)
+        elif cc == CC_OK:
+            logger.debug('IPMI Response [%s] cc=0x%02x', rsp, cc)
+        else:
+            logger.debug('IPMI Response [%s] cc=0x%02x (%s)', rsp, cc,
+                         CompletionCodeError.find_cc_desc(
+                             cc, rsp.cmdid, rsp.netfn & 0xfe,
+                             rsp.group_extension))
 
         return rsp

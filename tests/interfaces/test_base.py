@@ -7,6 +7,7 @@ import pytest
 
 import pyipmi
 import pyipmi.msgs.bmc
+import pyipmi.msgs.sel
 from pyipmi.interfaces import INTERFACES
 from pyipmi.interfaces.base import Interface
 from pyipmi.interfaces.ipmb import (IpmbInterface, IpmbHeaderReq,
@@ -81,6 +82,23 @@ def test_send_and_receive_uses_raw():
     assert intf.request == (req.target, 0, 6, b'\x01')
     assert rsp.completion_code == 0
     assert rsp.device_id == 0x0c
+
+
+@pytest.mark.parametrize('data, expected', [
+    (b'\x00\xdd\xff', 'cc=0x00'),
+    (b'\xc5', 'cc=0xc5 (Reservation Canceled or Invalid Reservation ID)'),
+])
+def test_send_and_receive_logs_completion_code(caplog, data, expected):
+    intf = RawStub()
+    intf.send_and_receive_raw = lambda *args: data
+    req = pyipmi.msgs.sel.ReserveSelReq()
+    req.target = pyipmi.Target(0x72)
+    with caplog.at_level(logging.DEBUG, logger='pyipmi'):
+        intf.send_and_receive(req)
+
+    assert caplog.messages[-1] == (
+        'IPMI Response [ReserveSelRsp [netfn=11, cmd=66, grp=None]] '
+        + expected)
 
 
 class IpmbStub(IpmbInterface):
