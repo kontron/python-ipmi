@@ -191,6 +191,20 @@ def test_get_sdr_data_helper_other_error():
         get_sdr_data_helper(lambda: 1, get_fn, 4)
 
 
+def test_clear_repository_helper_initiate_in_progress(no_sleep):
+    clear_fn = MagicMock(side_effect=[
+        REPOSITORY_ERASURE_IN_PROGRESS,
+        REPOSITORY_ERASURE_IN_PROGRESS,
+        REPOSITORY_ERASURE_COMPLETED,
+    ])
+    clear_repository_helper(lambda: 0x1234, clear_fn)
+    assert clear_fn.call_args_list == [
+        call(REPOSITORY_INITIATE_ERASE, 0x1234),
+        call(REPOSITORY_GET_ERASE_STATUS, 0x1234),
+        call(REPOSITORY_GET_ERASE_STATUS, 0x1234),
+    ]
+
+
 def test_clear_repository_helper_reservation_canceled(no_sleep):
     reserve_fn = MagicMock(side_effect=[0x1234, 0x5678])
     clear_fn = MagicMock(side_effect=[

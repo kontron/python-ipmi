@@ -187,7 +187,10 @@ def _clear_repository(reserve_fn: Callable[[], int], clear_fn: Callable,
             else:
                 raise
 
-        if in_progress == constants.REPOSITORY_ERASURE_IN_PROGRESS:
+        # the erasure is in progress after it was initiated, only the erase
+        # status is polled until it is completed
+        if (ctrl == constants.REPOSITORY_GET_ERASE_STATUS
+                and in_progress == constants.REPOSITORY_ERASURE_IN_PROGRESS):
             time.sleep(0.5)
             continue
 
