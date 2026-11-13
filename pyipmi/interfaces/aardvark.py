@@ -55,6 +55,12 @@ except RuntimeError:  # python 3
 # interval. In between, it waits for device calls of other threads.
 POLL_INTERVAL = 0.001
 
+# The Aardvark API status of an adapter that cannot be opened, e.g. as it is
+# in use, and how long and how often the open is tried.
+ERR_UNABLE_TO_OPEN = -7
+OPEN_RETRY_TIME = 2.0
+OPEN_RETRY_INTERVAL = 0.05
+
 
 class _DeviceCall:
     """A device function call, done by the receive thread."""
@@ -124,8 +130,14 @@ class Aardvark(IpmbInterface):
         self._dev: Any = None
 
     def open(self) -> None:
-        """Open the adapter, configure it and start the receive thread."""
-        self._dev = pyaardvark.open(self.port, self.serial_number)
+        """Open the adapter, configure it and start the receive thread.
+
+        Right after a close, the adapter cannot be opened for a moment: the
+        Aardvark library releases its USB interface after ``aa_close()``
+        returned. The open is retried for up to `OPEN_RETRY_TIME` seconds
+        while it fails with "unable to open".
+        """
+        self._dev = self._open_device()
         self._dev.enable_i2c_slave(self.slave_address >> 1)
 
         if self.i2c_pullups:
@@ -139,6 +151,18 @@ class Aardvark(IpmbInterface):
             self.enable_fastmode(False)
 
         self._start_receiver()
+
+    def _open_device(self) -> Any:
+        deadline = time.monotonic() + OPEN_RETRY_TIME
+        while True:
+            try:
+                return pyaardvark.open(self.port, self.serial_number)
+            except OSError as e:
+                if e.errno != ERR_UNABLE_TO_OPEN or \
+                        time.monotonic() >= deadline:
+                    raise
+                logger.debug('aardvark busy, retrying the open')
+            time.sleep(OPEN_RETRY_INTERVAL)
 
     def close(self) -> None:
         """Stop the receive thread and close the adapter, if it is open."""

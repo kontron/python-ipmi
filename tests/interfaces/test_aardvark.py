@@ -84,11 +84,47 @@ def test_close_after_failed_open():
 
     module = types.SimpleNamespace(open=open_device,
                                    POLL_I2C_READ=POLL_I2C_READ)
-    with patch('pyipmi.interfaces.aardvark.pyaardvark', module):
+    with patch('pyipmi.interfaces.aardvark.pyaardvark', module), \
+            patch('pyipmi.interfaces.aardvark.OPEN_RETRY_TIME', 0.1):
         intf = Aardvark(slave_address=0x24)
         with pytest.raises(OSError):
             intf.open()
         intf.close()
+
+
+def test_open_retries_while_unable_to_open(device):
+    tries = []
+
+    def open_device(port, serial_number):
+        tries.append(time.monotonic())
+        if len(tries) < 3:
+            raise OSError(-7, 'unable to open device')
+        return device
+
+    module = types.SimpleNamespace(open=open_device,
+                                   POLL_I2C_READ=POLL_I2C_READ)
+    with patch('pyipmi.interfaces.aardvark.pyaardvark', module):
+        intf = Aardvark(slave_address=0x24)
+        intf.open()
+        intf.close()
+    assert len(tries) == 3
+    assert device.closed
+
+
+def test_open_does_not_retry_other_errors():
+    tries = []
+
+    def open_device(port, serial_number):
+        tries.append(1)
+        raise OSError(-2, 'unable to load library')
+
+    module = types.SimpleNamespace(open=open_device,
+                                   POLL_I2C_READ=POLL_I2C_READ)
+    with patch('pyipmi.interfaces.aardvark.pyaardvark', module):
+        intf = Aardvark(slave_address=0x24)
+        with pytest.raises(OSError):
+            intf.open()
+    assert len(tries) == 1
 
 
 def test_requester(device):
