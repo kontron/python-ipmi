@@ -801,8 +801,13 @@ class SdrFullSensorRecord(SdrCommon):
             and ``'default_scanning'``.
         capabilities (list[str]): The sensor capabilities:
             ``'ignore_sensor'``, ``'auto_rearm'``, the hysteresis support
-            (``'hysteresis_*'``) and the threshold support
-            (``'threshold_*'``).
+            (``'hysteresis_*'``), the threshold support
+            (``'threshold_*'``) and the event message control support:
+            ``'event_control_per_state'`` (per threshold or state, which
+            implies the entire sensor and global disable),
+            ``'event_control_entire_sensor'`` (which implies global
+            disable), ``'event_control_global_disable'`` or
+            ``'event_control_none'`` (no events).
         sensor_type_code (int): The sensor type.
         event_reading_type_code (int): The event/reading type.
         assertion_mask (int): The assertion event mask.
@@ -1033,14 +1038,12 @@ class SdrFullSensorRecord(SdrCommon):
         elif capabilities & THRESHOLD_MASK == THRESHOLD_IS_FIXED:
             self.capabilities.append('threshold_fixed')
         # sensor event message control support
-        if (capabilities & 0x03) == 0:
-            pass
-        if (capabilities & 0x03) == 1:
-            pass
-        if (capabilities & 0x03) == 2:
-            pass
-        if (capabilities & 0x03) == 3:
-            pass
+        self.capabilities.append({
+            0: 'event_control_per_state',
+            1: 'event_control_entire_sensor',
+            2: 'event_control_global_disable',
+            3: 'event_control_none',
+        }[capabilities & 0x03])
 
     def _from_data(self, data: ByteSequence) -> None:
         buffer = ByteBuffer(data[5:])

@@ -450,10 +450,13 @@ def test_full_sensor_record_bit_fields():
 
 
 @pytest.mark.parametrize('capabilities, expected', [
-    (0x00, ['hysteresis_not_supported', 'threshold_not_supported']),
-    (0x14, ['hysteresis_readable', 'threshold_readable']),
-    (0x28, ['hysteresis_read_and_setable', 'threshold_read_and_setable']),
-    (0x3c, ['hysteresis_fixed', 'threshold_fixed']),
+    (0x00, ['hysteresis_not_supported', 'threshold_not_supported',
+            'event_control_per_state']),
+    (0x15, ['hysteresis_readable', 'threshold_readable',
+            'event_control_entire_sensor']),
+    (0x2a, ['hysteresis_read_and_setable', 'threshold_read_and_setable',
+            'event_control_global_disable']),
+    (0x3f, ['hysteresis_fixed', 'threshold_fixed', 'event_control_none']),
 ])
 def test_full_sensor_record_threshold_access(capabilities, expected):
     record = SdrFullSensorRecord()
