@@ -239,13 +239,25 @@ class Aardvark(IpmbInterface):
     def send_frame(self, frame: bytes) -> None:
         """Send a complete IPMB message, starting with rsSA.
 
+        A failed write is logged with the error of the adapter, e.g. the
+        I2C status of a missing acknowledge, as the router only reports a
+        timeout for it.
+
         Args:
             frame: The message.
+
+        Raises:
+            OSError: The adapter failed to write the message.
         """
         i2c_addr = frame[0] >> 1
 
         logger.debug('IPMB TX [%s]', bytes(frame).hex(' '))
-        self._call(self._dev.i2c_master_write, i2c_addr, bytes(frame[1:]))
+        try:
+            self._call(self._dev.i2c_master_write, i2c_addr,
+                       bytes(frame[1:]))
+        except OSError as e:
+            logger.debug('IPMB TX failed: %s', e)
+            raise
 
     def _read_frame(self, timeout: float) -> bytes | None:
         deadline = time.monotonic() + timeout

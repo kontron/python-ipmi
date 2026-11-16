@@ -169,3 +169,19 @@ def test_responder(device):
         router.close()
 
     assert device.written[0] == encode_ipmb_response(header, b'\x00\x42')
+
+
+def test_failed_write_is_logged(device, caplog):
+    def nack(i2c_addr, data):
+        raise OSError(3, 'I2C_STATUS_SLA_NACK')
+    device.i2c_master_write = nack
+    intf = Aardvark(slave_address=0x20)
+    intf.open()
+    try:
+        with caplog.at_level('DEBUG', logger='pyipmi.interfaces.aardvark'):
+            with pytest.raises(OSError):
+                intf.send_frame(b'\x72\x18\x76\x20\x04\x01\xdb')
+    finally:
+        intf.close()
+
+    assert 'IPMB TX failed: [Errno 3] I2C_STATUS_SLA_NACK' in caplog.text
