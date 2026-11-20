@@ -336,3 +336,111 @@ def test_responder_message_handler(kcm, interfaces):
     assert rsp.device_id == 0x0c
     assert rsp.manufacturer_id == 0x003a98
     router.close()
+
+
+@pytest.mark.parametrize('channel', [-1, 'a', '0'])
+def test_invalid_channel(kcm, channel):
+    with pytest.raises(ValueError):
+        Kcm(channel=channel)
+
+
+def test_both_channels_open(kcm, interfaces):
+    intf = interfaces(slave_address=0x24, channel='ab', i2c_speed=400000)
+    assert intf.channels == (0, 1)
+    assert kcm.written[1:] == [
+        (2, struct.pack('<BBI', 0, 0x24, 400000)),
+        (2, struct.pack('<BBI', 1, 0x24, 400000)),
+    ]
+    assert intf._device.has_listener(0)
+    assert intf._device.has_listener(1)
+    intf.close()
+    assert kcm.closed
+
+
+def test_both_channels_in_use(kcm, interfaces):
+    intf = interfaces(slave_address=0x24, channel=1)
+    with pytest.raises(KcmError):
+        Kcm(slave_address=0x26, channel='ab').open()
+    # neither channel is changed, channel 0 is free again
+    assert kcm.addrs == [0x22, 0x24]
+    assert intf._device.has_listener(1)
+    assert not intf._device.has_listener(0)
+    interfaces(channel=0)
+
+
+def sent_channels(kcm):
+    return [data[0] for cmd, data in kcm.written if cmd == 1]
+
+
+def test_both_channels_alternate(kcm, interfaces):
+    kcm.responder = lambda chan, req: [(chan, build_rsp(req, b'\x00'))]
+    intf = interfaces(channel='ab')
+    for _ in range(4):
+        intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
+    assert sent_channels(kcm) == [0, 1, 0, 1]
+
+
+def test_both_channels_response_on_other_channel(kcm, interfaces):
+    """The IPMC alternates too, the response may come on the other IPMB."""
+    kcm.responder = lambda chan, req: [(1 - chan, build_rsp(req, b'\x00\x11'))]
+    intf = interfaces(channel='ab')
+    for _ in range(2):
+        rsp = intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
+        assert rsp == b'\x00\x11'
+
+
+def test_both_channels_failover(kcm, interfaces):
+    """Channel 0 is broken, every message is sent on channel 1."""
+    def responder(chan, req):
+        if chan == 0:
+            return None
+        return [(chan, build_rsp(req, b'\x00'))]
+
+    kcm.responder = responder
+    intf = interfaces(channel='ab')
+    for _ in range(2):
+        rsp = intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
+        assert rsp == b'\x00'
+    # each message is sent once on channel 1, no request was retried
+    assert sent_channels(kcm) == [0, 1, 1]
+
+
+def test_both_channels_send_fails(kcm, interfaces):
+    kcm.responder = lambda chan, req: None
+    intf = interfaces(channel='ab')
+    with pytest.raises(KcmError):
+        intf.send_frame(b'\x72\x18\x76\x20\x04\x01\xdb')
+    assert sent_channels(kcm) == [0, 1]
+
+
+def test_both_channels_responder(kcm, interfaces):
+    """Requests received on both IPMBs are answered, alternately."""
+    responses = []
+
+    def responder(chan, frame):
+        responses.append((chan, frame))
+        return []
+
+    def handler(req):
+        rsp = pyipmi.msgs.bmc.GetDeviceIdRsp()
+        pyipmi.msgs.decode_message(rsp, DEVICE_ID_RSP)
+        return rsp
+
+    router = MessageRouter()
+    router.register_handler(constants.NETFN_APP, constants.CMDID_GET_DEVICE_ID,
+                            handler)
+    intf = interfaces(slave_address=0x20, channel='ab', router=router)
+    kcm.responder = responder
+
+    for seq, chan in enumerate((0, 0)):
+        hdr = bytes((0x20, 0x18))
+        body = bytes((0x82, seq << 2, 0x01))
+        req = hdr + bytes((checksum(hdr),)) + body + bytes((checksum(body),))
+        intf._device._dispatch(bytes((chan,)) + req)
+
+    deadline = time.monotonic() + 1
+    while len(responses) < 2 and time.monotonic() < deadline:
+        time.sleep(0.001)
+    router.close()
+    assert [chan for chan, _ in responses] == [0, 1]
+    assert all(frame[0] == 0x82 for _, frame in responses)

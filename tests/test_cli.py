@@ -81,6 +81,10 @@ class TestParseInterfaceOptions:
         assert options['baudrate'] == 921600
         assert options['i2c_speed'] == 400000
 
+    def test_options_kcm_both_channels(self):
+        options = parse_interface_options('kcm', 'channel=AB')
+        assert options['channel'] == 'ab'
+
 
 class TestLogLevel:
     @pytest.mark.parametrize('value, expected', [

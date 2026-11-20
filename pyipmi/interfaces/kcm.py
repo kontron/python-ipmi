@@ -19,6 +19,7 @@
 The KCM is connected to both IPMB buses of a chassis, IPMB-A on channel 0
 and IPMB-B on channel 1, and to the host over a serial port, which needs the
 pyserial package. :class:`Kcm` is the interface for one channel of the KCM,
+or for both channels as redundant IPMB-A and IPMB-B (``channel='ab'``),
 :class:`KcmDevice` the serial connection shared by the channels.
 
 Example:
@@ -30,10 +31,17 @@ Example:
         ipmi.target = pyipmi.Target(ipmb_address=0x82)
         with ipmi:
             print(ipmi.get_device_id())
+
+    Use both IPMBs, as needed by VITA 46.11: the messages are sent
+    alternately on IPMB-A and IPMB-B::
+
+        interface = pyipmi.interfaces.create_interface(
+            'kcm', slave_address=0x20, port='/dev/ttyUSB0', channel='ab')
 """
 
 from __future__ import annotations
 
+import functools
 import logging
 import queue
 import struct
@@ -69,6 +77,9 @@ RSP_STATUS_INFO = 7
 
 # a frame carries at most 127 bytes: cmd, payload and CRC
 MAX_FRAME_LEN = 127
+
+# the channel value of an interface that uses both IPMBs
+CHANNEL_AB = 'ab'
 
 # the oldest firmware with a known layout of the status reply, 1.6 and 1.7
 # use the same one
@@ -414,11 +425,18 @@ class KcmDevice:
 
 
 class Kcm(IpmbInterface):
-    """This interface uses one IPMB channel of the KCM.
+    """This interface uses one IPMB channel of the KCM, or both.
 
     Channel 0 is IPMB-A, channel 1 IPMB-B. An interface for the other
     channel of the same KCM can be opened at the same time; they share
     the serial port.
+
+    With the channel ``'ab'`` the interface uses both channels as the
+    redundant IPMB-A and IPMB-B of VITA 46.11: the messages, requests and
+    responses, are sent alternately on IPMB-A and IPMB-B. If the KCM fails
+    to send a message on one IPMB, e.g. it is not acknowledged, it is sent
+    on the other one. Messages are received on both IPMBs, so a response
+    is accepted on either of them.
 
     Incoming requests are ignored by default. To answer them, e.g. to
     acknowledge the Platform Event Messages of the IPMCs, set a
@@ -428,29 +446,38 @@ class Kcm(IpmbInterface):
     NAME = 'kcm'
 
     def __init__(self, slave_address: int = 0x20,
-                 port: str = '/dev/ttyUSB0', channel: int = 0,
+                 port: str = '/dev/ttyUSB0', channel: int | str = 0,
                  baudrate: int = 115200, i2c_speed: int = 100000,
                  router: MessageRouter | None = None) -> None:
         """Initialize the interface.
 
         Args:
-            slave_address: The own IPMB address, set on the channel of the
+            slave_address: The own IPMB address, set on the channels of the
                 KCM when the interface is opened.
             port: The serial port of the KCM, a device path or a
                 pyserial URL.
             channel: The channel of the KCM, 0 for IPMB-A and 1 for
-                IPMB-B.
+                IPMB-B, or ``'ab'`` for both, used alternately.
             baudrate: The baud rate of the serial port.
-            i2c_speed: The I2C bit rate of the channel in Hz.
+            i2c_speed: The I2C bit rate of the channels in Hz.
             router: The router of the received messages, see
                 :class:`~pyipmi.interfaces.ipmb.IpmbInterface`.
 
         Raises:
             RuntimeError: The pyserial package is not installed.
+            ValueError: The channel is invalid.
         """
         if serial is None:
             raise RuntimeError('No pyserial module found. You can not '
                                'use this interface.')
+
+        self.channels: tuple[int, ...]
+        if channel == CHANNEL_AB:
+            self.channels = (0, 1)
+        elif isinstance(channel, int) and channel >= 0:
+            self.channels = (channel,)
+        else:
+            raise ValueError(f'invalid KCM channel {channel!r}')
 
         super().__init__(slave_address, router)
         self.port = port
@@ -458,30 +485,34 @@ class Kcm(IpmbInterface):
         self.baudrate = baudrate
         self.i2c_speed = i2c_speed
         self._device: KcmDevice | None = None
+        self._next_channel = 0
+        self._next_channel_lock = threading.Lock()
 
     def open(self) -> None:
-        """Open the KCM and configure the channel.
+        """Open the KCM and configure the channels.
 
         Raises:
-            KcmError: The KCM failed, or the channel is
+            KcmError: The KCM failed, or a channel is
                 already used by another interface.
         """
         device = KcmDevice.acquire(self.port, self.baudrate)
-        # claim the channel first, so the configuration of a channel used
-        # by another interface is not changed
+        claimed: list[int] = []
         try:
-            device.add_listener(self.channel, self._receive_frame)
+            # claim the channels first, so the configuration of a channel
+            # used by another interface is not changed
+            for channel in self.channels:
+                device.add_listener(channel, functools.partial(
+                    self._receive_channel_frame, channel))
+                claimed.append(channel)
+            for channel in self.channels:
+                self._check_status(device.command(
+                    CMD_CONFIGURE_I2C_CHANNEL,
+                    struct.pack('<BBI', channel, self.slave_address,
+                                self.i2c_speed),
+                    RSP_STATUS))
         except Exception:
-            device.release()
-            raise
-        try:
-            self._check_status(device.command(
-                CMD_CONFIGURE_I2C_CHANNEL,
-                struct.pack('<BBI', self.channel, self.slave_address,
-                            self.i2c_speed),
-                RSP_STATUS))
-        except Exception:
-            device.remove_listener(self.channel)
+            for channel in claimed:
+                device.remove_listener(channel)
             device.release()
             raise
         self._device = device
@@ -489,10 +520,16 @@ class Kcm(IpmbInterface):
     def close(self) -> None:
         """Release the KCM, it is closed if no other channel uses it."""
         if self._device is not None:
-            self._device.remove_listener(self.channel)
+            for channel in self.channels:
+                self._device.remove_listener(channel)
             self._device.release()
             self._device = None
         super().close()
+
+    def _receive_channel_frame(self, channel: int, frame: bytes) -> None:
+        self._logger.debug('IPMB RX channel %d [%s]', channel,
+                           bytes(frame).hex(' '))
+        self._router.handle_frame(self, bytes(frame))
 
     @staticmethod
     def _check_status(reply: bytes) -> None:
@@ -501,23 +538,45 @@ class Kcm(IpmbInterface):
         if reply[0] != 1:
             raise KcmError(f'KCM error code {reply[1]:d}')
 
+    def _send_order(self) -> tuple[int, ...]:
+        """Return the channels in the order to try for the next message.
+
+        The first channel alternates from message to message.
+        """
+        with self._next_channel_lock:
+            first = self._next_channel
+            self._next_channel = (first + 1) % len(self.channels)
+        return self.channels[first:] + self.channels[:first]
+
     def send_frame(self, frame: bytes) -> None:
         """Send a complete IPMB message, starting with rsSA.
 
         The rsSA is sent as the address of the I2C write, the KCM
-        converts it to the 7-bit address.
+        converts it to the 7-bit address. With both channels, the message
+        is sent on the next channel, and on the other channel if that
+        fails.
 
         Args:
             frame: The message.
 
         Raises:
             KcmError: The interface is not open, or the KCM
-                failed to send the message, e.g. it was not acknowledged.
+                failed to send the message on all channels, e.g. it was
+                not acknowledged.
         """
         if self._device is None:
             raise KcmError('interface is not open')
 
         frame = bytes(frame)
-        logger.debug('IPMB TX channel %d [%s]', self.channel, frame.hex(' '))
-        self._check_status(self._device.command(
-            CMD_SEND_MESSAGE, bytes((self.channel,)) + frame, RSP_STATUS))
+        error: KcmError | None = None
+        for channel in self._send_order():
+            logger.debug('IPMB TX channel %d [%s]', channel, frame.hex(' '))
+            try:
+                self._check_status(self._device.command(
+                    CMD_SEND_MESSAGE, bytes((channel,)) + frame, RSP_STATUS))
+                return
+            except KcmError as e:
+                logger.debug('IPMB TX channel %d failed: %s', channel, e)
+                error = e
+        assert error is not None
+        raise error

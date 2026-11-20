@@ -419,6 +419,12 @@ Both channels can be used at the same time; the interfaces share the serial port
 
   pyipmi -I kcm -o port=/dev/ttyUSB0,channel=1 -t 0x82 bmc info
 
+VITA 46.11 systems have redundant IPMBs, and a compliant IPMC alternates its messages between IPMB-A and IPMB-B. With ``channel='ab'`` the interface uses both channels the same way: it sends the messages alternately on IPMB-A and IPMB-B, sends a message on the other IPMB if the KCM fails to send it, and accepts the responses on both IPMBs.
+
+.. code:: shell
+
+  pyipmi -I kcm -o port=/dev/ttyUSB0,channel=ab -t 0x82 bmc info
+
 IPMB with Aardvark
 ******************
 

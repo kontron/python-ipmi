@@ -2006,7 +2006,8 @@ def parse_interface_options(interface_name: str,
             if name == 'port':
                 interface_options['port'] = value
             elif name == 'channel':
-                interface_options['channel'] = int(value)
+                interface_options['channel'] = (
+                    value.lower() if value.lower() == 'ab' else int(value))
             elif name == 'address':
                 interface_options['slave_address'] = int(value, 0)
             elif name == 'baudrate':
@@ -2098,7 +2099,8 @@ interface options (-o name=value,...):
     address=<addr>     own IPMB address (default 0x20)
   kcm:
     port=<path>        serial port of the KCM (default /dev/ttyUSB0)
-    channel=<n>        IPMB channel of the KCM, 0 = IPMB-A, 1 = IPMB-B
+    channel=<n>        IPMB channel of the KCM, 0 = IPMB-A, 1 = IPMB-B,
+                       ab = both, used alternately (VITA 46.11)
                        (default 0)
     address=<addr>     own IPMB address (default 0x20)
     baudrate=<n>       baud rate of the serial port (default 115200)
