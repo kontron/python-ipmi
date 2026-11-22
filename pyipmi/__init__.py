@@ -506,6 +506,35 @@ class Ipmi(bmc.Bmc, chassis.Chassis, dcmi.Dcmi, fru.Fru, picmg.Picmg, hpm.Hpm,
         return self.interface.send_and_receive_raw(self.target, lun, netfn,
                                                    raw_bytes)
 
+    def send_raw_broadcast(self, lun: int, netfn: int,
+                           raw_bytes: bytes) -> bytes:
+        """Send a raw request as IPMB broadcast and return the raw response.
+
+        The request is prefixed with the broadcast address 00h (IPMI 2.0
+        section 20.9), as Broadcast Get Device ID is sent; the response is
+        expected from the target.
+
+        Args:
+            lun: The logical unit number.
+            netfn: The network function.
+            raw_bytes: The request, starting with the command ID.
+
+        Returns:
+            The response, starting with the completion code.
+
+        Raises:
+            NotImplementedError: The interface is not connected to an IPMB.
+            RuntimeError: No target has been set.
+        """
+        from .interfaces.ipmb import IpmbInterface
+        if not isinstance(self.interface, IpmbInterface):
+            raise NotImplementedError(
+                    'a broadcast needs an interface on the IPMB')
+        if self.target is None:
+            raise RuntimeError('No IPMI target has been set')
+        return self.interface.send_and_receive_raw(self.target, lun, netfn,
+                                                   raw_bytes, broadcast=True)
+
     def raw_command(self, lun: int, netfn: int, raw_bytes: bytes) -> bytes:
         """Deprecated, the old name of :meth:`send_raw`."""
         warnings.warn('raw_command is deprecated, use send_raw',

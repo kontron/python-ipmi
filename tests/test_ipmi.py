@@ -278,6 +278,22 @@ def test_ipmi_send_raw():
         ipmi.target, 0, 6, b'\x01')
 
 
+def test_ipmi_send_raw_broadcast():
+    from pyipmi.interfaces.ipmb import IpmbInterface
+    ipmi = create_connection(IpmbInterface())
+    ipmi.target = Target(0x72)
+    ipmi.interface.send_and_receive_raw = MagicMock(return_value=b'\x00\x01')
+    assert ipmi.send_raw_broadcast(0, 6, b'\x01') == b'\x00\x01'
+    ipmi.interface.send_and_receive_raw.assert_called_once_with(
+        ipmi.target, 0, 6, b'\x01', broadcast=True)
+
+
+def test_ipmi_send_raw_broadcast_needs_ipmb():
+    ipmi = create_connection(interfaces.create_interface('mock'))
+    with pytest.raises(NotImplementedError):
+        ipmi.send_raw_broadcast(0, 6, b'\x01')
+
+
 def test_ipmi_raw_command_deprecated():
     ipmi = create_connection(interfaces.create_interface('mock'))
     ipmi.interface.send_and_receive_raw = MagicMock(return_value=b'\x00')

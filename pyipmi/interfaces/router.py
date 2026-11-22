@@ -48,8 +48,8 @@ from collections.abc import Callable
 from ..errors import IpmiTimeoutError
 from ..msgs import create_message, encode_message, decode_message, Message
 from ..msgs.constants import CC_INV_CMD, CC_UNSPECIFIED_ERROR
-from .ipmb import (IPMB_MIN_MSG_LEN, IpmbHeaderReq, IpmbHeaderRsp, checksum,
-                   encode_ipmb_msg)
+from .ipmb import (IPMB_BROADCAST_ADDRESS, IPMB_MIN_MSG_LEN, IpmbHeaderReq,
+                   IpmbHeaderRsp, checksum, encode_ipmb_msg)
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +207,7 @@ class MessageRouter:
 
     def request(self, interface: IpmbInterface, header: IpmbHeaderReq,
                 payload: bytes | None, timeout: float, tries: int = 1,
-                retry_delay: float = 0.2) -> bytes:
+                retry_delay: float = 0.2, broadcast: bool = False) -> bytes:
         """Send a request on the interface and wait for its response.
 
         The request is sent up to ``tries`` times with the same sequence
@@ -225,6 +225,9 @@ class MessageRouter:
             tries: The number of times the request is sent.
             retry_delay: The additional wait before a repetition in
                 seconds.
+            broadcast: Send the request as broadcast, prefixed with the
+                broadcast address 00h (IPMI 2.0 section 20.9). The
+                response is still expected from ``header.rs_sa``.
 
         Returns:
             The complete IPMB response message, starting with the rqSA.
@@ -236,6 +239,8 @@ class MessageRouter:
                                 header.cmdid, header.rq_seq, header.rs_lun)
         pending = _PendingRequest()
         frame = encode_ipmb_msg(header, payload)
+        if broadcast:
+            frame = bytes((IPMB_BROADCAST_ADDRESS,)) + frame
         with self._lock:
             self._pending[key] = pending
         try:

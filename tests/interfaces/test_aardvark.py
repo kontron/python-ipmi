@@ -143,6 +143,28 @@ def test_requester(device):
     assert header.rq_sa == 0x20
 
 
+def test_broadcast_request(device):
+    """A broadcast is written to the general call address 00h, followed
+    by the whole request, and answered by the target."""
+    device.responder = lambda frame: [
+        encode_ipmb_response(IpmbHeaderReq(data=frame[1:]), b'\x00\x11')]
+    intf = Aardvark(slave_address=0x20)
+    intf.open()
+    try:
+        rsp = intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01',
+                                        broadcast=True)
+    finally:
+        intf.close()
+
+    assert rsp == b'\x00\x11'
+    written = device.written[0]
+    assert written[0] == 0x00
+    header = IpmbHeaderReq(data=written[1:])
+    assert header.rs_sa == 0x72
+    assert header.rq_sa == 0x20
+    assert header.cmdid == 0x01
+
+
 def test_responder(device):
     router = MessageRouter()
     router.register_raw_handler(6, 1, lambda intf, hdr, data: b'\x00\x42')

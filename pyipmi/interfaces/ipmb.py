@@ -48,6 +48,8 @@ logger = logging.getLogger(__name__)
 
 # rqSA, netFn/rqLUN, checksum, rsSA, rqSeq/rsLUN, cmd, checksum
 IPMB_MIN_MSG_LEN = 7
+# the address a broadcast request is prefixed with (IPMI 2.0 section 20.9)
+IPMB_BROADCAST_ADDRESS = 0x00
 
 if TYPE_CHECKING:
     from .router import MessageRouter
@@ -540,10 +542,10 @@ class IpmbInterface(Interface):
         self._default_router.close()
 
     def _request(self, header: IpmbHeaderReq, payload: bytes | None,
-                 tries: int = 1) -> bytes:
+                 tries: int = 1, broadcast: bool = False) -> bytes:
         """Send a request and return the complete response message."""
         return self._router.request(self, header, payload, self.timeout,
-                                    tries, self.retry_delay)
+                                    tries, self.retry_delay, broadcast)
 
     def is_target_accessible(self, target: Target) -> bool:
         """Check if the target answers a Get Device ID request.
@@ -574,7 +576,8 @@ class IpmbInterface(Interface):
             return self.next_sequence_number
 
     def _send_and_receive(self, target: Target, lun: int, netfn: int,
-                          cmdid: int, payload: bytes) -> bytes:
+                          cmdid: int, payload: bytes,
+                          broadcast: bool = False) -> bytes:
         """Send a request and receive the response.
 
         Args:
@@ -583,6 +586,8 @@ class IpmbInterface(Interface):
             netfn: The network function.
             cmdid: The command ID.
             payload: The request data after the command ID.
+            broadcast: Send the request prefixed with the broadcast
+                address 00h; the target is the expected responder.
 
         Returns:
             The response data, starting with the completion code.
@@ -600,11 +605,15 @@ class IpmbInterface(Interface):
         header.rq_sa = self.slave_address
         header.cmdid = cmdid
 
-        rx_data = self._request(header, payload, self.max_retries)
+        if broadcast:
+            rx_data = self._request(header, payload, self.max_retries,
+                                    broadcast=True)
+        else:
+            rx_data = self._request(header, payload, self.max_retries)
         return bytes(rx_data[6:-1])
 
     def send_and_receive_raw(self, target: Target, lun: int, netfn: int,
-                             raw_bytes: bytes) -> bytes:
+                             raw_bytes: bytes, broadcast: bool = False) -> bytes:
         """Send a raw request and return the raw response.
 
         Args:
@@ -612,6 +621,10 @@ class IpmbInterface(Interface):
             lun: The logical unit number.
             netfn: The network function.
             raw_bytes: The request, starting with the command ID.
+            broadcast: Send the request as broadcast, prefixed with the
+                broadcast address 00h (IPMI 2.0 section 20.9), e.g.
+                Broadcast Get Device ID; the target is the expected
+                responder.
 
         Returns:
             The response, starting with the completion code.
@@ -623,4 +636,5 @@ class IpmbInterface(Interface):
                                       lun=lun,
                                       netfn=netfn,
                                       cmdid=array('B', raw_bytes)[0],
-                                      payload=raw_bytes[1:])
+                                      payload=raw_bytes[1:],
+                                      broadcast=broadcast)
