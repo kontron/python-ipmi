@@ -17,7 +17,10 @@ version_archive = os.path.join(os.path.dirname(__file__), 'version_archive.txt')
 def pep440_version(describe):
     """Convert the output of 'git describe' to a PEP 440 version.
 
-    0.5.8-77-g7c853b0.dirty -> 0.5.8.dev77+g7c853b0.dirty
+    0.5.8-77-g7c853b0.dirty -> 0.5.8.post77+g7c853b0.dirty
+
+    The commits after a tag are counted as a post-release: a version
+    newer than the tag, so that it satisfies e.g. python-ipmi>=0.5.8.
 
     Without tags, e.g. in a shallow clone, 'git describe --always' prints
     only the abbreviated commit:
@@ -32,7 +35,7 @@ def pep440_version(describe):
     tag, distance, commit, dirty = m.groups()
     version = tag
     if distance:
-        version += f'.dev{distance}+{commit}'
+        version += f'.post{distance}+{commit}'
     if dirty:
         version += ('.' if distance else '+') + dirty[1:]
     return version
