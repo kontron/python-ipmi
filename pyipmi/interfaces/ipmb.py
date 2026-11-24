@@ -37,7 +37,6 @@ from typing import TYPE_CHECKING
 from collections.abc import Iterable, Sequence
 
 from .. import Routing, Target
-from ..errors import IpmiTimeoutError
 from ..msgs import (create_message, create_request_by_name,
                     encode_message, decode_message, constants)
 from ..utils import check_rsp_completion_code
