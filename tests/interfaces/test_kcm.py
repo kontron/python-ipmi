@@ -190,6 +190,22 @@ def test_close(kcm):
     assert kcm.closed
 
 
+def test_send_frame_closed_meanwhile(kcm):
+    """The router thread may send a response while the interface is closed."""
+    intf = Kcm()
+    intf.open()
+    send_order = intf._send_order
+
+    def close_then_order():
+        order = send_order()
+        intf.close()
+        return order
+
+    intf._send_order = close_then_order
+    with pytest.raises(KcmError, match='not open'):
+        intf.send_frame(bytes(7))
+
+
 def test_open_old_firmware(kcm):
     kcm.version = 0x0105
     with pytest.raises(KcmError):
@@ -444,3 +460,110 @@ def test_both_channels_responder(kcm, interfaces):
     router.close()
     assert [chan for chan, _ in responses] == [0, 1]
     assert all(frame[0] == 0x82 for _, frame in responses)
+
+
+def configured(kcm):
+    """Return (channel, address) of each Configure I2C Channel command."""
+    return [struct.unpack('<BBI', data)[:2]
+            for cmd, data in kcm.written if cmd == 2]
+
+
+def test_received_channels(kcm, interfaces):
+    """The channel of each response is recorded."""
+    kcm.responder = lambda chan, req: [(1 - chan, build_rsp(req, b'\x00'))]
+    intf = interfaces(channel='ab')
+    for _ in range(3):
+        intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
+    assert intf.received_channels() == [1, 0, 1]
+    messages = intf.received_messages()
+    assert [c for c, _ in messages] == [1, 0, 1]
+    # the responses, from the responder 72h to the requester 20h
+    assert all(m[0] == 0x20 and m[3] == 0x72 for _, m in messages)
+    intf.clear_received_channels()
+    assert intf.received_channels() == []
+
+
+def test_disable_channel(kcm, interfaces):
+    kcm.responder = lambda chan, req: [(chan, build_rsp(req, b'\x00'))]
+    intf = interfaces(slave_address=0x20, channel='ab')
+    intf.disable_channel(1)
+    assert configured(kcm)[-1] == (1, 0xfe)
+    assert intf.enabled_channels == (0,)
+    for _ in range(3):
+        intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
+    assert sent_channels(kcm) == [0, 0, 0]
+
+    intf.enable_channel(1)
+    assert configured(kcm)[-1] == (1, 0x20)
+    assert intf.enabled_channels == (0, 1)
+    for _ in range(2):
+        intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
+    # both channels are used again, alternately
+    assert sorted(sent_channels(kcm)[3:]) == [0, 1]
+
+
+def test_disabled_channel_receives_nothing(kcm, interfaces):
+    """A response received on a disabled channel is not accepted."""
+    kcm.responder = lambda chan, req: [(1, build_rsp(req, b'\x00'))]
+    intf = interfaces(channel='ab')
+    intf.max_retries = 1
+    intf.timeout = 0.05
+    intf.disable_channel(1)
+    with pytest.raises(IpmiTimeoutError):
+        intf.send_and_receive_raw(pyipmi.Target(0x72), 0, 6, b'\x01')
+    assert intf.received_channels() == [1]
+
+
+def test_all_channels_disabled(kcm, interfaces):
+    intf = interfaces(channel='ab')
+    intf.disable_channel(0)
+    intf.disable_channel(1)
+    with pytest.raises(KcmError):
+        intf.send_frame(b'\x72\x18\x76\x20\x04\x01\xdb')
+    assert sent_channels(kcm) == []
+
+
+def test_disable_channel_not_used(kcm, interfaces):
+    intf = interfaces(channel=0)
+    with pytest.raises(ValueError):
+        intf.disable_channel(1)
+
+
+def test_disable_channel_before_open(kcm):
+    intf = Kcm(slave_address=0x20, channel='ab')
+    intf.disable_channel(0)
+    intf.open()
+    try:
+        assert configured(kcm) == [(0, 0xfe), (1, 0x20)]
+    finally:
+        intf.close()
+
+
+def test_close_enables_disabled_channel(kcm, interfaces):
+    intf = interfaces(slave_address=0x20, channel='ab')
+    intf.disable_channel(1)
+    intf.close()
+    assert configured(kcm)[-1] == (1, 0x20)
+    assert kcm.addrs == [0x20, 0x20]
+
+
+def test_set_i2c_speed(kcm, interfaces):
+    intf = interfaces(slave_address=0x20, channel='ab')
+    intf.set_i2c_speed(400000, channel=1)
+    assert kcm.written[-1] == (2, struct.pack('<BBI', 1, 0x20, 400000))
+    assert intf.get_i2c_speed(0) == 100000
+    assert intf.get_i2c_speed(1) == 400000
+    # the speed is kept when the channel is disabled
+    intf.disable_channel(1)
+    assert kcm.written[-1] == (2, struct.pack('<BBI', 1, 0xfe, 400000))
+    intf.set_i2c_speed(100000)
+    assert [data for cmd, data in kcm.written[-2:]] == [
+        struct.pack('<BBI', 0, 0x20, 100000),
+        struct.pack('<BBI', 1, 0xfe, 100000)]
+
+
+def test_set_i2c_speed_channel_not_used(kcm, interfaces):
+    intf = interfaces(channel=0)
+    with pytest.raises(ValueError):
+        intf.set_i2c_speed(400000, channel=1)
+    assert intf.get_i2c_speed(0) == 100000

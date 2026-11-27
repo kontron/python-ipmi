@@ -425,6 +425,18 @@ VITA 46.11 systems have redundant IPMBs, and a compliant IPMC alternates its mes
 
   pyipmi -I kcm -o port=/dev/ttyUSB0,channel=ab -t 0x82 bmc info
 
+To test this behaviour of an IPMC, a channel can be disabled, e.g. to simulate a failed IPMB-B: nothing is sent on it any more, and its own address is set to ``DISABLED_SLAVE_ADDRESS`` (FEh), so the KCM acknowledges none of the IPMC's messages on it and the IPMC has to send them on the other IPMB. The channel of each received message is recorded:
+
+.. code:: python
+
+  interface.disable_channel(1)
+  interface.clear_received_channels()
+  ipmi.get_device_id()
+  assert interface.received_channels() == [0]
+  interface.enable_channel(1)
+
+The I2C bit rate of a channel can be changed while the interface is open, e.g. to 400 kHz, the FAST-MODE of VITA 46.11, on IPMB-B: ``interface.set_i2c_speed(400000, channel=1)``. Without a channel it is changed on all channels of the interface.
+
 IPMB with Aardvark
 ******************
 

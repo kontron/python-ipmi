@@ -37,6 +37,11 @@ Example:
 
         interface = pyipmi.interfaces.create_interface(
             'kcm', slave_address=0x20, port='/dev/ttyUSB0', channel='ab')
+
+    Simulate a failed IPMB-B, the IPMC's messages on it are not
+    acknowledged::
+
+        interface.disable_channel(1)
 """
 
 from __future__ import annotations
@@ -47,6 +52,7 @@ import queue
 import struct
 import threading
 import time
+from collections import deque
 from typing import Any
 from collections.abc import Callable
 
@@ -84,6 +90,14 @@ CHANNEL_AB = 'ab'
 # the oldest firmware with a known layout of the status reply, 1.6 and 1.7
 # use the same one
 MIN_FIRMWARE_VERSION = 0x0106
+
+# the own address of a disabled channel, so that the KCM acknowledges no
+# message on it: 7-bit 7Fh, reserved by the I2C specification, so no device
+# of an IPMB uses it
+DISABLED_SLAVE_ADDRESS = 0xfe
+
+# the number of received messages that are recorded with their channel
+MAX_RECEIVED_CHANNELS = 1024
 
 
 def crc8(data: bytes) -> int:
@@ -326,9 +340,12 @@ class KcmDevice:
             The payload of the reply after the sequence number.
 
         Raises:
-            KcmError: The frame is too long, or no reply within
-                the command timeout.
+            KcmError: The device is not open, the frame is too long, or
+                no reply within the command timeout.
         """
+        ser = self._ser
+        if ser is None:
+            raise KcmError('KCM is not open')
         seq = self._next_seq()
         payload = struct.pack('<H', seq) + data
         if len(payload) + 2 > MAX_FRAME_LEN:
@@ -342,7 +359,7 @@ class KcmDevice:
         try:
             frame = encode_frame(cmd, payload)
             logger.debug('KCM TX %s', frame[1:-1].decode())
-            self._ser.write(frame)
+            ser.write(frame)
 
             deadline = time.monotonic() + self.cmd_timeout
             while True:
@@ -438,6 +455,12 @@ class Kcm(IpmbInterface):
     on the other one. Messages are received on both IPMBs, so a response
     is accepted on either of them.
 
+    A channel can be disabled, e.g. to simulate a failed IPMB: nothing is
+    sent on it and the KCM acknowledges no message on it, so the sender
+    sees a failed transmission (see `disable_channel()`). The channel of
+    each received message is recorded (see `received_channels()`), so a
+    test can check on which IPMB the responses arrive.
+
     Incoming requests are ignored by default. To answer them, e.g. to
     acknowledge the Platform Event Messages of the IPMCs, set a
     `MessageRouter` with registered handlers.
@@ -487,6 +510,11 @@ class Kcm(IpmbInterface):
         self._device: KcmDevice | None = None
         self._next_channel = 0
         self._next_channel_lock = threading.Lock()
+        self._disabled: set[int] = set()
+        self._speeds = dict.fromkeys(self.channels, i2c_speed)
+        self._received: deque[tuple[int, bytes]] = deque(
+            maxlen=MAX_RECEIVED_CHANNELS)
+        self._received_lock = threading.Lock()
 
     def open(self) -> None:
         """Open the KCM and configure the channels.
@@ -505,11 +533,7 @@ class Kcm(IpmbInterface):
                     self._receive_channel_frame, channel))
                 claimed.append(channel)
             for channel in self.channels:
-                self._check_status(device.command(
-                    CMD_CONFIGURE_I2C_CHANNEL,
-                    struct.pack('<BBI', channel, self.slave_address,
-                                self.i2c_speed),
-                    RSP_STATUS))
+                self._configure(device, channel)
         except Exception:
             for channel in claimed:
                 device.remove_listener(channel)
@@ -518,15 +542,168 @@ class Kcm(IpmbInterface):
         self._device = device
 
     def close(self) -> None:
-        """Release the KCM, it is closed if no other channel uses it."""
+        """Release the KCM, it is closed if no other channel uses it.
+
+        A disabled channel is enabled again first, so the KCM does not
+        keep ignoring the messages on it.
+        """
         if self._device is not None:
+            for channel in sorted(self._disabled):
+                try:
+                    self.enable_channel(channel)
+                except KcmError as e:
+                    logger.warning('KCM channel %d not enabled again: %s',
+                                   channel, e)
             for channel in self.channels:
                 self._device.remove_listener(channel)
             self._device.release()
             self._device = None
         super().close()
 
+    def _configure(self, device: KcmDevice, channel: int) -> None:
+        """Set the own address and the I2C bit rate of the channel.
+
+        The own address is `DISABLED_SLAVE_ADDRESS` if the channel is
+        disabled.
+        """
+        address = (DISABLED_SLAVE_ADDRESS if channel in self._disabled
+                   else self.slave_address)
+        self._check_status(device.command(
+            CMD_CONFIGURE_I2C_CHANNEL,
+            struct.pack('<BBI', channel, address, self._speeds[channel]),
+            RSP_STATUS))
+
+    def _check_channel(self, channel: int) -> None:
+        if channel not in self.channels:
+            raise ValueError(f'channel {channel!r} is not used by the '
+                             f'interface, it uses {self.channels}')
+
+    def get_i2c_speed(self, channel: int) -> int:
+        """Return the I2C bit rate of a channel.
+
+        Args:
+            channel: The channel, one of the channels of the interface.
+
+        Returns:
+            The bit rate in Hz.
+
+        Raises:
+            ValueError: The interface does not use the channel.
+        """
+        self._check_channel(channel)
+        return self._speeds[channel]
+
+    def set_i2c_speed(self, speed: int, channel: int | None = None) -> None:
+        """Set the I2C bit rate of a channel, or of all channels.
+
+        E.g. 400000 for the FAST-MODE and 100000 for the STANDARD-MODE of
+        VITA 46.11. The bit rate is kept when a channel is disabled or
+        enabled and when the interface is opened again.
+
+        Args:
+            speed: The bit rate in Hz.
+            channel: The channel, one of the channels of the interface, or
+                None for all channels of the interface.
+
+        Raises:
+            ValueError: The interface does not use the channel.
+            KcmError: The KCM failed to configure the channel.
+        """
+        channels = self.channels if channel is None else (channel,)
+        for c in channels:
+            self._check_channel(c)
+        for c in channels:
+            self._speeds[c] = speed
+            device = self._device
+            if device is not None:
+                self._configure(device, c)
+
+    @property
+    def enabled_channels(self) -> tuple[int, ...]:
+        """The channels of the interface that are not disabled."""
+        return tuple(c for c in self.channels if c not in self._disabled)
+
+    def disable_channel(self, channel: int) -> None:
+        """Disable a channel, e.g. to simulate a failed IPMB.
+
+        Nothing is sent on the channel any more. Its own address is set to
+        `DISABLED_SLAVE_ADDRESS`, so the KCM acknowledges no message on
+        it and the sender, e.g. an IPMC that sends its response, sees a
+        failed transmission. A message the KCM still receives on it is
+        recorded (see `received_channels()`) but not passed to the router.
+
+        Args:
+            channel: The channel, 0 for IPMB-A or 1 for IPMB-B, one of the
+                channels of the interface.
+
+        Raises:
+            ValueError: The interface does not use the channel.
+            KcmError: The KCM failed to configure the channel.
+        """
+        self._check_channel(channel)
+        self._disabled.add(channel)
+        device = self._device
+        if device is not None:
+            self._configure(device, channel)
+
+    def enable_channel(self, channel: int) -> None:
+        """Enable a channel disabled by `disable_channel()` again.
+
+        Its own address is set to ``slave_address`` again.
+
+        Args:
+            channel: The channel, 0 for IPMB-A or 1 for IPMB-B, one of the
+                channels of the interface.
+
+        Raises:
+            ValueError: The interface does not use the channel.
+            KcmError: The KCM failed to configure the channel.
+        """
+        self._check_channel(channel)
+        self._disabled.discard(channel)
+        device = self._device
+        if device is not None:
+            self._configure(device, channel)
+
+    def received_channels(self) -> list[int]:
+        """Return the channels of the received messages, oldest first.
+
+        All messages are recorded, responses and requests, also those on a
+        disabled channel, at most `MAX_RECEIVED_CHANNELS`.
+
+        Returns:
+            The channel of each message received since the interface was
+            opened or `clear_received_channels()` was called.
+        """
+        with self._received_lock:
+            return [channel for channel, _ in self._received]
+
+    def received_messages(self) -> list[tuple[int, bytes]]:
+        """Return the received messages with their channels, oldest first.
+
+        The same messages as `received_channels()`.
+
+        Returns:
+            The channel and the IPMB message, starting with the address
+            it was sent to (rqSA of a response, rsSA of a request), of each
+            message received since the interface was opened or
+            `clear_received_channels()` was called.
+        """
+        with self._received_lock:
+            return list(self._received)
+
+    def clear_received_channels(self) -> None:
+        """Forget the channels of the messages received so far."""
+        with self._received_lock:
+            self._received.clear()
+
     def _receive_channel_frame(self, channel: int, frame: bytes) -> None:
+        with self._received_lock:
+            self._received.append((channel, bytes(frame)))
+        if channel in self._disabled:
+            self._logger.debug('IPMB RX channel %d (disabled) [%s]', channel,
+                               bytes(frame).hex(' '))
+            return
         self._logger.debug('IPMB RX channel %d [%s]', channel,
                            bytes(frame).hex(' '))
         self._router.handle_frame(self, bytes(frame))
@@ -541,12 +718,14 @@ class Kcm(IpmbInterface):
     def _send_order(self) -> tuple[int, ...]:
         """Return the channels in the order to try for the next message.
 
-        The first channel alternates from message to message.
+        The first channel alternates from message to message, disabled
+        channels are left out.
         """
         with self._next_channel_lock:
             first = self._next_channel
             self._next_channel = (first + 1) % len(self.channels)
-        return self.channels[first:] + self.channels[:first]
+        order = self.channels[first:] + self.channels[:first]
+        return tuple(c for c in order if c not in self._disabled)
 
     def send_frame(self, frame: bytes) -> None:
         """Send a complete IPMB message, starting with rsSA.
@@ -560,19 +739,25 @@ class Kcm(IpmbInterface):
             frame: The message.
 
         Raises:
-            KcmError: The interface is not open, or the KCM
-                failed to send the message on all channels, e.g. it was
-                not acknowledged.
+            KcmError: The interface is not open, all its channels are
+                disabled, or the KCM failed to send the message on all
+                enabled channels, e.g. it was not acknowledged.
         """
-        if self._device is None:
+        # the router thread sends responses, the interface may be closed
+        # meanwhile
+        device = self._device
+        if device is None:
             raise KcmError('interface is not open')
 
         frame = bytes(frame)
         error: KcmError | None = None
-        for channel in self._send_order():
+        order = self._send_order()
+        if not order:
+            raise KcmError('all channels of the interface are disabled')
+        for channel in order:
             logger.debug('IPMB TX channel %d [%s]', channel, frame.hex(' '))
             try:
-                self._check_status(self._device.command(
+                self._check_status(device.command(
                     CMD_SEND_MESSAGE, bytes((channel,)) + frame, RSP_STATUS))
                 return
             except KcmError as e:
